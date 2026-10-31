@@ -1,14 +1,14 @@
 # Vaultbound: The Shifting Depths
 
-**Milestone 5.6 — Loot and equipment overhaul, staged implementation.** A Godot 4 / GDScript-only, offline fantasy expedition prototype for Android landscape. The existing Sanctuary, Collection Hall and Rootbound Abyss now share slate-and-bronze architecture, turquoise magic, mossy ruins, living foliage and flowing water. Recruit companions, explore, fight, extract treasure and develop the character through the preserved RPG systems.
+**Milestone 5.6 — Loot and equipment prototype, version 0.5.6.** A Godot 4 / GDScript-only, offline fantasy expedition prototype for Android landscape. The existing Sanctuary, Collection Hall and Rootbound Abyss share slate-and-bronze architecture, turquoise magic, mossy ruins, living foliage and flowing water. Recruit companions, explore, fight, extract treasure and develop the character through the preserved RPG systems.
 
-The verified foundation adds owned primary/secondary weapon loadouts and version-four save migration. Mobile menus share an enchanted navy, bronze and turquoise theme, with distinct Inventory and Equipment entries, rotatable inspection and saved accessibility settings. Rootbound enemies now leave searchable loot caches, and currency is displayed as Depthmarks (DM). Follow the [implementation plan](docs/milestone-5.6-plan.md) and [checkpoint validation](docs/milestone-5.6-validation.md) for completed versus pending work.
+This milestone adds two owned weapon loadouts, version-four save migration, distinct Inventory and Equipment menus, rotatable character/item inspection and saved accessibility settings. Rootbound enemies leave searchable loot caches, and currency is displayed as Depthmarks (DM). The catalog contains 350 noncurrency definitions: 300 available through current content and 50 gated future entries. Guaranteed enhancements, bounded equipment effects, twenty recipes and animated owned-item displays use the existing progression systems. See the [implementation plan](docs/milestone-5.6-plan.md), [validation report](docs/milestone-5.6-validation.md) and [Android review checklist](docs/milestone-5.6-android.md). Production character assets and physical-device review remain outstanding.
 
 The Sanctuary, practice dungeon and arena, player movement, sword/shield and staff combat, touch controls, both smoothly switchable cameras, procedural dungeons, treasure, boss encounters and secured progression from Milestones 1–5 remain available. `project.godot` stays at the repository root. The active party supports one human leader and up to two local AI companions. No online multiplayer, player-to-player trading, guilds or additional biomes are implemented.
 
 ## Import and play on Android
 
-1. Install the official **Godot Android editor**, standard GDScript edition. Use **Godot 4.6.3**, the validated engine for this visual pass. Older Godot releases have not been validated with the new depth-fog and presentation settings.
+1. Install the official **Godot Android editor**, standard GDScript edition. Use **Godot 4.6.3**, the validated engine for this milestone. Older Godot releases have not been validated with the new depth-fog and presentation settings.
 2. Download/extract the full repository or source ZIP into storage the editor can access. Grant the editor file access if requested.
 3. Choose **Import**, select the root `project.godot`, then open it with the **Compatibility** renderer. Wait for resource import to finish.
 4. Keep the device in landscape and choose **Run Project**. The main scene is `scenes/main.tscn`.
@@ -141,6 +141,8 @@ Character progression uses an explicit thirty-level table. Extraction grants **2
 
 The Hall is a separate underground castle chamber reached from the Sanctuary's northwestern arch. It contains **eight equipment stands, four relic pedestals, a Rootwarden trophy wall, a monster journal and an item journal**. Interact with a stand, choose an eligible owned item and confirm the display. An assignment references the original inventory instance; it never creates a second item or removes ownership, and the same instance cannot occupy multiple stands. Clear a display before selling or salvaging its item. The trophy unlocks from the existing Rootwarden discovery, and successful extraction records monster discoveries. Assignments and journals persist across travel and restart.
 
+Occupied stands add bounded rotation, floating motion and rarity rune accents around the shared family models. **INSPECT** opens an item viewport with drag rotation, lore, ownership origin and truthful artwork status. Character and item previews render only when changed. Collection completion counts the 300 obtainable definitions; future records remain visible as unavailable catalog entries. Rare-or-better accepted loot shows a short **UNSECURED — Extract to keep** notification without granting additional rewards. See [item presentation](docs/item-presentation.md) and the [mobile UI guide](docs/milestone-5.6-ui.md).
+
 ## Rootwarden and awareness
 
 The Rootwarden uses Root Slam, sequential Thorn Eruption patches and Vine Grasp (a brief interruption on a landed hit). Below 40% health it enters **Guardian's Fury** through a safe phase transition and gains a faster pattern with a radial burst. Ground warnings remain at least 0.9 seconds, attack windows share unique IDs, and sequential patches cannot stack multiple hits from the same cast. Dodge, shield/ward, range and wall obstruction apply normally.
@@ -163,10 +165,11 @@ Shared native materials use two original 128×128 procedural grain textures, res
 | 3D antialiasing | Off | Off | 2× MSAA |
 | Ambient motes per batch | 8 | 16 | 24 |
 | Simultaneous impact bursts | 8 | 14 | 20 |
+| Active item sparks across nearby displays/weapons | 4 | 8 | 12 |
 
 Abyss mote batches additionally cap at twelve per room and follow existing room visibility. Essential geometry, interactables and combat warnings do not disappear on Low. The frame target changes rendering pacing; physics remains 60 Hz. Preferences live separately at `user://vaultbound/visual_settings.cfg`, without changing the progression profile. Invalid graphics files retain current settings; an explicit successful change writes verified replacement preferences.
 
-The 30 FPS midrange Android goal and optional 60 FPS target require physical-device verification. Native primitives do not include authored mesh LOD chains; the tier's general LOD threshold prepares for compatible future assets, while current savings come from batching, shadow policy, visibility and bounded decoration/effects. See the [visual style guide](docs/visual-style-guide.md), [initial baseline](docs/milestone-5.5-baseline.md) and [performance report](docs/milestone-5.5-performance.md) for the measured scope and limitations.
+The 30 FPS midrange Android goal and optional 60 FPS target require physical-device verification. Native primitives do not include authored mesh LOD chains; the tier's general LOD threshold prepares for compatible future assets, while current savings come from batching, shadow policy, visibility and bounded decoration/effects. Item spark limits describe active instances, not all reserved mesh storage; reduced effects removes them and reduced motion freezes decorative movement. See the [current CPU/resource performance report](docs/milestone-5.6-performance.md), [asset register](docs/milestone-5.6-assets.md), [visual style guide](docs/visual-style-guide.md) and [archived environment baseline](docs/milestone-5.5-baseline.md).
 
 ## Project organization and mobile budget
 
@@ -186,7 +189,7 @@ Each level uses one shared environment and one directional light, with shadows c
 
 ## Validation
 
-Current staged results are recorded in [Milestone 5.6 validation](docs/milestone-5.6-validation.md), including the real Search/extraction/restart gate and its resolved save-precision regression. The archived Milestone 5.5 pass recorded **3,025 assertions across 33 engine invocations**. Counts from repeated checkpoint runs are not added together.
+The final Godot 4.6.3 release gate passed **10,519 assertions across 58 suites and 71 separate engine invocations**, including **100 dungeon seeds**, independent restart readers, fresh source import and startup. Game-test logs had no errors or warnings; editor import reported only restricted-runner socket and missing Android build-tools notices. See the [validation report](docs/milestone-5.6-validation.md) and [per-invocation results](docs/milestone-5.6-test-results.json). Checkpoint reruns and host microbenchmarks are reported separately, not added to this total. Physical Android and rendered visual acceptance remain pending.
 
 Run these desktop/cloud checks from the repository root; substitute `godot` if that is your installed executable. Isolate test user data from normal play:
 
@@ -280,7 +283,7 @@ godot4 --headless --path . --script res://tests/loadout_migration_test.gd -- --r
 
 Import first to index global GDScript classes. Assertions exit nonzero on failure; inspect logs for runtime errors too. Restricted Linux runners may need writable `XDG_DATA_HOME`, `XDG_CONFIG_HOME` and `XDG_CACHE_HOME`. Android SDK/build-tools warnings affect APK export setup, not scene resources.
 
-See [Milestone 5.6 validation](docs/milestone-5.6-validation.md) for current checkpoint results and Android review steps, [Milestone 5.5 validation](docs/milestone-5.5-validation.md) for the archived environment pass, [Milestone 5 validation](docs/milestone-5-validation.md) for the RPG baseline, and [the Android test plan](docs/test-plan.md) for the broader manual checklist. The [Milestone 4 report](docs/milestone-4-validation.md), [Milestone 3 report](docs/milestone-3-validation.md) and [Milestone 2 guide](docs/milestone-2-guide.md) retain the companion, expedition and combat baselines. The original GitHub roadmap is [archived separately](docs/original-github-roadmap.md) and describes future ideas, not shipped functionality.
+See [Milestone 5.6 validation](docs/milestone-5.6-validation.md) for current results and the [Android review checklist](docs/milestone-5.6-android.md) for remaining device tests. [Milestone 5.5 validation](docs/milestone-5.5-validation.md), [Milestone 5 validation](docs/milestone-5-validation.md) and [the historical test plan](docs/test-plan.md) preserve the environment and RPG baselines. The [Milestone 4 report](docs/milestone-4-validation.md), [Milestone 3 report](docs/milestone-3-validation.md) and [Milestone 2 guide](docs/milestone-2-guide.md) retain the companion, expedition and combat baselines. The original GitHub roadmap is [archived separately](docs/original-github-roadmap.md) and describes future ideas, not shipped functionality.
 
 ## Remaining limits
 
@@ -288,4 +291,4 @@ This is a complete expedition loop prototype, not a finished commercial game. La
 
 **No physical Android testing is claimed.** Rendered visual review, touchscreen comfort, APK export/signing, audio output, frame pacing, heat and battery use still need device verification. Headless checks establish logic and resource validity; they do not compile shaders on an Android GPU or establish final appearance, game feel or mobile frame rate.
 
-Work is limited to the staged Milestone 5.6 plan and stops after its final review build. Online multiplayer, player-to-player trading, guilds, additional companion classes and later milestones are not implemented.
+Work stops at this Milestone 5.6 review build. Online multiplayer, player-to-player trading, guilds, additional companion classes and later milestones are not implemented. Natural drop pacing, economy balance, visual polish and actual menu responsiveness still require play-testing. Host catalog microbenchmarks are not measurements of Android menu latency or frame rate.

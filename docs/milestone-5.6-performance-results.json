@@ -1,0 +1,1087 @@
+{
+  "schema_version": 1,
+  "measured_at_utc": "2026-10-31T21:10:03Z",
+  "scope": "Linux headless native API audit; no rendered game, GPU or physical Android measurement.",
+  "engine": {
+    "build": "official",
+    "hash": "7d41c59c457bd5a245092b4e7eb2d833e3b3f8c3",
+    "hex": 263683,
+    "major": 4,
+    "minor": 6,
+    "patch": 3,
+    "status": "stable",
+    "string": "4.6.3-stable (official)",
+    "timestamp": 0
+  },
+  "host": {
+    "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+    "machine": "x86_64",
+    "logical_cpus": 5
+  },
+  "source": {
+    "verified_repository_commit": "4ae9c46cc2984b4a45b1a7606cdfe857bb2c809e",
+    "registry_sha256": "f87937f671456af13b7be7658fb43f0e5d8d2913e1737eb44097efb781230c2f",
+    "source_hash_map_sha256": "4611ba11cb444fe1703d9e19b90cb3fc32a4019cf3cf1fb7de09694ffcb55971",
+    "source_hash_map_encoding": "UTF-8 JSON with keys sorted, no whitespace; hashes map relative paths to lowercase SHA-256.",
+    "source_files_changed_during_run": [],
+    "raw_session_evidence": "/tmp/vaultbound-m56-performance/final-20261031T211003Z"
+  },
+  "method": {
+    "fresh_processes": 7,
+    "initial_item_resource_cache": "Verified empty in each process; OS page cache not flushed.",
+    "catalog_warm_state": "All definition resources explicitly retained by harness; not actual RPG menu cache state.",
+    "lookup_percentiles": "Batch latency divided by 1000; not individual-call tails.",
+    "reward_percentiles": "Pooled individually timed native roll calls.",
+    "rss": "Unavailable: native samples recorded -1; JSON null values are not zero.",
+    "static_memory": "Godot allocator usage including engine and harness; not complete process memory, GPU memory or Android memory.",
+    "concurrency": "Other project Godot gates paused; shared-host scheduling remains uncontrolled."
+  },
+  "catalog": {
+    "available_noncurrency": 300,
+    "disabled_families_or_groups": {
+      "bow": 5,
+      "consumable": 6,
+      "dual_blades": 4,
+      "greatsword": 5,
+      "magical_gauntlets": 3,
+      "material": 8,
+      "scythe": 4,
+      "spear": 5,
+      "trophy": 10
+    },
+    "groups": {
+      "accessory": 35,
+      "armor": 85,
+      "consumable": 25,
+      "currency": 1,
+      "material": 45,
+      "trophy": 30,
+      "valuable": 80,
+      "weapon": 50
+    },
+    "icon_paths": {
+      "res://assets/items/accessory.svg": 12,
+      "res://assets/items/armor.svg": 15,
+      "res://assets/items/boots.svg": 15,
+      "res://assets/items/catalog.svg": 26,
+      "res://assets/items/depthmark.svg": 1,
+      "res://assets/items/gloves.svg": 13,
+      "res://assets/items/helmet.svg": 15,
+      "res://assets/items/leg_armor.svg": 13,
+      "res://assets/items/material.svg": 45,
+      "res://assets/items/necklace.svg": 11,
+      "res://assets/items/potion.svg": 25,
+      "res://assets/items/relic.svg": 111,
+      "res://assets/items/ring.svg": 11,
+      "res://assets/items/shield.svg": 14,
+      "res://assets/items/staff.svg": 11,
+      "res://assets/items/sword.svg": 13
+    },
+    "icon_status": {
+      "catalog_placeholder": 32,
+      "original_family_icon": 319
+    },
+    "model_status": {
+      "missing": 26,
+      "not_applicable": 71,
+      "shared_family_placeholder": 254
+    },
+    "visual_scene_paths": {
+      "res://scenes/items/accessory.tscn": 12,
+      "res://scenes/items/boots.tscn": 15,
+      "res://scenes/items/chest.tscn": 15,
+      "res://scenes/items/gloves.tscn": 13,
+      "res://scenes/items/helmet.tscn": 15,
+      "res://scenes/items/leg_armor.tscn": 13,
+      "res://scenes/items/necklace.tscn": 11,
+      "res://scenes/items/relic.tscn": 111,
+      "res://scenes/items/ring.tscn": 11,
+      "res://scenes/items/shield.tscn": 14,
+      "res://scenes/items/staff.tscn": 11,
+      "res://scenes/items/sword.tscn": 13
+    }
+  },
+  "pooled_summary": {
+    "catalog_first_load_ms": {
+      "n": 7,
+      "median": 114.06,
+      "p95": null,
+      "minimum": 106.718,
+      "maximum": 121.188,
+      "p95_note": "Not estimated from seven cold samples."
+    },
+    "catalog_warm_load_ms": {
+      "n": 175,
+      "median": 0.788,
+      "p95": 0.971,
+      "minimum": 0.7,
+      "maximum": 1.527
+    },
+    "known_lookups_us_per_call": {
+      "n": 210,
+      "median": 2.593,
+      "p95": 3.155,
+      "minimum": 2.364,
+      "maximum": 3.956
+    },
+    "known_lookups_total_calls": 210000,
+    "unknown_lookups_us_per_call": {
+      "n": 210,
+      "median": 0.647,
+      "p95": 0.839,
+      "minimum": 0.574,
+      "maximum": 2.441
+    },
+    "unknown_lookups_total_calls": 210000,
+    "catalog_static_delta_kib": {
+      "n": 7,
+      "median": 3395.26171875,
+      "p95": 3395.26171875,
+      "minimum": 3395.26171875,
+      "maximum": 3395.26171875
+    },
+    "rss_available": false,
+    "catalog_rss_delta_kib": null,
+    "catalog_resource_delta": {
+      "n": 7,
+      "median": 448,
+      "p95": 448,
+      "minimum": 448,
+      "maximum": 448
+    },
+    "reward_sources": {
+      "basic": {
+        "latency_ms": {
+          "n": 7000,
+          "median": 1.948,
+          "p95": 2.49,
+          "minimum": 1.635,
+          "maximum": 7.838
+        },
+        "process_median_ms": {
+          "n": 7,
+          "median": 1.952,
+          "p95": 2.019,
+          "minimum": 1.865,
+          "maximum": 2.019
+        },
+        "static_delta_bytes": {
+          "n": 7,
+          "median": -440,
+          "p95": -440,
+          "minimum": -440,
+          "maximum": -440
+        },
+        "rss_delta_kib": null,
+        "resources_delta": {
+          "n": 7,
+          "median": 0,
+          "p95": 0,
+          "minimum": 0,
+          "maximum": 0
+        }
+      },
+      "stronger": {
+        "latency_ms": {
+          "n": 7000,
+          "median": 2.0545,
+          "p95": 2.51,
+          "minimum": 1.767,
+          "maximum": 6.575
+        },
+        "process_median_ms": {
+          "n": 7,
+          "median": 2.085,
+          "p95": 2.099,
+          "minimum": 1.978,
+          "maximum": 2.099
+        },
+        "static_delta_bytes": {
+          "n": 7,
+          "median": -984,
+          "p95": -984,
+          "minimum": -984,
+          "maximum": -984
+        },
+        "rss_delta_kib": null,
+        "resources_delta": {
+          "n": 7,
+          "median": 0,
+          "p95": 0,
+          "minimum": 0,
+          "maximum": 0
+        }
+      },
+      "elite": {
+        "latency_ms": {
+          "n": 7000,
+          "median": 2.084,
+          "p95": 2.626,
+          "minimum": 1.729,
+          "maximum": 9.857
+        },
+        "process_median_ms": {
+          "n": 7,
+          "median": 2.108,
+          "p95": 2.162,
+          "minimum": 2.001,
+          "maximum": 2.162
+        },
+        "static_delta_bytes": {
+          "n": 7,
+          "median": -1528,
+          "p95": -1528,
+          "minimum": -1528,
+          "maximum": -1528
+        },
+        "rss_delta_kib": null,
+        "resources_delta": {
+          "n": 7,
+          "median": 0,
+          "p95": 0,
+          "minimum": 0,
+          "maximum": 0
+        }
+      },
+      "boss": {
+        "latency_ms": {
+          "n": 7000,
+          "median": 1.775,
+          "p95": 2.228,
+          "minimum": 1.486,
+          "maximum": 7.662
+        },
+        "process_median_ms": {
+          "n": 7,
+          "median": 1.792,
+          "p95": 1.822,
+          "minimum": 1.729,
+          "maximum": 1.822
+        },
+        "static_delta_bytes": {
+          "n": 7,
+          "median": -3244,
+          "p95": -3244,
+          "minimum": -3244,
+          "maximum": -3244
+        },
+        "rss_delta_kib": null,
+        "resources_delta": {
+          "n": 7,
+          "median": 0,
+          "p95": 0,
+          "minimum": 0,
+          "maximum": 0
+        }
+      }
+    },
+    "static_peak_mib": {
+      "n": 7,
+      "median": 24.741573333740234,
+      "p95": 24.741573333740234,
+      "minimum": 24.741573333740234,
+      "maximum": 24.741573333740234
+    },
+    "end_rss_mib": null
+  },
+  "processes": [
+    {
+      "process": 1,
+      "catalog_first_load_us": 108965,
+      "cached_definitions_before_catalog": 0,
+      "warm_catalog_us": {
+        "sample_count": 25,
+        "min_us": 700,
+        "median_us": 768,
+        "p95_us": 865,
+        "max_us": 880,
+        "mean_us": 781.04
+      },
+      "catalog_memory_before": {
+        "static_bytes": 22014120,
+        "static_peak_bytes": 23640448,
+        "resource_count": 6,
+        "object_count": 1460,
+        "rss_bytes": null
+      },
+      "catalog_memory_after": {
+        "static_bytes": 25490868,
+        "static_peak_bytes": 25497312,
+        "resource_count": 454,
+        "object_count": 1936,
+        "rss_bytes": null
+      },
+      "end_memory": {
+        "static_bytes": 25789856,
+        "static_peak_bytes": 25943420,
+        "resource_count": 459,
+        "object_count": 1941,
+        "rss_bytes": null
+      },
+      "lookups": {
+        "known_lookups": {
+          "batches": 30,
+          "calls_per_batch": 1000,
+          "total_calls": 30000,
+          "hits": 30000,
+          "amortized_median_us_per_call": 2.758,
+          "amortized_p95_us_per_call": 3.155
+        },
+        "unknown_lookups": {
+          "batches": 30,
+          "calls_per_batch": 1000,
+          "total_calls": 30000,
+          "hits": 0,
+          "amortized_median_us_per_call": 0.66,
+          "amortized_p95_us_per_call": 0.755
+        }
+      },
+      "monster_rolls": {
+        "basic": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1635,
+            "median_us": 1920,
+            "p95_us": 2344,
+            "max_us": 4396,
+            "mean_us": 1983.463
+          },
+          "static_endpoint_delta_bytes": -440,
+          "resource_endpoint_delta": 0,
+          "checksum": 6991,
+          "rss_endpoint_delta_bytes": null
+        },
+        "boss": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1486,
+            "median_us": 1770,
+            "p95_us": 2215,
+            "max_us": 3702,
+            "mean_us": 1836.874
+          },
+          "static_endpoint_delta_bytes": -3244,
+          "resource_endpoint_delta": 0,
+          "checksum": 189264,
+          "rss_endpoint_delta_bytes": null
+        },
+        "elite": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1729,
+            "median_us": 2074,
+            "p95_us": 2582,
+            "max_us": 7890,
+            "mean_us": 2163.009
+          },
+          "static_endpoint_delta_bytes": -1528,
+          "resource_endpoint_delta": 0,
+          "checksum": 40268,
+          "rss_endpoint_delta_bytes": null
+        },
+        "stronger": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1816,
+            "median_us": 2065,
+            "p95_us": 2528,
+            "max_us": 4088,
+            "mean_us": 2121.928
+          },
+          "static_endpoint_delta_bytes": -984,
+          "resource_endpoint_delta": 0,
+          "checksum": 14608,
+          "rss_endpoint_delta_bytes": null
+        }
+      }
+    },
+    {
+      "process": 2,
+      "catalog_first_load_us": 106718,
+      "cached_definitions_before_catalog": 0,
+      "warm_catalog_us": {
+        "sample_count": 25,
+        "min_us": 734,
+        "median_us": 792,
+        "p95_us": 910,
+        "max_us": 918,
+        "mean_us": 806.52
+      },
+      "catalog_memory_before": {
+        "static_bytes": 22014120,
+        "static_peak_bytes": 23640448,
+        "resource_count": 6,
+        "object_count": 1460,
+        "rss_bytes": null
+      },
+      "catalog_memory_after": {
+        "static_bytes": 25490868,
+        "static_peak_bytes": 25497312,
+        "resource_count": 454,
+        "object_count": 1936,
+        "rss_bytes": null
+      },
+      "end_memory": {
+        "static_bytes": 25789856,
+        "static_peak_bytes": 25943420,
+        "resource_count": 459,
+        "object_count": 1941,
+        "rss_bytes": null
+      },
+      "lookups": {
+        "known_lookups": {
+          "batches": 30,
+          "calls_per_batch": 1000,
+          "total_calls": 30000,
+          "hits": 30000,
+          "amortized_median_us_per_call": 2.465,
+          "amortized_p95_us_per_call": 2.582
+        },
+        "unknown_lookups": {
+          "batches": 30,
+          "calls_per_batch": 1000,
+          "total_calls": 30000,
+          "hits": 0,
+          "amortized_median_us_per_call": 0.645,
+          "amortized_p95_us_per_call": 0.791
+        }
+      },
+      "monster_rolls": {
+        "basic": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1638,
+            "median_us": 1865,
+            "p95_us": 2174,
+            "max_us": 5542,
+            "mean_us": 1915.792
+          },
+          "static_endpoint_delta_bytes": -440,
+          "resource_endpoint_delta": 0,
+          "checksum": 6991,
+          "rss_endpoint_delta_bytes": null
+        },
+        "boss": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1545,
+            "median_us": 1729,
+            "p95_us": 2017,
+            "max_us": 4015,
+            "mean_us": 1767.865
+          },
+          "static_endpoint_delta_bytes": -3244,
+          "resource_endpoint_delta": 0,
+          "checksum": 189264,
+          "rss_endpoint_delta_bytes": null
+        },
+        "elite": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1798,
+            "median_us": 2001,
+            "p95_us": 2279,
+            "max_us": 3313,
+            "mean_us": 2034.821
+          },
+          "static_endpoint_delta_bytes": -1528,
+          "resource_endpoint_delta": 0,
+          "checksum": 40268,
+          "rss_endpoint_delta_bytes": null
+        },
+        "stronger": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1767,
+            "median_us": 1978,
+            "p95_us": 2287,
+            "max_us": 4435,
+            "mean_us": 2023.207
+          },
+          "static_endpoint_delta_bytes": -984,
+          "resource_endpoint_delta": 0,
+          "checksum": 14608,
+          "rss_endpoint_delta_bytes": null
+        }
+      }
+    },
+    {
+      "process": 3,
+      "catalog_first_load_us": 111577,
+      "cached_definitions_before_catalog": 0,
+      "warm_catalog_us": {
+        "sample_count": 25,
+        "min_us": 731,
+        "median_us": 785,
+        "p95_us": 1160,
+        "max_us": 1527,
+        "mean_us": 847.6
+      },
+      "catalog_memory_before": {
+        "static_bytes": 22014120,
+        "static_peak_bytes": 23640448,
+        "resource_count": 6,
+        "object_count": 1460,
+        "rss_bytes": null
+      },
+      "catalog_memory_after": {
+        "static_bytes": 25490868,
+        "static_peak_bytes": 25497312,
+        "resource_count": 454,
+        "object_count": 1936,
+        "rss_bytes": null
+      },
+      "end_memory": {
+        "static_bytes": 25789856,
+        "static_peak_bytes": 25943420,
+        "resource_count": 459,
+        "object_count": 1941,
+        "rss_bytes": null
+      },
+      "lookups": {
+        "known_lookups": {
+          "batches": 30,
+          "calls_per_batch": 1000,
+          "total_calls": 30000,
+          "hits": 30000,
+          "amortized_median_us_per_call": 2.597,
+          "amortized_p95_us_per_call": 2.912
+        },
+        "unknown_lookups": {
+          "batches": 30,
+          "calls_per_batch": 1000,
+          "total_calls": 30000,
+          "hits": 0,
+          "amortized_median_us_per_call": 0.647,
+          "amortized_p95_us_per_call": 0.95
+        }
+      },
+      "monster_rolls": {
+        "basic": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1645,
+            "median_us": 1952,
+            "p95_us": 2387,
+            "max_us": 5440,
+            "mean_us": 2012.016
+          },
+          "static_endpoint_delta_bytes": -440,
+          "resource_endpoint_delta": 0,
+          "checksum": 6991,
+          "rss_endpoint_delta_bytes": null
+        },
+        "boss": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1592,
+            "median_us": 1822,
+            "p95_us": 2479,
+            "max_us": 5517,
+            "mean_us": 1922.836
+          },
+          "static_endpoint_delta_bytes": -3244,
+          "resource_endpoint_delta": 0,
+          "checksum": 189264,
+          "rss_endpoint_delta_bytes": null
+        },
+        "elite": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1867,
+            "median_us": 2108,
+            "p95_us": 2746,
+            "max_us": 7191,
+            "mean_us": 2215.546
+          },
+          "static_endpoint_delta_bytes": -1528,
+          "resource_endpoint_delta": 0,
+          "checksum": 40268,
+          "rss_endpoint_delta_bytes": null
+        },
+        "stronger": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1800,
+            "median_us": 2085,
+            "p95_us": 2535,
+            "max_us": 3905,
+            "mean_us": 2138.059
+          },
+          "static_endpoint_delta_bytes": -984,
+          "resource_endpoint_delta": 0,
+          "checksum": 14608,
+          "rss_endpoint_delta_bytes": null
+        }
+      }
+    },
+    {
+      "process": 4,
+      "catalog_first_load_us": 114060,
+      "cached_definitions_before_catalog": 0,
+      "warm_catalog_us": {
+        "sample_count": 25,
+        "min_us": 706,
+        "median_us": 796,
+        "p95_us": 1037,
+        "max_us": 1070,
+        "mean_us": 815.08
+      },
+      "catalog_memory_before": {
+        "static_bytes": 22014120,
+        "static_peak_bytes": 23640448,
+        "resource_count": 6,
+        "object_count": 1460,
+        "rss_bytes": null
+      },
+      "catalog_memory_after": {
+        "static_bytes": 25490868,
+        "static_peak_bytes": 25497312,
+        "resource_count": 454,
+        "object_count": 1936,
+        "rss_bytes": null
+      },
+      "end_memory": {
+        "static_bytes": 25789856,
+        "static_peak_bytes": 25943420,
+        "resource_count": 459,
+        "object_count": 1941,
+        "rss_bytes": null
+      },
+      "lookups": {
+        "known_lookups": {
+          "batches": 30,
+          "calls_per_batch": 1000,
+          "total_calls": 30000,
+          "hits": 30000,
+          "amortized_median_us_per_call": 2.599,
+          "amortized_p95_us_per_call": 3.187
+        },
+        "unknown_lookups": {
+          "batches": 30,
+          "calls_per_batch": 1000,
+          "total_calls": 30000,
+          "hits": 0,
+          "amortized_median_us_per_call": 0.654,
+          "amortized_p95_us_per_call": 0.799
+        }
+      },
+      "monster_rolls": {
+        "basic": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1767,
+            "median_us": 2008,
+            "p95_us": 3484,
+            "max_us": 7838,
+            "mean_us": 2200.222
+          },
+          "static_endpoint_delta_bytes": -440,
+          "resource_endpoint_delta": 0,
+          "checksum": 6991,
+          "rss_endpoint_delta_bytes": null
+        },
+        "boss": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1602,
+            "median_us": 1792,
+            "p95_us": 2270,
+            "max_us": 7662,
+            "mean_us": 1873.949
+          },
+          "static_endpoint_delta_bytes": -3244,
+          "resource_endpoint_delta": 0,
+          "checksum": 189264,
+          "rss_endpoint_delta_bytes": null
+        },
+        "elite": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1889,
+            "median_us": 2144,
+            "p95_us": 3232,
+            "max_us": 9857,
+            "mean_us": 2322.38
+          },
+          "static_endpoint_delta_bytes": -1528,
+          "resource_endpoint_delta": 0,
+          "checksum": 40268,
+          "rss_endpoint_delta_bytes": null
+        },
+        "stronger": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1828,
+            "median_us": 2086,
+            "p95_us": 2526,
+            "max_us": 4827,
+            "mean_us": 2138.783
+          },
+          "static_endpoint_delta_bytes": -984,
+          "resource_endpoint_delta": 0,
+          "checksum": 14608,
+          "rss_endpoint_delta_bytes": null
+        }
+      }
+    },
+    {
+      "process": 5,
+      "catalog_first_load_us": 115262,
+      "cached_definitions_before_catalog": 0,
+      "warm_catalog_us": {
+        "sample_count": 25,
+        "min_us": 736,
+        "median_us": 780,
+        "p95_us": 878,
+        "max_us": 883,
+        "mean_us": 792.88
+      },
+      "catalog_memory_before": {
+        "static_bytes": 22014120,
+        "static_peak_bytes": 23640448,
+        "resource_count": 6,
+        "object_count": 1460,
+        "rss_bytes": null
+      },
+      "catalog_memory_after": {
+        "static_bytes": 25490868,
+        "static_peak_bytes": 25497312,
+        "resource_count": 454,
+        "object_count": 1936,
+        "rss_bytes": null
+      },
+      "end_memory": {
+        "static_bytes": 25789856,
+        "static_peak_bytes": 25943420,
+        "resource_count": 459,
+        "object_count": 1941,
+        "rss_bytes": null
+      },
+      "lookups": {
+        "known_lookups": {
+          "batches": 30,
+          "calls_per_batch": 1000,
+          "total_calls": 30000,
+          "hits": 30000,
+          "amortized_median_us_per_call": 2.714,
+          "amortized_p95_us_per_call": 3.333
+        },
+        "unknown_lookups": {
+          "batches": 30,
+          "calls_per_batch": 1000,
+          "total_calls": 30000,
+          "hits": 0,
+          "amortized_median_us_per_call": 0.731,
+          "amortized_p95_us_per_call": 2.379
+        }
+      },
+      "monster_rolls": {
+        "basic": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1786,
+            "median_us": 2019,
+            "p95_us": 2554,
+            "max_us": 4511,
+            "mean_us": 2091.403
+          },
+          "static_endpoint_delta_bytes": -440,
+          "resource_endpoint_delta": 0,
+          "checksum": 6991,
+          "rss_endpoint_delta_bytes": null
+        },
+        "boss": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1550,
+            "median_us": 1810,
+            "p95_us": 2226,
+            "max_us": 4666,
+            "mean_us": 1871.364
+          },
+          "static_endpoint_delta_bytes": -3244,
+          "resource_endpoint_delta": 0,
+          "checksum": 189264,
+          "rss_endpoint_delta_bytes": null
+        },
+        "elite": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1896,
+            "median_us": 2150,
+            "p95_us": 2593,
+            "max_us": 9645,
+            "mean_us": 2219.396
+          },
+          "static_endpoint_delta_bytes": -1528,
+          "resource_endpoint_delta": 0,
+          "checksum": 40268,
+          "rss_endpoint_delta_bytes": null
+        },
+        "stronger": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1800,
+            "median_us": 2095,
+            "p95_us": 2529,
+            "max_us": 4290,
+            "mean_us": 2153.59
+          },
+          "static_endpoint_delta_bytes": -984,
+          "resource_endpoint_delta": 0,
+          "checksum": 14608,
+          "rss_endpoint_delta_bytes": null
+        }
+      }
+    },
+    {
+      "process": 6,
+      "catalog_first_load_us": 118714,
+      "cached_definitions_before_catalog": 0,
+      "warm_catalog_us": {
+        "sample_count": 25,
+        "min_us": 737,
+        "median_us": 852,
+        "p95_us": 1050,
+        "max_us": 1495,
+        "mean_us": 870.04
+      },
+      "catalog_memory_before": {
+        "static_bytes": 22014120,
+        "static_peak_bytes": 23640448,
+        "resource_count": 6,
+        "object_count": 1460,
+        "rss_bytes": null
+      },
+      "catalog_memory_after": {
+        "static_bytes": 25490868,
+        "static_peak_bytes": 25497312,
+        "resource_count": 454,
+        "object_count": 1936,
+        "rss_bytes": null
+      },
+      "end_memory": {
+        "static_bytes": 25789856,
+        "static_peak_bytes": 25943420,
+        "resource_count": 459,
+        "object_count": 1941,
+        "rss_bytes": null
+      },
+      "lookups": {
+        "known_lookups": {
+          "batches": 30,
+          "calls_per_batch": 1000,
+          "total_calls": 30000,
+          "hits": 30000,
+          "amortized_median_us_per_call": 2.614,
+          "amortized_p95_us_per_call": 3.63
+        },
+        "unknown_lookups": {
+          "batches": 30,
+          "calls_per_batch": 1000,
+          "total_calls": 30000,
+          "hits": 0,
+          "amortized_median_us_per_call": 0.645,
+          "amortized_p95_us_per_call": 0.83
+        }
+      },
+      "monster_rolls": {
+        "basic": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1774,
+            "median_us": 2004,
+            "p95_us": 2561,
+            "max_us": 5825,
+            "mean_us": 2074.835
+          },
+          "static_endpoint_delta_bytes": -440,
+          "resource_endpoint_delta": 0,
+          "checksum": 6991,
+          "rss_endpoint_delta_bytes": null
+        },
+        "boss": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1600,
+            "median_us": 1822,
+            "p95_us": 2281,
+            "max_us": 4625,
+            "mean_us": 1887.452
+          },
+          "static_endpoint_delta_bytes": -3244,
+          "resource_endpoint_delta": 0,
+          "checksum": 189264,
+          "rss_endpoint_delta_bytes": null
+        },
+        "elite": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1859,
+            "median_us": 2162,
+            "p95_us": 2862,
+            "max_us": 9812,
+            "mean_us": 2285.799
+          },
+          "static_endpoint_delta_bytes": -1528,
+          "resource_endpoint_delta": 0,
+          "checksum": 40268,
+          "rss_endpoint_delta_bytes": null
+        },
+        "stronger": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1843,
+            "median_us": 2099,
+            "p95_us": 2621,
+            "max_us": 6575,
+            "mean_us": 2182.393
+          },
+          "static_endpoint_delta_bytes": -984,
+          "resource_endpoint_delta": 0,
+          "checksum": 14608,
+          "rss_endpoint_delta_bytes": null
+        }
+      }
+    },
+    {
+      "process": 7,
+      "catalog_first_load_us": 121188,
+      "cached_definitions_before_catalog": 0,
+      "warm_catalog_us": {
+        "sample_count": 25,
+        "min_us": 728,
+        "median_us": 774,
+        "p95_us": 867,
+        "max_us": 894,
+        "mean_us": 786.24
+      },
+      "catalog_memory_before": {
+        "static_bytes": 22014120,
+        "static_peak_bytes": 23640448,
+        "resource_count": 6,
+        "object_count": 1460,
+        "rss_bytes": null
+      },
+      "catalog_memory_after": {
+        "static_bytes": 25490868,
+        "static_peak_bytes": 25497312,
+        "resource_count": 454,
+        "object_count": 1936,
+        "rss_bytes": null
+      },
+      "end_memory": {
+        "static_bytes": 25789856,
+        "static_peak_bytes": 25943420,
+        "resource_count": 459,
+        "object_count": 1941,
+        "rss_bytes": null
+      },
+      "lookups": {
+        "known_lookups": {
+          "batches": 30,
+          "calls_per_batch": 1000,
+          "total_calls": 30000,
+          "hits": 30000,
+          "amortized_median_us_per_call": 2.503,
+          "amortized_p95_us_per_call": 2.749
+        },
+        "unknown_lookups": {
+          "batches": 30,
+          "calls_per_batch": 1000,
+          "total_calls": 30000,
+          "hits": 0,
+          "amortized_median_us_per_call": 0.624,
+          "amortized_p95_us_per_call": 0.721
+        }
+      },
+      "monster_rolls": {
+        "basic": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1715,
+            "median_us": 1915,
+            "p95_us": 2314,
+            "max_us": 3396,
+            "mean_us": 1968.382
+          },
+          "static_endpoint_delta_bytes": -440,
+          "resource_endpoint_delta": 0,
+          "checksum": 6991,
+          "rss_endpoint_delta_bytes": null
+        },
+        "boss": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1491,
+            "median_us": 1730,
+            "p95_us": 1992,
+            "max_us": 4405,
+            "mean_us": 1762.753
+          },
+          "static_endpoint_delta_bytes": -3244,
+          "resource_endpoint_delta": 0,
+          "checksum": 189264,
+          "rss_endpoint_delta_bytes": null
+        },
+        "elite": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1869,
+            "median_us": 2019,
+            "p95_us": 2344,
+            "max_us": 5257,
+            "mean_us": 2064.649
+          },
+          "static_endpoint_delta_bytes": -1528,
+          "resource_endpoint_delta": 0,
+          "checksum": 40268,
+          "rss_endpoint_delta_bytes": null
+        },
+        "stronger": {
+          "warmup_calls": 100,
+          "latency_us": {
+            "sample_count": 1000,
+            "min_us": 1828,
+            "median_us": 2024,
+            "p95_us": 2322,
+            "max_us": 6121,
+            "mean_us": 2067.225
+          },
+          "static_endpoint_delta_bytes": -984,
+          "resource_endpoint_delta": 0,
+          "checksum": 14608,
+          "rss_endpoint_delta_bytes": null
+        }
+      }
+    }
+  ]
+}

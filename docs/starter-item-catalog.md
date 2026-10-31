@@ -1,6 +1,6 @@
 # Functional starter catalog checkpoint
 
-Milestone 5.6 checkpoint 5 retains every original item ID and adds eleven definitions: **40 noncurrency starter items plus the stable `gold_coin` currency record**, displayed as Depthmarks. The larger 350-definition catalog is a later checkpoint and is not claimed here.
+Milestone 5.6 checkpoint 5 retains every original item ID and adds eleven definitions: **40 noncurrency starter items plus the stable `gold_coin` currency record**, displayed as Depthmarks. This page records that independently tested starter subset. Subsequent [catalog batches](catalog-batches.md) reach 350 noncurrency definitions while preserving these items.
 
 ## Shared data and ownership
 
@@ -35,7 +35,7 @@ Two further recipes create the high-rarity sword/staff from these earned compone
 
 ## Art status
 
-Icons are original vector family icons, including four new gloves, leg armor, necklace and ring symbols. Display models remain inexpensive native primitive family placeholders. `icon_art_status` and `model_art_status` expose that distinction; no unique sculpted item, rigged armor or high-quality character asset is claimed. The new models have no collision or real-time lights and fit the existing display bounds. Display animation and aura fields are authored configuration; the later presentation checkpoint applies them.
+Icons are original vector family icons, including four new gloves, leg armor, necklace and ring symbols. Display models remain inexpensive native primitive family placeholders. `icon_art_status` and `model_art_status` expose that distinction; no unique sculpted item, rigged armor or high-quality character asset is claimed. The new models have no collision or real-time lights and fit the existing display bounds. The integrated [presentation system](item-presentation.md) applies their bounded display animation and aura configuration.
 
 ## Validation and Android review
 

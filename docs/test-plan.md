@@ -1,8 +1,14 @@
-# Milestone 5.5 review checklist
+# Milestone 5.6 review checklist and archived regressions
 
-These tests run the persistent game shell, physics, input hub, actor scenes, combat data, modular dungeon, treasure ledger and portal signals. They do not establish device performance or replace real Android multitouch and visual review. Current visual-pass results are in [Milestone 5.5 validation](milestone-5.5-validation.md), with structural budgets in [the performance report](milestone-5.5-performance.md). The RPG baseline remains in [Milestone 5 validation](milestone-5-validation.md). Earlier results remain archived in `milestone-1-validation.md`, `validation-report.md`, `milestone-3-validation.md` and `milestone-4-validation.md`.
+Use the [Milestone 5.6 Android checklist](milestone-5.6-android.md) for current manual acceptance and the [README validation commands](../README.md#validation) for the complete current automated suite, including new checkpoint tests and separate-process persistence runs. [Milestone 5.6 validation](milestone-5.6-validation.md) records completed gates; the [implementation plan](milestone-5.6-plan.md) and [catalog batches](catalog-batches.md) distinguish delivered work from pending targets. No Android device, rendered GPU or sustained frame-rate result is implied by a headless pass.
 
-## Automated checks
+The sections below preserve the Milestone 1–5.5 test descriptions and command inventory as historical regression evidence. References to exactly thirty definitions, six equipment slots, eight recipes, +5-only upgrades, PACK or a boss reliquary describe those earlier builds. They are not current Milestone 5.6 acceptance criteria: current saves are version four, Equipment exposes eleven slots, Mythic/Ancient Relic upgrades can reach +10, and the Rootwarden reward uses a searchable grand cache. Use the current catalog/report for definition and recipe counts; do not weaken present tests to match archived counts.
+
+These tests exercise the persistent game shell, physics, input hub, actor scenes, combat data, modular dungeon, treasure ledger and portal signals. They do not establish device performance or replace physical Android multitouch and visual review. Archived visual-pass results are in [Milestone 5.5 validation](milestone-5.5-validation.md), with structural budgets in [its performance report](milestone-5.5-performance.md). The RPG baseline remains in [Milestone 5 validation](milestone-5-validation.md). Earlier results remain archived in `milestone-1-validation.md`, `validation-report.md`, `milestone-3-validation.md` and `milestone-4-validation.md`.
+
+## Archived automated command inventory — through Milestone 5.5
+
+The original commands are retained below. This is not the complete Milestone 5.6 gate; use the current README command list linked above when validating the latest source. Test implementations may have evolved since these historical scope descriptions were written.
 
 From the project directory, with Godot 4.6.3 installed:
 
@@ -49,7 +55,7 @@ In a restricted runner where the default user-data directory is not writable, po
 
 The persistence and expedition fixtures intentionally use isolated `/tmp/` paths on the Linux runner. Run the writer and reader as separate engine invocations in the shown order; the reader checks data created by the previous process. These tests never delete or alter the normal `user://vaultbound/profile.json` save.
 
-### Visual-pass suites
+### Archived Milestone 5.5 visual-pass scope
 
 - Load shared materials, original procedural textures, three environment presets and bounded ambient/water resources. Verify immutable material sharing and independent environments.
 - Exercise all fourteen cosmetic room motifs, deterministic separate art seeds, bounded batches, quality density and unchanged connectors/collision. Check real generated layouts with the existing 100-seed structural suite.
@@ -61,7 +67,7 @@ The persistence and expedition fixtures intentionally use isolated `/tmp/` paths
 
 These are logical and structural checks. The headless backend does not validate GPU shader compilation, rendered fog/alpha sorting, lighting exposure or sustained mobile performance.
 
-### RPG suites
+### Archived Milestone 5 RPG scope
 
 - Load exactly thirty item definitions and all seven rarities with usable icons, models, stat data, stack limits, acquisition paths and the original twelve stable IDs.
 - Validate forty-slot capacity, bounded stacks, unique equipment identities, deterministic rolled modifiers, valid quantities and protection flags.
@@ -77,7 +83,7 @@ These are logical and structural checks. The headless backend does not validate 
 - Route scrolling, canceled gestures, filters/sorts, item selection, character/equipment tabs, buying/crafting confirmations and Hall selection through the real touch overlay. Check three landscape canvases, hidden-preview shutdown and both actual journal lecterns; reject display changes from journal-only service access.
 - Run separate engine writer/reader processes to verify enhanced/locked/favorite equipment, condition, modifiers, talents, active companions, journal/trophy state and display assignments remain loaded in the actual player/Hall scenes.
 
-### Party suites
+### Archived Milestone 4 party scope
 
 - Recruit and dismiss the two starting companions through the saved roster, reject duplicates/unknown identities, preserve the human leader and cap active AI members at two.
 - Follow in formation, honor direct commands and share the existing sword/staff simulation without depending on camera mode.
@@ -90,7 +96,7 @@ These are logical and structural checks. The headless backend does not validate 
 
 The test report records which of these checks actually passed. Controlled fixture positioning and damage isolate lifecycle/combat contracts; they do not establish the quality of a human-led full dungeon playthrough.
 
-### Dungeon and expedition suites
+### Archived Milestone 3 dungeon and expedition scope
 
 - Generate and validate 100 seeds, including deterministic reproduction, every room count from 8–12, connected nonoverlapping grid cells, a guaranteed entrance/boss/extraction route, all 14 module variants and optional secret branches.
 - Reject overlapping/disconnected layouts, missing or extra doors, invalid role references and out-of-range route IDs.
@@ -107,7 +113,7 @@ The test report records which of these checks actually passed. Controlled fixtur
 
 Runtime progression fixtures reposition the player to exercise room activation and inject controlled damage to finish the boss. They establish system behavior, not a human-completed balanced expedition or a frame-rate result.
 
-### Regression suite
+### Archived core regression scope
 
 - Every game scene, script and data resource loads.
 - Startup Sanctuary, valid floor collision and enabled controls.
@@ -120,7 +126,7 @@ Runtime progression fixtures reposition the player to exercise room activation a
 - Invalid destinations keep the current playable world.
 - Sanctuary/dungeon portal round trip; repeated interaction cannot duplicate the level; health is preserved and stale scene targets are cleared.
 
-### Combat suite
+### Archived Milestone 2 combat scope
 
 - Weapon/attack/enemy data contracts and all three sword combo stages.
 - Windup, active damage, recovery, stamina costs and unique attack IDs.
@@ -135,7 +141,7 @@ Runtime progression fixtures reposition the player to exercise room activation a
 - Skeleton, archer and golem detection, wall visibility, telegraph, attack, recovery, damage, camera independence, leash return, strong stagger and death.
 - Dungeon/arena portal round trip, exactly three enemy archetypes, effect/projectile/enemy cleanup, rest-station encounter reset, and lethal player damage returning safely to Sanctuary.
 
-### UI suite
+### Archived core UI scope
 
 - Control geometry at three landscape canvas sizes.
 - Held heavy/defense input, final-owner release with multiple fingers, cancellation and reset.
@@ -144,7 +150,9 @@ Runtime progression fixtures reposition the player to exercise room activation a
 
 The touch suites inject Godot input events into the actual router. They verify logical ownership and cancellation, not touchscreen hardware delivery, platform gesture handling or physical touch target comfort.
 
-## Required manual Android review
+## Archived manual Android review — core, expedition and party
+
+Retain these earlier scenarios as regression coverage, using the current controls and acceptance criteria in the Milestone 5.6 guide above. Their original terminology is preserved; listing a scenario does not claim it was performed on hardware.
 
 Run in the Godot Android editor in landscape. Record device model, Android version, Godot version, renderer and observed frame rate with the review.
 
@@ -188,7 +196,7 @@ Then review the new party expedition on the physical Android device:
 11. Switch cameras during companion attacks, projectile flight, blocking, healing, dodge and revive. Check that health, target, cooldowns and attack counts do not reset or duplicate. Verify party cards, boss bar, minimap, prompts and commands remain legible in both views.
 12. Record FPS/draw calls, frame pacing, heat and battery with two companions and the maximum active enemy encounter, over repeated expeditions and app suspend/resume. Compare against the solo baseline. Cloud tests do not establish an Android frame-rate target.
 
-## Milestone 5 physical Android review
+## Archived Milestone 5 physical Android review
 
 Use the normal Android import/run instructions in README. Back up an existing development profile before manually testing migration; do not delete an old save merely to make a test pass. Record device model, Android/Godot versions, renderer and the dungeon seed used.
 
@@ -210,7 +218,7 @@ No physical Android result is claimed by the headless suites. The RPG save is lo
 
 Android device testing, APK export/signing, GPU visual review and device performance measurement remain pending. Multiplayer networking is outside this milestone; local attack IDs and a shared damage service do not implement multiplayer.
 
-## Milestone 5.5 physical Android visual review
+## Archived Milestone 5.5 physical Android visual review
 
 Use Godot 4.6.3 with Compatibility. Preserve a backup of the existing profile and record the device model, Android version, screen resolution, graphics tier, FPS target, seed and party composition. The baseline and report contain structural counts, not device FPS measurements.
 

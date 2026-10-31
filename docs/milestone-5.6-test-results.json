@@ -1,0 +1,1609 @@
+{
+  "milestone": "5.6",
+  "source_commit": "4ae9c46cc2984b4a45b1a7606cdfe857bb2c809e",
+  "source_archive": "/tmp/vaultbound-56-checkpoint8-source",
+  "engine": "Godot 4.6.3.stable.official.7d41c59c4",
+  "release_metadata": {
+    "project_version": "0.5.6",
+    "android_version_name": "0.5.6",
+    "android_version_code": 7,
+    "export_presets_sha256": "f39f5e7dc18159a8e6ef407074e3d028fd4635b7d712a21e0a6d4706ba7dccd3",
+    "apk_export_tested": false
+  },
+  "completed_at_utc": "2026-10-31T21:20:30.675853+00:00",
+  "source_signature": {
+    "sha256": "05dc770e1535140c23172bdd4824780f1d3671743eea233a2045edb3b04435af",
+    "semantic_file_count": 673,
+    "opening_equals_closing": true,
+    "matches_frozen_main_reference": true,
+    "scope": [
+      "project.godot",
+      "scripts/**",
+      "resources/**",
+      "scenes/**",
+      "assets/**",
+      "tests/**"
+    ],
+    "excluded_generated_suffixes": [
+      ".uid",
+      ".import"
+    ]
+  },
+  "suite_count": 58,
+  "invocation_count": 71,
+  "passed_assertions": 10519,
+  "failed_invocations": 0,
+  "process_order": "Sequential; every listed invocation is a separate Godot process. Readers follow their writers.",
+  "storage_isolation": "Every process uses disposable XDG_DATA_HOME, XDG_CONFIG_HOME and XDG_CACHE_HOME under the evidence directory. Test-specific persisted profiles are explicit /tmp fixtures. Normal play storage was not used.",
+  "layout_coverage": {
+    "suite": "dungeon_layout_test",
+    "seed_min": 0,
+    "seed_max": 99,
+    "seed_count": 100,
+    "structural_pass_records": 100,
+    "reproducibility_pass_records": 100
+  },
+  "setup": [
+    {
+      "suite": "import",
+      "exit_code": 0,
+      "passed": 0,
+      "errors": [],
+      "environment_notices": [
+        "ERROR: Condition \"_sock == -1\" is true. Returning: FAILED",
+        "ERROR: Condition \"err != OK\" is true. Returning: ERR_CANT_CREATE",
+        "ERROR: Condition \"_sock == -1\" is true. Returning: FAILED",
+        "ERROR: Condition \"err != OK\" is true. Returning: ERR_CANT_CREATE",
+        "Unable to open Android 'build-tools' directory."
+      ],
+      "seconds": 5.23,
+      "log": "/tmp/vaultbound-56-final-regression/import.log",
+      "ok": true
+    },
+    {
+      "suite": "startup",
+      "exit_code": 0,
+      "passed": 0,
+      "errors": [],
+      "environment_notices": [],
+      "seconds": 4.824,
+      "log": "/tmp/vaultbound-56-final-regression/startup.log",
+      "ok": true
+    }
+  ],
+  "fixture_setup_commands": [
+    [
+      "mkdir",
+      "-p",
+      "/tmp/vaultbound-final-loadout-restart",
+      "/tmp/vaultbound-final-restart",
+      "/tmp/vaultbound-final-roster-restart",
+      "/tmp/vaultbound-final-rpg-restart"
+    ]
+  ],
+  "setup_commands": [
+    [
+      "env",
+      "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/import/data",
+      "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/import/config",
+      "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/import/cache",
+      "godot4",
+      "--headless",
+      "--path",
+      ".",
+      "--editor",
+      "--import",
+      "--quit"
+    ],
+    [
+      "env",
+      "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/startup/data",
+      "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/startup/config",
+      "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/startup/cache",
+      "godot4",
+      "--headless",
+      "--path",
+      ".",
+      "--quit-after",
+      "120"
+    ]
+  ],
+  "invocations": [
+    {
+      "suite": "abyss_visual_test",
+      "arguments": [],
+      "passed_assertions": 100,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/abyss_visual_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/abyss_visual_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/abyss_visual_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/abyss_visual_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/abyss_visual_test.log"
+    },
+    {
+      "suite": "accessibility_preferences_test",
+      "arguments": [],
+      "passed_assertions": 41,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/accessibility_preferences_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/accessibility_preferences_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/accessibility_preferences_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/accessibility_preferences_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/accessibility_preferences_test.log"
+    },
+    {
+      "suite": "accessibility_preferences_test",
+      "arguments": [
+        "--read"
+      ],
+      "passed_assertions": 3,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/accessibility_preferences_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/accessibility_preferences_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/accessibility_preferences_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/accessibility_preferences_test.gd",
+        "--",
+        "--read"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/accessibility_preferences_test_read.log"
+    },
+    {
+      "suite": "catalog_category_integration_test",
+      "arguments": [],
+      "passed_assertions": 87,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/catalog_category_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/catalog_category_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/catalog_category_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/catalog_category_integration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/catalog_category_integration_test.log"
+    },
+    {
+      "suite": "catalog_category_integration_test",
+      "arguments": [
+        "--read"
+      ],
+      "passed_assertions": 13,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/catalog_category_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/catalog_category_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/catalog_category_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/catalog_category_integration_test.gd",
+        "--",
+        "--read"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/catalog_category_integration_test_read.log"
+    },
+    {
+      "suite": "catalog_equipment_batch_test",
+      "arguments": [],
+      "passed_assertions": 1063,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/catalog_equipment_batch_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/catalog_equipment_batch_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/catalog_equipment_batch_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/catalog_equipment_batch_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/catalog_equipment_batch_test.log"
+    },
+    {
+      "suite": "catalog_runtime_integration_test",
+      "arguments": [],
+      "passed_assertions": 67,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/catalog_runtime_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/catalog_runtime_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/catalog_runtime_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/catalog_runtime_integration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/catalog_runtime_integration_test.log"
+    },
+    {
+      "suite": "catalog_stackable_batch_test",
+      "arguments": [],
+      "passed_assertions": 1174,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/catalog_stackable_batch_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/catalog_stackable_batch_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/catalog_stackable_batch_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/catalog_stackable_batch_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/catalog_stackable_batch_test.log"
+    },
+    {
+      "suite": "catalog_weapon_batch_test",
+      "arguments": [],
+      "passed_assertions": 308,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/catalog_weapon_batch_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/catalog_weapon_batch_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/catalog_weapon_batch_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/catalog_weapon_batch_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/catalog_weapon_batch_test.log"
+    },
+    {
+      "suite": "character_presentation_test",
+      "arguments": [],
+      "passed_assertions": 21,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/character_presentation_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/character_presentation_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/character_presentation_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/character_presentation_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/character_presentation_test.log"
+    },
+    {
+      "suite": "character_progression_test",
+      "arguments": [],
+      "passed_assertions": 69,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/character_progression_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/character_progression_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/character_progression_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/character_progression_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/character_progression_test.log"
+    },
+    {
+      "suite": "collection_world_test",
+      "arguments": [],
+      "passed_assertions": 36,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/collection_world_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/collection_world_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/collection_world_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/collection_world_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/collection_world_test.log"
+    },
+    {
+      "suite": "combat_presentation_test",
+      "arguments": [],
+      "passed_assertions": 33,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/combat_presentation_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/combat_presentation_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/combat_presentation_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/combat_presentation_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/combat_presentation_test.log"
+    },
+    {
+      "suite": "combat_test",
+      "arguments": [],
+      "passed_assertions": 177,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/combat_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/combat_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/combat_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/combat_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/combat_test.log"
+    },
+    {
+      "suite": "companion_behavior_test",
+      "arguments": [],
+      "passed_assertions": 38,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/companion_behavior_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/companion_behavior_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/companion_behavior_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/companion_behavior_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/companion_behavior_test.log"
+    },
+    {
+      "suite": "companion_navigation_test",
+      "arguments": [],
+      "passed_assertions": 26,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/companion_navigation_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/companion_navigation_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/companion_navigation_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/companion_navigation_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/companion_navigation_test.log"
+    },
+    {
+      "suite": "dungeon_layout_test",
+      "arguments": [],
+      "passed_assertions": 480,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/dungeon_layout_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/dungeon_layout_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/dungeon_layout_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/dungeon_layout_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/dungeon_layout_test.log"
+    },
+    {
+      "suite": "encounter_loot_test",
+      "arguments": [],
+      "passed_assertions": 36,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/encounter_loot_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/encounter_loot_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/encounter_loot_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/encounter_loot_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/encounter_loot_test.log"
+    },
+    {
+      "suite": "enhancement_integration_test",
+      "arguments": [],
+      "passed_assertions": 170,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/enhancement_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/enhancement_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/enhancement_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/enhancement_integration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/enhancement_integration_test.log"
+    },
+    {
+      "suite": "enhancement_integration_test",
+      "arguments": [
+        "--read"
+      ],
+      "passed_assertions": 20,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/enhancement_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/enhancement_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/enhancement_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/enhancement_integration_test.gd",
+        "--",
+        "--read"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/enhancement_integration_test_read.log"
+    },
+    {
+      "suite": "enhancement_policy_test",
+      "arguments": [],
+      "passed_assertions": 54,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/enhancement_policy_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/enhancement_policy_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/enhancement_policy_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/enhancement_policy_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/enhancement_policy_test.log"
+    },
+    {
+      "suite": "enhancement_ui_test",
+      "arguments": [],
+      "passed_assertions": 39,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/enhancement_ui_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/enhancement_ui_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/enhancement_ui_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/enhancement_ui_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/enhancement_ui_test.log"
+    },
+    {
+      "suite": "equipment_effects_integration_test",
+      "arguments": [],
+      "passed_assertions": 40,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/equipment_effects_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/equipment_effects_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/equipment_effects_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/equipment_effects_integration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/equipment_effects_integration_test.log"
+    },
+    {
+      "suite": "equipment_effects_test",
+      "arguments": [],
+      "passed_assertions": 49,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/equipment_effects_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/equipment_effects_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/equipment_effects_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/equipment_effects_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/equipment_effects_test.log"
+    },
+    {
+      "suite": "expedition_test",
+      "arguments": [],
+      "passed_assertions": 115,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/expedition_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/expedition_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/expedition_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/expedition_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/expedition_test.log"
+    },
+    {
+      "suite": "expedition_ui_test",
+      "arguments": [],
+      "passed_assertions": 19,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/expedition_ui_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/expedition_ui_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/expedition_ui_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/expedition_ui_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/expedition_ui_test.log"
+    },
+    {
+      "suite": "hall_inspection_ui_test",
+      "arguments": [],
+      "passed_assertions": 73,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/hall_inspection_ui_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/hall_inspection_ui_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/hall_inspection_ui_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/hall_inspection_ui_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/hall_inspection_ui_test.log"
+    },
+    {
+      "suite": "inventory_economy_test",
+      "arguments": [],
+      "passed_assertions": 170,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/inventory_economy_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/inventory_economy_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/inventory_economy_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/inventory_economy_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/inventory_economy_test.log"
+    },
+    {
+      "suite": "item_catalog_test",
+      "arguments": [],
+      "passed_assertions": 2704,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/item_catalog_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/item_catalog_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/item_catalog_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/item_catalog_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/item_catalog_test.log"
+    },
+    {
+      "suite": "item_presentation_test",
+      "arguments": [],
+      "passed_assertions": 54,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/item_presentation_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/item_presentation_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/item_presentation_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/item_presentation_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/item_presentation_test.log"
+    },
+    {
+      "suite": "loadout_integration_test",
+      "arguments": [],
+      "passed_assertions": 78,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/loadout_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/loadout_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/loadout_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/loadout_integration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/loadout_integration_test.log"
+    },
+    {
+      "suite": "loadout_integration_test",
+      "arguments": [
+        "--read"
+      ],
+      "passed_assertions": 10,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/loadout_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/loadout_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/loadout_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/loadout_integration_test.gd",
+        "--",
+        "--read"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/loadout_integration_test_read.log"
+    },
+    {
+      "suite": "loadout_migration_test",
+      "arguments": [],
+      "passed_assertions": 50,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/loadout_migration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/loadout_migration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/loadout_migration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/loadout_migration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/loadout_migration_test.log"
+    },
+    {
+      "suite": "loadout_migration_test",
+      "arguments": [
+        "--write",
+        "/tmp/vaultbound-final-loadout-restart/profile.json"
+      ],
+      "passed_assertions": 2,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/loadout_migration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/loadout_migration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/loadout_migration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/loadout_migration_test.gd",
+        "--",
+        "--write",
+        "/tmp/vaultbound-final-loadout-restart/profile.json"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/loadout_migration_test_write.log"
+    },
+    {
+      "suite": "loadout_migration_test",
+      "arguments": [
+        "--read",
+        "/tmp/vaultbound-final-loadout-restart/profile.json"
+      ],
+      "passed_assertions": 3,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/loadout_migration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/loadout_migration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/loadout_migration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/loadout_migration_test.gd",
+        "--",
+        "--read",
+        "/tmp/vaultbound-final-loadout-restart/profile.json"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/loadout_migration_test_read.log"
+    },
+    {
+      "suite": "loadout_ui_test",
+      "arguments": [],
+      "passed_assertions": 87,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/loadout_ui_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/loadout_ui_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/loadout_ui_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/loadout_ui_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/loadout_ui_test.log"
+    },
+    {
+      "suite": "loot_cache_world_test",
+      "arguments": [],
+      "passed_assertions": 30,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/loot_cache_world_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/loot_cache_world_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/loot_cache_world_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/loot_cache_world_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/loot_cache_world_test.log"
+    },
+    {
+      "suite": "loot_ledger_test",
+      "arguments": [],
+      "passed_assertions": 44,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/loot_ledger_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/loot_ledger_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/loot_ledger_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/loot_ledger_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/loot_ledger_test.log"
+    },
+    {
+      "suite": "loot_persistence_test",
+      "arguments": [],
+      "passed_assertions": 47,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/loot_persistence_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/loot_persistence_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/loot_persistence_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/loot_persistence_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/loot_persistence_test.log"
+    },
+    {
+      "suite": "mobile_ui_integration_test",
+      "arguments": [],
+      "passed_assertions": 152,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/mobile_ui_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/mobile_ui_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/mobile_ui_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/mobile_ui_integration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/mobile_ui_integration_test.log"
+    },
+    {
+      "suite": "party_character_integration_test",
+      "arguments": [],
+      "passed_assertions": 35,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/party_character_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/party_character_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/party_character_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/party_character_integration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/party_character_integration_test.log"
+    },
+    {
+      "suite": "party_persistence_test",
+      "arguments": [],
+      "passed_assertions": 70,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/party_persistence_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/party_persistence_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/party_persistence_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/party_persistence_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/party_persistence_test.log"
+    },
+    {
+      "suite": "party_persistence_test",
+      "arguments": [
+        "--write",
+        "/tmp/vaultbound-final-roster-restart/profile.json"
+      ],
+      "passed_assertions": 5,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/party_persistence_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/party_persistence_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/party_persistence_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/party_persistence_test.gd",
+        "--",
+        "--write",
+        "/tmp/vaultbound-final-roster-restart/profile.json"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/party_persistence_test_write.log"
+    },
+    {
+      "suite": "party_persistence_test",
+      "arguments": [
+        "--read",
+        "/tmp/vaultbound-final-roster-restart/profile.json"
+      ],
+      "passed_assertions": 8,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/party_persistence_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/party_persistence_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/party_persistence_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/party_persistence_test.gd",
+        "--",
+        "--read",
+        "/tmp/vaultbound-final-roster-restart/profile.json"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/party_persistence_test_read.log"
+    },
+    {
+      "suite": "party_targeting_test",
+      "arguments": [],
+      "passed_assertions": 38,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/party_targeting_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/party_targeting_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/party_targeting_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/party_targeting_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/party_targeting_test.log"
+    },
+    {
+      "suite": "party_test",
+      "arguments": [],
+      "passed_assertions": 88,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/party_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/party_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/party_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/party_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/party_test.log"
+    },
+    {
+      "suite": "party_ui_test",
+      "arguments": [],
+      "passed_assertions": 137,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/party_ui_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/party_ui_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/party_ui_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/party_ui_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/party_ui_test.log"
+    },
+    {
+      "suite": "persistence_restart_test",
+      "arguments": [
+        "--write",
+        "/tmp/vaultbound-final-restart/profile.json"
+      ],
+      "passed_assertions": 8,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/persistence_restart_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/persistence_restart_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/persistence_restart_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/persistence_restart_test.gd",
+        "--",
+        "--write",
+        "/tmp/vaultbound-final-restart/profile.json"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/persistence_restart_test_write.log"
+    },
+    {
+      "suite": "persistence_restart_test",
+      "arguments": [
+        "--read",
+        "/tmp/vaultbound-final-restart/profile.json"
+      ],
+      "passed_assertions": 13,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/persistence_restart_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/persistence_restart_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/persistence_restart_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/persistence_restart_test.gd",
+        "--",
+        "--read",
+        "/tmp/vaultbound-final-restart/profile.json"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/persistence_restart_test_read.log"
+    },
+    {
+      "suite": "profile_roundtrip_test",
+      "arguments": [],
+      "passed_assertions": 55,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/profile_roundtrip_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/profile_roundtrip_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/profile_roundtrip_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/profile_roundtrip_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/profile_roundtrip_test.log"
+    },
+    {
+      "suite": "profile_roundtrip_test",
+      "arguments": [
+        "--read"
+      ],
+      "passed_assertions": 3,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/profile_roundtrip_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/profile_roundtrip_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/profile_roundtrip_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/profile_roundtrip_test.gd",
+        "--",
+        "--read"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/profile_roundtrip_test_read.log"
+    },
+    {
+      "suite": "profile_v4_test",
+      "arguments": [],
+      "passed_assertions": 84,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/profile_v4_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/profile_v4_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/profile_v4_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/profile_v4_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/profile_v4_test.log"
+    },
+    {
+      "suite": "rare_discovery_test",
+      "arguments": [],
+      "passed_assertions": 64,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/rare_discovery_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/rare_discovery_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/rare_discovery_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/rare_discovery_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/rare_discovery_test.log"
+    },
+    {
+      "suite": "rarity_ui_test",
+      "arguments": [],
+      "passed_assertions": 32,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/rarity_ui_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/rarity_ui_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/rarity_ui_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/rarity_ui_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/rarity_ui_test.log"
+    },
+    {
+      "suite": "rootwarden_test",
+      "arguments": [],
+      "passed_assertions": 53,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/rootwarden_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/rootwarden_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/rootwarden_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/rootwarden_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/rootwarden_test.log"
+    },
+    {
+      "suite": "rpg_integration_test",
+      "arguments": [],
+      "passed_assertions": 117,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/rpg_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/rpg_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/rpg_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/rpg_integration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/rpg_integration_test.log"
+    },
+    {
+      "suite": "rpg_ui_test",
+      "arguments": [],
+      "passed_assertions": 66,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/rpg_ui_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/rpg_ui_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/rpg_ui_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/rpg_ui_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/rpg_ui_test.log"
+    },
+    {
+      "suite": "save_migration_test",
+      "arguments": [],
+      "passed_assertions": 42,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/save_migration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/save_migration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/save_migration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/save_migration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/save_migration_test.log"
+    },
+    {
+      "suite": "save_migration_test",
+      "arguments": [
+        "--write",
+        "/tmp/vaultbound-final-rpg-restart/profile.json"
+      ],
+      "passed_assertions": 3,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/save_migration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/save_migration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/save_migration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/save_migration_test.gd",
+        "--",
+        "--write",
+        "/tmp/vaultbound-final-rpg-restart/profile.json"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/save_migration_test_write.log"
+    },
+    {
+      "suite": "save_migration_test",
+      "arguments": [
+        "--read",
+        "/tmp/vaultbound-final-rpg-restart/profile.json"
+      ],
+      "passed_assertions": 19,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/save_migration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/save_migration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/save_migration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/save_migration_test.gd",
+        "--",
+        "--read",
+        "/tmp/vaultbound-final-rpg-restart/profile.json"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/save_migration_test_read.log"
+    },
+    {
+      "suite": "searchable_loot_integration_test",
+      "arguments": [],
+      "passed_assertions": 149,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/searchable_loot_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/searchable_loot_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/searchable_loot_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/searchable_loot_integration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/searchable_loot_integration_test.log"
+    },
+    {
+      "suite": "searchable_loot_integration_test",
+      "arguments": [
+        "--read"
+      ],
+      "passed_assertions": 14,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/searchable_loot_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/searchable_loot_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/searchable_loot_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/searchable_loot_integration_test.gd",
+        "--",
+        "--read"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/searchable_loot_integration_test_read.log"
+    },
+    {
+      "suite": "session_loot_test",
+      "arguments": [],
+      "passed_assertions": 75,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/session_loot_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/session_loot_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/session_loot_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/session_loot_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/session_loot_test.log"
+    },
+    {
+      "suite": "smoke_test",
+      "arguments": [],
+      "passed_assertions": 686,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/smoke_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/smoke_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/smoke_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/smoke_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/smoke_test.log"
+    },
+    {
+      "suite": "starter_items_integration_test",
+      "arguments": [],
+      "passed_assertions": 107,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/starter_items_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/starter_items_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/starter_items_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/starter_items_integration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/starter_items_integration_test.log"
+    },
+    {
+      "suite": "starter_sources_test",
+      "arguments": [],
+      "passed_assertions": 324,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/starter_sources_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/starter_sources_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/starter_sources_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/starter_sources_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/starter_sources_test.log"
+    },
+    {
+      "suite": "static_visual_batcher_test",
+      "arguments": [],
+      "passed_assertions": 32,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/static_visual_batcher_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/static_visual_batcher_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/static_visual_batcher_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/static_visual_batcher_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/static_visual_batcher_test.log"
+    },
+    {
+      "suite": "ui_layout_test",
+      "arguments": [],
+      "passed_assertions": 247,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/ui_layout_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/ui_layout_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/ui_layout_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/ui_layout_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/ui_layout_test.log"
+    },
+    {
+      "suite": "visual_integration_test",
+      "arguments": [],
+      "passed_assertions": 61,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/visual_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/visual_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/visual_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/visual_integration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/visual_integration_test.log"
+    },
+    {
+      "suite": "visual_settings_test",
+      "arguments": [],
+      "passed_assertions": 54,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/visual_settings_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/visual_settings_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/visual_settings_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/visual_settings_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/visual_settings_test.log"
+    },
+    {
+      "suite": "visual_style_test",
+      "arguments": [],
+      "passed_assertions": 48,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-56-final-regression/xdg/visual_style_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-56-final-regression/xdg/visual_style_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-56-final-regression/xdg/visual_style_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        ".",
+        "--script",
+        "res://tests/visual_style_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-56-final-regression/visual_style_test.log"
+    }
+  ],
+  "limits": [
+    "Headless logic/resource/physics/input contracts only; no rendered GPU or physical Android testing.",
+    "No APK export, sustained FPS, thermal, production-animation-quality or unique-item-art claim."
+  ]
+}

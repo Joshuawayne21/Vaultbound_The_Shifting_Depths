@@ -1,5 +1,7 @@
 # Milestone 5.6 validation
 
+**Final version 0.5.6 gate: 10,519 assertions passed across all 58 available suites in 71 separate engine invocations.** Fresh import/startup, ten independent readers and all 100 layout seeds passed on the committed release source. [Checkpoint 9](#checkpoint-9--complete-committed-release-regression) records the final result; the [durable test results](milestone-5.6-test-results.json) contain every command, count and source signature. Earlier checkpoint totals below are separate historical gates and are not added to the final total. Physical Android/GPU and APK validation remain outstanding.
+
 ## Checkpoint 1 — owned loadouts and safe save foundation
 
 Validated on 2026-10-31 using **Godot 4.6.3 stable, Linux headless, Compatibility**. This checkpoint extends the existing Milestone 5.5 game; it does not complete the later Milestone 5.6 catalog, loot, character or UI overhaul stages. The staged scope and preservation rules are recorded in [the implementation plan](milestone-5.6-plan.md).
@@ -451,3 +453,29 @@ The Hall test owns a real three-unit Mossworn Obol stack and checks its allocate
 Evidence is `/tmp/vaultbound-m56-presentation-finish/focused-results-351.json`, `integrated-source-351.json`, source-stability records and logs, plus `/tmp/vaultbound-56-checkpoint8-regression/results.json`, source-opening/closing manifests and logs. Editor import succeeded with the known sandbox socket and absent Android build-tools notices. The earlier 7c/302-definition scratch runs are development evidence and are not added to this total.
 
 On Android, fill the Hall, rotate inspections, inspect real equipment and trophies, change all graphics/accessibility presets and reopen both preview screens. Check rarity and discovery-card readability during combat in both cameras, with touch controls, scene changes and app suspension. Shared family art, procedural characters, occlusion/clipping, GPU frame time, thermals and physical touch comfort still require device review; no imported production rig, bespoke item models or device/FPS result is claimed.
+
+## Checkpoint 9 — complete committed-release regression
+
+**All 10,519 assertions passed across all 58 available suites in 71 separate engine invocations.** Every listed final invocation passed on its first run; no failed/debugging run or earlier checkpoint repeat is included. Fresh editor import and a separate 120-frame main-scene startup also exited successfully. All game-test and startup logs were inspected and contained no errors, warnings, failed assertions or leaked-object messages.
+
+The tested source is local commit `4ae9c46cc2984b4a45b1a7606cdfe857bb2c809e`, published as `9f07691274da7e5eb28e3ab96da78c256b0d176c`, with project version **0.5.6** and Android export version name **0.5.6** / code **7**. Godot **4.6.3 stable** ran the committed archive at `/tmp/vaultbound-56-checkpoint8-source`. This full gate also serves as checkpoint 8's exact-source publication gate; it is counted once. The final documentation pass changes no tested gameplay source.
+
+Opening and closing manifests match all **673 semantic source files**, as well as the frozen main reference, at SHA-256 **`05dc770e1535140c23172bdd4824780f1d3671743eea233a2045edb3b04435af`**. The scope includes `project.godot` and every file under scripts, resources, scenes, assets and tests, excluding generated `.uid`/`.import` sidecars. The durable results separately record the Android export-preset hash and actual version fields; this is metadata verification, not an APK export result.
+
+| Final evidence | Result |
+| --- | --- |
+| Discovered reusable suites | All 58 ran; no available `*_test.gd` suite was omitted |
+| Engine test invocations | 71, including every documented writer/reader mode |
+| Passed assertions | 10,519; zero failed invocations |
+| Independent readers | Ten separate processes verify saved profiles or preferences after their writers |
+| Procedural layout | 480 checks; logs prove structural validation and exact reproduction for every distinct seed 0–99 |
+| Resource/startup checks | Fresh import, separate 120-frame startup and 686-assertion smoke suite passed |
+| Source stability | Opening = closing = frozen release reference; no gameplay edit during the gate |
+
+The complete run covers original movement, both cameras, touch ownership, sword/shield and staff combat, Rootwarden behavior, party control/targeting/navigation, generated-room geometry, Search and extraction, inventory/economy, character progression, legacy migration, byte-precise saves, loadouts, enhancement and bounded equipment effects. It also covers the final 351-record catalog, all twenty recipes, unavailable-content rejection, actual valuable/material/supply/trophy transactions, Hall ownership/inspection, discovery feedback, safe-area/accessibility layouts, static batching and existing visual-setting contracts. The real Search reader and category reader preserve secured ownership and display references through restart and later death.
+
+Every process used disposable `XDG_DATA_HOME`, `XDG_CONFIG_HOME` and `XDG_CACHE_HOME` locations. Persisted fixtures used explicit `/tmp` paths; normal play storage was not used. Readers ran after their writers in separate sequential engine processes. The committed [test-results JSON](milestone-5.6-test-results.json) includes each exact command with storage isolation, required fixture-directory setup, suite/mode, passed count, log path, final source signature and observed 100-seed evidence. Raw results, logs, setup output and opening/closing manifests remain in `/tmp/vaultbound-56-final-regression/`.
+
+Fresh import emitted only the previously identified sandbox editor-socket bind and missing Android build-tools notices. There were no script, parse or resource failures. No gameplay correction or fixture weakening was required during this final release gate, and no unresolved automated regression remains.
+
+Physical Android touch, rendered GPU appearance, shader output, APK signing/export, audio output, sustained 30/60 FPS, frame pacing, memory, thermals and battery behavior remain unverified. Characters retain original native geometry and procedural animation; item models/icons remain the documented shared family assets. Controlled fixtures and host microbenchmarks do not establish natural economy pacing, final art quality or mobile responsiveness. See the [Android checklist](milestone-5.6-android.md), [asset inventory](milestone-5.6-assets.md) and [scoped performance audit](milestone-5.6-performance.md) for the remaining review. Work stops at Milestone 5.6.
