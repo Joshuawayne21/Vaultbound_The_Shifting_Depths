@@ -2,15 +2,20 @@ class_name VaultGraphicsPanel
 extends Control
 ## Uses the existing modal input owner. Changes commit only on a completed tap.
 signal close_requested
-const GOLD := Color("d2b575")
-const IVORY := Color("f0eadb")
-const MUTED := Color("8fa5a5")
-const TEAL := Color("63c9b6")
-const PANEL := Color("10282e")
+const GOLD := VaultUITheme.GOLD
+const IVORY := VaultUITheme.IVORY
+const MUTED := VaultUITheme.MUTED
+const TEAL := VaultUITheme.TEAL
+const PANEL := VaultUITheme.PANEL
 const DETAILS := ["Fewer decorative plants and motes. Dynamic shadows off.", "Balanced decoration and soft dynamic shadows.", "Richer decoration, sharper shadows and smoother edges."]
 var settings: Node
 var selected_quality := 1
 var selected_fps := 30
+var selected_ui_scale := 100
+var selected_reduced_motion := false
+var selected_reduced_effects := false
+var section := "graphics"
+var ui_scale := 1.0
 var notice := ""
 var _font: Font
 var _pointers: Dictionary = {}
@@ -28,10 +33,14 @@ func open_panel() -> void:
 	if is_instance_valid(settings):
 		selected_quality = settings.current_quality
 		selected_fps = settings.target_fps
+		selected_ui_scale = settings.ui_scale_percent
+		selected_reduced_motion = settings.reduced_motion
+		selected_reduced_effects = settings.reduced_effects
 		notice = settings.storage_error
 	else:
 		notice = "Graphics settings are unavailable."
 	_pointers.clear()
+	section = "graphics"
 	_epoch += 1
 	show()
 	queue_redraw()
@@ -40,6 +49,12 @@ func hide_panel() -> void:
 	hide()
 	_pointers.clear()
 	_epoch += 1
+
+func apply_visual_settings(value: Dictionary) -> void:
+	ui_scale = VaultUITheme.scale_from(value)
+	_pointers.clear()
+	_epoch += 1
+	queue_redraw()
 
 func _notification(what: int) -> void:
 	if what in [NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED]:
@@ -91,6 +106,14 @@ func _end(id: int, point: Vector2, canceled: bool) -> void:
 func _hit(point: Vector2) -> String:
 	if close_rect().has_point(point): return "close"
 	if apply_rect().has_point(point): return "apply"
+	for index in range(2):
+		if tab_rect(index).has_point(point): return "tab_%d" % index
+	if section == "accessibility":
+		for index in range(3):
+			if scale_rect(index).has_point(point): return "scale_%d" % index
+		if motion_rect().has_point(point): return "motion"
+		if effects_rect().has_point(point): return "effects"
+		return ""
 	for index in range(3):
 		if quality_rect(index).has_point(point): return "quality_%d" % index
 	for index in range(2):
@@ -102,29 +125,53 @@ func _activate(action: String) -> void:
 	if action == "close":
 		close_requested.emit()
 	elif action == "apply" and is_instance_valid(settings):
-		if settings.set_options(selected_quality, selected_fps):
-			notice = "%s graphics · %d FPS target saved" % [settings.quality_name, settings.target_fps]
+		if settings.set_preferences(selected_quality, selected_fps, selected_ui_scale, selected_reduced_motion, selected_reduced_effects):
+			notice = "%s · %d FPS target · UI %d%% saved" % [settings.quality_name, settings.target_fps, settings.ui_scale_percent]
 		else:
 			notice = settings.storage_error
 	elif action.begins_with("quality_"):
 		selected_quality = action.trim_prefix("quality_").to_int()
 	elif action.begins_with("fps_"):
 		selected_fps = 30 if action.ends_with("0") else 60
+	elif action.begins_with("tab_"):
+		section = "graphics" if action.ends_with("0") else "accessibility"
+	elif action.begins_with("scale_"):
+		selected_ui_scale = [100, 110, 120][action.trim_prefix("scale_").to_int()]
+	elif action == "motion":
+		selected_reduced_motion = not selected_reduced_motion
+	elif action == "effects":
+		selected_reduced_effects = not selected_reduced_effects
 	queue_redraw()
 
 func panel_rect() -> Rect2:
-	var extent := Vector2(minf(820, size.x - 64), minf(600, size.y - 64))
+	var inset := VaultUITheme.safe_inset(self)
+	var extent := Vector2(minf(900, size.x - 64 - inset.x * 2), minf(620, size.y - 64 - inset.y * 2))
 	return Rect2((size - extent) * 0.5, extent)
+
+func tab_rect(index: int) -> Rect2:
+	var rect := panel_rect()
+	return Rect2(rect.position + Vector2(32 + index * 240, 82), Vector2(228, 52))
 
 func quality_rect(index: int) -> Rect2:
 	var rect := panel_rect()
 	var width := (rect.size.x - 88) / 3.0
-	return Rect2(rect.position + Vector2(32 + index * (width + 12), 108), Vector2(width, 64))
+	return Rect2(rect.position + Vector2(32 + index * (width + 12), 170), Vector2(width, 64))
 
 func fps_rect(index: int) -> Rect2:
 	var rect := panel_rect()
 	var width := (rect.size.x - 76) * 0.5
-	return Rect2(rect.position + Vector2(32 + index * (width + 12), 294), Vector2(width, 64))
+	return Rect2(rect.position + Vector2(32 + index * (width + 12), 330), Vector2(width, 64))
+
+func scale_rect(index: int) -> Rect2:
+	return quality_rect(index)
+
+func motion_rect() -> Rect2:
+	var rect := panel_rect()
+	return Rect2(rect.position + Vector2(32, 290), Vector2(rect.size.x - 64, 64))
+
+func effects_rect() -> Rect2:
+	var rect := panel_rect()
+	return Rect2(rect.position + Vector2(32, 382), Vector2(rect.size.x - 64, 64))
 
 func close_rect() -> Rect2:
 	var rect := panel_rect()
@@ -138,29 +185,47 @@ func _draw() -> void:
 	if _font == null:
 		return
 	var rect := panel_rect()
-	draw_rect(rect, PANEL)
-	draw_rect(rect, Color(GOLD, 0.5), false, 1.0)
-	_text("GRAPHICS & PERFORMANCE", rect.position + Vector2(32, 44), 25, IVORY)
-	_text("Choose the look and frame-rate target that suit your device.", rect.position + Vector2(32, 74), 15, MUTED)
-	for index in range(3):
-		_button(quality_rect(index), ["LOW", "MEDIUM", "HIGH"][index], selected_quality == index)
-	_text(DETAILS[selected_quality], rect.position + Vector2(32, 204), 15, IVORY)
-	_text("Combat warnings, walls and gameplay remain equally visible.", rect.position + Vector2(32, 232), 14, MUTED)
-	_text("FRAME-RATE TARGET", rect.position + Vector2(32, 276), 15, GOLD)
-	_button(fps_rect(0), "30 FPS · BALANCED", selected_fps == 30)
-	_button(fps_rect(1), "60 FPS · CAPABLE DEVICES", selected_fps == 60)
-	_text("60 FPS uses more battery and may increase heat.", rect.position + Vector2(32, 389), 15, IVORY)
-	_text("Actual performance depends on your device. These are targets.", rect.position + Vector2(32, 417), 14, MUTED)
+	VaultUITheme.frame(self, rect, PANEL, GOLD, true)
+	_text("DISPLAY & ACCESSIBILITY", rect.position + Vector2(32, 44), 25, IVORY)
+	_button(tab_rect(0), "GRAPHICS", section == "graphics")
+	_button(tab_rect(1), "ACCESSIBILITY", section == "accessibility")
+	if section == "accessibility":
+		_draw_accessibility(rect)
+	else:
+		_draw_graphics(rect)
 	if not notice.is_empty():
-		_text(notice, rect.position + Vector2(32, 457), 14, TEAL)
+		_text(notice, rect.position + Vector2(32, rect.size.y - 112), 13, TEAL)
 	_button(close_rect(), "BACK", false)
 	_button(apply_rect(), "APPLY & SAVE", true)
 
+func _draw_graphics(rect: Rect2) -> void:
+	_text("VISUAL QUALITY", rect.position + Vector2(32, 156), 13, GOLD)
+	for index in range(3):
+		_button(quality_rect(index), ["LOW", "MEDIUM", "HIGH"][index], selected_quality == index)
+	_text(DETAILS[selected_quality], rect.position + Vector2(32, 260), 14, IVORY)
+	_text("Combat warnings and navigation stay equally visible.", rect.position + Vector2(32, 284), 12, MUTED)
+	_text("FRAME-RATE TARGET", rect.position + Vector2(32, 316), 13, GOLD)
+	_button(fps_rect(0), "30 FPS · BALANCED", selected_fps == 30)
+	_button(fps_rect(1), "60 FPS · CAPABLE DEVICES", selected_fps == 60)
+	_text("60 FPS uses more battery and may increase heat.", rect.position + Vector2(32, 426), 14, IVORY)
+	_text("Frame rates are goals requiring tests on your Android device.", rect.position + Vector2(32, 452), 12, MUTED)
+
+func _draw_accessibility(rect: Rect2) -> void:
+	_text("TEXT, ICON & CONTROL SIZE", rect.position + Vector2(32, 156), 13, GOLD)
+	for index in range(3):
+		var value: int = [100, 110, 120][index]
+		_button(scale_rect(index), "%d%%" % value, selected_ui_scale == value)
+	_text("Menus reflow at larger sizes; gameplay controls retain safe anchors.", rect.position + Vector2(32, 260), 12, MUTED)
+	_button(motion_rect(), "REDUCED MOTION: " + ("ON" if selected_reduced_motion else "OFF"), selected_reduced_motion)
+	_text("Calmer UI transitions and cosmetic character movement.", rect.position + Vector2(32, 374), 12, MUTED)
+	_button(effects_rect(), "REDUCED PARTICLES & AURAS: " + ("ON" if selected_reduced_effects else "OFF"), selected_reduced_effects)
+	_text("Lower decorative effects; attack warnings remain readable.", rect.position + Vector2(32, 470), 12, MUTED)
+
 func _button(rect: Rect2, label: String, selected: bool) -> void:
-	draw_rect(rect, Color("204a4d") if selected else Color("153138"))
-	draw_rect(rect, TEAL if selected else Color(GOLD, 0.3), false, 1.5)
-	var width := _font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
+	VaultUITheme.frame(self, rect, Color("173549") if selected else Color("141e32"), TEAL if selected else GOLD, selected)
+	var width := _font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, roundi(15 * ui_scale)).x
 	_text(label, rect.get_center() + Vector2(-width * 0.5, 5), 15, IVORY if selected else MUTED)
 
 func _text(value: String, at: Vector2, font_size: int, color: Color) -> void:
+	font_size = roundi(font_size * ui_scale)
 	draw_string(_font, at, value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)

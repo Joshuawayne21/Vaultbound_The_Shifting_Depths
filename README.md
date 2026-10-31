@@ -2,7 +2,7 @@
 
 **Milestone 5.6 — Loot and equipment overhaul, staged implementation.** A Godot 4 / GDScript-only, offline fantasy expedition prototype for Android landscape. The existing Sanctuary, Collection Hall and Rootbound Abyss now share slate-and-bronze architecture, turquoise magic, mossy ruins, living foliage and flowing water. Recruit companions, explore, fight, extract treasure and develop the character through the preserved RPG systems.
 
-The first verified checkpoint adds owned primary/secondary weapon loadouts and version-three save migration. Follow the [implementation plan](docs/milestone-5.6-plan.md) and [checkpoint validation](docs/milestone-5.6-validation.md) for completed versus pending work.
+The verified foundation adds owned primary/secondary weapon loadouts and version-three save migration. Mobile menus now share an enchanted navy, bronze and turquoise theme, with distinct Inventory and Equipment entries, rotatable inspection and saved accessibility settings. Follow the [implementation plan](docs/milestone-5.6-plan.md) and [checkpoint validation](docs/milestone-5.6-validation.md) for completed versus pending work.
 
 The Sanctuary, practice dungeon and arena, player movement, sword/shield and staff combat, touch controls, both smoothly switchable cameras, procedural dungeons, treasure, boss encounters and secured progression from Milestones 1–5 remain available. `project.godot` stays at the repository root. The active party supports one human leader and up to two local AI companions. No online multiplayer, player-to-player trading, guilds or additional biomes are implemented.
 
@@ -39,19 +39,22 @@ Running inside the Android editor requires no APK export. The included ARM64 exp
 | Target lock | LOCK | T |
 | Select owned loadout | Two circular weapon buttons | 1 / 2; R cycles assigned weapons |
 | Interact / chest / extraction | USE nearby | F |
-| Inventory | PACK | I |
+| Inventory | INVENTORY | I |
+| Equipment / rotate preview | EQUIPMENT, drag the character | O, mouse drag inside the preview |
 | Healing consumable | TONIC | H |
 | Performance display | METRICS inside PACK | P |
-| Graphics quality / frame target | GRAPHICS | F10 |
+| Graphics / UI scale / reduced motion and effects | GRAPHICS | F10 |
 | Party commands | PARTY | B |
 | Recruit / dismiss | USE at the Sanctuary Tavern | F at the Tavern |
 | Revive nearby ally | REVIVE prompt | Party menu / interact |
+
+Inventory supports name, rarity, level, value, lowest-rarity, equipment category and recent-acquisition sorting. Equipment inspection reuses the gameplay avatar and active loadout; drag only within its preview to rotate it. Hidden previews do not continuously render. In GRAPHICS, choose 100%, 110% or 120% UI size, reduced motion and reduced effects. Larger text and touch targets reflow inside the safe area. These settings are saved separately from progression.
 
 Assign owned swords or staffs to PRIMARY / SECONDARY in the inventory equipment actions. Empty loadout buttons are disabled and show no weapon icon. The unassigned practice controller still supports R until a weapon is assigned. Switching requires recovery from the current action, takes 0.32 seconds and preserves ability cooldowns, targeting and current resources. The shield and legacy accessory remain separate equipment slots.
 
 Sword/shield retains its three-hit combo, charged heavy, Shield Bash and Cleave. Staff retains bolts, charged splash, Arcane Burst and Frost Nova. Both use identical damage, costs, cooldowns, range and targeting in either camera view. Charge, block and joystick touches cancel safely on focus loss, Android pause, travel and modal opening.
 
-PACK, GRAPHICS, merchant/workbench/Collection Hall screens, party/recruitment menus and expedition results pause the local player, companions and active world. Closing them restores input without resuming stale held buttons. Basic movement is grounded; jumping is intentionally omitted. The elevated tactical camera uses a narrow perspective lens for a continuous transition rather than a strict orthographic projection.
+Inventory, Equipment, GRAPHICS, merchant/workbench/Collection Hall screens, party/recruitment menus and expedition results pause the local player, companions and active world. Closing them restores input without resuming stale held buttons. Basic movement is grounded; jumping is intentionally omitted. The elevated tactical camera uses a narrow perspective lens for a continuous transition rather than a strict orthographic projection.
 
 ## Party and companions
 

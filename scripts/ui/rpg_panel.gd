@@ -4,16 +4,16 @@ extends Control
 ## session; a confirmation never edits a profile or constructs an item itself.
 signal close_requested
 
-const GOLD := Color("d2b575")
-const IVORY := Color("f0eadb")
-const MUTED := Color("8fa5a5")
-const TEAL := Color("63c9b6")
-const WARNING := Color("e79a73")
-const PANEL := Color("10282e")
+const GOLD := VaultUITheme.GOLD
+const IVORY := VaultUITheme.IVORY
+const MUTED := VaultUITheme.MUTED
+const TEAL := VaultUITheme.TEAL
+const WARNING := VaultUITheme.WARNING
+const PANEL := VaultUITheme.PANEL
 const RARITIES := ["common", "uncommon", "rare", "epic", "legendary", "mythic", "ancient_relic"]
-const RARITY_COLORS := [Color("c8d0c7"), Color("83c795"), Color("84bce7"), Color("c19be6"), Color("edbf70"), Color("ef8eb7"), Color("74eadb")]
+const RARITY_COLORS := VaultUITheme.RARITY_COLORS
 const FILTERS := ["all", "equipment", "consumable", "material", "collectible", "favorites", "locked", "reserve"]
-const SORTS := ["name", "rarity", "level"]
+const SORTS := ["name", "rarity", "level", "value", "rarity_low", "category", "recent"]
 const SLOTS := ["main_weapon", "secondary_weapon", "off_hand", "helmet", "chest_armor", "gloves", "leg_armor", "boots", "necklace", "ring", "accessory"]
 const SLOT_LABELS := ["MAIN WEAPON", "SECONDARY WEAPON", "SHIELD", "HELMET", "CHEST ARMOR", "GLOVES", "LEG ARMOR", "BOOTS", "NECKLACE", "RING", "CHARM"]
 const EQUIPMENT_PAGE_SIZE := 6
@@ -43,6 +43,12 @@ var _preview_avatar: Node3D
 var _preview_texture: TextureRect
 var _list_clip: Control
 var _list_canvas: Control
+var ui_scale := 1.0
+var reduced_motion := false
+var reduced_effects := false
+var preview_yaw := 0.0
+var _preview_pointer_id := -2
+var _preview_frame_requests := 0
 
 class ItemCanvas extends Control:
 	var panel: VaultRPGPanel
@@ -71,6 +77,8 @@ func open_context(value: StringName, details: Dictionary = {}) -> void:
 	kind = value
 	context = details.duplicate(true)
 	section = &"buy" if value == &"merchant" else &"upgrade" if value == &"blacksmith" else &"display" if value == &"collection" else &"character" if value == &"character" else &"inventory"
+	if value == &"equipment":
+		section = &"equipment"
 	if value == &"merchant" and String(context.get("vendor", "")) == "appraiser":
 		section = &"identify"
 	if value == &"inventory" and bool(session.get("active")):
@@ -89,6 +97,7 @@ func open_context(value: StringName, details: Dictionary = {}) -> void:
 	status = ""
 	pending_quote.clear()
 	_pointers.clear()
+	_preview_pointer_id = -2
 	_epoch += 1
 	show()
 	refresh()
@@ -97,6 +106,7 @@ func hide_panel() -> void:
 	hide()
 	pending_quote.clear()
 	_pointers.clear()
+	_preview_pointer_id = -2
 	_epoch += 1
 	if is_instance_valid(_preview_texture):
 		_preview_texture.hide()
@@ -122,16 +132,30 @@ func set_notice(message: String) -> void:
 func _notification(what: int) -> void:
 	if what in [NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED]:
 		_pointers.clear()
+		_preview_pointer_id = -2
 		_epoch += 1
 	elif what == NOTIFICATION_RESIZED and is_instance_valid(_preview_texture):
 		_preview_texture.position = preview_rect().position
 		_preview_texture.size = preview_rect().size
 
+func apply_visual_settings(settings: Dictionary) -> void:
+	ui_scale = VaultUITheme.scale_from(settings)
+	reduced_motion = bool(settings.get("reduced_motion", false))
+	reduced_effects = bool(settings.get("reduced_effects", false))
+	_pointers.clear()
+	_preview_pointer_id = -2
+	_epoch += 1
+	equipment_page = mini(equipment_page, ceili(float(SLOTS.size()) / equipment_page_size()) - 1)
+	_clamp_scroll()
+	if visible and section == &"equipment":
+		_update_preview()
+	queue_redraw()
+
 func handle_event(event: InputEvent) -> void:
 	if not visible:
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
-		if event.physical_keycode in [KEY_ESCAPE, KEY_I]:
+		if event.physical_keycode in [KEY_ESCAPE, KEY_I, KEY_O]:
 			if pending_quote.is_empty():
 				close_requested.emit()
 			else:
@@ -167,7 +191,10 @@ func _local_point(point: Vector2) -> Vector2:
 func _begin_pointer(id: int, point: Vector2) -> void:
 	if _pointers.has(id):
 		return
-	_pointers[id] = {"start": point, "last": point, "dragged": false, "epoch": _epoch,
+	var preview := section == &"equipment" and pending_quote.is_empty() and preview_rect().has_point(point) and _preview_pointer_id == -2
+	if preview:
+		_preview_pointer_id = id
+	_pointers[id] = {"start": point, "last": point, "dragged": false, "epoch": _epoch, "preview": preview,
 		"scroll": pending_quote.is_empty() and list_rect().has_point(point) and section not in [&"equipment", &"character"], "action": _hit_action(point)}
 
 func _drag_pointer(id: int, point: Vector2) -> void:
@@ -176,6 +203,10 @@ func _drag_pointer(id: int, point: Vector2) -> void:
 	var pointer: Dictionary = _pointers[id]
 	if point.distance_to(pointer.start) > 12.0:
 		pointer.dragged = true
+	if pointer.dragged and bool(pointer.get("preview", false)) and is_instance_valid(_preview_avatar):
+		preview_yaw = wrapf(preview_yaw + (point.x - Vector2(pointer.last).x) * 0.012, -PI, PI)
+		_preview_avatar.rotation.y = preview_yaw
+		_request_preview_frame()
 	if pointer.dragged and pointer.scroll:
 		scroll_offset -= point.y - Vector2(pointer.last).y
 		_clamp_scroll()
@@ -187,6 +218,8 @@ func _end_pointer(id: int, point: Vector2, canceled: bool) -> void:
 		return
 	var pointer: Dictionary = _pointers[id]
 	_pointers.erase(id)
+	if id == _preview_pointer_id:
+		_preview_pointer_id = -2
 	if canceled or pointer.dragged or int(pointer.epoch) != _epoch or point.distance_to(pointer.start) > 12.0:
 		return
 	var action: Dictionary = pointer.action
@@ -203,7 +236,8 @@ func tabs() -> Array:
 		_: return [[&"inventory", "INVENTORY"], [&"bag", "EXPEDITION"], [&"equipment", "EQUIPMENT"], [&"character", "CHARACTER"], [&"journal", "JOURNALS"]]
 
 func panel_rect() -> Rect2:
-	var extent := Vector2(minf(1160, size.x - 48), minf(656, size.y - 40))
+	var inset := VaultUITheme.safe_inset(self)
+	var extent := Vector2(minf(1160, size.x - 48 - inset.x * 2), minf(656, size.y - 40 - inset.y * 2))
 	return Rect2((size - extent) * 0.5, extent)
 
 func close_rect() -> Rect2:
@@ -231,21 +265,28 @@ func sort_rect() -> Rect2:
 
 func cell_rect(index: int) -> Rect2:
 	var rect := list_rect()
-	var width := (rect.size.x - 32) / 5.0
-	return Rect2(rect.position + Vector2((index % 5) * (width + 8), floori(float(index) / 5.0) * 100 - scroll_offset), Vector2(width, 92))
+	var columns := grid_columns()
+	var width := (rect.size.x - 8 * (columns - 1)) / columns
+	return Rect2(rect.position + Vector2((index % columns) * (width + 8), floori(float(index) / columns) * grid_stride() - scroll_offset), Vector2(width, grid_stride() - 8))
+
+func grid_columns() -> int:
+	return 4 if ui_scale > 1.01 else 5
+
+func grid_stride() -> float:
+	return 100.0 * ui_scale
 
 func row_rect(index: int) -> Rect2:
 	var rect := list_rect()
-	return Rect2(rect.position + Vector2(0, index * 74 - scroll_offset), Vector2(rect.size.x, 66))
+	return Rect2(rect.position + Vector2(0, index * 74 * ui_scale - scroll_offset), Vector2(rect.size.x, 66 * ui_scale))
 
 func action_rect(index: int, count: int = 2) -> Rect2:
 	var detail := detail_rect()
 	var width := (detail.size.x - 8 * (count - 1)) / count
-	return Rect2(detail.position + Vector2(index * (width + 8), detail.size.y - 54), Vector2(width, 54))
+	return Rect2(detail.position + Vector2(index * (width + 8), detail.size.y - 54 * ui_scale), Vector2(width, 54 * ui_scale))
 
 func secondary_rect(index: int) -> Rect2:
 	var rect := action_rect(index, 2)
-	rect.position.y -= 64
+	rect.position.y -= rect.size.y + 10
 	return rect
 
 func quantity_rect(increase: bool) -> Rect2:
@@ -255,15 +296,18 @@ func quantity_rect(increase: bool) -> Rect2:
 func slot_rect(index: int) -> Rect2:
 	var rect := panel_rect()
 	var width := (rect.size.x - 406) / 2.0
-	var row := index % EQUIPMENT_PAGE_SIZE
+	var row := index % equipment_page_size()
 	return Rect2(rect.position + Vector2(358 + (row % 2) * (width + 12), 154 + floori(float(row) / 2.0) * 117), Vector2(width, 105))
+
+func equipment_page_size() -> int:
+	return 4 if ui_scale > 1.01 else EQUIPMENT_PAGE_SIZE
 
 func equipment_page_rect(next: bool) -> Rect2:
 	return Rect2(panel_rect().end - Vector2(100 if next else 184, 98), Vector2(72, 48))
 
 func visible_slot_indices() -> Array[int]:
 	var result: Array[int] = []
-	for index in range(equipment_page * EQUIPMENT_PAGE_SIZE, mini(SLOTS.size(), (equipment_page + 1) * EQUIPMENT_PAGE_SIZE)):
+	for index in range(equipment_page * equipment_page_size(), mini(SLOTS.size(), (equipment_page + 1) * equipment_page_size())):
 		result.append(index)
 	return result
 
@@ -337,6 +381,15 @@ func _entries() -> Array:
 			continue
 		result.append(entry)
 	result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if SORTS[sort_index] == "value" and int(a.get("value", 0)) != int(b.get("value", 0)):
+			return int(a.get("value", 0)) > int(b.get("value", 0))
+		if SORTS[sort_index] == "rarity_low" and a.get("rarity", "common") != b.get("rarity", "common"):
+			return RARITIES.find(String(a.get("rarity", "common"))) < RARITIES.find(String(b.get("rarity", "common")))
+		if SORTS[sort_index] == "category" and a.get("category", "") != b.get("category", ""):
+			return String(a.get("category", "")).naturalnocasecmp_to(String(b.get("category", ""))) < 0
+		if SORTS[sort_index] == "recent" and a.get("uid", "") != b.get("uid", ""):
+			# Stable monotonically allocated instance IDs, independent of device time.
+			return String(a.get("uid", "")).naturalnocasecmp_to(String(b.get("uid", ""))) > 0
 		if SORTS[sort_index] == "rarity" and a.get("rarity", "common") != b.get("rarity", "common"):
 			return RARITIES.find(String(a.get("rarity", "common"))) > RARITIES.find(String(b.get("rarity", "common")))
 		if SORTS[sort_index] == "level" and int(a.get("required_level", 1)) != int(b.get("required_level", 1)):
@@ -351,7 +404,7 @@ func _display_count() -> int:
 	return count
 
 func _clamp_scroll() -> void:
-	var total := ceilf(float(_display_count()) / 5.0) * 100 if _grid_mode() else _display_count() * 74.0
+	var total := ceilf(float(_display_count()) / grid_columns()) * grid_stride() if _grid_mode() else _display_count() * 74.0 * ui_scale
 	scroll_offset = clampf(scroll_offset, 0.0, maxf(0.0, total - list_rect().size.y))
 
 func selected_entry() -> Dictionary:
@@ -469,8 +522,9 @@ func _activate(action: Dictionary) -> void:
 			_epoch += 1
 			if is_instance_valid(_preview_texture): _preview_texture.visible = section == &"equipment"
 			if section == &"equipment": _update_preview()
+			elif is_instance_valid(_preview_viewport): _preview_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 		"equipment_page":
-			equipment_page = clampi(equipment_page + int(action.value), 0, ceili(float(SLOTS.size()) / EQUIPMENT_PAGE_SIZE) - 1)
+			equipment_page = clampi(equipment_page + int(action.value), 0, ceili(float(SLOTS.size()) / equipment_page_size()) - 1)
 			_epoch += 1
 		"filter": filter_index = (filter_index + 1) % FILTERS.size(); scroll_offset = 0; selected_uid = ""; selected_key = ""; _epoch += 1
 		"journal_filter": journal_filter = (journal_filter + 1) % 3; scroll_offset = 0; selected_uid = ""; selected_key = ""; _epoch += 1
@@ -482,6 +536,7 @@ func _activate(action: Dictionary) -> void:
 			selected_key = selected_uid
 			section = &"inventory"; filter_index = 0; scroll_offset = 0; _epoch += 1
 			if is_instance_valid(_preview_texture): _preview_texture.hide()
+			if is_instance_valid(_preview_viewport): _preview_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 		"transaction": _request_quote(StringName(action.action), action.args, bool(action.get("confirm", true)))
 		"use_bag":
 			_epoch += 1
@@ -544,6 +599,8 @@ func _draw() -> void:
 	if not pending_quote.is_empty(): _draw_confirmation()
 
 func _title() -> String:
+	if section == &"equipment":
+		return "YOUR EQUIPMENT"
 	match kind:
 		&"blacksmith": return "THE EMBER ANVIL"
 		&"merchant":
@@ -572,7 +629,8 @@ func _context_hint() -> String:
 func _draw_collection() -> void:
 	if section not in [&"buy", &"craft", &"bag", &"journal"]:
 		_button(filter_rect(), "FILTER · " + String(FILTERS[filter_index]).to_upper(), true)
-		_button(sort_rect(), "SORT · " + String(SORTS[sort_index]).to_upper(), true)
+		var sort_label := "BASE VALUE" if SORTS[sort_index] == "value" else String(SORTS[sort_index]).replace("_", " ").to_upper()
+		_button(sort_rect(), "SORT · " + sort_label, true)
 	elif section == &"journal":
 		_button(filter_rect(), "JOURNAL · " + ["ALL", "ITEMS", "MONSTERS"][journal_filter], true)
 		_text("%d DISCOVERIES" % _entries().size(), sort_rect().position + Vector2(8, 29), 12, GOLD)
@@ -602,25 +660,25 @@ func draw_list(canvas: Control) -> void:
 		canvas.draw_rect(item_rect, Color("1a3e40") if selected else Color("142e35"))
 		canvas.draw_rect(item_rect.grow(-1), tint if selected else Color(tint, 0.55), false, 2 if selected else 1)
 		if _grid_mode():
-			_draw_icon(item, Rect2(item_rect.position + Vector2(8, 8), Vector2(38, 38)), tint, canvas)
-			_list_text(canvas, _fit(String(item.get("label", "Unknown")), item_rect.size.x - 12, 11), item_rect.position + Vector2(6, 62), 11, tint)
+			_draw_icon(item, Rect2(item_rect.position + Vector2(8, 8), Vector2(38, 38) * ui_scale), tint, canvas)
+			_list_text(canvas, _fit(String(item.get("label", "Unknown")), item_rect.size.x - 12, 11), item_rect.position + Vector2(6, 62 * ui_scale), 11, tint)
 			var tag := "×%d" % int(item.get("quantity", 1))
 			if item.get("category", "") == "equipment": tag = "+%d · %d%%" % [int(item.get("enhancement", 0)), int(item.get("durability", 100))]
-			_list_text(canvas, tag, item_rect.position + Vector2(6, 81), 10, MUTED)
+			_list_text(canvas, tag, item_rect.position + Vector2(6, 81 * ui_scale), 10, MUTED)
 			var mark := "L" if bool(item.get("locked", false)) else "★" if bool(item.get("favorite", false)) else "E" if bool(item.get("equipped", false)) else "D" if bool(item.get("displayed", false)) else "?" if not bool(item.get("identified", true)) else ""
 			_list_text(canvas, mark, item_rect.position + Vector2(item_rect.size.x - 18, 24), 14, GOLD)
 		else:
-			_draw_icon(item, Rect2(item_rect.position + Vector2(9, 10), Vector2(42, 42)), tint, canvas)
-			_list_text(canvas, _fit(String(item.get("label", item.get("name", "Unknown"))), item_rect.size.x - 80, 15), item_rect.position + Vector2(62, 27), 15, tint)
+			_draw_icon(item, Rect2(item_rect.position + Vector2(9, 10), Vector2(42, 42) * ui_scale), tint, canvas)
+			_list_text(canvas, _fit(String(item.get("label", item.get("name", "Unknown"))), item_rect.size.x - 80 * ui_scale, 15), item_rect.position + Vector2(62, 27) * ui_scale, 15, tint)
 			var detail := String(item.get("category", "" )).replace("_", " ").capitalize()
 			if section == &"buy": detail = "%d gold · %d remaining" % [int(item.get("price", 0)), int(item.get("remaining", item.get("quantity", 0)))]
 			elif section == &"craft": detail = "%d gold · Level %d" % [int(item.get("gold", 0)), int(item.get("required_level", 1))]
 			elif section == &"bag" or FILTERS[filter_index] == "reserve": detail = "× %d" % int(item.get("quantity", 1))
-			_list_text(canvas, _fit(detail, item_rect.size.x - 80, 12), item_rect.position + Vector2(62, 49), 12, MUTED)
+			_list_text(canvas, _fit(detail, item_rect.size.x - 80 * ui_scale, 12), item_rect.position + Vector2(62, 49) * ui_scale, 12, MUTED)
 	if entries.is_empty():
 		_list_text(canvas, "No items in this view", viewport.get_center(), 16, MUTED, true)
 		_list_text(canvas, "Explore, extract, or change the filter.", viewport.get_center() + Vector2(0, 26), 12, MUTED, true)
-	var total := ceilf(float(_display_count()) / 5.0) * 100 if _grid_mode() else _display_count() * 74.0
+	var total := ceilf(float(_display_count()) / grid_columns()) * grid_stride() if _grid_mode() else _display_count() * 74.0 * ui_scale
 	if total > viewport.size.y:
 		var track := Rect2(viewport.end.x - 4, viewport.position.y, 3, viewport.size.y)
 		canvas.draw_rect(track, Color(MUTED, 0.18))
@@ -726,7 +784,7 @@ func _draw_comparison(item: Dictionary, at: Vector2, width: float) -> void:
 
 func _draw_equipment() -> void:
 	_panel(preview_rect(), Color("0b2028"))
-	_text("YOUR ADVENTURER", preview_rect().position + Vector2(148, -10), 12, GOLD, true)
+	_text("DRAG TO ROTATE YOUR ADVENTURER", preview_rect().position + Vector2(148, -10), 10, GOLD, true)
 	for index in visible_slot_indices():
 		var rect := slot_rect(index)
 		_panel(rect, Color("153339"))
@@ -740,8 +798,8 @@ func _draw_equipment() -> void:
 		_button(unequip_rect(index), "UNEQUIP", not uid.is_empty())
 	var stats: Dictionary = data.get("stats", {})
 	_button(equipment_page_rect(false), "‹", equipment_page > 0)
-	_button(equipment_page_rect(true), "›", (equipment_page + 1) * EQUIPMENT_PAGE_SIZE < SLOTS.size())
-	_text("SLOTS %d / %d" % [equipment_page + 1, ceili(float(SLOTS.size()) / EQUIPMENT_PAGE_SIZE)], panel_rect().end - Vector2(290, 68), 11, MUTED)
+	_button(equipment_page_rect(true), "›", (equipment_page + 1) * equipment_page_size() < SLOTS.size())
+	_text("SLOTS %d / %d" % [equipment_page + 1, ceili(float(SLOTS.size()) / equipment_page_size())], panel_rect().end - Vector2(290, 68), 11, MUTED)
 	var at := panel_rect().position + Vector2(32, 555)
 	_text("HEALTH %d   ·   STAMINA %d   ·   DAMAGE ×%.2f   ·   PROTECTION %d%%" % [int(stats.get("max_health", 100)), int(stats.get("max_stamina", 100)), float(stats.get("damage_multiplier", 1.0)), int(round(float(stats.get("armor", 0)) * 100))], at, 14, IVORY)
 
@@ -862,7 +920,13 @@ func _update_preview() -> void:
 	if weapon.get("weapon_style", "") == "staff": family = "staff"
 	family = String(data.get("weapon_style", family))
 	_preview_avatar.set_weapon(StringName(family))
-	_preview_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+	_preview_avatar.rotation.y = preview_yaw
+	_request_preview_frame()
+
+func _request_preview_frame() -> void:
+	if visible and section == &"equipment" and pending_quote.is_empty() and is_instance_valid(_preview_viewport):
+		_preview_frame_requests += 1
+		_preview_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 static func rarity_color(rarity: String) -> Color:
 	var index := RARITIES.find(rarity)
@@ -887,27 +951,28 @@ func _stat_value(key: String, value: float) -> String:
 	return "%g" % snappedf(value, 0.1)
 
 func _panel(rect: Rect2, fill: Color) -> void:
-	draw_rect(rect, fill)
-	draw_rect(rect, Color(GOLD, 0.35), false, 1)
-	draw_line(rect.position, rect.position + Vector2(26, 0), GOLD, 2)
+	VaultUITheme.frame(self, rect, fill)
 
 func _button(rect: Rect2, label: String, enabled: bool, selected: bool = false) -> void:
 	_panel(rect, Color("24564f") if selected else Color("1b4245") if enabled else Color("142b32"))
 	_text(_fit(label, rect.size.x - 16, 12), rect.get_center() + Vector2(0, 5), 12, IVORY if enabled else MUTED, true)
 
 func _text(value: String, position: Vector2, font_size: int, color: Color, centered: bool = false) -> void:
+	font_size = roundi(font_size * ui_scale)
 	var at := position
 	if centered: at.x -= _font.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x * 0.5
 	draw_string(_font, at + Vector2.DOWN, value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0.01, 0.025, 0.03, 0.8))
 	draw_string(_font, at, value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
 
 func _list_text(canvas: Control, value: String, position: Vector2, font_size: int, color: Color, centered: bool = false) -> void:
+	font_size = roundi(font_size * ui_scale)
 	var at := position
 	if centered: at.x -= _font.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x * 0.5
 	canvas.draw_string(_font, at + Vector2.DOWN, value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0.01, 0.025, 0.03, 0.8))
 	canvas.draw_string(_font, at, value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
 
 func _fit(value: String, width: float, font_size: int) -> String:
+	font_size = roundi(font_size * ui_scale)
 	if _font.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= width: return value
 	var result := value
 	while result.length() > 1 and _font.get_string_size(result + "…", HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > width:
@@ -920,12 +985,12 @@ func _wrap(value: String, at: Vector2, width: float, font_size: int, color: Colo
 	var words := value.split(" ")
 	for word: String in words:
 		var candidate := line + (" " if not line.is_empty() else "") + word
-		if _font.get_string_size(candidate, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > width and not line.is_empty():
-			_text(line, at + Vector2(0, row * (font_size + 7)), font_size, color)
+		if _font.get_string_size(candidate, HORIZONTAL_ALIGNMENT_LEFT, -1, roundi(font_size * ui_scale)).x > width and not line.is_empty():
+			_text(line, at + Vector2(0, row * (font_size * ui_scale + 7)), font_size, color)
 			row += 1
 			if row >= maximum_lines: return
 			line = word
 		else:
 			line = candidate
 	if not line.is_empty() and row < maximum_lines:
-		_text(_fit(line, width, font_size), at + Vector2(0, row * (font_size + 7)), font_size, color)
+		_text(_fit(line, width, font_size), at + Vector2(0, row * (font_size * ui_scale + 7)), font_size, color)

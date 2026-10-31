@@ -60,3 +60,26 @@ Use the import and controls instructions in [README](../README.md). With a backe
 7. Complete an expedition with companions, extract, restart and then lose another expedition. Previously secured equipment, recruited companions and display references must remain intact.
 
 **No physical Android device testing, rendered GPU visual inspection, APK export/signing, Android shader validation or measured 30/60 FPS claim is made.** Native family models/icons and procedural animation remain the available art; the switch cue is not a replacement production character rig. Later milestone checkpoints must still deliver and validate their own planned features before the full Milestone 5.6 completion report.
+
+## Checkpoint 2 — mobile menus and accessibility
+
+The existing UI now shares a navy, bronze/gold and turquoise presentation theme with distinct Inventory and Equipment HUD entries. Inventory sorting adds base value, lowest rarity, category and recently acquired instance order. The same-avatar equipment preview rotates on drag and requests a frame only when needed; switching tabs or closing the menu disables it. UI scale choices of 100%, 110% and 120% enlarge text and targets while inventory columns and equipment pages adapt. Reduced motion/effects choices use the separate versioned graphics preferences file and preserve gameplay saves.
+
+**The checkpoint gate passed 802 assertions across nine engine invocations.** All final game-test logs were clean. This total counts the six retained UI suites once, the settings main/independent reader once each and the new integration suite once; it does not add repeated debugging runs.
+
+| Suite | Passed assertions | Checkpoint coverage |
+| --- | ---: | --- |
+| `mobile_ui_integration_test.gd` | 152 | Three landscape canvases × three scale choices × two safe insets, HUD/party/combat separation, all equipment pages, Inventory/Equipment routing, charge/joystick cancellation, preview drag isolation, paused actors, hidden preview shutdown, sorting and touch-applied accessibility |
+| `accessibility_preferences_test.gd`, main/read | 41 + 3 | Legacy graphics preferences, all new settings, verified atomic writes, separate-process restart, bounded reduced effects and malformed/truncated/future preference protection |
+| `loadout_ui_test.gd` | 87 | Existing owned circles, icons, selection, cancellation and equipment assignment |
+| `ui_layout_test.gd` | 247 | Existing combat control layout and multitouch/focus contracts |
+| `party_ui_test.gd` | 137 | Recruitment, command/revive routing and party modal behavior |
+| `expedition_ui_test.gd` | 19 | Minimap, results/notices and inventory modal isolation |
+| `visual_settings_test.gd` | 54 | Existing quality/frame targets and saved preference integration |
+| `rpg_ui_test.gd` | 62 | Existing commerce/crafting/equipment touch flow and correct modal pause clocks |
+
+The focused real-game suite verifies that the secured progression file remains byte-for-byte unchanged after UI scaling, sorting, inspection and accessibility changes. It tests the existing avatar contract without depending on the later character overhaul, allowing this checkpoint to be committed and validated independently. Logs include `/tmp/vaultbound-m56-mobile-ui-integration.log`, the settings suite's isolated `/tmp/vaultbound-m56-accessibility/` fixtures and the retained UI suite logs named above.
+
+Preference review found that an empty or truncated legacy configuration could otherwise be interpreted as default settings. The final loader requires the existing quality and FPS fields before applying a legacy record, and tests verify that empty/partial records preserve the current choices. No unresolved critical checkpoint regression is recorded.
+
+Android review must still check readable labels, long item descriptions and thumb comfort at all three scales, especially 120% on the smallest supported landscape display. Check notch/cutout safe areas, two-finger movement plus menu opening, preview dragging, tab changes, app background/resume and persistent reduced motion/effects. Headless geometry and input checks do not establish rendered glyph clipping, GPU preview quality or physical touchscreen behavior. The new theme uses original code-driven frames and existing family icons; no new production icon library is claimed.

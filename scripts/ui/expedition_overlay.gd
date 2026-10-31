@@ -7,12 +7,12 @@ signal results_closed
 signal consumable_requested
 signal equipment_requested(item_id: String)
 
-const GOLD := Color("d2b575")
-const IVORY := Color("f0eadb")
-const MUTED := Color("8fa5a5")
-const TEAL := Color("63c9b6")
-const WARNING := Color("e79a73")
-const PANEL := Color(0.025, 0.07, 0.085, 0.94)
+const GOLD := VaultUITheme.GOLD
+const IVORY := VaultUITheme.IVORY
+const MUTED := VaultUITheme.MUTED
+const TEAL := VaultUITheme.TEAL
+const WARNING := VaultUITheme.WARNING
+const PANEL := VaultUITheme.PANEL
 const RARITY_COLORS := {
 	"common": Color("c8d0c7"), "uncommon": Color("83c795"),
 	"rare": Color("84bce7"), "epic": Color("c19be6"),
@@ -49,6 +49,9 @@ var _party_notice := ""
 var progression_session: Node
 var rpg_panel: Control
 var graphics_panel: Control
+var ui_scale := 1.0
+var reduced_motion := false
+var reduced_effects := false
 
 
 func _ready() -> void:
@@ -86,7 +89,7 @@ func _process(delta: float) -> void:
 	for member: Dictionary in party_snapshot.get("members", []):
 		var id := String(member.get("id", ""))
 		var current := float(member.get("health", 0.0))
-		_party_health[id] = lerpf(float(_party_health.get(id, current)), current, 1.0 - exp(-12.0 * delta))
+		_party_health[id] = current if reduced_motion else lerpf(float(_party_health.get(id, current)), current, 1.0 - exp(-12.0 * delta))
 	for notice: Dictionary in _notifications:
 		notice.remaining = maxf(0.0, float(notice.remaining) - delta)
 	while not _notifications.is_empty() and float(_notifications[0].remaining) <= 0.0:
@@ -95,6 +98,15 @@ func _process(delta: float) -> void:
 	if _elapsed >= 1.0 / 30.0:
 		_elapsed = 0.0
 		queue_redraw()
+
+
+func apply_visual_settings(settings: Dictionary) -> void:
+	ui_scale = VaultUITheme.scale_from(settings)
+	reduced_motion = bool(settings.get("reduced_motion", false))
+	reduced_effects = bool(settings.get("reduced_effects", false))
+	_owned_touches.clear()
+	_owned_mouse = false
+	queue_redraw()
 
 
 func set_session_snapshot(data: Dictionary) -> void:
@@ -188,6 +200,14 @@ func open_pack() -> void:
 		if progression_session.has_method("close_service"):
 			progression_session.close_service()
 		rpg_panel.open_context(&"inventory")
+	_open_modal(&"pack")
+
+
+func open_equipment() -> void:
+	if mode != &"none" or not is_instance_valid(progression_session) or not is_instance_valid(rpg_panel):
+		return
+	progression_session.close_service()
+	rpg_panel.open_context(&"equipment")
 	_open_modal(&"pack")
 
 
@@ -292,6 +312,9 @@ func _input(event: InputEvent) -> void:
 		if event.physical_keycode == KEY_I:
 			get_viewport().set_input_as_handled()
 			open_pack()
+		elif event.physical_keycode == KEY_O:
+			get_viewport().set_input_as_handled()
+			open_equipment()
 		elif event.physical_keycode == KEY_F10:
 			get_viewport().set_input_as_handled()
 			open_graphics()
@@ -305,6 +328,9 @@ func _input(event: InputEvent) -> void:
 	elif _pack_rect().has_point(point):
 		_claim_press(event)
 		open_pack()
+	elif _equipment_rect().has_point(point):
+		_claim_press(event)
+		open_equipment()
 	elif _tonic_rect().has_point(point):
 		_claim_press(event)
 		consumable_requested.emit()
@@ -399,27 +425,32 @@ func _safe() -> Vector2:
 
 
 func _pack_rect() -> Rect2:
-	return Rect2(Vector2(31, 331) + _safe(), Vector2(162, 62))
+	return Rect2(Vector2(31, 331) + _safe(), Vector2(88, 62 * ui_scale))
+
+
+func _equipment_rect() -> Rect2:
+	return Rect2(Vector2(129, 331) + _safe(), Vector2(88, 62 * ui_scale))
 
 
 func _tonic_rect() -> Rect2:
-	return Rect2(Vector2(205, 331) + _safe(), Vector2(110, 62))
+	return Rect2(Vector2(227, 331) + _safe(), Vector2(88, 62 * ui_scale))
 
 
 func _graphics_rect() -> Rect2:
-	return Rect2(Vector2(size.x - 315 - _safe().x, 29 + _safe().y), Vector2(110, 62))
+	return Rect2(Vector2(size.x - 315 - _safe().x, 29 + _safe().y), Vector2(110, 62 * ui_scale))
 
 
 func _party_rect() -> Rect2:
-	return Rect2(Vector2(size.x * 0.5 - 110, size.y - 188 - _safe().y), Vector2(220, 62))
+	return Rect2(Vector2(size.x * 0.5 - 110 * ui_scale, _party_member_rect(0).position.y - 14 - 62 * ui_scale), Vector2(220, 62) * ui_scale)
 
 
 func _party_member_rect(index: int) -> Rect2:
-	return Rect2(Vector2(size.x * 0.5 - 211 + index * 216, size.y - 112 - _safe().y), Vector2(206, 68))
+	var width := 206.0 * ui_scale
+	return Rect2(Vector2(size.x * 0.5 - width - 5 + index * (width + 10), size.y - 44 - 68 * ui_scale - _safe().y), Vector2(width, 68 * ui_scale))
 
 
 func _revive_rect() -> Rect2:
-	return Rect2(Vector2(size.x * 0.5 - 211, size.y - 268 - _safe().y), Vector2(422, 62))
+	return Rect2(Vector2(size.x * 0.5 - 211 * ui_scale, _party_rect().position.y - 18 - 62 * ui_scale), Vector2(422, 62) * ui_scale)
 
 
 func _command_rect(index: int) -> Rect2:
@@ -439,7 +470,7 @@ func _recruit_rect(index: int) -> Rect2:
 
 
 func _modal_rect() -> Rect2:
-	var extent := Vector2(minf(840, size.x - 80), minf(560, size.y - 80))
+	var extent := Vector2(minf(840, size.x - 80 - _safe().x * 2), minf(560, size.y - 80 - _safe().y * 2))
 	return Rect2((size - extent) * 0.5, extent)
 
 
@@ -523,7 +554,7 @@ func _draw() -> void:
 	var graphics := _graphics_rect()
 	_panel(graphics, PANEL)
 	_text("GRAPHICS", graphics.get_center() + Vector2(0, -7), 12, GOLD, true)
-	_text("QUALITY / FPS", graphics.get_center() + Vector2(0, 14), 9, MUTED, true)
+	_text("DISPLAY / UI", graphics.get_center() + Vector2(0, 14), 9, MUTED, true)
 	if is_instance_valid(party):
 		_draw_party_controls()
 	_draw_storage_warning()
@@ -576,7 +607,7 @@ func _draw_party_controls() -> void:
 		var downed := bool(member.get("downed", false))
 		var eliminated := bool(member.get("eliminated", false))
 		var tint := WARNING if downed or eliminated else (GOLD if id == "guardian" else TEAL)
-		_portrait(card.position + Vector2(28, 31), id, tint, 20)
+		_portrait(card.position + Vector2(28, 31), id, tint, 20 * ui_scale)
 		_text(_fit_text(String(member.get("name", id.capitalize())), 125, 13), card.position + Vector2(56, 20), 13, IVORY)
 		var health := float(member.get("health", 0.0))
 		var maximum := maxf(1, float(member.get("max_health", 1.0)))
@@ -589,7 +620,7 @@ func _draw_party_controls() -> void:
 		var track := Rect2(card.position + Vector2(56, 45), Vector2(136, 6))
 		draw_rect(track, Color(0.01, 0.03, 0.04))
 		var fraction := clampf(float(_party_health.get(id, health)) / maximum, 0, 1)
-		draw_rect(Rect2(track.position, Vector2(track.size.x * fraction, 6)), tint)
+		draw_rect(Rect2(track.position, Vector2(track.size.x * fraction, 6)), WARNING if downed or eliminated else VaultUITheme.HEALTH)
 		var revive := clampf(float(member.get("revive_progress", 0.0)), 0, 1)
 		if downed and revive > 0.0:
 			draw_rect(Rect2(track.position, Vector2(track.size.x * revive, 6)), TEAL)
@@ -678,8 +709,12 @@ func _portrait(center: Vector2, role: String, tint: Color, radius: float) -> voi
 func _draw_pack_controls() -> void:
 	var pack := _pack_rect()
 	_panel(pack, PANEL)
-	_text("EXPEDITION PACK" if OS.has_feature("mobile") else "EXPEDITION PACK  ·  I", pack.position + Vector2(12, 21), 10, GOLD)
-	_text("%d secured gold" % int(session_snapshot.get("secured_gold", 0)), pack.position + Vector2(12, 44), 12, IVORY)
+	_text("INVENTORY", pack.get_center() + Vector2(0, -6), 10, GOLD, true)
+	_text("ITEMS  ·  I", pack.get_center() + Vector2(0, 15), 9, MUTED, true)
+	var equipment := _equipment_rect()
+	_panel(equipment, PANEL)
+	_text("EQUIPMENT", equipment.get_center() + Vector2(0, -6), 10, TEAL, true)
+	_text("INSPECT · O", equipment.get_center() + Vector2(0, 15), 9, MUTED, true)
 	var tonic := _tonic_rect()
 	_panel(tonic, PANEL)
 	_text("TONIC" if OS.has_feature("mobile") else "TONIC  ·  H", tonic.get_center() + Vector2(0, -7), 12, TEAL, true)
@@ -782,10 +817,11 @@ func _draw_notices() -> void:
 	for index in range(_notifications.size()):
 		var notice: Dictionary = _notifications[index]
 		var message := _fit_text(String(notice.message), 510, 13)
-		var opacity := minf(1.0, float(notice.remaining))
-		var width := minf(540, _font.get_string_size(message, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x + 30)
-		var rect := Rect2(size.x * 0.5 - width * 0.5, 290 + index * 29 + _safe().y, width, 25)
-		draw_rect(rect, Color(0.02, 0.07, 0.075, opacity * 0.9))
+		var opacity := 1.0 if reduced_motion else minf(1.0, float(notice.remaining))
+		var width := minf(540, _font.get_string_size(message, HORIZONTAL_ALIGNMENT_LEFT, -1, roundi(13 * ui_scale)).x + 36)
+		var height := 25.0 * ui_scale
+		var rect := Rect2(size.x * 0.5 - width * 0.5, 290 + index * (height + 4) + _safe().y, width, height)
+		VaultUITheme.frame(self, rect, Color(PANEL, opacity * 0.94), TEAL)
 		_text(message, rect.get_center() + Vector2(0, 5), 13, Color(IVORY, opacity), true)
 
 
@@ -877,9 +913,7 @@ func _button(rect: Rect2, caption: String, enabled: bool) -> void:
 
 
 func _panel(rect: Rect2, fill: Color) -> void:
-	draw_rect(rect, fill)
-	draw_rect(rect, Color(GOLD, 0.3), false, 1)
-	draw_line(rect.position, rect.position + Vector2(24, 0), GOLD, 2)
+	VaultUITheme.frame(self, rect, fill)
 
 
 func _diamond(center: Vector2, radius: float, color: Color) -> void:
@@ -887,6 +921,7 @@ func _diamond(center: Vector2, radius: float, color: Color) -> void:
 
 
 func _text(value: String, position: Vector2, font_size: int, color: Color, centered: bool = false, right_aligned: bool = false) -> void:
+	font_size = roundi(font_size * ui_scale)
 	var at := position
 	var width := _font.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	if centered:
@@ -898,6 +933,7 @@ func _text(value: String, position: Vector2, font_size: int, color: Color, cente
 
 
 func _fit_text(value: String, width: float, font_size: int) -> String:
+	font_size = roundi(font_size * ui_scale)
 	if _font.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= width:
 		return value
 	var cut := value

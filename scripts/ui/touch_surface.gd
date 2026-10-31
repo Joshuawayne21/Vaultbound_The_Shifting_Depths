@@ -4,12 +4,12 @@ extends Control
 ## Drawing uses viewport coordinates, so the same hit areas work with stretch.
 
 const INK := Color("10282d")
-const PANEL := Color(0.035, 0.09, 0.11, 0.87)
-const GOLD := Color("d2b575")
-const IVORY := Color("f0eadb")
-const MUTED := Color("8fa5a5")
-const TEAL := Color("63c9b6")
-const HEALTH := Color("d99579")
+const PANEL := VaultUITheme.PANEL
+const GOLD := VaultUITheme.GOLD
+const IVORY := VaultUITheme.IVORY
+const MUTED := VaultUITheme.MUTED
+const TEAL := VaultUITheme.TEAL
+const HEALTH := VaultUITheme.HEALTH
 const JOYSTICK_RADIUS := 62.0
 const DEADZONE := 0.14
 const LOADOUT_ACTIONS := [&"weapon_primary", &"weapon_secondary"]
@@ -50,6 +50,9 @@ var _mouse_switch_start := Vector2.ZERO
 var _mouse_switch_dragged := false
 var _weapon_texture_cache: Dictionary = {}
 var _switch_feedback := 0.0
+var ui_scale := 1.0
+var reduced_motion := false
+var reduced_effects := false
 
 
 func _ready() -> void:
@@ -65,6 +68,9 @@ func _process(delta: float) -> void:
 	_switch_feedback = maxf(0.0, _switch_feedback - delta)
 	displayed_health = lerpf(displayed_health, health, 1.0 - exp(-12.0 * delta))
 	displayed_stamina = lerpf(displayed_stamina, stamina, 1.0 - exp(-12.0 * delta))
+	if reduced_motion:
+		displayed_health = health
+		displayed_stamina = stamina
 	_redraw_elapsed += delta
 	# Smooth feedback at a modest update rate; no UI animation needs a 60Hz redraw.
 	if _redraw_elapsed >= 1.0 / 30.0:
@@ -83,9 +89,19 @@ func update_stats(current_health: float, health_limit: float, current_stamina: f
 
 
 func update_combat(snapshot: Dictionary) -> void:
-	if not combat_snapshot.is_empty() and snapshot.get("active_loadout", "") != combat_snapshot.get("active_loadout", ""):
+	if not reduced_motion and not combat_snapshot.is_empty() and snapshot.get("active_loadout", "") != combat_snapshot.get("active_loadout", ""):
 		_switch_feedback = 0.22
 	combat_snapshot = snapshot.duplicate()
+	queue_redraw()
+
+
+func apply_visual_settings(settings: Dictionary) -> void:
+	ui_scale = VaultUITheme.scale_from(settings)
+	reduced_motion = bool(settings.get("reduced_motion", false))
+	reduced_effects = bool(settings.get("reduced_effects", false))
+	if reduced_motion:
+		_switch_feedback = 0.0
+	reset_touches()
 	queue_redraw()
 
 
@@ -289,22 +305,26 @@ func _button_centers() -> Dictionary:
 
 func _button_radius(action: StringName) -> float:
 	if action == &"primary_attack":
-		return 44.0
+		return 44.0 * ui_scale
 	if action in [&"dodge", &"defense", &"heavy_attack"]:
-		return 35.0
-	return 32.0
+		return 35.0 * ui_scale
+	return 32.0 * ui_scale
 
 
 func _camera_rect() -> Rect2:
-	return Rect2(size.x - 207.0 - _safe_inset.x, 200.0 + _safe_inset.y, 174.0, 62.0)
+	return Rect2(size.x - 207.0 - _safe_inset.x, 200.0 + _safe_inset.y, 174.0, 62.0 * ui_scale)
 
 
 func _weapon_rect() -> Rect2:
-	return Rect2(Vector2(31.0, 174.0) + _safe_inset, Vector2(284.0, 68.0))
+	return Rect2(Vector2(31.0, 174.0) + _safe_inset, Vector2(284.0, 68.0 * ui_scale))
 
 
 func _loadout_center(index: int) -> Vector2:
-	return Vector2(67.0 + index * 76.0, 208.0) + _safe_inset
+	return Vector2(33.0 + 34.0 * ui_scale + index * 76.0 * ui_scale, 174.0 + 34.0 * ui_scale) + _safe_inset
+
+
+func _loadout_radius() -> float:
+	return 34.0 * ui_scale
 
 
 func _loadout_data(index: int) -> Dictionary:
@@ -323,7 +343,7 @@ func _action_at(point: Vector2) -> StringName:
 	if _camera_rect().has_point(point):
 		return &"camera_toggle"
 	for index in range(2):
-		if point.distance_to(_loadout_center(index)) <= 34.0 and not String(_loadout_data(index).get("uid", "")).is_empty():
+		if point.distance_to(_loadout_center(index)) <= _loadout_radius() and not String(_loadout_data(index).get("uid", "")).is_empty():
 			return LOADOUT_ACTIONS[index]
 	var centers := _button_centers()
 	for action: StringName in centers:
@@ -350,7 +370,7 @@ func _draw() -> void:
 	_draw_combat_status()
 	_draw_prompts()
 	if damage_flash > 0.0:
-		var alpha := damage_flash / 0.34 * 0.28
+		var alpha := damage_flash / 0.34 * (0.1 if reduced_motion else 0.28)
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0.72, 0.08, 0.035, alpha), false, 14.0)
 	if transition_alpha > 0.001:
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0.018, 0.035, 0.045, transition_alpha))
@@ -375,7 +395,7 @@ func _draw_identity() -> void:
 	_bar(origin + Vector2(17.0, 72.0), 250.0, displayed_health / maxf(1.0, max_health), HEALTH)
 	_text("HEALTH", origin + Vector2(17.0, 68.0), 10, IVORY)
 	_text("%d / %d" % [health, max_health], origin + Vector2(267.0, 68.0), 10, IVORY, false, true)
-	_bar(origin + Vector2(17.0, 108.0), 250.0, displayed_stamina / maxf(1.0, max_stamina), HEALTH if stamina < 24.0 else TEAL)
+	_bar(origin + Vector2(17.0, 108.0), 250.0, displayed_stamina / maxf(1.0, max_stamina), VaultUITheme.WARNING if stamina < 24.0 else VaultUITheme.RESOURCE)
 	_text("STAMINA", origin + Vector2(17.0, 102.0), 10, IVORY)
 	_text("%d / %d" % [stamina, max_stamina], origin + Vector2(267.0, 102.0), 10, IVORY, false, true)
 
@@ -441,6 +461,8 @@ func _draw_action_buttons() -> void:
 		var available := action != &"interact" or not interaction.is_empty()
 		available = available and cooldown <= 0.0 and input_enabled
 		var tint := GOLD if primary or action == &"heavy_attack" else IVORY
+		if action == &"skill_one": tint = TEAL
+		if action == &"skill_two": tint = VaultUITheme.RARITY_COLORS[3]
 		if action == &"target_lock" and bool(combat_snapshot.get("target_locked", false)):
 			tint = TEAL
 		if action == &"defense" and bool(combat_snapshot.get("blocking", false)):
@@ -455,7 +477,9 @@ func _draw_action_buttons() -> void:
 		if cooldown > 0.0:
 			_text("%.1f" % cooldown, center + Vector2(0, 6), 18, IVORY, true)
 		else:
-			_draw_icon(action, center - Vector2(0.0, 4.0), tint)
+			draw_set_transform(center, 0.0, Vector2.ONE * ui_scale)
+			_draw_icon(action, Vector2(0.0, -4.0), tint)
+			draw_set_transform(Vector2.ZERO)
 		var caption := _action_caption(action)
 		_text(caption, center + Vector2(0.0, radius + 16.0), 10, tint, true)
 		if action in [&"heavy_attack", &"defense"]:
@@ -504,24 +528,25 @@ func _draw_weapon() -> void:
 		var selected: bool = equipped and active == LOADOUT_SLOTS[index]
 		var tint := TEAL if selected else GOLD if equipped else MUTED
 		if selected:
-			draw_circle(center, 34.0 + _switch_feedback * 12.0, Color(TEAL, 0.12 + _switch_feedback * 0.2), true, -1, true)
-		draw_circle(center, 30.0, Color("173a42") if selected else PANEL, true, -1, true)
-		draw_arc(center, 30.0, 0, TAU, 40, tint, 2.0 if selected else 1.2, true)
-		draw_arc(center, 26.5, 0, TAU, 40, Color(tint, 0.28), 1.0, true)
+			draw_circle(center, _loadout_radius() + _switch_feedback * 12.0, Color(TEAL, 0.06 if reduced_effects else 0.12 + _switch_feedback * 0.2), true, -1, true)
+		draw_circle(center, 30.0 * ui_scale, Color("153345") if selected else PANEL, true, -1, true)
+		draw_arc(center, 30.0 * ui_scale, 0, TAU, 40, tint, 2.0 if selected else 1.2, true)
+		draw_arc(center, 26.5 * ui_scale, 0, TAU, 40, Color(tint, 0.28), 1.0, true)
 		for angle: float in [0.0, PI * 0.5, PI, PI * 1.5]:
-			_diamond(center + Vector2(cos(angle), sin(angle)) * 30.0, 2.5, tint)
+			_diamond(center + Vector2(cos(angle), sin(angle)) * 30.0 * ui_scale, 2.5, tint)
 		var texture := _loadout_texture(item) if equipped else null
 		if texture != null:
-			draw_texture_rect(texture, Rect2(center - Vector2(17, 23), Vector2(34, 34)), false, IVORY if selected else Color(IVORY, 0.75))
+			draw_texture_rect(texture, Rect2(center - Vector2(17, 23) * ui_scale, Vector2(34, 34) * ui_scale), false, IVORY if selected else Color(IVORY, 0.75))
 		else:
 			_text("ICON?" if equipped else "EMPTY", center + Vector2(0, 2), 9, MUTED, true)
-		_text(str(index + 1), center + Vector2(0, 22), 10, tint, true)
+		_text(str(index + 1), center + Vector2(0, 22) * ui_scale, 10, tint, true)
 		if remaining > 0 and equipped:
 			var progress := clampf(remaining / maxf(0.01, float(combat_snapshot.get("weapon_switch_duration", 0.32))), 0, 1)
-			draw_arc(center, 34.0, -PI * 0.5, -PI * 0.5 + TAU * progress, 40, Color(GOLD, 0.85), 2.5, true)
-	_text("WEAPON LOADOUTS", rect.position + Vector2(153, 17), 9, GOLD)
-	_text("1 PRIMARY · 2 SECONDARY", rect.position + Vector2(153, 35), 8, MUTED)
-	_text("SWITCHING" if remaining > 0 else "TAP AN EQUIPPED SLOT", rect.position + Vector2(153, 54), 8, TEAL if remaining > 0 else MUTED)
+			draw_arc(center, _loadout_radius(), -PI * 0.5, -PI * 0.5 + TAU * progress, 40, Color(GOLD, 0.85), 2.5, true)
+	var text_x := 153.0 if ui_scale <= 1.01 else 195.0
+	_text("LOADOUTS", rect.position + Vector2(text_x, 20), 10, GOLD)
+	_text("WEAPON I / II", rect.position + Vector2(text_x, 40), 8, MUTED)
+	_text("SWITCHING" if remaining > 0 else "TAP TO EQUIP", rect.position + Vector2(text_x, 60), 8, TEAL if remaining > 0 else MUTED)
 
 
 func _loadout_texture(item: Dictionary) -> Texture2D:
@@ -536,7 +561,7 @@ func _loadout_texture(item: Dictionary) -> Texture2D:
 
 
 func _draw_combat_status() -> void:
-	var origin := Vector2(32.0, 258.0) + _safe_inset
+	var origin := Vector2(32.0 + _safe_inset.x, _weapon_rect().end.y + 22.0)
 	var state := String(combat_snapshot.get("state", "idle"))
 	var charge: float = float(combat_snapshot.get("charge_ratio", 0.0))
 	if charge > 0.0:
@@ -551,7 +576,7 @@ func _draw_combat_status() -> void:
 		for i in range(3):
 			_diamond(origin + Vector2(8.0 + i * 24.0, 36.0), 5.0, GOLD if i < combo else Color(MUTED, 0.3))
 	if stamina < 24.0:
-		_text("LOW STAMINA", origin + Vector2(0, 61), 11, HEALTH)
+		_text("LOW STAMINA", origin + Vector2(150, 36), 10, VaultUITheme.WARNING)
 
 
 func _draw_icon(action: StringName, center: Vector2, color: Color) -> void:
@@ -616,16 +641,15 @@ func _draw_prompts() -> void:
 
 
 func _panel(rect: Rect2, fill: Color) -> void:
-	draw_rect(rect, fill)
-	draw_rect(rect, Color(GOLD, 0.24), false, 1.0)
-	draw_line(rect.position, rect.position + Vector2(20.0, 0.0), GOLD, 2.0, true)
-	draw_line(rect.end - Vector2(20.0, 0.0), rect.end, GOLD, 2.0, true)
+	VaultUITheme.frame(self, rect, fill)
 
 
 func _bar(origin: Vector2, width: float, fraction: float, color: Color) -> void:
-	draw_rect(Rect2(origin, Vector2(width, 7.0)), Color(0.01, 0.04, 0.05, 0.9))
-	draw_rect(Rect2(origin, Vector2(width * clampf(fraction, 0.0, 1.0), 7.0)), color)
-	draw_line(origin + Vector2(0.0, 9.0), origin + Vector2(width, 9.0), Color(color, 0.22), 1.0)
+	var height := 7.0 * ui_scale
+	draw_rect(Rect2(origin, Vector2(width, height)), Color("0b101d"))
+	draw_rect(Rect2(origin, Vector2(width * clampf(fraction, 0.0, 1.0), height)), color)
+	draw_line(origin + Vector2(0.0, 2), origin + Vector2(width * clampf(fraction, 0, 1), 2), Color(IVORY, 0.3), 1.0)
+	draw_rect(Rect2(origin - Vector2.ONE, Vector2(width + 2, height + 2)), Color(GOLD, 0.25), false, 1)
 
 
 func _diamond(center: Vector2, radius: float, color: Color, filled: bool = true) -> void:
@@ -638,6 +662,7 @@ func _diamond(center: Vector2, radius: float, color: Color, filled: bool = true)
 
 
 func _text(value: String, position: Vector2, font_size: int, color: Color, centered: bool = false, right_aligned: bool = false) -> void:
+	font_size = roundi(font_size * ui_scale)
 	var at := position
 	var text_width := _font.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	if centered:

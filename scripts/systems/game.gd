@@ -80,6 +80,8 @@ func _on_action(action: StringName) -> void:
 		_use_consumable()
 	elif action == &"inventory" and not transitioning:
 		hud.toggle_inventory()
+	elif action == &"equipment_menu" and not transitioning:
+		hud.toggle_equipment()
 	elif action == &"perf_toggle":
 		hud.toggle_performance()
 	elif action == &"party_menu" and not transitioning:

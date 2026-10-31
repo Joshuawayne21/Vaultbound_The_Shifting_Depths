@@ -36,6 +36,7 @@ const ACTION_KEYS := {
 	&"weapon_secondary": [KEY_2],
 	&"use_consumable": [KEY_H],
 	&"inventory": [KEY_I],
+	&"equipment_menu": [KEY_O],
 	&"perf_toggle": [KEY_P],
 	&"party_menu": [KEY_B],
 	&"revive_teammate": [KEY_V],

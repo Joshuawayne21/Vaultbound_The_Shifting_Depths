@@ -89,6 +89,13 @@ func toggle_inventory() -> void:
 		expedition_overlay.open_pack()
 
 
+func toggle_equipment() -> void:
+	if expedition_overlay.mode == &"pack":
+		expedition_overlay.close_modal()
+	elif expedition_overlay.mode == &"none":
+		expedition_overlay.open_equipment()
+
+
 func toggle_graphics() -> void:
 	if expedition_overlay.mode == &"graphics":
 		expedition_overlay.close_modal()
