@@ -1,11 +1,13 @@
-[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/items/material.svg" id="2"]
 
 [resource]
 script = ExtResource("1")
 id = &"aurora_bloom"
 label = "Aurora Bloom"
+description = "A luminous flower used to craft the Emerald Pendant."
 category = "material"
 rarity = "epic"
 value = 120
@@ -13,3 +15,13 @@ quantity_min = 1
 quantity_max = 1
 weapon_style = &""
 healing = 0.0
+stamina_restore = 0.0
+stack_limit = 99
+slot = &""
+required_level = 1
+identified_by_default = true
+base_stats = {}
+salvage = {}
+special_effects = Array[String]([])
+crafting_tags = Array[String](["reagent"])
+icon = ExtResource("2")

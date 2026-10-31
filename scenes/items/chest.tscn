@@ -1,0 +1,47 @@
+[gd_scene load_steps=7 format=3]
+
+[sub_resource type="StandardMaterial3D" id="Material_gold"]
+albedo_color = Color(0.76, 0.59, 0.34, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="Material_teal"]
+albedo_color = Color(0.22, 0.47, 0.48, 1)
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="Mesh_0"]
+size = Vector3(0.69, 0.76, 0.38)
+
+[sub_resource type="BoxMesh" id="Mesh_1"]
+size = Vector3(0.24, 0.15, 0.43)
+
+[sub_resource type="BoxMesh" id="Mesh_2"]
+size = Vector3(0.24, 0.15, 0.43)
+
+[sub_resource type="BoxMesh" id="Mesh_3"]
+size = Vector3(0.08, 0.65, 0.05)
+
+[node name="ChestDisplay" type="Node3D"]
+
+[node name="Part0" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.42, 0)
+mesh = SubResource("Mesh_0")
+material_override = SubResource("Material_teal")
+cast_shadow = 0
+
+[node name="Part1" type="MeshInstance3D" parent="."]
+position = Vector3(-0.45, 0.7, 0)
+mesh = SubResource("Mesh_1")
+material_override = SubResource("Material_gold")
+cast_shadow = 0
+
+[node name="Part2" type="MeshInstance3D" parent="."]
+position = Vector3(0.45, 0.7, 0)
+mesh = SubResource("Mesh_2")
+material_override = SubResource("Material_gold")
+cast_shadow = 0
+
+[node name="Part3" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.42, -0.22)
+mesh = SubResource("Mesh_3")
+material_override = SubResource("Material_gold")
+cast_shadow = 0

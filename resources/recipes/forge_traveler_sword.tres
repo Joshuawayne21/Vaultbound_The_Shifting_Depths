@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="VaultCraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/crafting_recipe.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "forge_traveler_sword"
+label = "Forge Traveler Sword"
+description = "Bind a reliable iron blade for the existing sword family."
+ingredients = {"iron_ore": 3, "root_fiber": 2}
+gold = 12
+output_id = "traveler_sword"
+output_quantity = 1
+required_level = 1

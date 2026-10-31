@@ -9,6 +9,7 @@ const LEVELS := {
 	&"dungeon": "res://scenes/world/dungeon.tscn",
 	&"combat_arena": "res://scenes/world/combat_arena.tscn",
 	&"rootbound_abyss": "res://scenes/world/rootbound_abyss.tscn",
+	&"collection_hall": "res://scenes/world/collection_hall.tscn",
 }
 
 ## Set to a nonnegative value in the inspector to reproduce an expedition on Android.
@@ -42,6 +43,7 @@ func _ready() -> void:
 	camera_rig.set_target(player)
 	hud.bind_player(player)
 	hud.bind_expedition(ExpeditionSession)
+	ExpeditionSession.changed.connect(_on_progression_changed)
 	hud.modal_changed.connect(_on_modal_changed)
 	hud.consumable_requested.connect(_use_consumable)
 	hud.equipment_requested.connect(_equip_item)
@@ -125,6 +127,7 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 		# discards only its unsecured bag; the secured profile is untouched.
 		ExpeditionSession.fail_run("abandoned")
 	transitioning = true
+	ExpeditionSession.close_service()
 	party.set_paused(true)
 	if _modal_open:
 		hud.close_modals()
@@ -142,6 +145,8 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	active_world = next_world
 	current_location = destination
 	player.reset_for_spawn(active_world.get_spawn_transform(entry_id))
+	ExpeditionSession.bind_game_context(player, destination)
+	player.apply_progression(ExpeditionSession.profile)
 	party.enter_world(active_world, destination)
 	camera_rig.reset_position()
 	for portal: Node in get_tree().get_nodes_in_group("interactables"):
@@ -220,6 +225,7 @@ func _on_modal_changed(open: bool) -> void:
 			_world_process_mode = active_world.process_mode
 			active_world.process_mode = Node.PROCESS_MODE_DISABLED
 	else:
+		ExpeditionSession.close_service()
 		player.process_mode = _player_process_mode
 		if is_instance_valid(active_world):
 			active_world.process_mode = _world_process_mode
@@ -233,3 +239,6 @@ func _use_consumable() -> void:
 
 func _equip_item(item_id: String) -> void:
 	ExpeditionSession.equip_item(item_id, player)
+
+func _on_progression_changed(_data: Dictionary) -> void:
+	player.apply_progression(ExpeditionSession.profile)

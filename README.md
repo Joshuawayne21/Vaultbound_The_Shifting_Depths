@@ -1,8 +1,8 @@
 # Vaultbound: The Shifting Depths
 
-**Milestone 4 — Intelligent AI Adventurers.** A Godot 4 / GDScript-only, offline party expedition prototype for Android landscape. Recruit a Guardian and Mystic in the Sanctuary, lead them through a seeded 8–12-room underground jungle, fight monsters and the Rootwarden, revive fallen allies, and extract to secure your rewards.
+**Milestone 5 — Equipment, Inventory and RPG Progression.** A Godot 4 / GDScript-only, offline fantasy expedition prototype for Android landscape. Explore the Rootbound Abyss with recruited companions, extract treasure, equip and improve unique gear, trade with Sanctuary merchants, craft supplies, develop talents and exhibit owned treasures in the Collection Hall.
 
-The Sanctuary, practice dungeon and arena, player movement, sword/shield and staff combat, touch controls, both smoothly switchable cameras, procedural dungeons, treasure, boss encounters and secured progression from Milestones 1–3 remain available. `project.godot` stays at the repository root. The active party supports one human leader and up to two local AI companions. No online multiplayer, additional biomes or marketplace are implemented.
+The Sanctuary, practice dungeon and arena, player movement, sword/shield and staff combat, touch controls, both smoothly switchable cameras, procedural dungeons, treasure, boss encounters and secured progression from Milestones 1–4 remain available. `project.godot` stays at the repository root. The active party supports one human leader and up to two local AI companions. No online multiplayer, player-to-player trading, guilds or additional biomes are implemented.
 
 ## Import and play on Android
 
@@ -13,7 +13,9 @@ The Sanctuary, practice dungeon and arena, player movement, sword/shield and sta
 5. In Sanctuary, visit the **Tavern on the west side** and tap **USE** to recruit the Guardian and Mystic. Recruitment is optional; solo play remains available. The **east-facing Rootbound Abyss archway** begins an expedition, and the northern arch still leads to the original practice dungeon and arena.
 6. Open the entrance supply chest, follow the discovered-room minimap, explore branches, and approach whispering vine walls to reveal hidden rooms. Walk through open doorways; rooms connect continuously.
 7. Defeat the Rootwarden, claim its reward chest, then find the **extraction spring in the connected chamber beyond the boss**. Tap **USE** to save rewards and return to the Sanctuary.
-8. Review the results screen and open **PACK → SECURED** to inspect saved items. Collected gear can select an existing weapon style; tonics restore health.
+8. Review the results screen, then open **PACK → INVENTORY**. Select an owned item to compare and equip it, mark it as a favorite or lock it. The **EQUIPMENT** tab shows all six slots and a character preview; **CHARACTER** shows XP and talent allocation.
+9. Visit the four merchants/workbenches along the **south side of Sanctuary**: General Merchant, Blacksmith, Equipment Trader and Relic Appraiser. Review the displayed costs before confirming purchases, sales, crafts or improvements.
+10. Use the **northwestern Collection Hall passage** to assign owned equipment and relics to displays and view the discovery journals. Its return arch leads safely back to Sanctuary.
 
 On desktop, open the same project and press F5. F6 runs only the selected scene and may omit the persistent shell. The original Sanctuary and character models are assembled at runtime; Abyss room geometry is authored in reusable native `.tscn` scenes.
 
@@ -43,7 +45,7 @@ Running inside the Android editor requires no APK export. The included ARM64 exp
 
 Sword/shield retains its three-hit combo, charged heavy, Shield Bash and Cleave. Staff retains bolts, charged splash, Arcane Burst and Frost Nova. Both use identical damage, costs, cooldowns, range and targeting in either camera view. Charge, block and joystick touches cancel safely on focus loss, Android pause, travel and modal opening.
 
-PACK, party/recruitment menus and expedition results pause the local player, companions and active world. Closing them restores input without resuming stale held buttons. Basic movement is grounded; jumping is intentionally omitted. The elevated tactical camera uses a narrow perspective lens for a continuous transition rather than a strict orthographic projection.
+PACK, merchant/workbench/Collection Hall screens, party/recruitment menus and expedition results pause the local player, companions and active world. Closing them restores input without resuming stale held buttons. Basic movement is grounded; jumping is intentionally omitted. The elevated tactical camera uses a narrow perspective lens for a continuous transition rather than a strict orthographic projection.
 
 ## Party and companions
 
@@ -80,17 +82,33 @@ Existing skeletons, archers and golems form deterministic groups with modest dep
 
 ## Treasure, inventory and saving
 
-Common, Reinforced, Ancient and Cursed chests share one chest implementation. Item definitions and weighted `.tres` loot tables provide gold, crafting materials, equipment, healing consumables and collectibles across **Common, Uncommon, Rare, Epic and Legendary** rarities. The boss chest has its own table and a guaranteed **Heart of the Rootwarden** collectible. Chests can be claimed only once per expedition.
+Common, Reinforced, Ancient and Cursed chests share one chest implementation. Item definitions and weighted `.tres` loot tables provide gold, crafting materials, equipment, healing consumables and collectibles across **Common, Uncommon, Rare, Epic, Legendary, Mythic and Ancient Relic** rarities. The shared catalog contains **30 starter definitions**, including the original twelve items, and keeps definition resources separate from unique owned equipment instances. The boss chest has its own table and a guaranteed **Heart of the Rootwarden** collectible. Chests can be claimed only once per expedition.
 
 - **Unsecured pack:** loot collected this run. It is not saved until extraction. Tonics in the pack can be consumed immediately.
-- **Secured inventory:** extracted gold/items/discoveries. Owned gear can select its sword or staff style; rarity does not currently add equipment stat bonuses. Both original base weapons remain available.
-- **Successful extraction:** requires boss defeat. Gold, item quantities, discoveries, completion/kill/time statistics and seed are written and verified before travel occurs.
+- **Secured inventory:** forty slots for owned stacks and individual equipment. Worn gear stays in those slots; each equipment instance keeps its unique ID, rolled modifiers, enhancement, condition and protection flags. Item-specific stack limits apply to materials and consumables. Both original sword/shield and staff combat families remain available.
+- **Successful extraction:** requires boss defeat. Gold, unique gear/stacks, discoveries, character and companion experience, completion/kill/time statistics and seed are written and verified before travel occurs. Chest collection checks space for all pending rewards before claiming a chest; a rejected chest remains available.
 - **Death or retreat:** returns to the Sanctuary and discards only the current unsecured bag. Previously secured equipment, items and gold remain. A results screen explains the outcome.
 - **Closing the app during a run:** abandons its in-memory unsecured loot. Mid-expedition resume is not implemented. Previously secured progress loads on restart.
 
-The offline profile lives at `user://vaultbound/profile.json` with a previous valid `.bak`. Writes use a temporary file, validation/read-back and atomic rename. A failed extraction write leaves the run and its loot available for retry. Corrupt or newer unsupported saves are preserved; a valid backup is recovered where possible, otherwise progression becomes read-only with an on-screen warning. Never delete the profile to fix an import problem. Android stores `user://` in app-specific storage; its exact path depends on whether you run from the editor or an exported app.
+The **version-two** offline profile lives at `user://vaultbound/profile.json` with a previous valid `.bak`. Version-one saves migrate in memory without rewriting the original on load. Existing gold, counts, equipped selection, companions, discoveries and expedition statistics are preserved; equipment receives stable instance IDs. If an old inventory exceeds forty slots, its remaining quantities stay in a **legacy reserve**. Select the inventory reserve filter to claim supported items as space becomes available; unknown legacy IDs remain preserved rather than discarded. Writes use a temporary file, validation/read-back and atomic rename. A failed extraction write leaves the run and its loot available for retry. Corrupt or newer unsupported saves are preserved; a valid backup is recovered where possible, otherwise progression becomes read-only with an on-screen warning. Never delete the profile to fix an import problem. Android stores `user://` in app-specific storage; its exact path depends on whether you run from the editor or an exported app.
 
-The profile service and local combat command boundary are separated from presentation for later server-authoritative work. This does **not** implement authentication, networking, replication, anti-cheat or cloud saves.
+The profile service, transaction rules and local combat command boundary are separated from presentation for later server-authoritative work. These local saves are temporary development/offline persistence and are editable on the device; online play will require secure server-side storage and validation. This does **not** implement authentication, networking, replication, anti-cheat or cloud saves.
+
+## Equipment, merchants, crafting and character growth
+
+Equipment slots are **Main Weapon, Off-Hand, Helmet, Chest Armor, Boots and Accessory**. Item selection shows requirements, condition, enhancement, modifiers and a comparison against current equipment. Category/favorite/lock filters and name/rarity/level sorting support the touch-scrollable inventory. Selling and salvaging reject equipped, displayed, favorite or locked items. Unidentified artifacts cannot be equipped. Each confirmation is tied to one saved revision and transaction receipt, so stale or repeated touchscreen confirmations cannot duplicate a purchase or craft.
+
+Equipped bonuses affect real player health/stamina limits, damage, protection and stamina recovery. Changing gear clamps current resources instead of healing the player for free. Main-weapon and shield bonuses apply only to their compatible active weapon family; switching the original base sword/staff family does not grant a sword's bonuses to a staff. Existing avatar parts receive restrained appearance changes without attaching unscaled armor models. The equipment screen renders the same avatar in an isolated preview viewport that stops updating when hidden.
+
+The General Merchant sells consumables/materials, the Equipment Trader carries a small rotating selection, and the Relic Appraiser reveals the properties of mysterious equipment for a fee. Stock rotations use **successfully completed expedition counts**, never device time. Buying verifies gold, remaining stock and inventory space before saving. Sales remove only the selected owned instance or quantity.
+
+The Blacksmith provides guaranteed **+0 through +5** enhancement, condition repairs, salvage and eight authored recipes: Traveler Sword, Apprentice Staff, Round Shield, Tempered Ingot, Mooncap Tonics, Stamina Draughts, Rootstep Boots and Emerald Pendant. Upgrades preview the next statistics and required materials/gold. There are no random upgrade failures. Recipes use obtainable dungeon or merchant materials. Protected materials must be unlocked/unfavorited before they can be consumed. Successful extraction wears equipped gear by 2 condition; defeat wears it by 8. Broken gear remains owned and retains its base combat family, but its equipment bonuses stop applying until repaired.
+
+Character progression uses an explicit thirty-level table. Extraction grants **250 XP plus 20 per defeated normal enemy**; failed or abandoned runs grant none. Level 2 requires 200 cumulative XP and level 30 caps at 46,400. Each level grants one talent point after level 1. The small **Offense, Defense and Utility** branches allow up to ten ranks each, improve modest statistics, and require confirmation before spending a point. Talent respec is not included in this milestone. A separate normalized-stat resolver prepares for later PvP work; no PvP or online authority is implemented.
+
+## Collection Hall
+
+The Hall is a separate underground castle chamber reached from the Sanctuary's northwestern arch. It contains **eight equipment stands, four relic pedestals, a Rootwarden trophy wall, a monster journal and an item journal**. Interact with a stand, choose an eligible owned item and confirm the display. An assignment references the original inventory instance; it never creates a second item or removes ownership, and the same instance cannot occupy multiple stands. Clear a display before selling or salvaging its item. The trophy unlocks from the existing Rootwarden discovery, and successful extraction records monster discoveries. Assignments and journals persist across travel and restart.
 
 ## Rootwarden and awareness
 
@@ -108,8 +126,9 @@ Awareness grows from kills, treasure value, cursed chests and time. Configurable
 - `scripts/party/`, `resources/companions/`, `scenes/party/`: party lifecycle, AI decisions, navigation, companion data and Tavern recruitment.
 - `scenes/rooms/`, `scenes/props/`, `resources/materials/`: authored reusable Abyss geometry and materials.
 - `scripts/expedition/`: pure layout generation, room activation, encounters, pooled hazards, awareness, secrets and extraction.
-- `scripts/progression/`, `resources/items/`, `resources/loot/`: item definitions, weighted loot, transient run ledger and secured local profile.
-- `scripts/ui/`: original touch controls plus discovery map, inventory, results and expedition HUD.
+- `scripts/progression/`, `resources/items/`, `resources/loot/`, `resources/recipes/`, `resources/progression/`: definitions, instance inventory, transaction rules, recipes, character tables, transient loot and versioned local saves.
+- `scripts/ui/`: original combat/party controls, expedition HUD, discovery map and touch-scrollable RPG inventory/service panels.
+- `scenes/world/collection_hall.tscn`, `scripts/world/`: Sanctuary services, Hall exhibits/journals and existing travel destinations.
 - `tests/`, `docs/`: automated checks, archived milestone information and Android manual review.
 
 The level uses one shared environment and shadow-casting directional light, simple shared materials and native primitive collision. Far rooms stop rendering/simulating while their floor and boundary collision stay valid. Normal encounters cap at **six active enemies**; the boss encounter suspends them. Two environmental hazards and four boss warning meshes are reused. Paving uses MultiMesh draws; animated water uses three reused foam strips rather than fluid or particle simulation. Emissive decoration does not add realtime point lights. The metrics overlay shows FPS, active foes and draw calls.
@@ -134,6 +153,13 @@ godot4 --headless --path . --script res://tests/companion_behavior_test.gd
 godot4 --headless --path . --script res://tests/party_targeting_test.gd
 godot4 --headless --path . --script res://tests/companion_navigation_test.gd
 godot4 --headless --path . --script res://tests/party_persistence_test.gd
+godot4 --headless --path . --script res://tests/item_catalog_test.gd
+godot4 --headless --path . --script res://tests/inventory_economy_test.gd
+godot4 --headless --path . --script res://tests/character_progression_test.gd
+godot4 --headless --path . --script res://tests/collection_world_test.gd
+godot4 --headless --path . --script res://tests/save_migration_test.gd
+godot4 --headless --path . --script res://tests/rpg_integration_test.gd
+godot4 --headless --path . --script res://tests/rpg_ui_test.gd
 ```
 
 The persistence restart fixture uses **two separate engine processes**, with a disposable `/tmp` path on desktop/cloud (not an Android shell instruction):
@@ -143,16 +169,18 @@ godot4 --headless --path . --script res://tests/persistence_restart_test.gd -- -
 godot4 --headless --path . --script res://tests/persistence_restart_test.gd -- --read /tmp/vaultbound-restart/profile.json
 godot4 --headless --path . --script res://tests/party_persistence_test.gd -- --write /tmp/vaultbound-roster-restart/profile.json
 godot4 --headless --path . --script res://tests/party_persistence_test.gd -- --read /tmp/vaultbound-roster-restart/profile.json
+godot4 --headless --path . --script res://tests/save_migration_test.gd -- --write /tmp/vaultbound-rpg-restart/profile.json
+godot4 --headless --path . --script res://tests/save_migration_test.gd -- --read /tmp/vaultbound-rpg-restart/profile.json
 ```
 
 Import first to index global GDScript classes. Assertions exit nonzero on failure; inspect logs for runtime errors too. Restricted Linux runners may need writable `XDG_DATA_HOME`, `XDG_CONFIG_HOME` and `XDG_CACHE_HOME`. Android SDK/build-tools warnings affect APK export setup, not scene resources.
 
-See [Milestone 4 validation](docs/milestone-4-validation.md) for current observed results and [Milestone 3 validation](docs/milestone-3-validation.md) for the archived expedition baseline and [the Android test plan](docs/test-plan.md) for the manual checklist. The [Milestone 2 guide](docs/milestone-2-guide.md) retains earlier combat details. The original GitHub roadmap is [archived separately](docs/original-github-roadmap.md) and describes future ideas, not shipped functionality.
+See [Milestone 5 validation](docs/milestone-5-validation.md) for current results and [the Android test plan](docs/test-plan.md) for the manual checklist. The [Milestone 4 report](docs/milestone-4-validation.md), [Milestone 3 report](docs/milestone-3-validation.md) and [Milestone 2 guide](docs/milestone-2-guide.md) retain the companion, expedition and combat baselines. The original GitHub roadmap is [archived separately](docs/original-github-roadmap.md) and describes future ideas, not shipped functionality.
 
 ## Remaining limits
 
-This is a complete expedition loop prototype, not a finished commercial game. Equipment stat affixes, crafting, additional floors/biomes, expedition resume, arbitrary stairs or multilevel navigation, companion gear/talents and additional classes are outside this milestone. Companion pathfinding targets the authored flat modular floors; enemy steering remains intended for the open room modules. Geometry, procedural character animation and synthesized sounds are stylized placeholders.
+This is a complete expedition loop prototype, not a finished commercial game. Large talent trees, talent respec, additional floors/biomes, expedition resume, arbitrary stairs or multilevel navigation, companion gear/talents and additional classes are outside this milestone. Inventory capacity is forty active slots; the recoverable reserve preserves old saves and is not unlimited storage for new rewards. Companion pathfinding targets the authored flat modular floors; enemy steering remains intended for the open room modules. Geometry, procedural character animation and synthesized sounds are stylized placeholders.
 
 **No physical Android testing is claimed.** Rendered visual review, touchscreen comfort, APK export/signing, audio output, frame pacing, heat and battery use still need device verification. Headless checks establish logic and resource validity, not final game feel or a measured mobile frame rate.
 
-Work stops after Milestone 4 for review. Online multiplayer, additional companion classes and later milestones are not implemented.
+Work stops after Milestone 5 for review. Online multiplayer, player-to-player trading, guilds, additional companion classes and later milestones are not implemented.

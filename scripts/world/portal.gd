@@ -95,6 +95,7 @@ func get_prompt() -> String:
 		&"sanctuary": return "Return to Sanctuary"
 		&"combat_arena": return "Enter the Proving Grounds"
 		&"rootbound_abyss": return "Begin a Rootbound Abyss expedition"
+		&"collection_hall": return "Enter your Collection Hall"
 		&"dungeon": return "Return to the Sunken Vault" if entry_id == &"from_arena" else "Enter the Sunken Vault"
 	return "Use the passage"
 

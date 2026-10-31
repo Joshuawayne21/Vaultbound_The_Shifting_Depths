@@ -17,6 +17,7 @@ const RARITY_COLORS := {
 	"common": Color("c8d0c7"), "uncommon": Color("83c795"),
 	"rare": Color("84bce7"), "epic": Color("c19be6"),
 	"legendary": Color("edbf70"),
+	"mythic": Color("ef8eb7"), "ancient_relic": Color("74eadb"),
 }
 const PAGE_SIZE := 5
 const PARTY_COMMANDS := [
@@ -45,12 +46,35 @@ var _party_health: Dictionary = {}
 var _owned_touches: Dictionary = {}
 var _owned_mouse := false
 var _party_notice := ""
+var progression_session: Node
+var rpg_panel: Control
 
 
 func _ready() -> void:
 	_font = ThemeDB.fallback_font
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var panel_script := load("res://scripts/ui/rpg_panel.gd") as Script
+	if panel_script != null:
+		rpg_panel = panel_script.new() as Control
+		rpg_panel.name = "RPGPanel"
+		add_child(rpg_panel)
+		rpg_panel.close_requested.connect(close_modal)
+
+
+func bind_progression_session(session: Node) -> void:
+	progression_session = session
+	if is_instance_valid(rpg_panel):
+		rpg_panel.bind_session(session)
+
+
+func open_service(kind: StringName, context: Dictionary = {}) -> void:
+	if not is_instance_valid(rpg_panel) or not is_instance_valid(progression_session):
+		return
+	if mode not in [&"none", &"pack"]:
+		return
+	rpg_panel.open_context(kind, context)
+	_open_modal(&"pack")
 
 
 func _process(delta: float) -> void:
@@ -70,6 +94,8 @@ func _process(delta: float) -> void:
 
 func set_session_snapshot(data: Dictionary) -> void:
 	session_snapshot = data.duplicate(true)
+	if is_instance_valid(rpg_panel) and rpg_panel.visible:
+		rpg_panel.refresh()
 	page = mini(page, maxi(0, (_pack_items().size() - 1) / PAGE_SIZE))
 	queue_redraw()
 
@@ -136,6 +162,8 @@ func set_dungeon_snapshot(data: Dictionary) -> void:
 
 
 func add_notice(message: String) -> void:
+	if is_instance_valid(rpg_panel) and rpg_panel.visible:
+		rpg_panel.set_notice(message)
 	_notifications.append({"message": message, "remaining": 4.0})
 	while _notifications.size() > 3:
 		_notifications.pop_front()
@@ -151,10 +179,16 @@ func open_pack() -> void:
 	pack_tab = &"bag" if bool(session_snapshot.get("active", false)) else &"bank"
 	page = 0
 	selected_item = ""
+	if is_instance_valid(progression_session) and progression_session.has_method("progression_snapshot") and is_instance_valid(rpg_panel):
+		if progression_session.has_method("close_service"):
+			progression_session.close_service()
+		rpg_panel.open_context(&"inventory")
 	_open_modal(&"pack")
 
 
 func _open_modal(value: StringName) -> void:
+	if value != &"pack" and is_instance_valid(rpg_panel) and rpg_panel.visible:
+		rpg_panel.hide_panel()
 	var was_open := mode != &"none"
 	mode = value
 	InputHub.reset_controls()
@@ -171,6 +205,8 @@ func close_modal() -> void:
 		return
 	var was_results := mode == &"results"
 	mode = &"none"
+	if is_instance_valid(rpg_panel) and rpg_panel.visible:
+		rpg_panel.hide_panel()
 	InputHub.reset_controls()
 	if is_instance_valid(source_surface):
 		source_surface.modal_blocked = false
@@ -198,6 +234,9 @@ func _input(event: InputEvent) -> void:
 		# Consume the complete event stream while open, including releases/drags;
 		# a finger that opened/closed a panel must never become a world attack.
 		get_viewport().set_input_as_handled()
+		if is_instance_valid(rpg_panel) and rpg_panel.visible:
+			rpg_panel.handle_event(event)
+			return
 		if event is InputEventKey and event.pressed and not event.echo:
 			if event.physical_keycode in [KEY_ESCAPE, KEY_ENTER, KEY_KP_ENTER] or (mode == &"pack" and event.physical_keycode == KEY_I) or (mode == &"party" and event.physical_keycode == KEY_B):
 				close_modal()
@@ -466,7 +505,9 @@ func _draw() -> void:
 	if mode != &"none":
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0.012, 0.025, 0.035, 0.88))
 		match mode:
-			&"pack": _draw_pack()
+			&"pack":
+				if not is_instance_valid(rpg_panel) or not rpg_panel.visible:
+					_draw_pack()
 			&"results": _draw_results()
 			&"party": _draw_party_menu()
 			&"recruit": _draw_recruitment()

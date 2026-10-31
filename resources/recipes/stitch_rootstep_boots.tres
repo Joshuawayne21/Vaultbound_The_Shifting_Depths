@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="VaultCraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/crafting_recipe.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "stitch_rootstep_boots"
+label = "Stitch Rootstep Boots"
+description = "Weave stamina-supporting expedition boots."
+ingredients = {"root_fiber": 8, "tempered_ingot": 1}
+gold = 24
+output_id = "rootstep_boots"
+output_quantity = 1
+required_level = 3

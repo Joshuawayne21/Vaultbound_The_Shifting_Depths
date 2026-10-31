@@ -1,0 +1,39 @@
+[gd_scene load_steps=6 format=3]
+
+[sub_resource type="StandardMaterial3D" id="Material_glow"]
+albedo_color = Color(0.4, 0.88, 0.69, 1)
+roughness = 0.85
+shading_mode = 0
+
+[sub_resource type="StandardMaterial3D" id="Material_gold"]
+albedo_color = Color(0.76, 0.59, 0.34, 1)
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="Mesh_0"]
+size = Vector3(0.38, 0.67, 0.38)
+
+[sub_resource type="BoxMesh" id="Mesh_1"]
+size = Vector3(0.62, 0.12, 0.62)
+
+[sub_resource type="BoxMesh" id="Mesh_2"]
+size = Vector3(0.48, 0.09, 0.48)
+
+[node name="RelicDisplay" type="Node3D"]
+
+[node name="Part0" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.47, 0)
+mesh = SubResource("Mesh_0")
+material_override = SubResource("Material_glow")
+cast_shadow = 0
+
+[node name="Part1" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.08, 0)
+mesh = SubResource("Mesh_1")
+material_override = SubResource("Material_gold")
+cast_shadow = 0
+
+[node name="Part2" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.82, 0)
+mesh = SubResource("Mesh_2")
+material_override = SubResource("Material_gold")
+cast_shadow = 0

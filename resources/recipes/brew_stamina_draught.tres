@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="VaultCraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/crafting_recipe.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "brew_stamina_draught"
+label = "Brew Stamina Draughts"
+description = "Prepare two useful stamina supplies for long fights."
+ingredients = {"glow_spore": 2, "emerald_dust": 1}
+gold = 5
+output_id = "stamina_draught"
+output_quantity = 2
+required_level = 1

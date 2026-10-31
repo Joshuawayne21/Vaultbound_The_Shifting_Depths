@@ -67,6 +67,8 @@ var _target_ring: MeshInstance3D
 var _recovery_requested := false
 var _hud_elapsed := 0.0
 var _damage_receipts: Dictionary = {}
+var _progression_profile: Dictionary = {}
+var _derived_stats: Dictionary = {"damage_multiplier": 1.0, "armor": 0.0}
 
 @onready var visual: Node3D = $Visual
 
@@ -184,6 +186,7 @@ func receive_hit(packet: Dictionary) -> bool:
 	var original_amount := amount
 	amount = combat.block_damage(amount, incoming)
 	blocked = blocked and amount < original_amount
+	amount *= 1.0 - clampf(float(_derived_stats.get("armor", 0.0)), 0.0, 0.55)
 	health_component.damage(amount)
 	damage_sequence += 1
 	if is_instance_valid(party):
@@ -217,6 +220,42 @@ func restore_stamina(amount: float) -> float:
 	stamina += restored
 	_emit_stats()
 	return restored
+
+func apply_progression(profile: Dictionary) -> void:
+	# Cache only inputs to the stat policy; inventory menu state and every-second
+	# expedition snapshots must not reset a combat action or refill resources.
+	_progression_profile = {"character": profile.get("character", CharacterProgression.empty_character()).duplicate(true),
+		"inventory": profile.get("inventory", []).duplicate(true), "equipment": profile.get("equipment", {}).duplicate(true)}
+	_refresh_progression_stats()
+
+func _refresh_progression_stats() -> void:
+	var family: StringName = combat.weapon.style if combat != null else &"sword"
+	var next := CharacterProgression.resolve_stats(_progression_profile, family)
+	if next == _derived_stats:
+		return
+	var previous_health := health
+	var previous_stamina := stamina
+	_derived_stats = next
+	max_health = float(next.max_health)
+	max_stamina = float(next.max_stamina)
+	# Preserving absolute current values prevents equipping/unequipping health
+	# gear from becoming a repeatable heal, including near-death max reductions.
+	health = previous_health
+	stamina = previous_stamina
+	stamina_component.regeneration = float(next.stamina_regen)
+	if is_instance_valid(visual) and visual.has_method("set_equipment_appearance"):
+		visual.set_equipment_appearance(next.appearance)
+	_previous_stats = Vector2(-1.0, -1.0)
+	_emit_stats()
+
+func on_weapon_style_changed() -> void:
+	_refresh_progression_stats()
+
+func combat_damage_multiplier() -> float:
+	return clampf(float(_derived_stats.get("damage_multiplier", 1.0)), 1.0, 2.0)
+
+func progression_stats() -> Dictionary:
+	return _derived_stats.duplicate(true)
 
 func set_controls_enabled(enabled: bool) -> void:
 	controls_enabled = enabled and not downed and not eliminated and health > 0.0

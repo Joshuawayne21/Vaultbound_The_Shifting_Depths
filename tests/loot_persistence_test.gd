@@ -26,7 +26,7 @@ func _loot_tables() -> void:
 		rarities[item.rarity] = true
 	check(valid_items and catalog.size() >= 10, "Item catalog defines valid reusable item resources")
 	check(categories.size() == 5, "Catalog includes gold, materials, equipment, consumables and collectibles")
-	check(rarities.size() == 5, "Catalog includes common through legendary rarity")
+	check(rarities.size() == 7, "Catalog includes all seven rarity tiers through Ancient Relic")
 	var sampled_rarities: Dictionary = {}
 	for category: String in Loot.CATEGORIES:
 		var table: Resource = Loot.table_for(category)
@@ -36,7 +36,7 @@ func _loot_tables() -> void:
 		for index in range(table.entries.size()):
 			if table.weights[index] > 0.0:
 				configured_rarities[table.entries[index].rarity] = true
-		check(configured_rarities.size() == 5, "Every rarity has a nonzero configured probability in " + category)
+		check(["common", "uncommon", "rare", "epic", "legendary"].all(func(rarity: String) -> bool: return configured_rarities.has(rarity)), "Original five rarities retain nonzero configured probability in " + category)
 		var first: Dictionary = table.roll(410, "same-chest")
 		table.roll(915, "other-chest")
 		check(first == table.roll(410, "same-chest"), "Loot is deterministic and independent of opening order: " + category)
@@ -55,7 +55,7 @@ func _loot_tables() -> void:
 		check(variation.size() > 3, "Seeded " + category + " rewards vary")
 		if category == "boss":
 			check(first.items.any(func(entry: Dictionary) -> bool: return entry.id == "rootwarden_heart"), "Boss table guarantees the Rootwarden collectible")
-	check(sampled_rarities.size() == 5, "Five thousand seeded chest rolls exercise all five rarities")
+	check(sampled_rarities.size() == 7, "Five thousand seeded chest rolls exercise all seven rarities")
 	check(Loot.table_for(&"missing") == null and Loot.item_for("missing") == null, "Unknown item and chest IDs are rejected")
 	var invalid: Resource = Loot.table_for(&"common").duplicate(true)
 	invalid.weights = PackedFloat32Array([0.0])
@@ -70,7 +70,7 @@ func _profile_storage() -> void:
 	var profile: Dictionary = store.load_profile()
 	check(profile.gold == 0 and not store.read_only, "Missing profile starts a writable empty bank")
 	profile.gold = 100
-	profile.items = {"temple_blade": 1}
+	check(VaultInventory.add_items(profile, {"temple_blade": 1}), "The canonical inventory accepts a secured weapon fixture")
 	profile.discoveries = ["temple_blade"]
 	profile.revision = 1
 	profile.statistics.best_seconds = 17.183333333333337

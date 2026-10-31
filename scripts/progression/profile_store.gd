@@ -4,7 +4,7 @@ extends RefCounted
 ## a temporary file, and renamed only after a successful read-back. A previous
 ## valid profile is kept as .bak. This is offline persistence, not remote authority.
 
-const VERSION := 1
+const VERSION := 2
 const MAX_COUNT := 2147483647
 const MAX_COMPANION_LEVEL := 20
 const MAX_COMPANION_EXPERIENCE := 19000
@@ -25,10 +25,13 @@ func _init(storage_path: String = "user://vaultbound/profile.json") -> void:
 	path = storage_path
 
 static func empty_profile() -> Dictionary:
-	return {"version": VERSION, "revision": 0, "gold": 0, "items": {}, "discoveries": [],
+	var profile := {"version": VERSION, "revision": 0, "gold": 0, "items": {}, "discoveries": [],
 		"equipped_item": "", "companions": COMPANION_DEFAULTS.duplicate(true),
+		"character": CharacterProgression.empty_character(), "monster_discoveries": [],
 		"statistics": {"completed": 0, "deaths": 0,
 			"total_gold": 0, "total_kills": 0, "best_seconds": 0.0, "last_seed": 0}}
+	profile.merge(VaultInventory.empty_fields(), true)
+	return profile
 
 func load_profile() -> Dictionary:
 	last_error = ""
@@ -99,8 +102,24 @@ func save_profile(candidate: Dictionary) -> bool:
 	return true
 
 static func normalize(value: Variant) -> Dictionary:
-	if not value is Dictionary or not _integer(value.get("version"), VERSION, VERSION):
+	if not value is Dictionary or not _integer(value.get("version"), 1, VERSION):
 		return {}
+	if int(value.version) == VERSION:
+		# Version 2 is complete, not an optional patch. Missing sections indicate
+		# an invalid save and must trigger backup recovery rather than empty defaults.
+		for key: String in ["revision", "gold", "items", "discoveries", "equipped_item", "companions", "statistics", "character", "monster_discoveries"]:
+			if not value.has(key):
+				return {}
+		if not value.companions is Dictionary or value.companions.size() != COMPANION_DEFAULTS.size():
+			return {}
+		if not value.statistics is Dictionary or not value.character is Dictionary or not value.character.get("talents") is Dictionary:
+			return {}
+		for key: String in ["completed", "deaths", "total_gold", "total_kills", "best_seconds", "last_seed"]:
+			if not value.statistics.has(key):
+				return {}
+		for key: String in CharacterProgression.TALENT_IDS:
+			if not value.character.talents.has(key):
+				return {}
 	if not _integer(value.get("gold"), 0, MAX_COUNT) or not _integer(value.get("revision", 0), 0, MAX_COUNT):
 		return {}
 	if not value.get("items", {}) is Dictionary or not value.get("discoveries", []) is Array:
@@ -140,8 +159,8 @@ static func normalize(value: Variant) -> Dictionary:
 	if not equipped is String or String(equipped).length() > 96:
 		return {}
 	result.equipped_item = equipped
-	# Milestone 3 profiles have no roster. This additive version-1 migration only
-	# supplies defaults in memory; it never rewrites a file merely by loading it.
+	# Older profiles may have no roster. Migration supplies defaults in memory;
+	# loading never rewrites a file and never replaces unreadable progress.
 	var companions: Variant = value.get("companions", {})
 	if not companions is Dictionary:
 		return {}
@@ -165,6 +184,42 @@ static func normalize(value: Variant) -> Dictionary:
 		result.companions[id] = {"name": String(entry.name), "role": String(entry.role),
 			"level": int(entry.level), "experience": int(entry.experience),
 			"trait": String(entry.trait), "proficiency": float(proficiency), "recruited": bool(entry.recruited)}
+	if int(value.version) == 1:
+		var migrated := VaultInventory.migrate_legacy(result.items, String(result.equipped_item))
+		if migrated.is_empty():
+			return {}
+		result.merge(migrated, true)
+		VaultInventory.sync_mirrors(result)
+		if int(result.statistics.completed) > 0 or result.discoveries.has("rootwarden_heart"):
+			result.monster_discoveries.append("rootwarden")
+	else:
+		var inventory := VaultInventory.normalize_fields(value)
+		var character := CharacterProgression.normalize_character(value.get("character"))
+		if inventory.is_empty() or character.is_empty():
+			return {}
+		result.merge(inventory, true)
+		result.character = character
+		if VaultInventory.totals(result) != result.items:
+			return {}
+		var mirrored := result.duplicate(true)
+		VaultInventory.sync_mirrors(mirrored)
+		if mirrored.equipped_item != result.equipped_item:
+			return {}
+		for uid: String in result.equipment.values():
+			if uid.is_empty():
+				continue
+			var equipped_entry := VaultInventory.find(result, uid)
+			if VaultLootTable.item_for(equipped_entry.item_id).required_level > int(character.level):
+				return {}
+		var monsters: Variant = value.get("monster_discoveries", [])
+		if not monsters is Array:
+			return {}
+		for id: Variant in monsters:
+			if not id is String or id not in ["skeleton", "archer", "golem", "rootwarden"]:
+				return {}
+			if not result.monster_discoveries.has(id):
+				result.monster_discoveries.append(id)
+		result.monster_discoveries.sort()
 	return result
 
 static func companion_level(experience: int) -> int:

@@ -1,6 +1,6 @@
-# Milestone 4 review checklist
+# Milestone 5 review checklist
 
-These tests run the persistent game shell, physics, input hub, actor scenes, combat data, modular dungeon, treasure ledger and portal signals. They do not establish device performance or replace real Android multitouch and visual review. Earlier results remain archived in `milestone-1-validation.md` and `validation-report.md`; the expedition baseline is archived in `milestone-3-validation.md`, and current results are in `milestone-4-validation.md`.
+These tests run the persistent game shell, physics, input hub, actor scenes, combat data, modular dungeon, treasure ledger and portal signals. They do not establish device performance or replace real Android multitouch and visual review. Current RPG results are in [Milestone 5 validation](milestone-5-validation.md). Earlier results remain archived in `milestone-1-validation.md`, `validation-report.md`, `milestone-3-validation.md` and `milestone-4-validation.md`.
 
 ## Automated checks
 
@@ -22,10 +22,19 @@ godot4 --headless --path . --script res://tests/companion_behavior_test.gd
 godot4 --headless --path . --script res://tests/party_targeting_test.gd
 godot4 --headless --path . --script res://tests/companion_navigation_test.gd
 godot4 --headless --path . --script res://tests/party_persistence_test.gd
+godot4 --headless --path . --script res://tests/item_catalog_test.gd
+godot4 --headless --path . --script res://tests/inventory_economy_test.gd
+godot4 --headless --path . --script res://tests/character_progression_test.gd
+godot4 --headless --path . --script res://tests/collection_world_test.gd
+godot4 --headless --path . --script res://tests/save_migration_test.gd
+godot4 --headless --path . --script res://tests/rpg_integration_test.gd
+godot4 --headless --path . --script res://tests/rpg_ui_test.gd
 godot4 --headless --path . --script res://tests/persistence_restart_test.gd -- --write /tmp/vaultbound-m3-restart/profile.json
 godot4 --headless --path . --script res://tests/persistence_restart_test.gd -- --read /tmp/vaultbound-m3-restart/profile.json
 godot4 --headless --path . --script res://tests/party_persistence_test.gd -- --write /tmp/vaultbound-m4-roster-restart/profile.json
 godot4 --headless --path . --script res://tests/party_persistence_test.gd -- --read /tmp/vaultbound-m4-roster-restart/profile.json
+godot4 --headless --path . --script res://tests/save_migration_test.gd -- --write /tmp/vaultbound-m5-rpg-restart/profile.json
+godot4 --headless --path . --script res://tests/save_migration_test.gd -- --read /tmp/vaultbound-m5-rpg-restart/profile.json
 ```
 
 Each test exits nonzero on failed assertions and prints its named `CHECKS PASSED` result on success. Also inspect every log for `SCRIPT ERROR`, `ERROR` and `WARNING`: Godot can log a script exception without changing the process exit status. Import first so global script classes and resources are indexed.
@@ -33,6 +42,22 @@ Each test exits nonzero on failed assertions and prints its named `CHECKS PASSED
 In a restricted runner where the default user-data directory is not writable, point `XDG_DATA_HOME`, `XDG_CACHE_HOME` and `XDG_CONFIG_HOME` at writable temporary directories for the commands. A normal Android editor installation does not need this workaround.
 
 The persistence and expedition fixtures intentionally use isolated `/tmp/` paths on the Linux runner. Run the writer and reader as separate engine invocations in the shown order; the reader checks data created by the previous process. These tests never delete or alter the normal `user://vaultbound/profile.json` save.
+
+### RPG suites
+
+- Load exactly thirty item definitions and all seven rarities with usable icons, models, stat data, stack limits, acquisition paths and the original twelve stable IDs.
+- Validate forty-slot capacity, bounded stacks, unique equipment identities, deterministic rolled modifiers, valid quantities and protection flags.
+- Migrate complete version-one saves without rewriting their original bytes on load; preserve counts, equipped ownership, companions, discoveries and statistics, including huge/unknown legacy reserves.
+- Reject incomplete version-two sections, duplicate IDs, forged references, inconsistent aggregate counts, invalid enhancement/condition, XP/level mismatch and overspent talents. Recover a valid backup rather than replacing damaged progress with empty defaults.
+- Exercise all six equipment slots, actual player statistics, both existing weapon families and equipment comparison; verify unequip keeps ownership and repeated equip/unequip cannot heal.
+- Check every character level threshold through thirty, talent budgets/caps, modest bonuses and a separate future normalization policy without claiming online PvP.
+- Use real Sanctuary merchant/workbench interactions for purchases, protected sales, appraisal, repair, salvage, deterministic upgrades and crafting. Check exact costs, stock limits, capacity and save failure protection.
+- Confirm stale or repeated transaction IDs and simultaneous touchscreen confirmation fingers cannot duplicate purchases or crafts. Caller-edited price/quantity fields cannot change a previously issued local quote.
+- Use all eight configured recipes and verify each consumes obtainable materials and creates only its specified result; test upgrades through +5.
+- Enter the Collection Hall with the same party, validate eight equipment stands/four relic pedestals, Rootwarden trophy and journals, assign an owned instance without copying it, and reconstruct the same exhibit on return/restart.
+- Collect a real generated chest, extract accepted loot/character XP/monster discovery, then wipe a later party without erasing secured gear, talent allocations, displays or companion progression.
+- Route scrolling, canceled gestures, filters/sorts, item selection, character/equipment tabs, buying/crafting confirmations and Hall selection through the real touch overlay. Check three landscape canvases, hidden-preview shutdown and both actual journal lecterns; reject display changes from journal-only service access.
+- Run separate engine writer/reader processes to verify enhanced/locked/favorite equipment, condition, modifiers, talents, active companions, journal/trophy state and display assignments remain loaded in the actual player/Hall scenes.
 
 ### Party suites
 
@@ -52,7 +77,7 @@ The test report records which of these checks actually passed. Controlled fixtur
 - Generate and validate 100 seeds, including deterministic reproduction, every room count from 8–12, connected nonoverlapping grid cells, a guaranteed entrance/boss/extraction route, all 14 module variants and optional secret branches.
 - Reject overlapping/disconnected layouts, missing or extra doors, invalid role references and out-of-range route IDs.
 - Instantiate all 14 native modules and check authored enemy spawn floors/clearance, open center paths and closed unused doors with the physics server.
-- Sample 5,000 deterministic loot rolls across all chest categories; verify five rarities, item categories, weighted data validity and guaranteed boss discovery.
+- Sample 5,000 deterministic loot rolls across all chest categories; verify all seven rarities, item categories, weighted data validity and guaranteed boss discovery.
 - Verify atomic secured-profile saves, full-precision expedition times, backup recovery, rejected negative data, unsupported versions and preservation of unreadable primary/backup files.
 - Exercise Root Slam, Thorn Eruption, Vine Grasp, Guardian's Fury, readable warning windows, recovery, dodge/cover avoidance, one hit per cast, modifiers, deactivation safety, leash limits and boss death.
 - Use real chest interactions in a generated run, including one-time receipts, cursed awareness, consumable use, secret discovery and persistent encounter damage/death across room culling.
@@ -144,5 +169,25 @@ Then review the new party expedition on the physical Android device:
 10. Complete a boss/extraction run with companions. Confirm they return, the roster stays recruited, secured loot belongs to the player, and extraction XP/level/proficiency survives a restart. Test extraction while an ally is downed or separated and confirm the whole roster returns safely.
 11. Switch cameras during companion attacks, projectile flight, blocking, healing, dodge and revive. Check that health, target, cooldowns and attack counts do not reset or duplicate. Verify party cards, boss bar, minimap, prompts and commands remain legible in both views.
 12. Record FPS/draw calls, frame pacing, heat and battery with two companions and the maximum active enemy encounter, over repeated expeditions and app suspend/resume. Compare against the solo baseline. Cloud tests do not establish an Android frame-rate target.
+
+## Milestone 5 physical Android review
+
+Use the normal Android import/run instructions in README. Back up an existing development profile before manually testing migration; do not delete an old save merely to make a test pass. Record device model, Android/Godot versions, renderer and the dungeon seed used.
+
+1. Open a copy of an existing Milestone 4 profile. Confirm gold, secured items, equipped weapon, companions and expedition history remain. Check the reserve filter if old holdings exceed forty active slots.
+2. Open PACK while moving and while a charge is held. Swipe the inventory with one finger; confirm no item action fires during scrolling or cancellation, and gameplay input returns cleanly on close.
+3. Select, compare, favorite and lock several rarity tiers. Check tooltip legibility, rarity borders and all six equipment slots in landscape on the device. Review the avatar preview for clipping, reversed weapons, scale or floating armor and compare it to the world character.
+4. Equip/unequip health and stamina gear while wounded. Confirm current health never increases from repeated swaps, and sword/staff family changes do not apply incompatible weapon or shield bonuses.
+5. At the General Merchant, buy a small stack, cancel another purchase and deliberately tap Confirm with two fingers. Gold, inventory and remaining stock should change only once. Confirm the merchant cannot be used from a distant location or dungeon.
+6. At the Equipment Trader, buy and sell an unprotected spare. Try selling a locked, favorite, worn or displayed item; it should remain owned. Complete an expedition and verify stock rotation changes through that controlled trigger, not after changing the device clock.
+7. At the Blacksmith, preview/confirm upgrades through +5, repair worn gear, salvage an expendable item and craft a weapon, tonic and utility item. Check ingredient/gold totals and the disabled/rejected state when requirements are missing. Repeat a confirmation touch and verify no duplicate result.
+8. Obtain a sealed artifact and visit the Relic Appraiser. Confirm unknown properties stay hidden until the quoted fee is paid, then verify the same item can be equipped without a second appraisal charge.
+9. Earn character XP through extraction, allocate a talent point after reviewing its effect, restart the game and confirm level/XP/spent points remain. Review level-up feedback and all three branches for readable requirements.
+10. Visit the Hall. Inspect warm lighting, stone/gold materials, crystals and camera obstruction in both perspectives. Assign several equipment stands/relic pedestals, clear one, revisit and restart. Inventory quantities and instance IDs must not change from displaying an item.
+11. Check item and monster journal filters and the Rootwarden trophy after a successful expedition. Confirm downed/separated companions still return through extraction and can accompany the Hall visit.
+12. Fill inventory near capacity and open a dungeon chest. If its full reward cannot fit, the chest must remain unclaimed and existing belongings unchanged. Extract valid loot, then lose a later expedition and verify secured equipment, enhancements, talents, displays and companions remain.
+13. Background/resume the editor during inventory scrolling, purchase confirmation and character preview. Check that no stale release buys or crafts an item. Review cutouts, system gestures, frame pacing, touch latency, sound, heat and battery use on the physical device.
+
+No physical Android result is claimed by the headless suites. The RPG save is local development/offline data; server-side persistence and validation remain required before online play.
 
 Android device testing, APK export/signing, GPU visual review and device performance measurement remain pending. Multiplayer networking is outside this milestone; local attack IDs and a shared damage service do not implement multiplayer.

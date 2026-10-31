@@ -188,6 +188,8 @@ func _finish_attack() -> void:
 func _commit_hit() -> void:
 	var data := current_attack
 	var damage := data.damage * _charged_multiplier
+	if actor.has_method("combat_damage_multiplier"):
+		damage *= actor.combat_damage_multiplier()
 	var selected := find_target(data.attack_range)
 	match data.mode:
 		&"projectile":
@@ -378,6 +380,8 @@ func equip_style(style: StringName) -> bool:
 	_combo_remaining = 0.0
 	_next_combo = 0
 	actor.visual.set_weapon(weapon.style)
+	if actor.has_method("on_weapon_style_changed"):
+		actor.on_weapon_style_changed()
 	actor.feedback.emit(weapon.display_name + " equipped")
 	return true
 

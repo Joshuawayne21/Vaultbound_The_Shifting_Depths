@@ -1,11 +1,14 @@
-[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/items/shield.svg" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/items/shield.tscn" id="3"]
 
 [resource]
 script = ExtResource("1")
 id = &"warden_shield"
 label = "Warden Shield"
+description = "A sturdy shield for the sword family. Its armor bonus applies while sword and shield are active."
 category = "equipment"
 rarity = "rare"
 value = 75
@@ -13,3 +16,14 @@ quantity_min = 1
 quantity_max = 1
 weapon_style = &"sword"
 healing = 0.0
+stamina_restore = 0.0
+stack_limit = 1
+slot = &"off_hand"
+required_level = 1
+identified_by_default = true
+base_stats = {"armor": 0.03, "max_stamina": 4.0}
+salvage = {"iron_ore": 3, "emerald_dust": 2}
+special_effects = Array[String]([])
+crafting_tags = Array[String]([])
+icon = ExtResource("2")
+visual_scene = ExtResource("3")

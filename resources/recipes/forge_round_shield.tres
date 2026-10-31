@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="VaultCraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/crafting_recipe.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "forge_round_shield"
+label = "Forge Round Shield"
+description = "Build a practical shield for sword-family defense."
+ingredients = {"iron_ore": 2, "root_fiber": 3}
+gold = 10
+output_id = "round_shield"
+output_quantity = 1
+required_level = 1

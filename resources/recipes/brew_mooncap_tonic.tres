@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="VaultCraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/crafting_recipe.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "brew_mooncap_tonic"
+label = "Brew Mooncap Tonics"
+description = "Brew two restorative tonics from common spores."
+ingredients = {"glow_spore": 2, "root_fiber": 1}
+gold = 3
+output_id = "mooncap_tonic"
+output_quantity = 2
+required_level = 1

@@ -266,7 +266,7 @@ func _create_retreat() -> void:
 func _on_enemy_defeated(_enemy: Node3D) -> void:
 	awareness.enemy_defeated()
 	if _session != null:
-		_session.add_kill()
+		_session.add_kill(String(_enemy.data.archetype))
 
 func _on_boss_died(_enemy: Node3D) -> void:
 	if _boss_dead:

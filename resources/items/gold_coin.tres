@@ -1,11 +1,13 @@
-[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/items/gold.svg" id="2"]
 
 [resource]
 script = ExtResource("1")
 id = &"gold_coin"
 label = "Gold"
+description = "Sanctuary coin accepted by merchants and the Blacksmith."
 category = "gold"
 rarity = "common"
 value = 1
@@ -13,3 +15,13 @@ quantity_min = 6
 quantity_max = 12
 weapon_style = &""
 healing = 0.0
+stamina_restore = 0.0
+stack_limit = 999
+slot = &""
+required_level = 1
+identified_by_default = true
+base_stats = {}
+salvage = {}
+special_effects = Array[String]([])
+crafting_tags = Array[String]([])
+icon = ExtResource("2")

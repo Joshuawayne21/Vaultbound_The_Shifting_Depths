@@ -5,7 +5,10 @@ extends Resource
 
 const ITEM_IDS := ["gold_coin", "root_fiber", "mooncap_tonic", "emerald_dust", "sunfruit_elixir",
 	"temple_blade", "runic_staff", "warden_shield", "ancient_seed", "aurora_bloom",
-	"heartwood_blade", "rootwarden_heart"]
+	"heartwood_blade", "rootwarden_heart", "iron_ore", "tempered_ingot", "glow_spore",
+	"ancient_shard", "traveler_sword", "apprentice_staff", "round_shield", "iron_helm",
+	"mossguard_helm", "traveler_coat", "warden_cuirass", "trail_boots", "rootstep_boots",
+	"amber_ring", "emerald_pendant", "stamina_draught", "sealed_reliquary", "abyss_crown"]
 const CATEGORIES := ["common", "reinforced", "ancient", "cursed", "boss"]
 
 @export var category: StringName = &"common"

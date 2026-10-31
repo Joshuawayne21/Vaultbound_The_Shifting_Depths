@@ -13,6 +13,7 @@ var _phase := 0.0
 var _damage_flash := 0.0
 var _armor: StandardMaterial3D
 var _armor_color := Color("296672")
+var _unmodified_armor_color := Color("296672")
 var _sword: Node3D
 var _shield: Node3D
 var _staff: Node3D
@@ -24,9 +25,18 @@ var _combat_progress := 0.0
 var _combo_index := 0
 var _charge_ratio := 0.0
 var _blocking := false
+var _equipment_appearance: Dictionary = {}
+var _equipment_surfaces: Dictionary = {}
+var _surface_originals: Dictionary = {}
+var _surface_tints: Dictionary = {}
+
+const EQUIPMENT_TINTS := {"common": Color("c8d0c7"), "uncommon": Color("83c795"),
+	"rare": Color("84bce7"), "epic": Color("c19be6"), "legendary": Color("edbf70"),
+	"mythic": Color("ec8ea8"), "ancient_relic": Color("75e4d2")}
 
 
 func _ready() -> void:
+	_unmodified_armor_color = _armor_color
 	_build()
 	set_weapon(_weapon_style)
 
@@ -89,9 +99,9 @@ func _build() -> void:
 	_right_leg = _pivot(Vector3(0.17, 0.65, 0), _body)
 	for leg: Node3D in [_left_leg, _right_leg]:
 		_box(leg, Vector3(0.23, 0.38, 0.26), Vector3(0, -0.15, 0), navy)
-		_box(leg, Vector3(0.24, 0.27, 0.30), Vector3(0, -0.45, -0.02), leather)
+		_equipment_surface("boots", _box(leg, Vector3(0.24, 0.27, 0.30), Vector3(0, -0.45, -0.02), leather))
 		_box(leg, Vector3(0.19, 0.15, 0.035), Vector3(0, -0.29, -0.15), gold)
-		_box(leg, Vector3(0.26, 0.12, 0.39), Vector3(0, -0.58, -0.06), leather)
+		_equipment_surface("boots", _box(leg, Vector3(0.26, 0.12, 0.39), Vector3(0, -0.58, -0.06), leather))
 
 	_cylinder(_body, 0.37, 0.29, 0.55, Vector3(0, 1.02, 0), _armor)
 	_cylinder(_body, 0.30, 0.33, 0.14, Vector3(0, 0.76, 0), gold)
@@ -99,13 +109,14 @@ func _build() -> void:
 	_box(_body, Vector3(0.06, 0.42, 0.035), Vector3(0, 1.04, -0.322), gold)
 	# A bright diamond provides a small, readable emblem on the breastplate.
 	var emblem := _box(_body, Vector3(0.12, 0.12, 0.045), Vector3(0, 1.14, -0.35), glow)
+	_equipment_surface("accessory", emblem)
 	emblem.rotation.z = PI * 0.25
 	_cylinder(_body, 0.18, 0.19, 0.14, Vector3(0, 1.35, 0), leather)
 	_cylinder(_body, 0.23, 0.27, 0.40, Vector3(0, 1.57, 0), navy)
-	_cylinder(_body, 0.05, 0.235, 0.13, Vector3(0, 1.825, 0), _armor)
+	_equipment_surface("helmet", _cylinder(_body, 0.05, 0.235, 0.13, Vector3(0, 1.825, 0), _armor))
 	_box(_body, Vector3(0.36, 0.05, 0.032), Vector3(0, 1.60, -0.24), gold)
 	_box(_body, Vector3(0.22, 0.028, 0.038), Vector3(0, 1.55, -0.25), glow)
-	_box(_body, Vector3(0.06, 0.22, 0.04), Vector3(0, 1.48, -0.253), _armor)
+	_equipment_surface("helmet", _box(_body, Vector3(0.06, 0.22, 0.04), Vector3(0, 1.48, -0.253), _armor))
 
 	_left_arm = _pivot(Vector3(-0.39, 1.25, 0), _body)
 	_right_arm = _pivot(Vector3(0.39, 1.25, 0), _body)
@@ -124,13 +135,15 @@ func _build() -> void:
 	_box(_sword, Vector3(0.075, 0.075, 0.30), Vector3(0, -0.60, -0.03), leather)
 	_box(_sword, Vector3(0.34, 0.08, 0.07), Vector3(0, -0.60, -0.20), gold)
 	var blade := _box(_sword, Vector3(0.11, 0.055, 0.78), Vector3(0, -0.60, -0.61), steel)
+	_equipment_surface("main_weapon", blade)
 	blade.rotation.z = 0.12
 	var tip := _cylinder(_sword, 0.0, 0.08, 0.20, Vector3(0, -0.60, -1.10), steel, 4)
+	_equipment_surface("main_weapon", tip)
 	tip.rotation.x = -PI * 0.5
 	_shield = _pivot(Vector3(-0.12, -0.34, -0.06), _left_arm)
 	_shield.name = "Shield"
 	_box(_shield, Vector3(0.12, 0.65, 0.53), Vector3.ZERO, gold)
-	_box(_shield, Vector3(0.14, 0.53, 0.42), Vector3.ZERO, _armor)
+	_equipment_surface("off_hand", _box(_shield, Vector3(0.14, 0.53, 0.42), Vector3.ZERO, _armor))
 	_box(_shield, Vector3(0.16, 0.10, 0.44), Vector3.ZERO, gold)
 	var boss := _cylinder(_shield, 0.12, 0.12, 0.12, Vector3(-0.13, 0, 0), steel)
 	boss.rotation.z = PI / 2.0
@@ -141,6 +154,7 @@ func _build() -> void:
 		_cylinder(_staff, 0.07, 0.07, 0.08, Vector3(0, height, 0), gold)
 	_cylinder(_staff, 0.22, 0.065, 0.24, Vector3(0, 1.30, 0), gold)
 	_staff_crystal = _box(_staff, Vector3(0.24, 0.34, 0.24), Vector3(0, 1.51, 0), glow)
+	_equipment_surface("main_weapon", _staff_crystal)
 	_staff_crystal.rotation = Vector3(0.4, 0.0, 0.7)
 	_create_ward(glow)
 
@@ -174,6 +188,46 @@ func set_weapon(style: StringName) -> void:
 	_sword.visible = _weapon_style == &"sword"
 	_shield.visible = _weapon_style == &"sword"
 	_staff.visible = _weapon_style == &"staff"
+	set_equipment_appearance(_equipment_appearance)
+
+
+func _equipment_surface(slot: String, mesh: MeshInstance3D) -> void:
+	if not _equipment_surfaces.has(slot):
+		_equipment_surfaces[slot] = []
+	_equipment_surfaces[slot].append(mesh)
+	_surface_originals[mesh.get_instance_id()] = mesh.material_override
+
+
+func set_equipment_appearance(appearance: Dictionary) -> void:
+	# Existing hand/armor anchors and primitive silhouettes remain unchanged.
+	# Rarity tints use per-instance material copies; no shared companion/player
+	# materials, model scale or collision bodies are modified by equipment.
+	_equipment_appearance = appearance.duplicate(true)
+	if not is_instance_valid(_armor):
+		return
+	var chest: Dictionary = appearance.get("chest_armor", {})
+	_armor_color = _equipment_color(chest, _unmodified_armor_color) if not chest.is_empty() else _unmodified_armor_color
+	for slot: String in _equipment_surfaces:
+		var entry: Dictionary = appearance.get(slot, {})
+		var family := String(entry.get("weapon_style", ""))
+		var active := not entry.is_empty() and (family.is_empty() or family == String(_weapon_style) or slot not in ["main_weapon", "off_hand"])
+		for mesh: MeshInstance3D in _equipment_surfaces[slot]:
+			var original: StandardMaterial3D = _surface_originals[mesh.get_instance_id()]
+			if not active:
+				mesh.material_override = original
+				continue
+			if not _surface_tints.has(mesh.get_instance_id()):
+				_surface_tints[mesh.get_instance_id()] = original.duplicate() as StandardMaterial3D
+			var material: StandardMaterial3D = _surface_tints[mesh.get_instance_id()]
+			material.albedo_color = _equipment_color(entry, original.albedo_color)
+			mesh.material_override = material
+	_armor.albedo_color = _armor_color
+
+
+func _equipment_color(entry: Dictionary, base: Color) -> Color:
+	var rarity: Color = EQUIPMENT_TINTS.get(String(entry.get("rarity", "common")), EQUIPMENT_TINTS.common)
+	var color := base.lerp(rarity, 0.52)
+	return color.lerp(Color("edd7a3"), clampf(int(entry.get("enhancement", 0)) * 0.035, 0.0, 0.175))
 
 
 func set_combat_pose(state: StringName, progress: float, combo_index: int,

@@ -1,11 +1,13 @@
-[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/items/material.svg" id="2"]
 
 [resource]
 script = ExtResource("1")
 id = &"root_fiber"
 label = "Root Fiber"
+description = "Strong living fibers used for bindings, repairs and crafted equipment."
 category = "material"
 rarity = "common"
 value = 3
@@ -13,3 +15,13 @@ quantity_min = 2
 quantity_max = 6
 weapon_style = &""
 healing = 0.0
+stamina_restore = 0.0
+stack_limit = 99
+slot = &""
+required_level = 1
+identified_by_default = true
+base_stats = {}
+salvage = {}
+special_effects = Array[String]([])
+crafting_tags = Array[String](["reagent"])
+icon = ExtResource("2")

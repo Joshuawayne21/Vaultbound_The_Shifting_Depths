@@ -25,6 +25,9 @@ func _ready() -> void:
 
 func bind_expedition(session: Node) -> void:
 	_session = session
+	expedition_overlay.bind_progression_session(session)
+	if session.has_signal("ui_requested") and not session.ui_requested.is_connected(_on_ui_requested):
+		session.ui_requested.connect(_on_ui_requested)
 	if session.has_signal("changed") and not session.changed.is_connected(_on_session_changed):
 		session.changed.connect(_on_session_changed)
 	if session.has_signal("notice") and not session.notice.is_connected(_on_expedition_notice):
@@ -33,6 +36,10 @@ func bind_expedition(session: Node) -> void:
 		session.results_ready.connect(_on_results_ready)
 	if session.has_method("snapshot"):
 		_on_session_changed(session.snapshot())
+
+
+func _on_ui_requested(kind: StringName, context: Dictionary) -> void:
+	expedition_overlay.open_service(kind, context)
 
 
 func bind_party(party: Node) -> void:

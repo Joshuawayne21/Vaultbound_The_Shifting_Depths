@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/items/armor.svg" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/items/chest.tscn" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"warden_cuirass"
+label = "Warden Cuirass"
+description = "A restrained set of guardian plates. Adds health and damage reduction."
+category = "equipment"
+rarity = "rare"
+value = 85
+quantity_min = 1
+quantity_max = 1
+weapon_style = &""
+healing = 0.0
+stamina_restore = 0.0
+stack_limit = 1
+slot = &"chest_armor"
+required_level = 3
+identified_by_default = true
+base_stats = {"max_health": 6.0, "armor": 0.04}
+salvage = {"tempered_ingot": 2, "root_fiber": 3}
+special_effects = Array[String]([])
+crafting_tags = Array[String]([])
+icon = ExtResource("2")
+visual_scene = ExtResource("3")

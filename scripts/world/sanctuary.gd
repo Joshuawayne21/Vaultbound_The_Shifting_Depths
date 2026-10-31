@@ -5,9 +5,10 @@ const Architecture = preload("res://scripts/world/architecture.gd")
 const Portal = preload("res://scenes/world/portal.tscn")
 const TrainingTarget = preload("res://scenes/world/training_target.tscn")
 const Tavern = preload("res://scenes/party/tavern.tscn")
+const Shop = preload("res://scenes/world/npc_shop.tscn")
 
 var display_name := "THE SANCTUARY"
-var objective := "West: Tavern · North: practice vault · East: expedition"
+var objective := "West: Tavern & Hall · South: merchants & forge · East: expedition"
 
 func _ready() -> void:
 	var kit := Architecture.new(self)
@@ -34,11 +35,38 @@ func _ready() -> void:
 	expedition_gate.entry_id = &"default"
 	expedition_gate.title = "ROOTBOUND ABYSS · EXPEDITION"
 	add_child(expedition_gate)
+	var hall_gate := Portal.instantiate()
+	hall_gate.name = "CollectionHallGate"
+	hall_gate.position = Vector3(-7.0, 0, -6.5)
+	hall_gate.rotation.y = PI / 2.0
+	hall_gate.destination = &"collection_hall"
+	hall_gate.entry_id = &"default"
+	hall_gate.title = "COLLECTION HALL · YOUR LEGACY"
+	add_child(hall_gate)
+	_build_market()
 	var target := TrainingTarget.instantiate()
 	target.position = Vector3(5.0, 0, 0.2)
 	add_child(target)
 	kit.ring(Vector3(5.0, 0.055, 0.2), 1.65, 1.7, "gold")
 	kit.label("TRAINING COURT", Vector3(5.0, 0.18, 2.5), 23, Color("b8c9bd"))
+
+func _build_market() -> void:
+	var counters := [
+		{"x": -8.0, "kind": &"merchant", "vendor": "appraiser", "label": "Iris · Relic Appraiser", "color": Color("7c6f99")},
+		{"x": -3.8, "kind": &"merchant", "vendor": "general", "label": "Mara · General Merchant", "color": Color("668971")},
+		{"x": 3.8, "kind": &"merchant", "vendor": "equipment", "label": "Dain · Equipment Trader", "color": Color("577f91")},
+		{"x": 8.0, "kind": &"blacksmith", "vendor": "", "label": "Brann · Blacksmith", "color": Color("a47150")},
+	]
+	for counter: Dictionary in counters:
+		var shop := Shop.instantiate()
+		shop.name = "Blacksmith" if counter.kind == &"blacksmith" else String(counter.vendor).capitalize() + "Merchant"
+		shop.position = Vector3(counter.x, 0, 10.6)
+		shop.rotation.y = PI
+		shop.service_kind = counter.kind
+		shop.vendor = counter.vendor
+		shop.display_name = counter.label
+		shop.accent = counter.color
+		add_child(shop)
 
 func _build_border(kit: Architecture) -> void:
 	# Low camera-friendly boundaries, with a taller silhouette at the rear.
@@ -92,4 +120,6 @@ func get_spawn_transform(entry_id: StringName) -> Transform3D:
 		position = Vector3(0, 0.15, -5.4)
 	if entry_id == &"from_abyss":
 		return Transform3D(Basis(Vector3.UP, -PI / 2.0), Vector3(3.5, 0.15, -5.5))
+	if entry_id == &"from_hall":
+		return Transform3D(Basis(Vector3.UP, -PI / 2.0), Vector3(-3.5, 0.15, -6.5))
 	return Transform3D(Basis.IDENTITY, position)

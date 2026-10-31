@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/items/shield.svg" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/items/shield.tscn" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"round_shield"
+label = "Round Shield"
+description = "A wood and iron shield. Its modest protection applies to the sword family."
+category = "equipment"
+rarity = "common"
+value = 16
+quantity_min = 1
+quantity_max = 1
+weapon_style = &"sword"
+healing = 0.0
+stamina_restore = 0.0
+stack_limit = 1
+slot = &"off_hand"
+required_level = 1
+identified_by_default = true
+base_stats = {"armor": 0.02}
+salvage = {"iron_ore": 1, "root_fiber": 2}
+special_effects = Array[String]([])
+crafting_tags = Array[String]([])
+icon = ExtResource("2")
+visual_scene = ExtResource("3")

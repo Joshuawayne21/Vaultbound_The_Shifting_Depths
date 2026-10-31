@@ -1,0 +1,315 @@
+class_name VaultInventory
+extends RefCounted
+## Pure instance/stack rules. Callers mutate a copied candidate and save it before
+## publishing changes. Definitions are shared resources; instances are plain data.
+
+const Catalog = preload("res://scripts/progression/loot_table.gd")
+const CAPACITY := 40
+const MAX_COUNT := 2147483647
+const MAX_RECEIPTS := 64
+const SLOTS := ["main_weapon", "off_hand", "helmet", "chest_armor", "boots", "accessory"]
+const MODIFIER_LIMITS := {"max_health": 12.0, "max_stamina": 10.0, "damage_bonus": 0.05,
+	"armor": 0.04, "stamina_regen": 1.5}
+
+static func empty_fields() -> Dictionary:
+	var equipment := {}
+	var displays := {}
+	for slot: String in SLOTS:
+		equipment[slot] = ""
+	for index in range(8):
+		displays["equipment_%d" % index] = ""
+	for index in range(4):
+		displays["relic_%d" % index] = ""
+	return {"inventory": [], "equipment": equipment, "next_item_id": 1,
+		"legacy_reserve": {}, "displays": displays, "transaction_receipts": [],
+		"merchant_purchases": {}}
+
+static func migrate_legacy(items: Dictionary, equipped_item: String = "") -> Dictionary:
+	var result := empty_fields()
+	var ids: Array = items.keys()
+	ids.sort()
+	# Preserve the previously selected weapon before filling optional old stacks.
+	if ids.has(equipped_item):
+		ids.erase(equipped_item)
+		ids.push_front(equipped_item)
+	for raw_id: Variant in ids:
+		if not raw_id is String or not _integer(items[raw_id], 1, MAX_COUNT):
+			return {}
+		var id := String(raw_id)
+		if not _text(id, 96):
+			return {}
+		var remaining := int(items[id])
+		var definition := Catalog.item_for(id)
+		if definition != null and definition.category != "gold":
+			while remaining > 0 and result.inventory.size() < CAPACITY:
+				var amount := mini(remaining, stack_limit(definition))
+				var entry := _new_entry(result, id, amount, 0)
+				# Legacy ownership did not contain random modifiers or hidden properties.
+				entry.modifiers = {}
+				entry.identified = true
+				result.inventory.append(entry)
+				remaining -= amount
+				if id == equipped_item and definition.category == "equipment" and result.equipment.get(String(definition.slot), "") == "":
+					result.equipment[String(definition.slot)] = entry.uid
+		if remaining > 0:
+			result.legacy_reserve[id] = remaining
+	return result
+
+static func normalize_fields(value: Dictionary) -> Dictionary:
+	if not value.get("inventory") is Array or value.inventory.size() > CAPACITY:
+		return {}
+	if not _integer(value.get("next_item_id"), 1, MAX_COUNT):
+		return {}
+	for key: String in ["equipment", "legacy_reserve", "displays", "merchant_purchases"]:
+		if not value.get(key) is Dictionary:
+			return {}
+	# Version-two records must retain every assignment field. Missing keys are a
+	# damaged record, not permission to silently replace equipment/displays with
+	# empty selections; only the explicit legacy migration supplies defaults.
+	if value.equipment.size() != SLOTS.size() or value.displays.size() != 12:
+		return {}
+	for slot: String in SLOTS:
+		if not value.equipment.has(slot):
+			return {}
+	for index in range(8):
+		if not value.displays.has("equipment_%d" % index):
+			return {}
+	for index in range(4):
+		if not value.displays.has("relic_%d" % index):
+			return {}
+	if not value.get("transaction_receipts") is Array or value.transaction_receipts.size() > MAX_RECEIPTS:
+		return {}
+	var result := empty_fields()
+	result.next_item_id = int(value.next_item_id)
+	var used := {}
+	for raw: Variant in value.inventory:
+		if not raw is Dictionary:
+			return {}
+		var uid: Variant = raw.get("uid")
+		var item_id: Variant = raw.get("item_id")
+		if not uid is String or not _uid_valid(uid) or used.has(uid) or not item_id is String:
+			return {}
+		if int(String(uid).trim_prefix("item_")) >= result.next_item_id:
+			return {}
+		var definition := Catalog.item_for(item_id)
+		if definition == null or definition.category == "gold" or not _integer(raw.get("quantity"), 1, stack_limit(definition)):
+			return {}
+		if not _integer(raw.get("enhancement"), 0, 5) or not _integer(raw.get("durability"), 0, 100):
+			return {}
+		for key: String in ["identified", "locked", "favorite"]:
+			if not raw.get(key) is bool:
+				return {}
+		if not raw.get("modifiers") is Dictionary or raw.modifiers.size() > 2:
+			return {}
+		var modifiers := {}
+		for stat: Variant in raw.modifiers:
+			if not stat is String or not MODIFIER_LIMITS.has(stat):
+				return {}
+			var amount: Variant = raw.modifiers[stat]
+			if not _number(amount, 0.0, MODIFIER_LIMITS[stat]) or float(amount) <= 0.0:
+				return {}
+			modifiers[stat] = float(amount)
+		if definition.category != "equipment" and (int(raw.enhancement) != 0 or int(raw.durability) != 100 or not modifiers.is_empty() or not raw.identified):
+			return {}
+		var entry := {"uid": String(uid), "item_id": String(item_id), "quantity": int(raw.quantity),
+			"enhancement": int(raw.enhancement), "durability": int(raw.durability), "modifiers": modifiers,
+			"identified": bool(raw.identified), "locked": bool(raw.locked), "favorite": bool(raw.favorite)}
+		result.inventory.append(entry)
+		used[uid] = entry
+	for slot: Variant in value.equipment:
+		if not slot is String or not SLOTS.has(slot) or not value.equipment[slot] is String:
+			return {}
+		var uid: String = value.equipment[slot]
+		if not uid.is_empty():
+			if not used.has(uid):
+				return {}
+			var definition := Catalog.item_for(used[uid].item_id)
+			if String(definition.slot) != slot or not used[uid].identified or definition.category != "equipment":
+				return {}
+		result.equipment[slot] = uid
+	for id: Variant in value.legacy_reserve:
+		if not id is String or not _text(id, 96) or not _integer(value.legacy_reserve[id], 1, MAX_COUNT):
+			return {}
+		result.legacy_reserve[id] = int(value.legacy_reserve[id])
+	var displayed := {}
+	for stand: Variant in value.displays:
+		if not stand is String or not result.displays.has(stand) or not value.displays[stand] is String:
+			return {}
+		var uid: String = value.displays[stand]
+		if not uid.is_empty():
+			if not used.has(uid) or displayed.has(uid) or not display_eligible(used[uid], stand):
+				return {}
+			displayed[uid] = true
+		result.displays[stand] = uid
+	for receipt: Variant in value.transaction_receipts:
+		if not receipt is String or not _text(receipt, 120) or result.transaction_receipts.has(receipt):
+			return {}
+		result.transaction_receipts.append(receipt)
+	if value.merchant_purchases.size() > 128:
+		return {}
+	for key: Variant in value.merchant_purchases:
+		if not key is String or not _text(key, 160) or not _integer(value.merchant_purchases[key], 1, 9999):
+			return {}
+		result.merchant_purchases[key] = int(value.merchant_purchases[key])
+	var aggregate := totals(result)
+	for amount: int in aggregate.values():
+		if amount > MAX_COUNT:
+			return {}
+	return result
+
+static func totals(profile: Dictionary) -> Dictionary:
+	var result: Dictionary = profile.get("legacy_reserve", {}).duplicate(true)
+	for entry: Dictionary in profile.get("inventory", []):
+		result[entry.item_id] = int(result.get(entry.item_id, 0)) + int(entry.quantity)
+	return result
+
+static func sync_mirrors(profile: Dictionary) -> void:
+	profile.items = totals(profile)
+	var main := find(profile, String(profile.get("equipment", {}).get("main_weapon", "")))
+	profile.equipped_item = String(main.item_id) if not main.is_empty() else ""
+
+static func find(profile: Dictionary, uid: String) -> Dictionary:
+	for entry: Dictionary in profile.get("inventory", []):
+		if String(entry.uid) == uid:
+			return entry
+	return {}
+
+static func used_slots(profile: Dictionary) -> int:
+	return profile.get("inventory", []).size()
+
+static func stack_limit(definition: VaultItemDefinition) -> int:
+	return 1 if definition.category == "equipment" else clampi(int(definition.stack_limit), 1, 999)
+
+static func add_items(profile: Dictionary, items: Dictionary, seed: int = 0) -> bool:
+	var next := profile.duplicate(true)
+	var ids: Array = items.keys()
+	ids.sort()
+	for raw_id: Variant in ids:
+		if not raw_id is String or not _integer(items[raw_id], 1, MAX_COUNT):
+			return false
+		var id := String(raw_id)
+		var definition := Catalog.item_for(id)
+		if definition == null or definition.category == "gold":
+			return false
+		if int(totals(next).get(id, 0)) > MAX_COUNT - int(items[id]):
+			return false
+		var remaining := int(items[id])
+		var limit := stack_limit(definition)
+		if limit > 1:
+			for entry: Dictionary in next.inventory:
+				if entry.item_id != id or entry.quantity >= limit:
+					continue
+				var added := mini(remaining, limit - int(entry.quantity))
+				entry.quantity += added
+				remaining -= added
+				if remaining == 0:
+					break
+		while remaining > 0:
+			if next.inventory.size() >= CAPACITY or int(next.next_item_id) >= MAX_COUNT:
+				return false
+			var amount := mini(remaining, limit)
+			next.inventory.append(_new_entry(next, id, amount, seed))
+			remaining -= amount
+	profile.inventory = next.inventory
+	profile.next_item_id = next.next_item_id
+	sync_mirrors(profile)
+	return true
+
+static func consume_items(profile: Dictionary, items: Dictionary) -> bool:
+	var next := profile.duplicate(true)
+	for id: Variant in items:
+		if not id is String or not _integer(items[id], 1, MAX_COUNT):
+			return false
+		var remaining := int(items[id])
+		for entry: Dictionary in next.inventory:
+			if entry.item_id != id or is_protected(next, entry):
+				continue
+			var taken := mini(remaining, int(entry.quantity))
+			entry.quantity -= taken
+			remaining -= taken
+			if remaining == 0:
+				break
+		if remaining > 0:
+			return false
+		next.inventory = next.inventory.filter(func(entry: Dictionary) -> bool: return int(entry.quantity) > 0)
+	profile.inventory = next.inventory
+	sync_mirrors(profile)
+	return true
+
+static func available(profile: Dictionary, item_id: String) -> int:
+	var count := 0
+	for entry: Dictionary in profile.get("inventory", []):
+		if entry.item_id == item_id and not is_protected(profile, entry):
+			count += int(entry.quantity)
+	return count
+
+static func is_protected(profile: Dictionary, entry: Dictionary) -> bool:
+	return bool(entry.get("locked", false)) or bool(entry.get("favorite", false)) \
+		or profile.get("equipment", {}).values().has(entry.get("uid", "")) \
+		or profile.get("displays", {}).values().has(entry.get("uid", ""))
+
+static func display_eligible(entry: Dictionary, stand: String) -> bool:
+	var definition := Catalog.item_for(String(entry.get("item_id", "")))
+	if definition == null or not bool(entry.get("identified", false)):
+		return false
+	return (stand.begins_with("equipment_") and definition.category == "equipment") \
+		or (stand.begins_with("relic_") and definition.category == "collectible")
+
+static func describe_entries(profile: Dictionary) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for entry: Dictionary in profile.get("inventory", []):
+		var definition := Catalog.item_for(entry.item_id)
+		if definition == null:
+			continue
+		var detail := definition.describe(int(entry.quantity))
+		detail.merge(entry.duplicate(true), true)
+		detail.equipped = profile.get("equipment", {}).values().has(entry.uid)
+		detail.displayed = profile.get("displays", {}).values().has(entry.uid)
+		detail.protected = is_protected(profile, entry)
+		if not entry.identified:
+			detail.modifiers = {}
+			detail.base_stats = {}
+			detail.special_effects = []
+			detail.description = "Hidden properties await the Relic Appraiser in Sanctuary."
+		result.append(detail)
+	return result
+
+static func _new_entry(profile: Dictionary, item_id: String, quantity: int, seed: int) -> Dictionary:
+	var uid := "item_%010d" % int(profile.next_item_id)
+	profile.next_item_id = int(profile.next_item_id) + 1
+	var definition := Catalog.item_for(item_id)
+	var entry := {"uid": uid, "item_id": item_id, "quantity": quantity, "enhancement": 0,
+		"durability": 100, "modifiers": {}, "identified": bool(definition.identified_by_default),
+		"locked": false, "favorite": false}
+	if definition.category == "equipment":
+		var rank := ["common", "uncommon", "rare", "epic", "legendary", "mythic", "ancient_relic"].find(definition.rarity)
+		if rank >= 2:
+			var rng := RandomNumberGenerator.new()
+			rng.seed = seed ^ int(uid.hash()) ^ int(item_id.hash())
+			var options := ["max_health", "max_stamina", "damage_bonus", "stamina_regen"]
+			var stat: String = options[rng.randi_range(0, options.size() - 1)]
+			var scale: float = [1.0, 1.0, 0.005, 0.1][options.find(stat)]
+			entry.modifiers[stat] = snappedf(float(rng.randi_range(1, mini(rank + 1, 6))) * float(scale), 0.001)
+	else:
+		entry.identified = true
+	return entry
+
+static func _integer(value: Variant, minimum: int, maximum: int) -> bool:
+	return (value is int or value is float) and is_finite(float(value)) and float(value) == floor(float(value)) and float(value) >= minimum and float(value) <= maximum
+
+static func _number(value: Variant, minimum: float, maximum: float) -> bool:
+	return (value is int or value is float) and is_finite(float(value)) and float(value) >= minimum and float(value) <= maximum
+
+static func _uid_valid(value: String) -> bool:
+	if not value.begins_with("item_") or value.length() != 15:
+		return false
+	var digits := value.trim_prefix("item_")
+	return digits.is_valid_int() and digits == "%010d" % int(digits) and int(digits) > 0
+
+static func _text(value: String, maximum: int) -> bool:
+	if value.is_empty() or value.length() > maximum:
+		return false
+	for index in range(value.length()):
+		if value.unicode_at(index) < 32:
+			return false
+	return true
