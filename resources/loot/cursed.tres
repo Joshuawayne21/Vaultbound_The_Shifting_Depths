@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="VaultLootTable" load_steps=64 format=3]
+[gd_resource type="Resource" script_class="VaultLootTable" load_steps=72 format=3]
 
 [ext_resource type="Script" path="res://scripts/progression/loot_table.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="2"]
@@ -68,6 +68,15 @@
 [ext_resource type="Resource" path="res://resources/items/gilded_escort_badge.tres" id="63"]
 [ext_resource type="Resource" path="res://resources/items/keeper_of_spare_light.tres" id="64"]
 
+[ext_resource type="Resource" path="res://resources/items/emerald_mint_proof.tres" id="65"]
+[ext_resource type="Resource" path="res://resources/items/amethyst_coronet_front.tres" id="66"]
+[ext_resource type="Resource" path="res://resources/items/prismatic_stream_pearl.tres" id="67"]
+[ext_resource type="Resource" path="res://resources/items/paired_grove_sentinels.tres" id="68"]
+[ext_resource type="Resource" path="res://resources/items/moonlit_grove_fossil.tres" id="69"]
+[ext_resource type="Resource" path="res://resources/items/emerald_water_clock_face.tres" id="70"]
+[ext_resource type="Resource" path="res://resources/items/expedition_captains_signet.tres" id="71"]
+[ext_resource type="Resource" path="res://resources/items/emerald_watchers_eye_setting.tres" id="72"]
+
 [resource]
 script = ExtResource("1")
 category = &"cursed"
@@ -76,5 +85,5 @@ gold_min = 60
 gold_max = 100
 minimum_rolls = 3
 maximum_rolls = 4
-entries = Array[ExtResource("2")]( [ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20"), ExtResource("21"), ExtResource("22"), ExtResource("23"), ExtResource("24"), ExtResource("25"), ExtResource("26"), ExtResource("27"), ExtResource("28"), ExtResource("29"), ExtResource("30"), ExtResource("31"), ExtResource("32"), ExtResource("33"), ExtResource("34"), ExtResource("35"), ExtResource("36"), ExtResource("37"), ExtResource("38"), ExtResource("39"), ExtResource("40"), ExtResource("41"), ExtResource("42"), ExtResource("43"), ExtResource("44"), ExtResource("45"), ExtResource("46"), ExtResource("47"), ExtResource("48"), ExtResource("49"), ExtResource("50"), ExtResource("51"), ExtResource("52"), ExtResource("53"), ExtResource("54"), ExtResource("55"), ExtResource("56"), ExtResource("57"), ExtResource("58"), ExtResource("59"), ExtResource("60"), ExtResource("61"), ExtResource("62"), ExtResource("63"), ExtResource("64")] )
-weights = PackedFloat32Array(2, 4, 7, 10, 9, 10, 14, 12, 12, 8, 6, 7, 4, 5, 5, 5, 3, 5, 1.5, 0.4, 10, 0.566667, 0.566667, 0.566667, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.066667, 0.066667, 0.066667, 0.066667, 0.066667, 0.066667, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.342833, 0.342833, 0.088, 0.088, 0.342833, 0.342833, 0.088, 0.088, 0.342833, 0.342833, 0.088)
+entries = Array[ExtResource("2")]( [ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20"), ExtResource("21"), ExtResource("22"), ExtResource("23"), ExtResource("24"), ExtResource("25"), ExtResource("26"), ExtResource("27"), ExtResource("28"), ExtResource("29"), ExtResource("30"), ExtResource("31"), ExtResource("32"), ExtResource("33"), ExtResource("34"), ExtResource("35"), ExtResource("36"), ExtResource("37"), ExtResource("38"), ExtResource("39"), ExtResource("40"), ExtResource("41"), ExtResource("42"), ExtResource("43"), ExtResource("44"), ExtResource("45"), ExtResource("46"), ExtResource("47"), ExtResource("48"), ExtResource("49"), ExtResource("50"), ExtResource("51"), ExtResource("52"), ExtResource("53"), ExtResource("54"), ExtResource("55"), ExtResource("56"), ExtResource("57"), ExtResource("58"), ExtResource("59"), ExtResource("60"), ExtResource("61"), ExtResource("62"), ExtResource("63"), ExtResource("64"), ExtResource("65"), ExtResource("66"), ExtResource("67"), ExtResource("68"), ExtResource("69"), ExtResource("70"), ExtResource("71"), ExtResource("72")] )
+weights = PackedFloat32Array(2, 4, 7, 10, 9, 10, 14, 12, 12, 8, 6, 7, 4, 5, 5, 5, 3, 5, 1.5, 0.4, 10, 0.566667, 0.566667, 0.566667, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.066667, 0.066667, 0.066667, 0.066667, 0.066667, 0.066667, 0.0935, 0.0935, 0.0935, 0.0935, 0.0935, 0.342833, 0.342833, 0.088, 0.088, 0.342833, 0.342833, 0.088, 0.088, 0.342833, 0.342833, 0.088, 0.282837, 0.282837, 0.282837, 0.282837, 0.282837, 0.282837, 0.282837, 0.282837)

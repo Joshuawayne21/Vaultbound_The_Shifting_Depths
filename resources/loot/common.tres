@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="VaultLootTable" load_steps=37 format=3]
+[gd_resource type="Resource" script_class="VaultLootTable" load_steps=85 format=3]
 
 [ext_resource type="Script" path="res://scripts/progression/loot_table.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="2"]
@@ -41,6 +41,55 @@
 [ext_resource type="Resource" path="res://resources/items/lanternwick_talisman.tres" id="35"]
 [ext_resource type="Resource" path="res://resources/items/moss_map_brooch.tres" id="36"]
 
+[ext_resource type="Resource" path="res://resources/items/mossworn_obol.tres" id="37"]
+[ext_resource type="Resource" path="res://resources/items/pierced_ferry_token.tres" id="38"]
+[ext_resource type="Resource" path="res://resources/items/copper_prayer_chip.tres" id="39"]
+[ext_resource type="Resource" path="res://resources/items/square_temple_copper.tres" id="40"]
+[ext_resource type="Resource" path="res://resources/items/rootsealed_tithe_disc.tres" id="41"]
+[ext_resource type="Resource" path="res://resources/items/glass_inlaid_trade_weight.tres" id="42"]
+[ext_resource type="Resource" path="res://resources/items/bent_coronet_leaf.tres" id="43"]
+[ext_resource type="Resource" path="res://resources/items/tarnished_laurel_tip.tres" id="44"]
+[ext_resource type="Resource" path="res://resources/items/brass_circlet_rivet.tres" id="45"]
+[ext_resource type="Resource" path="res://resources/items/bronze_brow_arc.tres" id="46"]
+[ext_resource type="Resource" path="res://resources/items/gilded_petal_setting.tres" id="47"]
+[ext_resource type="Resource" path="res://resources/items/mourning_diadem_link.tres" id="48"]
+[ext_resource type="Resource" path="res://resources/items/riverglass_pebble.tres" id="49"]
+[ext_resource type="Resource" path="res://resources/items/smoky_quartz_shard.tres" id="50"]
+[ext_resource type="Resource" path="res://resources/items/clouded_green_agate.tres" id="51"]
+[ext_resource type="Resource" path="res://resources/items/banded_moss_jasper.tres" id="52"]
+[ext_resource type="Resource" path="res://resources/items/lantern_amber_cabochon.tres" id="53"]
+[ext_resource type="Resource" path="res://resources/items/bluecap_opal_chip.tres" id="54"]
+[ext_resource type="Resource" path="res://resources/items/clay_pilgrim_figurine.tres" id="55"]
+[ext_resource type="Resource" path="res://resources/items/chipped_roothare_figure.tres" id="56"]
+[ext_resource type="Resource" path="res://resources/items/bronze_seedling_effigy.tres" id="57"]
+[ext_resource type="Resource" path="res://resources/items/lanternkeeper_miniature.tres" id="58"]
+[ext_resource type="Resource" path="res://resources/items/copper_bridge_keeper.tres" id="59"]
+[ext_resource type="Resource" path="res://resources/items/jade_mushroom_carving.tres" id="60"]
+[ext_resource type="Resource" path="res://resources/items/fern_imprint_stone.tres" id="61"]
+[ext_resource type="Resource" path="res://resources/items/spiral_shell_cast.tres" id="62"]
+[ext_resource type="Resource" path="res://resources/items/petrified_leaf_fan.tres" id="63"]
+[ext_resource type="Resource" path="res://resources/items/amber_trapped_pollen.tres" id="64"]
+[ext_resource type="Resource" path="res://resources/items/stonewood_growth_slice.tres" id="65"]
+[ext_resource type="Resource" path="res://resources/items/root_lattice_nodule.tres" id="66"]
+[ext_resource type="Resource" path="res://resources/items/cracked_offering_cup.tres" id="67"]
+[ext_resource type="Resource" path="res://resources/items/engraved_candle_snuffer.tres" id="68"]
+[ext_resource type="Resource" path="res://resources/items/bronze_scriptorium_clasp.tres" id="69"]
+[ext_resource type="Resource" path="res://resources/items/gilded_supper_spoon.tres" id="70"]
+[ext_resource type="Resource" path="res://resources/items/stone_choir_tuning_fork.tres" id="71"]
+[ext_resource type="Resource" path="res://resources/items/ritual_linen_spindle.tres" id="72"]
+[ext_resource type="Resource" path="res://resources/items/faded_route_seal.tres" id="73"]
+[ext_resource type="Resource" path="res://resources/items/broken_survey_chain.tres" id="74"]
+[ext_resource type="Resource" path="res://resources/items/copper_camp_badge.tres" id="75"]
+[ext_resource type="Resource" path="res://resources/items/waxed_map_case.tres" id="76"]
+[ext_resource type="Resource" path="res://resources/items/lost_trail_compass.tres" id="77"]
+[ext_resource type="Resource" path="res://resources/items/silvered_signal_whistle.tres" id="78"]
+[ext_resource type="Resource" path="res://resources/items/carved_bone_counter.tres" id="79"]
+[ext_resource type="Resource" path="res://resources/items/goblin_barter_bead.tres" id="80"]
+[ext_resource type="Resource" path="res://resources/items/rustbound_shield_emblem.tres" id="81"]
+[ext_resource type="Resource" path="res://resources/items/ossuary_bronze_binding.tres" id="82"]
+[ext_resource type="Resource" path="res://resources/items/archers_trophy_brooch.tres" id="83"]
+[ext_resource type="Resource" path="res://resources/items/golem_inlay_tile.tres" id="84"]
+
 [resource]
 script = ExtResource("1")
 category = &"common"
@@ -49,5 +98,5 @@ gold_min = 8
 gold_max = 18
 minimum_rolls = 1
 maximum_rolls = 2
-entries = Array[ExtResource("2")]( [ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20"), ExtResource("21"), ExtResource("22"), ExtResource("23"), ExtResource("24"), ExtResource("25"), ExtResource("26"), ExtResource("27"), ExtResource("28"), ExtResource("29"), ExtResource("30"), ExtResource("31"), ExtResource("32"), ExtResource("33"), ExtResource("34"), ExtResource("35"), ExtResource("36")] )
-weights = PackedFloat32Array(12, 32, 27, 10, 6, 5, 2, 2, 2, 0.7, 0.3, 0.02, 15, 15, 2, 2, 2, 2, 2, 2, 1, 8, 10, 1.5, 1.5, 0.66, 0.66, 0.66, 0.66, 0.66, 0.9075, 0.9075, 0.9075, 0.9075)
+entries = Array[ExtResource("2")]( [ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20"), ExtResource("21"), ExtResource("22"), ExtResource("23"), ExtResource("24"), ExtResource("25"), ExtResource("26"), ExtResource("27"), ExtResource("28"), ExtResource("29"), ExtResource("30"), ExtResource("31"), ExtResource("32"), ExtResource("33"), ExtResource("34"), ExtResource("35"), ExtResource("36"), ExtResource("37"), ExtResource("38"), ExtResource("39"), ExtResource("40"), ExtResource("41"), ExtResource("42"), ExtResource("43"), ExtResource("44"), ExtResource("45"), ExtResource("46"), ExtResource("47"), ExtResource("48"), ExtResource("49"), ExtResource("50"), ExtResource("51"), ExtResource("52"), ExtResource("53"), ExtResource("54"), ExtResource("55"), ExtResource("56"), ExtResource("57"), ExtResource("58"), ExtResource("59"), ExtResource("60"), ExtResource("61"), ExtResource("62"), ExtResource("63"), ExtResource("64"), ExtResource("65"), ExtResource("66"), ExtResource("67"), ExtResource("68"), ExtResource("69"), ExtResource("70"), ExtResource("71"), ExtResource("72"), ExtResource("73"), ExtResource("74"), ExtResource("75"), ExtResource("76"), ExtResource("77"), ExtResource("78"), ExtResource("79"), ExtResource("80"), ExtResource("81"), ExtResource("82"), ExtResource("83"), ExtResource("84")] )
+weights = PackedFloat32Array(12, 32, 27, 10, 6, 5, 2, 2, 2, 0.7, 0.3, 0.02, 15, 15, 2, 2, 2, 2, 2, 2, 1, 8, 10, 1.5, 1.5, 0.66, 0.66, 0.66, 0.66, 0.66, 0.9075, 0.9075, 0.9075, 0.9075, 0.5125, 0.5125, 0.5125, 0.166375, 0.166375, 0.166375, 0.5125, 0.5125, 0.5125, 0.166375, 0.166375, 0.166375, 0.5125, 0.5125, 0.5125, 0.166375, 0.166375, 0.166375, 0.5125, 0.5125, 0.5125, 0.166375, 0.166375, 0.166375, 0.5125, 0.5125, 0.5125, 0.166375, 0.166375, 0.166375, 0.5125, 0.5125, 0.5125, 0.166375, 0.166375, 0.166375, 0.5125, 0.5125, 0.5125, 0.166375, 0.166375, 0.166375, 0.5125, 0.5125, 0.5125, 0.166375, 0.166375, 0.166375)

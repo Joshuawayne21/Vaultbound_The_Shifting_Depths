@@ -303,7 +303,7 @@ On Android, obtain the representative equipment, meet its displayed level requir
 
 Thirty new accessory definitions bring the registry to **188 noncurrency items plus the preserved currency record**, including 35 accessories. The batch adds ten rings, ten necklaces and ten legacy-slot charms. Existing Amber Ring, Emerald Pendant and Sealed Reliquary definitions and assignments remain intact. Source eligibility, existing loot row weights, the bounded addition policy and the forty-slot inventory are preserved.
 
-**The frozen-batch gate passed 4,466 assertions across ten invocations.** Five catalog/source/economy suites contributed 3,649; the independent runtime/save/resource gate contributed 817. All final logs were clean, with no failure or production regression. Opening and closing semantic source manifests matched (`8b9ae3b664b4276d88f3b3b902f41ef0e5f8ee136048c2d617e59202b1ff0074`). Committed-source publication checks remain separate.
+**The frozen-batch gate passed 4,466 assertions across ten invocations.** Five catalog/source/economy suites contributed 3,649; the independent runtime/save/resource gate contributed 817. Local commit `b9b8131`, published as `b639bf3`, additionally passed **1,963 assertions across four exact-source invocations**: equipment batch 1,063, representative runtime 67, starter sources 324 and smoke 509. Opening and closing semantic source manifests matched each other and the frozen gate (`8b9ae3b664b4276d88f3b3b902f41ef0e5f8ee136048c2d617e59202b1ff0074`). Evidence is `/tmp/vaultbound-56-c7c-source-checks/`, including per-suite results and both manifests. Repeated archive checks are reported separately. All game-test logs were clean, with no failure or production regression; fresh editor import exited successfully with only the known sandbox socket and absent Android build-tools notices.
 
 | Suite | Passed assertions | Coverage |
 | --- | ---: | --- |
@@ -323,3 +323,30 @@ The representative runtime test equips Surveyor Copper Band, Waywatch Cord and P
 Evidence is `/tmp/vaultbound-56-checkpoint7c-regression/results.json`, adjacent logs and `source-{opening,closing}.json`, plus `/tmp/vaultbound-m56-accessories-{starter_sources,item_catalog,catalog_weapon_batch,catalog_equipment_batch,inventory_economy}.log`. No broad combat or procedural generation replay was needed for this data-only category; the final milestone gate retains those regression checks.
 
 On Android, equip the representative ring, necklace and charm simultaneously, inspect their labels/stat changes/preview, switch both weapon families and restart to confirm independent assignments. Check locked/favorited sale protection and the existing accessory slot on an older save. Shared family visuals, natural economy balance, rendered clipping and physical-device responsiveness remain manual review items; no device testing is claimed.
+
+## Checkpoint 7d — valuable catalog batch
+
+Eighty collectible trade goods bring the registry to **268 noncurrency items plus the preserved currency record**. Eight families each receive ten distinct authored finds, using the existing bounded stacks, merchant sale rules and owned Collection Hall references. None adds equipment bonuses or a second currency balance. Existing source rows and weights remain unchanged; additions share the established 10% pre-batch rarity-weight allocation. The relic family icon and model remain shared placeholders.
+
+**The frozen-batch gate passed 5,339 assertions across eleven invocations.** Seven catalog/source/economy suites contributed 4,621; the independent category/save/resource gate contributed 718. Opening and closing semantic source manifests matched (`c51ff3c3485e65b21463f3eb5eac2f397c6ff93a1ba2a11b35f9ce781703dd0d`), and the focused gate's source records match that same semantic source. All final game-test logs were clean. Committed-source publication checks remain separate.
+
+| Suite | Passed assertions | Coverage |
+| --- | ---: | --- |
+| `catalog_stackable_batch_test.gd` | 518 | Eighty authored valuable definitions, exact native source tags, unchanged existing rows/weights, bounded rarity additions, noncombat metadata and honest family art |
+| `item_catalog_test.gd` | 2,216 | Full 269-record registry, original IDs, resources, rarity and acquisition contracts |
+| `catalog_equipment_batch_test.gd` | 1,063 | Preserved armor/accessory source, equipment, enhancement and saved-instance contracts |
+| `catalog_weapon_batch_test.gd` | 308 | Preserved supported and disabled weapon definitions |
+| `starter_sources_test.gd` | 324 | Original starters, earned materials and unavailable legacy ownership reserves |
+| `inventory_economy_test.gd` | 138 | Existing forty-slot capacity, protected ownership and atomic transactions |
+| `enhancement_policy_test.gd` | 54 | Existing guaranteed enhancement costs, rarity caps and bounded bonuses |
+| `catalog_category_integration_test.gd`, runtime/read | 32 + 12 | Native valuable rolls through real chests, actual Rootwarden-authorized extraction, exact partial sale/replay protection, favorite/display protection, owned Hall model, independent restart and later actual death |
+| `profile_v4_test.gd` | 84 | Versioned saved ownership and unavailable/unsupported-content preservation |
+| `smoke_test.gd` | 590 | Expanded resource loading, startup, movement, touch, cameras and original portals |
+
+The new integration fixture searches deterministic seeds in the unmodified common table for Mossworn Obol and Square Temple Copper, then opens actual chest instances and extracts their exact contents and DM. Controlled prior ownership supplies four extra obols for a partial sale: two full-condition obols produce exactly six DM, leave the same remaining stack UID and cannot replay. The temple copper's Hall display resolves its existing owned UID and model; displaying neither creates nor consumes inventory. A separate engine process reloads the exact saved profile, reconstructs the exhibit and verifies secured ownership after a later death.
+
+The first development reader correctly failed to trigger death while the new arrival's spawn invulnerability was active. The fixture now clears the same player/combat invulnerability fields used by the existing Search reader before its controlled lethal hit. Production behavior was unchanged. Both final gates were rerun on the corrected unchanged source; the earlier development invocation is excluded from the total.
+
+Evidence is `/tmp/vaultbound-m56-7d-focused-final/results.json` and source-before/after records, plus `/tmp/vaultbound-56-checkpoint7d-regression/results.json`, adjacent logs and source-opening/closing manifests. Fresh import succeeded with the known sandbox editor-socket and missing Android build-tools notices. A controlled source-selection and transaction fixture does not establish natural drop pacing, economy balance or a human boss playthrough.
+
+On Android, collect valuable drops, inspect their names and stacks, extract, sell part of a stack, favorite the remainder and display a different owned valuable. Confirm protected sales, restart persistence and later expedition loss. Shared relic geometry, rendered readability, physical touch comfort and sustained performance remain manual review items; no device/GPU or APK result is claimed.
