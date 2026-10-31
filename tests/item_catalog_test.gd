@@ -27,7 +27,10 @@ func _run() -> void:
 		if not definition.obtainable:
 			disabled += 1
 			var expected_art := "missing" if definition.catalog_group == "weapon" else "not_applicable"
-			check(not definition.can_equip() and definition.acquisition_sources.is_empty() and definition.visual_scene == null and definition.model_art_status == expected_art, "%s is explicitly unavailable with truthful category art metadata and no acquisition" % id)
+			var valid_art: bool = definition.visual_scene == null and definition.model_art_status == expected_art
+			if definition.catalog_group == "trophy":
+				valid_art = definition.visual_scene != null and definition.visual_scene.resource_path == "res://scenes/items/relic.tscn" and definition.model_art_status == "shared_family_placeholder"
+			check(not definition.can_equip() and definition.acquisition_sources.is_empty() and valid_art, "%s is explicitly unavailable with truthful category art metadata and no acquisition" % id)
 		if definition.category == "equipment":
 			check(String(definition.slot) in VaultItemDefinition.EQUIPMENT_SLOTS and definition.stack_limit == 1 and definition.required_level in range(1, 31), "%s has an equipment slot, one-per-instance stack and level requirement" % id)
 			check(definition.weapon_style in [&"", &"sword", &"staff"], "%s uses only an existing weapon family" % id)

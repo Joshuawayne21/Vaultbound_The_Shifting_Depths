@@ -31,6 +31,7 @@ func _run() -> void:
 		await _valuable_services()
 		await _material_services()
 		await _consumable_services()
+		await _trophy_services()
 		var encoded := JSON.stringify(Store.normalize(session.profile), "\t", true, true)
 		var target := FileAccess.open(EXPECTED, FileAccess.WRITE)
 		target.store_string(encoded)
@@ -64,14 +65,21 @@ func _acquisition() -> void:
 	var before: Dictionary = session.profile.duplicate(true)
 	await game.start_expedition(23)
 	if not await arrive(&"rootbound_abyss"): return
+	_future_trophy_rewards()
 	_future_material_rewards()
 	_future_consumable_rewards()
 	var level: Node3D = game.active_world
 	for enemy: Node3D in level.encounters.all_actors(): enemy.set_physics_process(false)
 	player.invulnerable_remaining = 60
 	level.awareness.time_rate = 0
-	var table := Catalog.table_for(&"common")
-	for id: String in ["mossworn_obol", "square_temple_copper", "rootbark_strip", "ambermoss_salve"]:
+	var sources: Array[Dictionary] = [
+		{"id": "mossworn_obol", "category": &"common"}, {"id": "square_temple_copper", "category": &"common"},
+		{"id": "rootbark_strip", "category": &"common"}, {"id": "ambermoss_salve", "category": &"common"},
+		{"id": "singing_stone_idol", "category": &"ancient"},
+	]
+	for source: Dictionary in sources:
+		var id: String = source.id
+		var table := Catalog.table_for(source.category)
 		var receipt := "category-native-" + id
 		var selected_seed := -1
 		for candidate in range(20000):
@@ -79,9 +87,9 @@ func _acquisition() -> void:
 			if roll.items.any(func(item: Dictionary) -> bool: return item.id == id):
 				selected_seed = candidate
 				break
-		if not check(selected_seed >= 0, "Unmodified native common chest can actually roll " + id): continue
+		if not check(selected_seed >= 0, "Unmodified native " + String(source.category) + " chest can actually roll " + id): continue
 		var chest := load("res://scenes/treasure/chest.tscn").instantiate() as Node3D
-		chest.configure(&"common", selected_seed, receipt)
+		chest.configure(source.category, selected_seed, receipt)
 		level.add_child(chest)
 		chest.global_position = player.global_position + Vector3(0, 0, 1.5)
 		var pending: int = session.run_items.get(id, 0)
@@ -158,6 +166,8 @@ func _read() -> void:
 	if not await arrive(&"collection_hall"): return
 	var stand: Node3D = game.active_world.stands.relic_0
 	check(stand.displayed_uid == String(expected.displays.relic_0) and is_instance_valid(stand.displayed_model), "Independent restart reconstructs the same owned valuable exhibit")
+	var trophy: Node3D = game.active_world.stands.relic_1
+	check(trophy.displayed_uid == String(expected.displays.relic_1) and is_instance_valid(trophy.displayed_model), "Independent restart reconstructs the same actually extracted trophy artifact")
 	await game.change_location(&"sanctuary")
 	if not await arrive(&"sanctuary"): return
 	await game.start_expedition(81)
@@ -228,6 +238,40 @@ func _consumable_services() -> void:
 	player.stamina = player.max_stamina
 	var before: Dictionary = session.profile.duplicate(true)
 	check(not session.quote_action(&"use", {"uid": _uid("lanternleaf_tea")}).ok and session.profile == before, "Full health and stamina reject the new supply without wasting its remaining unit")
+	game.hud.close_modals()
+
+func _future_trophy_rewards() -> void:
+	var definition := Catalog.item_for("hollow_kings_crown")
+	check(definition != null and not definition.obtainable and definition.acquisition_sources.is_empty(), "The unavailable Hollow King artifact claims no active encounter source")
+	var candidate: Dictionary = session.profile.duplicate(true)
+	var before: Dictionary = candidate.duplicate(true)
+	check(not Inventory.add_items(candidate, {"hollow_kings_crown": 1}) and candidate == before, "An unfinished boss artifact cannot create playable ownership")
+	var bag: Dictionary = session.run_items.duplicate(true)
+	var records: Array = session.loot_records()
+	var reward := {"chest_id": "future_trophy_category", "category": "boss", "gold": 43, "items": [{"id": "hollow_kings_crown", "quantity": 1}]}
+	var collected: bool = session.collect_reward(reward)
+	var registered: Dictionary = session.register_loot(reward, 0, Vector3.ZERO, "boss")
+	check(not collected and not registered.ok and session.run_items == bag and session.loot_records() == records and session.unsecured_gold == 0 and not session.has_claimed(reward.chest_id), "Active Session refuses unavailable boss trophies without minting bag items, DM, Search records or receipts")
+
+func _trophy_services() -> void:
+	await game.change_location(&"collection_hall")
+	if not await arrive(&"collection_hall"): return
+	var stand: Node3D = game.active_world.stands.relic_1
+	player.reset_for_spawn(Transform3D(Basis.IDENTITY, stand.global_position + Vector3(0, 0.15, 1.7)))
+	await frames(3)
+	stand.interact(player)
+	var uid := _uid("singing_stone_idol")
+	var inventory: Array = session.profile.inventory.duplicate(true)
+	var equipment: Dictionary = session.profile.equipment.duplicate(true)
+	var stats: Dictionary = player.progression_stats()
+	_commit(&"display", {"stand_id": "relic_1", "uid": uid}, "Display the actually extracted Singing Stone Idol")
+	check(stand.displayed_uid == uid and is_instance_valid(stand.displayed_model) and session.profile.inventory == inventory and session.profile.equipment == equipment and player.progression_stats() == stats, "Trophy exhibition preserves ownership and equipped statistics while showing the actual extracted UID")
+	game.hud.close_modals()
+	await game.change_location(&"sanctuary")
+	if not await arrive(&"sanctuary"): return
+	if await _visit(&"merchant", "general"):
+		var before: Dictionary = session.profile.duplicate(true)
+		check(not session.quote_action(&"sell", {"uid": uid}).ok and session.profile == before, "Displayed trophy artifact retains protected-sale ownership")
 	game.hud.close_modals()
 
 func _future_material_rewards() -> void:

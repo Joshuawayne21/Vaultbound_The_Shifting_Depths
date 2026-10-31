@@ -6,7 +6,9 @@ const BATCHES := {"valuable": {"manifest": preload("res://resources/catalogs/val
 	"material": {"manifest": preload("res://resources/catalogs/materials_expansion.tres"),
 	"count": 33, "sources": "res://tests/fixtures/catalog_materials_sources.json"},
 	"consumable": {"manifest": preload("res://resources/catalogs/consumables_expansion.tres"),
-	"count": 22, "sources": "res://tests/fixtures/catalog_consumables_sources.json"}}
+	"count": 22, "sources": "res://tests/fixtures/catalog_consumables_sources.json"},
+	"trophy": {"manifest": preload("res://resources/catalogs/trophies_expansion.tres"),
+	"count": 27, "sources": "res://tests/fixtures/catalog_trophies_sources.json"}}
 const Inventory = preload("res://scripts/progression/inventory_model.gd")
 const Store = preload("res://scripts/progression/profile_store.gd")
 
@@ -29,7 +31,9 @@ func _run() -> void:
 			var declared: Array = definition.acquisition_sources.duplicate()
 			declared.sort()
 			check(Contracts.sources_for(id) == declared and (not declared.is_empty() if definition.obtainable else declared.is_empty()), "Stackable source declarations match exact native rows: " + id)
-			if group == "consumable":
+			if group == "trophy":
+				_check_trophy(definition)
+			elif group == "consumable":
 				_check_consumable(definition)
 			elif group == "material":
 				_check_material(definition)
@@ -105,10 +109,10 @@ func _check_consumable(definition: VaultItemDefinition) -> void:
 	if definition.obtainable:
 		check(definition.healing >= 0.0 and definition.healing <= 140.0 and definition.stamina_restore >= 0.0 and definition.stamina_restore <= 100.0 and definition.healing + definition.stamina_restore > 0.0 and not definition.special_effects.is_empty(), "Available consumable provides bounded implemented restoration: " + id)
 	else:
-		check(not definition.combat_supported and definition.healing == 0.0 and definition.stamina_restore == 0.0 and definition.special_effects.is_empty() and definition.icon_art_status == "catalog_placeholder", "Future resistance supply advertises no working restorative or combat effect: " + id)
+		check(not definition.combat_supported and definition.healing == 0.0 and definition.stamina_restore == 0.0 and definition.special_effects.is_empty() and definition.icon_art_status == "catalog_placeholder", "Future supply advertises no working restorative or combat effect: " + id)
 		var profile := Store.empty_profile()
 		var before := profile.duplicate(true)
-		check(not Inventory.add_items(profile, {id: 1}) and profile == before, "Future resistance supply cannot enter trusted ownership: " + id)
+		check(not Inventory.add_items(profile, {id: 1}) and profile == before, "Future supply cannot enter trusted ownership: " + id)
 
 func _check_merchant_preservation() -> void:
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/catalog_consumables_merchant.json"))
@@ -124,3 +128,17 @@ func _check_merchant_preservation() -> void:
 	for field: String in ["equipment", "appraiser", "rotations"]:
 		var actual: Variant = JSON.parse_string(JSON.stringify(stock.get(field)))
 		check(actual == snapshot["unchanged_" + field], "Existing merchant offers and rotations remain unchanged: " + field)
+
+
+func _check_trophy(definition: VaultItemDefinition) -> void:
+	var id := String(definition.id)
+	check(definition.category == "collectible" and not definition.can_equip() and definition.slot == &"" and definition.weapon_style == &"" and definition.base_stats.is_empty(), "Trophy remains a collectible without equipment statistics: " + id)
+	check(definition.stack_limit == 1 and definition.quantity_min == 1 and definition.quantity_max == 1, "Trophy preserves one owned item per stack and reward: " + id)
+	check(definition.healing == 0.0 and definition.stamina_restore == 0.0 and definition.special_effects.is_empty() and definition.salvage.is_empty(), "Trophy introduces no restorative, combat or salvage mechanic: " + id)
+	check(definition.icon.resource_path == "res://assets/items/relic.svg" and definition.visual_scene.resource_path == "res://scenes/items/relic.tscn" and definition.model_art_status == "shared_family_placeholder", "Trophy honestly reuses the existing relic family art: " + id)
+	var animation := definition.display_animation
+	check(float(animation.rotation_speed) >= 0.0 and float(animation.rotation_speed) <= 0.3 and float(animation.bob_height) >= 0.0 and float(animation.bob_height) <= 0.08 and float(animation.bob_speed) > 0.0 and float(animation.bob_speed) <= 2.0, "Trophy display configuration remains bounded for existing pedestals: " + id)
+	if not definition.obtainable:
+		var profile := Store.empty_profile()
+		var before := profile.duplicate(true)
+		check(not Inventory.add_items(profile, {id: 1}) and profile == before, "Future encounter trophy cannot enter trusted ownership: " + id)

@@ -382,7 +382,7 @@ On Android, obtain ordinary, elite and boss material representatives; inspect re
 
 Twenty-two definitions bring the registry to **323 noncurrency items plus the preserved currency record**, including 25 consumables. Sixteen new supplies use the existing health/stamina restoration mechanics; six entries requiring unavailable resistance, antidote, return, detection or revival mechanics remain disabled. Three supported supplies enter the General Merchant. No unsupported consumable effect is represented as functional.
 
-**The frozen-batch gate passed 4,752 assertions across seven invocations.** Four focused catalog/source/economy suites contributed 4,011; three independent runtime/read/resource invocations contributed 741. Opening/closing manifests and both gates match the same semantic source (`1497b0161a40da8c8c143709d97af6d138261516f1ea5fb3d5994eefb5a7fb4a`). All final logs were clean on the first run. Preserved armor, weapon, enhancement and broad combat suites are retained for the complete final milestone gate. Committed-source checks remain separate.
+**The frozen-batch gate passed 4,752 assertions across seven invocations.** Four focused catalog/source/economy suites contributed 4,011; three independent runtime/read/resource invocations contributed 741. Local commit `b0c4c0a`, published as `86d5675`, additionally passed **1,699 assertions across four exact-source invocations**: stackable batch 958, category runtime/read 74 + 12 and smoke 655. Opening/closing archive manifests and both working gates match the same semantic source (`1497b0161a40da8c8c143709d97af6d138261516f1ea5fb3d5994eefb5a7fb4a`). Archive evidence is `/tmp/vaultbound-56-c7f-source-checks/`; repeated publication checks are reported separately. All final logs were clean on the first run. Preserved armor, weapon, enhancement and broad combat suites are retained for the complete final milestone gate.
 
 | Suite | Passed assertions | Coverage |
 | --- | ---: | --- |
@@ -398,3 +398,26 @@ The runtime extension buys Lanternleaf Tea and Reedwater Flask through a real me
 Evidence is `/tmp/vaultbound-m56-7f-focused-final/results.json` and matching source-before/after records, plus `/tmp/vaultbound-56-checkpoint7f-regression/results.json`, logs and source-opening/closing manifests. Fresh import succeeded with only known editor-socket and Android build-tools environment notices. The fixture establishes current effects and transactions, not balanced supply pricing or natural progression pacing.
 
 On Android, buy and collect these supplies, compare their descriptions with actual restoration, test full-resource rejection and restart after use. Future effect entries must remain unobtainable. Physical touch comfort, rendered feedback and device performance remain manual review items.
+
+## Checkpoint 7g — trophy artifacts and completed catalog
+
+Twenty-seven trophy artifacts complete **350 noncurrency definitions plus the preserved currency record**. The final catalog has 50 weapons, 85 armor pieces, 35 accessories, 80 valuables, 45 materials, 25 consumables and 30 trophy artifacts. **300 noncurrency definitions are currently obtainable; 50 future definitions are explicitly unavailable**: 26 unsupported weapons, eight future materials, six supplies requiring unimplemented mechanics and ten artifacts tied to unavailable encounters.
+
+Seventeen new artifacts use existing Ancient Chest or completed Rootwarden sources. The other ten have no acquisition path and cannot enter playable inventory or rewards. Their catalog artwork may truthfully reuse the existing relic family icon/model; shared placeholder art does not imply an implemented encounter. The existing Rootwarden Heart remains tied to the real boss reward and retains its singular ownership path.
+
+**The frozen-batch gate passed 5,155 assertions across seven invocations.** Four focused catalog/source/economy suites contributed 4,372; three independent runtime/read/resource invocations contributed 783. Both gates and their opening/closing manifests match the unchanged semantic source (`4a9d89c22f15910887d570dab07f40b874288da02ba8160356ca9e6b8b8e8345`). All final logs were clean on the first run. Committed-source checks and the complete milestone regression remain separate.
+
+| Suite | Passed assertions | Coverage |
+| --- | ---: | --- |
+| `catalog_stackable_batch_test.gd` | 1,174 | All authored stackable/trophy categories, exact active/disabled split, current source restrictions, existing rows and bounded weight additions |
+| `item_catalog_test.gd` | 2,704 | Complete 351-record registry, exact seven group totals, resources, recipes, native sources and honest disabled-art metadata |
+| `starter_sources_test.gd` | 324 | Original starters, earned-material and unavailable legacy-ownership contracts |
+| `inventory_economy_test.gd` | 170 | Preserved forty-slot inventory, protection and atomic transactions |
+| `catalog_category_integration_test.gd`, runtime/read | 87 + 13 | Native artifact chest/extraction, actual owned trophy display without stat/ownership changes, protected sale, future-boss artifact rejection, two independently restarted exhibits and later death |
+| `smoke_test.gd` | 683 | All expanded resources, startup, movement, touch, cameras and original portals |
+
+The runtime extension selects Singing Stone Idol from the unmodified Ancient Chest table, opens a real chest and extracts the artifact through the existing boss-authorized boundary. Its Hall pedestal resolves that exact owned UID without consuming inventory or changing equipped statistics. The independent reader reconstructs both the valuable and trophy exhibits and confirms their saved references survive a later death. Hollow King's Crown is checked as an actual unavailable catalog definition: neither direct inventory grant nor active Session reward/Search registration can mint its ownership, DM or receipt. No missing boss is spawned or represented as playable.
+
+Evidence is `/tmp/vaultbound-m56-7g-focused-final/results.json` and matching source-before/after records, plus `/tmp/vaultbound-56-checkpoint7g-regression/results.json`, logs and source-opening/closing manifests. Fresh import succeeded with only the known sandbox editor-socket and absent Android build-tools notices. Native family visuals remain shared placeholders; source eligibility and controlled acquisition do not establish unique artwork or balanced natural drop rates.
+
+On Android, acquire an existing-source artifact, extract it, assign its owned reference, restart and confirm later expedition loss preserves the exhibit. Future encounter artifacts must remain unavailable. Inspect labels, family models and collection readability; rendered appearance, physical input and performance remain manual checks.

@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="VaultItemCatalogData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_catalog_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+item_ids = PackedStringArray("hollow_kings_crown", "drowned_leviathan_eye", "crystal_devourer_core", "crown_of_eternal_vines", "ancient_explorers_compass", "moon_eaten_chalice", "first_vault_key", "frozen_kings_hourglass", "abyssal_lantern", "heart_of_forgotten_titan", "emberglass_crown", "eternal_root_fragment", "singing_stone_idol", "lost_kings_seal", "voidglass_sundial", "wardens_thorn_crown", "tear_of_the_deep", "crystal_serpent_fang", "forgotten_monarchs_mask", "mothwing_reliquary", "choirroot_resonator", "silverroot_astrolabe", "last_lantern_of_briarwatch", "pilgrims_verdant_codex", "oathstone_of_first_grove", "nightbloom_reliquary", "cairnkeepers_bell")

@@ -1,6 +1,6 @@
 # Milestone 5.6 catalog batches
 
-The original forty functional items and stable Depthmarks currency definition remain the independently tested starter set. Catalog growth is committed in separate, gated data batches. The target is **350 noncurrency definitions**, plus the preserved `gold_coin` record; this page reports only integrated content. The current total after batches 7a–7f is **324 definitions: 283 available noncurrency items, 40 unavailable future definitions and one currency record**.
+The original forty functional items and stable Depthmarks currency definition remain the independently tested starter set. Catalog growth is committed in separate, gated data batches. The target is **350 noncurrency definitions**, plus the preserved `gold_coin` record; this page reports only integrated content. The current total after batches 7a–7g is **351 definitions: 300 available noncurrency items, 50 unavailable future definitions and one currency record**.
 
 ## Batch 7a: weapon definitions
 
@@ -14,7 +14,7 @@ Batch 7a brought the project to **84 total definitions**: 83 noncurrency items a
 | Valuables | 80 | 80 |
 | Materials | 45 | 45 |
 | Consumables | 25 | 25 |
-| Trophy artifacts | 3 | 30 |
+| Trophy artifacts | 30 | 30 |
 
 The weapon batch adds seventeen supported items with distinct names, descriptions, lore and modest stat combinations. Six are acquired through the existing Equipment Trader and its three completed-expedition rotations. Two belong to common/basic rewards, two to reinforced/stronger rewards, three to ancient/cursed/elite rewards, and four to completed Rootwarden rewards. Required levels range from 1 to 27. No new recipe or material is needed for this batch.
 
@@ -54,10 +54,16 @@ Twenty-two consumable definitions bring the supply catalog to **25**. Sixteen ne
 
 All previous item definitions, merchant offers and stock rotations remain intact. New loot rows share the same 10% pre-batch rarity budget. Authored stacks range from three to ten, and the existing consumable transaction handles restoration, quantity, protection and replay checks. The supplies reuse the existing potion family icon; no unique bottle model is claimed.
 
-Six future resistance supplies remain unavailable, with empty sources, zero restoration and no active special effects. Their descriptions clearly mark the planned mechanic as unavailable. The forty disabled definitions now comprise twenty-six future weapons, eight future materials and these six resistance supplies.
+Six future resistance and utility supplies remain unavailable, with empty sources, zero restoration and no active special effects. Planned resistance/antidote, revival, return and detection mechanics are clearly marked as unavailable. At this checkpoint, the forty disabled definitions comprise twenty-six future weapons, eight future materials and these six future supplies.
+
+## Batch 7g: trophy artifact definitions
+
+Twenty-seven trophy artifacts complete the **30-item trophy catalog** and the **350 noncurrency definition target**. Seventeen new trophies have existing Rootbound acquisition paths: thirteen come from ancient chests and four from completed Rootwarden chest/encounter rewards. Each has its own authored identity and lore, one item per inventory stack, and bounded display configuration for the existing Collection Hall. Existing ownership, exhibition protection and journal rules apply.
+
+Ten trophy records tied to future encounters remain unavailable with empty sources. Their honest shared relic-family icon and model metadata describe the existing generic artwork; ownership grants and acquisition remain blocked. The final unavailable total is fifty: twenty-six future weapons, eight future materials, six future resistance/utility supplies and ten future trophies. All prior definitions and source rows remain unchanged, and new rows use the same 10% rarity-weight budget. No additional encounter, combat mechanic or item-specific model is represented as implemented.
 
 ## Batch validation
 
-`catalog_contracts.gd` holds explicit reviewed totals independently of resource data. `starter_sources_test.gd` retains the immutable 41-record starter audit. `item_catalog_test.gd` checks every integrated definition, group totals, active sources and inactive definitions. `catalog_weapon_batch_test.gd` preserves all 43 weapon checks. The reusable `catalog_equipment_batch_test.gd` verifies each armor and accessory definition's actual source, slot, stat bounds, protected ownership, enhancement cost and unchanged rolled instance properties; enhanced examples from each slot survive byte-exact encoded save/reload. `catalog_stackable_batch_test.gd` verifies authored valuable, material and consumable metadata, exact live acquisition tags, current material recipe uses, rejected future components/supplies, preserved prior merchant and source rows and the bounded rarity-weight additions. Oversized catalog rewards still fail atomically at forty inventory slots. The real player/camera/HUD regression remains separate in `catalog_runtime_integration_test.gd`.
+`catalog_contracts.gd` holds explicit reviewed totals independently of resource data. `starter_sources_test.gd` retains the immutable 41-record starter audit. `item_catalog_test.gd` checks every integrated definition, group totals, active sources and inactive definitions. `catalog_weapon_batch_test.gd` preserves all 43 weapon checks. The reusable `catalog_equipment_batch_test.gd` verifies each armor and accessory definition's actual source, slot, stat bounds, protected ownership, enhancement cost and unchanged rolled instance properties; enhanced examples from each slot survive byte-exact encoded save/reload. `catalog_stackable_batch_test.gd` verifies authored valuable, material, consumable and trophy metadata, exact live acquisition tags, current material recipe uses, rejected future components/supplies/trophies, preserved prior merchant and source rows and the bounded rarity-weight additions. Oversized catalog rewards still fail atomically at forty inventory slots. The real player/camera/HUD regression remains separate in `catalog_runtime_integration_test.gd`.
 
 On Android, buy Lanternwatch Blade and Sporewood Focus from the Equipment Trader, assign both loadouts, inspect their shared family previews, and switch while moving in both cameras. Try the new dungeon weapon drops, secure them through extraction, upgrade them and restart. Confirm the normal inventory still has forty slots. Physical-device performance and touch behavior require manual testing; catalog test results are not device measurements.
