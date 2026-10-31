@@ -19,6 +19,9 @@ var actors_by_room: Dictionary = {}
 var cleared: Dictionary = {}
 var _level: Node3D
 var _tick := 0.0
+var _spawn_ordinals: Dictionary = {}
+var _registered_actors: Dictionary = {}
+var _defeated_receipts: Dictionary = {}
 
 func configure(value: Dictionary, instances: Dictionary, level: Node3D, expedition_seed: int) -> void:
 	layout = value
@@ -60,6 +63,8 @@ func _spawn_initial(id: int) -> void:
 	encounter_started.emit(id)
 
 func _spawn(room_id: int, archetype: StringName, local_point: Vector3, elite: bool, strength: float = 1.0) -> Node3D:
+	if not rooms.has(room_id) or not ENEMIES.has(archetype):
+		return null
 	var enemy := ENEMIES[archetype].instantiate() as Node3D
 	var data: Resource = enemy.data.duplicate(true)
 	data.max_health *= strength * (1.3 if elite else 1.0)
@@ -75,6 +80,14 @@ func _spawn(room_id: int, archetype: StringName, local_point: Vector3, elite: bo
 	enemy.data = data
 	enemy.set_meta("abyss_room", room_id)
 	enemy.set_meta("elite", elite)
+	var ordinal := int(_spawn_ordinals.get(room_id, 0))
+	_spawn_ordinals[room_id] = ordinal + 1
+	var receipt := "enemy_room_%d_spawn_%d" % [room_id, ordinal]
+	enemy.set_meta("loot_receipt", receipt)
+	# Metadata is a presentation/debug hint. Identity and reward source come from
+	# this spawn registry, so a foreign actor or repeated died signal grants nothing.
+	_registered_actors[enemy.get_instance_id()] = {"actor": weakref(enemy), "receipt": receipt,
+		"room_id": room_id, "archetype": String(archetype), "elite": elite}
 	enemy.position = local_point + Vector3.UP * 0.15
 	rooms[room_id].add_child(enemy)
 	if not actors_by_room.has(room_id):
@@ -162,7 +175,11 @@ func _set_active(enemy: Node3D, enabled: bool) -> void:
 	enemy.process_mode = Node.PROCESS_MODE_INHERIT if enabled else Node.PROCESS_MODE_DISABLED
 
 func _on_enemy_died(enemy: Node3D) -> void:
-	var id := int(enemy.get_meta("abyss_room", -1))
+	var record := _dead_actor_record(enemy)
+	if record.is_empty() or _defeated_receipts.has(record.receipt):
+		return
+	_defeated_receipts[record.receipt] = true
+	var id := int(record.room_id)
 	var alive := false
 	for actor: Node3D in actors_by_room.get(id, []):
 		if is_instance_valid(actor) and actor.health > 0.0:
@@ -170,6 +187,27 @@ func _on_enemy_died(enemy: Node3D) -> void:
 	if not alive:
 		cleared[id] = true
 	enemy_defeated.emit(enemy)
+
+func death_record(enemy: Node3D) -> Dictionary:
+	var record := _dead_actor_record(enemy)
+	if record.is_empty() or not _defeated_receipts.has(record.receipt):
+		return {}
+	return {"receipt": record.receipt, "room_id": record.room_id,
+		"archetype": record.archetype, "elite": record.elite}
+
+func death_receipt(enemy: Node3D) -> String:
+	return String(death_record(enemy).get("receipt", ""))
+
+func _dead_actor_record(enemy: Node3D) -> Dictionary:
+	if not is_instance_valid(enemy) or not enemy.is_inside_tree() or float(enemy.get("health")) != 0.0 or enemy.get("state") != &"dead":
+		return {}
+	var record: Dictionary = _registered_actors.get(enemy.get_instance_id(), {})
+	if record.is_empty() or record.actor.get_ref() != enemy:
+		return {}
+	var id := int(record.room_id)
+	if not rooms.has(id) or enemy.get_parent() != rooms[id] or not actors_by_room.get(id, []).has(enemy):
+		return {}
+	return record
 
 func active_enemy_count() -> int:
 	var count := 0

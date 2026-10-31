@@ -49,6 +49,7 @@ var _party_notice := ""
 var progression_session: Node
 var rpg_panel: Control
 var graphics_panel: Control
+var loot_panel: Control
 var ui_scale := 1.0
 var reduced_motion := false
 var reduced_effects := false
@@ -68,15 +69,29 @@ func _ready() -> void:
 	graphics_panel.name = "GraphicsPanel"
 	add_child(graphics_panel)
 	graphics_panel.close_requested.connect(close_modal)
+	loot_panel = preload("res://scripts/ui/loot_panel.gd").new()
+	loot_panel.name = "LootPanel"
+	add_child(loot_panel)
+	loot_panel.close_requested.connect(close_modal)
 
 
 func bind_progression_session(session: Node) -> void:
 	progression_session = session
 	if is_instance_valid(rpg_panel):
 		rpg_panel.bind_session(session)
+	if is_instance_valid(loot_panel):
+		loot_panel.bind_session(session)
+	if session.has_signal("reward_collected") and not session.reward_collected.is_connected(_on_reward_collected):
+		session.reward_collected.connect(_on_reward_collected)
 
 
 func open_service(kind: StringName, context: Dictionary = {}) -> void:
+	if kind == &"loot":
+		if mode not in [&"none", &"loot"] or not is_instance_valid(loot_panel) or not is_instance_valid(progression_session):
+			return
+		loot_panel.open_cache(context)
+		_open_modal(&"loot")
+		return
 	if not is_instance_valid(rpg_panel) or not is_instance_valid(progression_session):
 		return
 	if mode not in [&"none", &"pack"]:
@@ -187,6 +202,18 @@ func add_notice(message: String) -> void:
 	queue_redraw()
 
 
+func _on_reward_collected(reward: Dictionary) -> void:
+	# Only the Session's accepted-reward signal creates a currency popup. Loot
+	# inspection, quote failures and repeated empty-cache requests never reach here.
+	var amount := int(reward.get("gold", 0))
+	if amount <= 0:
+		return
+	_notifications.append({"message": "+%d DM" % amount, "remaining": 1.4, "currency": true})
+	while _notifications.size() > 3:
+		_notifications.pop_front()
+	queue_redraw()
+
+
 func show_results(data: Dictionary) -> void:
 	results_snapshot = data.duplicate(true)
 	_open_modal(&"results")
@@ -223,6 +250,8 @@ func _open_modal(value: StringName) -> void:
 		graphics_panel.hide_panel()
 	if value != &"pack" and is_instance_valid(rpg_panel) and rpg_panel.visible:
 		rpg_panel.hide_panel()
+	if value != &"loot" and is_instance_valid(loot_panel) and loot_panel.visible:
+		loot_panel.hide_panel()
 	var was_open := mode != &"none"
 	mode = value
 	InputHub.reset_controls()
@@ -243,6 +272,9 @@ func close_modal() -> void:
 		graphics_panel.hide_panel()
 	if is_instance_valid(rpg_panel) and rpg_panel.visible:
 		rpg_panel.hide_panel()
+	if is_instance_valid(loot_panel) and loot_panel.visible:
+		loot_panel.hide_panel()
+		if is_instance_valid(progression_session): progression_session.close_service()
 	InputHub.reset_controls()
 	if is_instance_valid(source_surface):
 		source_surface.modal_blocked = false
@@ -270,6 +302,9 @@ func _input(event: InputEvent) -> void:
 		# Consume the complete event stream while open, including releases/drags;
 		# a finger that opened/closed a panel must never become a world attack.
 		get_viewport().set_input_as_handled()
+		if is_instance_valid(loot_panel) and loot_panel.visible:
+			loot_panel.handle_event(event)
+			return
 		if is_instance_valid(graphics_panel) and graphics_panel.visible:
 			graphics_panel.handle_event(event)
 			return
@@ -738,7 +773,7 @@ func _draw_expedition_status() -> void:
 	var floor_number := int(dungeon_snapshot.get("floor", 1))
 	var run_seed := int(dungeon_snapshot.get("seed", session_snapshot.get("run_seed", 0)))
 	_text("FLOOR %02d  ·  SEED %d" % [floor_number, run_seed], rect.position + Vector2(14, 21), 11, MUTED)
-	_text("%d GOLD · UNSECURED" % int(session_snapshot.get("unsecured_gold", 0)), rect.position + Vector2(rect.size.x - 14, 21), 11, GOLD, false, true)
+	_text("%d DM · UNSECURED" % int(session_snapshot.get("unsecured_gold", 0)), rect.position + Vector2(rect.size.x - 14, 21), 11, GOLD, false, true)
 	var awareness := clampf(float(dungeon_snapshot.get("awareness", 0)), 0, 100)
 	_text("AWARENESS", rect.position + Vector2(14, 47), 10, IVORY)
 	var track := Rect2(rect.position + Vector2(105, 38), Vector2(320, 7))
@@ -821,8 +856,11 @@ func _draw_notices() -> void:
 		var width := minf(540, _font.get_string_size(message, HORIZONTAL_ALIGNMENT_LEFT, -1, roundi(13 * ui_scale)).x + 36)
 		var height := 25.0 * ui_scale
 		var rect := Rect2(size.x * 0.5 - width * 0.5, 290 + index * (height + 4) + _safe().y, width, height)
-		VaultUITheme.frame(self, rect, Color(PANEL, opacity * 0.94), TEAL)
-		_text(message, rect.get_center() + Vector2(0, 5), 13, Color(IVORY, opacity), true)
+		var currency := bool(notice.get("currency", false))
+		var tint := GOLD if currency else TEAL
+		VaultUITheme.frame(self, rect, Color(PANEL, opacity * 0.94), tint)
+		var drift := 0.0 if reduced_motion or not currency else 3.0 * clampf(1.4 - float(notice.remaining), 0, 1)
+		_text(message, rect.get_center() + Vector2(0, 5 - drift), 13, Color(GOLD if currency else IVORY, opacity), true)
 
 
 func _draw_pack() -> void:
@@ -836,7 +874,7 @@ func _draw_pack() -> void:
 		_panel(tab_rect, Color(0.07, 0.2, 0.21, 1) if tab == pack_tab else PANEL)
 		var gold := int(session_snapshot.get("unsecured_gold" if tab == &"bag" else "secured_gold", 0))
 		_text("EXPEDITION BAG" if tab == &"bag" else "SECURED COLLECTION", tab_rect.position + Vector2(14, 22), 12, TEAL if tab == pack_tab else IVORY)
-		_text("%d GOLD" % gold, tab_rect.position + Vector2(14, 46), 12, GOLD)
+		_text("%d DM" % gold, tab_rect.position + Vector2(14, 46), 12, GOLD)
 	var items := _pack_items()
 	var total_pages := maxi(1, int(ceil(float(items.size()) / PAGE_SIZE)))
 	_text("%d / %d" % [page + 1, total_pages], rect.position + Vector2(rect.size.x - 126, 88), 11, MUTED, true)
@@ -880,7 +918,7 @@ func _draw_results() -> void:
 	var seed_value := int(results_snapshot.get("seed", 0))
 	_text("ROOTBOUND ABYSS  ·  SEED %d  ·  %02d:%02d" % [seed_value, seconds / 60, seconds % 60], rect.position + Vector2(30, 105), 12, MUTED)
 	var summaries := [
-		["GOLD SECURED" if success else "GOLD LOST", str(results_snapshot.get("gold", 0))],
+		["DM SECURED" if success else "DM LOST", str(results_snapshot.get("gold", 0))],
 		["ENEMIES DEFEATED", str(results_snapshot.get("kills", 0))],
 		["ROOTWARDEN", "DEFEATED" if bool(results_snapshot.get("boss_defeated", false)) else "STILL WATCHING"],
 	]
@@ -903,7 +941,7 @@ func _draw_results() -> void:
 		_text("+ %d more · inspect the pack for your complete collection" % (items.size() - 7), rect.position + Vector2(32, 448), 12, MUTED)
 	var discoveries: Array = results_snapshot.get("new_discoveries", []) if results_snapshot.get("new_discoveries", []) is Array else []
 	_text("NEW COLLECTION DISCOVERIES  %d" % discoveries.size(), rect.position + Vector2(32, rect.size.y - 76), 11, MUTED)
-	_text("SECURED GOLD TOTAL  %d" % int(results_snapshot.get("secured_total", session_snapshot.get("secured_gold", 0))), rect.position + Vector2(32, rect.size.y - 49), 13, GOLD)
+	_text("SECURED DM TOTAL  %d" % int(results_snapshot.get("secured_total", session_snapshot.get("secured_gold", 0))), rect.position + Vector2(32, rect.size.y - 49), 13, GOLD)
 	_button(_continue_rect(), "CONTINUE", true)
 
 

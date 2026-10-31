@@ -2,7 +2,7 @@
 
 **Milestone 5.6 — Loot and equipment overhaul, staged implementation.** A Godot 4 / GDScript-only, offline fantasy expedition prototype for Android landscape. The existing Sanctuary, Collection Hall and Rootbound Abyss now share slate-and-bronze architecture, turquoise magic, mossy ruins, living foliage and flowing water. Recruit companions, explore, fight, extract treasure and develop the character through the preserved RPG systems.
 
-The verified foundation adds owned primary/secondary weapon loadouts and version-three save migration. Mobile menus now share an enchanted navy, bronze and turquoise theme, with distinct Inventory and Equipment entries, rotatable inspection and saved accessibility settings. Follow the [implementation plan](docs/milestone-5.6-plan.md) and [checkpoint validation](docs/milestone-5.6-validation.md) for completed versus pending work.
+The verified foundation adds owned primary/secondary weapon loadouts and version-three save migration. Mobile menus share an enchanted navy, bronze and turquoise theme, with distinct Inventory and Equipment entries, rotatable inspection and saved accessibility settings. Rootbound enemies now leave searchable loot caches, and currency is displayed as Depthmarks (DM). Follow the [implementation plan](docs/milestone-5.6-plan.md) and [checkpoint validation](docs/milestone-5.6-validation.md) for completed versus pending work.
 
 The Sanctuary, practice dungeon and arena, player movement, sword/shield and staff combat, touch controls, both smoothly switchable cameras, procedural dungeons, treasure, boss encounters and secured progression from Milestones 1–5 remain available. `project.godot` stays at the repository root. The active party supports one human leader and up to two local AI companions. No online multiplayer, player-to-player trading, guilds or additional biomes are implemented.
 
@@ -14,8 +14,8 @@ The Sanctuary, practice dungeon and arena, player movement, sword/shield and sta
 4. Keep the device in landscape and choose **Run Project**. The main scene is `scenes/main.tscn`.
 5. In Sanctuary, visit the **Tavern on the west side** and tap **USE** to recruit the Guardian and Mystic. Recruitment is optional; solo play remains available. The **east-facing Rootbound Abyss archway** begins an expedition, and the northern arch still leads to the original practice dungeon and arena.
 6. Open the entrance supply chest, follow the discovered-room minimap, explore branches, and approach whispering vine walls to reveal hidden rooms. Walk through open doorways; rooms connect continuously.
-7. Defeat the Rootwarden, claim its reward chest, then find the **extraction spring in the connected chamber beyond the boss**. Tap **USE** to save rewards and return to the Sanctuary.
-8. Review the results screen, then open **PACK → INVENTORY**. Select an owned item to compare and equip it, mark it as a favorite or lock it. The **EQUIPMENT** tab shows all six slots and a character preview; **CHARACTER** shows XP and talent allocation.
+7. Defeated enemies leave searchable caches. Approach one, tap **USE**, then choose a quantity and **TAKE**, or **TAKE ALL**. Defeat the Rootwarden and search its grand cache, then find the **extraction spring in the connected chamber beyond the boss**. Tap **USE** to secure the collected rewards and return to Sanctuary.
+8. Review the results screen, then open **INVENTORY**. Select an owned item to compare and equip it, mark it as a favorite or lock it. The **EQUIPMENT** tab shows all eleven assignments and a rotatable character preview; **CHARACTER** shows XP and talent allocation.
 9. Visit the four merchants/workbenches along the **south side of Sanctuary**: General Merchant, Blacksmith, Equipment Trader and Relic Appraiser. Review the displayed costs before confirming purchases, sales, crafts or improvements.
 10. Use the **northwestern Collection Hall passage** to assign owned equipment and relics to displays and view the discovery journals. Its return arch leads safely back to Sanctuary.
 11. Tap **GRAPHICS** to select **Low, Medium or High** and a **30 or 60 FPS target**, then **APPLY & SAVE**. Start with the default **Medium / 30 FPS**. Use Low if sustained play shows frame-time spikes; 60 FPS is an optional target for capable devices, not a measured guarantee.
@@ -39,10 +39,11 @@ Running inside the Android editor requires no APK export. The included ARM64 exp
 | Target lock | LOCK | T |
 | Select owned loadout | Two circular weapon buttons | 1 / 2; R cycles assigned weapons |
 | Interact / chest / extraction | USE nearby | F |
+| Collect searched loot | TAKE / TAKE ALL in Search | Click the same Search controls |
 | Inventory | INVENTORY | I |
 | Equipment / rotate preview | EQUIPMENT, drag the character | O, mouse drag inside the preview |
 | Healing consumable | TONIC | H |
-| Performance display | METRICS inside PACK | P |
+| Performance display | METRICS inside Inventory | P |
 | Graphics / UI scale / reduced motion and effects | GRAPHICS | F10 |
 | Party commands | PARTY | B |
 | Recruit / dismiss | USE at the Sanctuary Tavern | F at the Tavern |
@@ -93,27 +94,44 @@ Existing skeletons, archers and golems form deterministic groups with modest dep
 
 ## Treasure, inventory and saving
 
-Common, Reinforced, Ancient and Cursed chests share one chest implementation. Item definitions and weighted `.tres` loot tables provide gold, crafting materials, equipment, healing consumables and collectibles across **Common, Uncommon, Rare, Epic, Legendary, Mythic and Ancient Relic** rarities. The shared catalog contains **30 starter definitions**, including the original twelve items, and keeps definition resources separate from unique owned equipment instances. The boss chest has its own table and a guaranteed **Heart of the Rootwarden** collectible. Chests can be claimed only once per expedition.
+Common, Reinforced, Ancient and Cursed chests share one chest implementation. Item definitions and weighted `.tres` loot tables provide Depthmarks (DM), crafting materials, equipment, healing consumables and collectibles across **Common, Uncommon, Rare, Epic, Legendary, Mythic and Ancient Relic** rarities. The shared catalog contains **30 starter definitions**, including the original twelve items, and keeps definition resources separate from unique owned equipment instances. The boss chest has its own table and a guaranteed **Heart of the Rootwarden** collectible. Chests can be claimed only once per expedition.
 
 - **Unsecured pack:** loot collected this run. It is not saved until extraction. Tonics in the pack can be consumed immediately.
 - **Secured inventory:** forty slots for owned stacks and individual equipment. Worn gear stays in those slots; each equipment instance keeps its unique ID, rolled modifiers, enhancement, condition and protection flags. Item-specific stack limits apply to materials and consumables. Both original sword/shield and staff combat families remain available.
-- **Successful extraction:** requires boss defeat. Gold, unique gear/stacks, discoveries, character and companion experience, completion/kill/time statistics and seed are written and verified before travel occurs. Chest collection checks space for all pending rewards before claiming a chest; a rejected chest remains available.
-- **Death or retreat:** returns to the Sanctuary and discards only the current unsecured bag. Previously secured equipment, items and gold remain. A results screen explains the outcome.
+- **Successful extraction:** requires boss defeat. Depthmarks, unique gear/stacks, discoveries, character and companion experience, completion/kill/time statistics and seed are written and verified before travel occurs. Chest collection checks space for all pending rewards before claiming a chest; a rejected chest remains available.
+- **Death or retreat:** returns to the Sanctuary and discards only the current unsecured bag. Previously secured equipment, items and Depthmarks remain. A results screen explains the outcome.
 - **Closing the app during a run:** abandons its in-memory unsecured loot. Mid-expedition resume is not implemented. Previously secured progress loads on restart.
 
 The **version-three** offline profile lives at `user://vaultbound/profile.json` with a previous valid `.bak`. Version-one and version-two saves migrate in memory without rewriting the original on load. Before the first migrated write, the exact original bytes are retained in `.pre-v3.bak`; a separately restored legacy record receives its own content-addressed snapshot. Version three adds secondary weapon, gloves, leg armor, necklace, ring and active loadout fields while preserving original shield/accessory assignments. Existing gold, counts, equipped selection, companions, discoveries and expedition statistics are preserved; equipment receives stable instance IDs. If an old inventory exceeds forty slots, its remaining quantities stay in a **legacy reserve**. Select the inventory reserve filter to claim supported items as space becomes available; unknown legacy IDs remain preserved rather than discarded. Writes use a temporary file, validation/read-back and atomic rename. A failed extraction write leaves the run and its loot available for retry. Corrupt or newer unsupported saves are preserved; a valid backup is recovered where possible, otherwise progression becomes read-only with an on-screen warning. Never delete the profile to fix an import problem. Android stores `user://` in app-specific storage; its exact path depends on whether you run from the editor or an exported app.
 
 The profile service, transaction rules and local combat command boundary are separated from presentation for later server-authoritative work. These local saves are temporary development/offline persistence and are editable on the device; online play will require secure server-side storage and validation. This does **not** implement authentication, networking, replication, anti-cheat or cloud saves.
 
+## Searchable loot and Depthmarks
+
+Defeated Rootbound Abyss enemies leave searchable caches. Approach a cache, tap **USE / Search**, select a row and **Take**, or choose **Take All**. Regular enemies, elites and the Rootwarden have distinct cache presentations. The grand boss cache retains the guaranteed Rootwarden Heart. Empty caches disappear. Room treasure keeps its existing interaction.
+
+Depthmarks are dark metallic coins condensed from dungeon energy, marked with turquoise and gold Vault seals. **DM** replaces the displayed generic currency name at merchants, the Blacksmith and expedition screens. Existing balances keep their exact amount: the save and transaction fields retain their internal `gold` names for compatibility, with no second writable balance or conversion grant.
+
+| Completed encounter | Initial DM range |
+| --- | ---: |
+| Skeleton / Goblin Archer | 4–8 |
+| Corrupted Golem | 8–18 |
+| Elite enemy | 25–50 |
+| Rootwarden | 120–250 |
+
+These are configurable reward ranges in `resources/loot/monster_rewards.tres`; controlled depth bands can scale them. Rewards are generated once per registered death. Resettable Sanctuary/Proving Grounds practice targets grant no bankable rewards. No quest or PvP reward system is implemented.
+
+Taking loot adds it to the existing **unsecured expedition bag**, with capacity checked against the forty-slot secured inventory plus all pending rewards. Extraction secures it; death, retreat or quitting an unfinished run loses it. A rejected or partially collected cache retains its remaining contents. Seven nearby regular/elite views and one reserved boss view are reused; hidden-room and overflow rewards stay in the run ledger. Nearby unopened low-tier caches may consolidate without rerolling. Repeated takes, stale touches, through-wall searches and duplicate death callbacks cannot grant the same contents again. Awareness activates once per original reward source, regardless of partial takes.
+
 ## Equipment, merchants, crafting and character growth
 
-Equipment slots are **Main Weapon, Off-Hand, Helmet, Chest Armor, Boots and Accessory**. Item selection shows requirements, condition, enhancement, modifiers and a comparison against current equipment. Category/favorite/lock filters and name/rarity/level sorting support the touch-scrollable inventory. Selling and salvaging reject equipped, displayed, favorite or locked items. Unidentified artifacts cannot be equipped. Each confirmation is tied to one saved revision and transaction receipt, so stale or repeated touchscreen confirmations cannot duplicate a purchase or craft.
+Equipment slots are **Main Weapon, Secondary Weapon, Shield, Helmet, Chest Armor, Gloves, Leg Armor, Boots, Necklace, Ring and Charm**. Shield and Charm preserve the original off-hand and accessory assignments. The upcoming starter-catalog checkpoint supplies gear for the newly added armor/jewelry slots. Item selection shows requirements, condition, enhancement, modifiers and a comparison against current equipment. Category/favorite/lock filters and name/rarity/level sorting support the touch-scrollable inventory. Selling and salvaging reject equipped, displayed, favorite or locked items. Unidentified artifacts cannot be equipped. Each confirmation is tied to one saved revision and transaction receipt, so stale or repeated touchscreen confirmations cannot duplicate a purchase or craft.
 
 Equipped bonuses affect real player health/stamina limits, damage, protection and stamina recovery. Changing gear clamps current resources instead of healing the player for free. Main-weapon and shield bonuses apply only to their compatible active weapon family; switching the original base sword/staff family does not grant a sword's bonuses to a staff. Existing avatar parts receive restrained appearance changes without attaching unscaled armor models. The equipment screen renders the same avatar in an isolated preview viewport that stops updating when hidden.
 
-The General Merchant sells consumables/materials, the Equipment Trader carries a small rotating selection, and the Relic Appraiser reveals the properties of mysterious equipment for a fee. Stock rotations use **successfully completed expedition counts**, never device time. Buying verifies gold, remaining stock and inventory space before saving. Sales remove only the selected owned instance or quantity.
+The General Merchant sells consumables/materials, the Equipment Trader carries a small rotating selection, and the Relic Appraiser reveals the properties of mysterious equipment for a fee. Stock rotations use **successfully completed expedition counts**, never device time. Buying verifies Depthmarks, remaining stock and inventory space before saving. Sales remove only the selected owned instance or quantity.
 
-The Blacksmith provides guaranteed **+0 through +5** enhancement, condition repairs, salvage and eight authored recipes: Traveler Sword, Apprentice Staff, Round Shield, Tempered Ingot, Mooncap Tonics, Stamina Draughts, Rootstep Boots and Emerald Pendant. Upgrades preview the next statistics and required materials/gold. There are no random upgrade failures. Recipes use obtainable dungeon or merchant materials. Protected materials must be unlocked/unfavorited before they can be consumed. Successful extraction wears equipped gear by 2 condition; defeat wears it by 8. Broken gear remains owned and retains its base combat family, but its equipment bonuses stop applying until repaired.
+The Blacksmith provides guaranteed **+0 through +5** enhancement, condition repairs, salvage and eight authored recipes: Traveler Sword, Apprentice Staff, Round Shield, Tempered Ingot, Mooncap Tonics, Stamina Draughts, Rootstep Boots and Emerald Pendant. Upgrades preview the next statistics and required materials/DM. There are no random upgrade failures. Recipes use obtainable dungeon or merchant materials. Protected materials must be unlocked/unfavorited before they can be consumed. Successful extraction wears equipped gear by 2 condition; defeat wears it by 8. Broken gear remains owned and retains its base combat family, but its equipment bonuses stop applying until repaired.
 
 Character progression uses an explicit thirty-level table. Extraction grants **250 XP plus 20 per defeated normal enemy**; failed or abandoned runs grant none. Level 2 requires 200 cumulative XP and level 30 caps at 46,400. Each level grants one talent point after level 1. The small **Offense, Defense and Utility** branches allow up to ten ranks each, improve modest statistics, and require confirmation before spending a point. Talent respec is not included in this milestone. A separate normalized-stat resolver prepares for later PvP work; no PvP or online authority is implemented.
 
@@ -166,11 +184,14 @@ Each level uses one shared environment and one directional light, with shadows c
 
 ## Validation
 
-The completed Milestone 5.5 pass records **3,025 passing assertions across 33 engine invocations**, covering the visual additions and the existing gameplay/save systems. See the report for exact evidence and device limitations.
+Current staged results are recorded in [Milestone 5.6 validation](docs/milestone-5.6-validation.md), including the real Search/extraction/restart gate and its resolved save-precision regression. The archived Milestone 5.5 pass recorded **3,025 assertions across 33 engine invocations**. Counts from repeated checkpoint runs are not added together.
 
-Run from the repository root; substitute `godot` if that is your installed executable:
+Run these desktop/cloud checks from the repository root; substitute `godot` if that is your installed executable. Isolate test user data from normal play:
 
 ```sh
+export XDG_DATA_HOME=/tmp/vaultbound-checks/data
+export XDG_CONFIG_HOME=/tmp/vaultbound-checks/config
+export XDG_CACHE_HOME=/tmp/vaultbound-checks/cache
 godot4 --headless --editor --path . --import --quit
 godot4 --headless --path . --script res://tests/smoke_test.gd
 godot4 --headless --path . --script res://tests/combat_test.gd
@@ -201,6 +222,28 @@ godot4 --headless --path . --script res://tests/visual_integration_test.gd
 godot4 --headless --path . --script res://tests/static_visual_batcher_test.gd
 ```
 
+The new Milestone 5.6 checkpoint suites use disposable `/tmp` fixtures on desktop/cloud. Run them with isolated user-data/config/cache directories as described below. Each reader must follow its writer in a separate Godot process:
+
+```sh
+godot4 --headless --path . --script res://tests/loadout_migration_test.gd
+godot4 --headless --path . --script res://tests/loadout_ui_test.gd
+godot4 --headless --path . --script res://tests/loadout_integration_test.gd
+godot4 --headless --path . --script res://tests/loadout_integration_test.gd -- --read
+godot4 --headless --path . --script res://tests/accessibility_preferences_test.gd
+godot4 --headless --path . --script res://tests/accessibility_preferences_test.gd -- --read
+godot4 --headless --path . --script res://tests/mobile_ui_integration_test.gd
+godot4 --headless --path . --script res://tests/character_presentation_test.gd
+godot4 --headless --path . --script res://tests/party_character_integration_test.gd
+godot4 --headless --path . --script res://tests/loot_ledger_test.gd
+godot4 --headless --path . --script res://tests/loot_cache_world_test.gd
+godot4 --headless --path . --script res://tests/encounter_loot_test.gd
+godot4 --headless --path . --script res://tests/session_loot_test.gd
+godot4 --headless --path . --script res://tests/profile_roundtrip_test.gd
+godot4 --headless --path . --script res://tests/profile_roundtrip_test.gd -- --read
+godot4 --headless --path . --script res://tests/searchable_loot_integration_test.gd
+godot4 --headless --path . --script res://tests/searchable_loot_integration_test.gd -- --read
+```
+
 The persistence restart fixture uses **two separate engine processes**, with a disposable `/tmp` path on desktop/cloud (not an Android shell instruction):
 
 ```sh
@@ -210,11 +253,13 @@ godot4 --headless --path . --script res://tests/party_persistence_test.gd -- --w
 godot4 --headless --path . --script res://tests/party_persistence_test.gd -- --read /tmp/vaultbound-roster-restart/profile.json
 godot4 --headless --path . --script res://tests/save_migration_test.gd -- --write /tmp/vaultbound-rpg-restart/profile.json
 godot4 --headless --path . --script res://tests/save_migration_test.gd -- --read /tmp/vaultbound-rpg-restart/profile.json
+godot4 --headless --path . --script res://tests/loadout_migration_test.gd -- --write /tmp/vaultbound-loadout-restart/profile.json
+godot4 --headless --path . --script res://tests/loadout_migration_test.gd -- --read /tmp/vaultbound-loadout-restart/profile.json
 ```
 
 Import first to index global GDScript classes. Assertions exit nonzero on failure; inspect logs for runtime errors too. Restricted Linux runners may need writable `XDG_DATA_HOME`, `XDG_CONFIG_HOME` and `XDG_CACHE_HOME`. Android SDK/build-tools warnings affect APK export setup, not scene resources.
 
-See [Milestone 5.5 validation](docs/milestone-5.5-validation.md) for current visual-pass results, [Milestone 5 validation](docs/milestone-5-validation.md) for the archived RPG baseline, and [the Android test plan](docs/test-plan.md) for the manual checklist. The [Milestone 4 report](docs/milestone-4-validation.md), [Milestone 3 report](docs/milestone-3-validation.md) and [Milestone 2 guide](docs/milestone-2-guide.md) retain the companion, expedition and combat baselines. The original GitHub roadmap is [archived separately](docs/original-github-roadmap.md) and describes future ideas, not shipped functionality.
+See [Milestone 5.6 validation](docs/milestone-5.6-validation.md) for current checkpoint results and Android review steps, [Milestone 5.5 validation](docs/milestone-5.5-validation.md) for the archived environment pass, [Milestone 5 validation](docs/milestone-5-validation.md) for the RPG baseline, and [the Android test plan](docs/test-plan.md) for the broader manual checklist. The [Milestone 4 report](docs/milestone-4-validation.md), [Milestone 3 report](docs/milestone-3-validation.md) and [Milestone 2 guide](docs/milestone-2-guide.md) retain the companion, expedition and combat baselines. The original GitHub roadmap is [archived separately](docs/original-github-roadmap.md) and describes future ideas, not shipped functionality.
 
 ## Remaining limits
 

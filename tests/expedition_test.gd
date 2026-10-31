@@ -235,11 +235,17 @@ func _boss_and_extraction(identity: int) -> void:
 	await frames(3)
 	check(boss.health == 0.0 and session.boss_defeated and level.snapshot().extraction_ready, "Defeating the real boss unlocks extraction exactly once")
 	var chest: Node3D = level.boss_reward_chest
-	if check(chest != null and chest.category == &"boss", "Rootwarden defeat creates its reward chest"):
+	if check(chest != null and chest.cache_snapshot().kind == "boss", "Rootwarden defeat creates its searchable boss reward chest"):
 		player.reset_for_spawn(Transform3D(Basis.IDENTITY, chest.global_position + Vector3(0, 0.15, 2)))
 		await frames(3)
 		input_hub.request_action(&"interact")
-		check(chest.is_open and session.run_items.get("rootwarden_heart", 0) >= 1, "Boss reward chest grants its collection reward to the unsecured bag")
+		var overlay: Control = game.hud.expedition_overlay
+		check(overlay.mode == &"loot" and overlay.loot_panel.visible, "Boss reward interaction opens the real Search interface")
+		var take_all: Vector2 = overlay.loot_panel.take_all_rect().get_center()
+		touch(overlay, 65, take_all, true)
+		touch(overlay, 65, take_all, false)
+		check(session.has_claimed("rootwarden_reward") and session.run_items.get("rootwarden_heart", 0) >= 1, "Boss Search Take All grants its collection reward to the unsecured bag once")
+		game.hud.close_modals()
 	await _move_to_room(int(level.layout.extraction_id), Vector3(0, 0.15, -2))
 	var bank_before: int = session.profile.gold
 	var bag_gold: int = session.unsecured_gold

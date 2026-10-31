@@ -278,16 +278,50 @@ func _read_json(file_path: String) -> Variant:
 	return parser.data
 
 func _write_verified(file_path: String, value: Dictionary) -> bool:
+	var proposed := normalize(value)
+	if proposed.is_empty():
+		return false
+	# Godot's JSON parser can choose an adjacent double even for a full-precision
+	# decimal (e.g. an elapsed time of 0.9583029999999999). Verify the exact encoded
+	# intent, not the pre-encoding binary float. Schema, counts and identities must
+	# still survive unchanged; no approximate comparisons or stat rounding apply.
+	var encoded := JSON.stringify(proposed, "\t", true, true)
+	var parser := JSON.new()
+	if parser.parse(encoded) != OK:
+		return false
+	var expected := normalize(parser.data)
+	if expected.is_empty() or not _same_discrete_values(proposed, expected):
+		return false
 	var file := FileAccess.open(file_path, FileAccess.WRITE)
 	if file == null:
 		return false
-	# Full precision preserves elapsed-time doubles across JSON parsing. Without
-	# it, a healthy save could fail exact verification after a real timed run.
-	file.store_string(JSON.stringify(value, "\t", true, true))
+	file.store_string(encoded)
 	file.flush()
 	var error := file.get_error()
 	file.close()
-	return error == OK and _read_valid(file_path) == normalize(value)
+	return error == OK and FileAccess.get_file_as_bytes(file_path) == encoded.to_utf8_buffer() and _read_valid(file_path) == expected
+
+static func _same_discrete_values(before: Variant, after: Variant) -> bool:
+	if typeof(before) != typeof(after):
+		return false
+	if before is Dictionary:
+		if before.size() != after.size():
+			return false
+		for key: Variant in before:
+			if not after.has(key) or not _same_discrete_values(before[key], after[key]):
+				return false
+		return true
+	if before is Array:
+		if before.size() != after.size():
+			return false
+		for index in range(before.size()):
+			if not _same_discrete_values(before[index], after[index]):
+				return false
+		return true
+	# Both float representations were validated above, and the file must match
+	# the original encoded bytes. Integers (including large seeds), IDs, references
+	# and flags retain exact equality rather than inheriting float rounding.
+	return true if before is float else before == after
 
 func _copy_verified(source: String, target: String) -> bool:
 	var previous := _read_valid(source)

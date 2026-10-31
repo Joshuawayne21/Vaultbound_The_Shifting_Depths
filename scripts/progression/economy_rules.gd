@@ -81,7 +81,7 @@ static func _evaluate(profile: Dictionary, action: StringName, arguments: Dictio
 			result.cost_gold = int(selected.price) * count
 			result.outputs = {String(selected.item_id): count}
 			if not _spend(next, result.cost_gold):
-				return _failure("You need %d gold for this purchase." % result.cost_gold, result)
+				return _failure("You need %d DM for this purchase." % result.cost_gold, result)
 			if not Inventory.add_items(next, result.outputs, int(profile.revision)):
 				return _failure("Your 40-slot inventory has no room for this purchase.", result)
 			next.merchant_purchases[key] = purchased + count
@@ -101,7 +101,7 @@ static func _evaluate(profile: Dictionary, action: StringName, arguments: Dictio
 			result.cost_gold = int(recipe.gold)
 			result.outputs = {String(recipe.output_id): int(recipe.output_quantity)}
 			if not _spend(next, result.cost_gold):
-				return _failure("You need %d gold to craft this recipe." % result.cost_gold, result)
+				return _failure("You need %d DM to craft this recipe." % result.cost_gold, result)
 			if not Inventory.consume_items(next, result.materials):
 				return _failure("Required materials are missing, locked or displayed. Claim legacy reserves first.", result)
 			if not Inventory.add_items(next, result.outputs, int(profile.revision)):
@@ -194,10 +194,10 @@ static func _evaluate(profile: Dictionary, action: StringName, arguments: Dictio
 						return _failure("You do not own that quantity in the selected stack.")
 					result.gold_gain = sell_price(entry) * count
 					if int(next.gold) > Inventory.MAX_COUNT - int(result.gold_gain):
-						return _failure("This sale would exceed the gold limit.", result)
+						return _failure("This sale would exceed the DM limit.", result)
 					_remove_selected(next, entry, count)
 					next.gold += result.gold_gain
-					result.message = "Sold %s ×%d for %d gold" % [definition.label, count, result.gold_gain]
+					result.message = "Sold %s ×%d for %d DM" % [definition.label, count, result.gold_gain]
 				&"upgrade":
 					if definition.category != "equipment" or not entry.identified or int(entry.enhancement) >= 5:
 						return _failure("Choose identified equipment below enhancement +5.")
@@ -207,7 +207,7 @@ static func _evaluate(profile: Dictionary, action: StringName, arguments: Dictio
 					result.cost_gold = costs.gold
 					result.materials = costs.materials
 					if not _spend(next, result.cost_gold) or not Inventory.consume_items(next, result.materials):
-						return _failure("The upgrade needs %d gold and the listed unlocked materials." % int(result.cost_gold), result)
+						return _failure("The upgrade needs %d DM and the listed unlocked materials." % int(result.cost_gold), result)
 					# consume_items replaces its inventory copy; reacquire by identity.
 					entry = Inventory.find(next, uid)
 					entry.enhancement += 1
@@ -217,7 +217,7 @@ static func _evaluate(profile: Dictionary, action: StringName, arguments: Dictio
 						return _failure("This equipment does not need repair.")
 					result.cost_gold = repair_cost(entry)
 					if not _spend(next, result.cost_gold):
-						return _failure("You need %d gold to restore this equipment." % int(result.cost_gold), result)
+						return _failure("You need %d DM to restore this equipment." % int(result.cost_gold), result)
 					entry.durability = 100
 					result.message = definition.label + " repaired to full condition"
 				&"salvage":
@@ -233,7 +233,7 @@ static func _evaluate(profile: Dictionary, action: StringName, arguments: Dictio
 						return _failure("This item has no hidden properties to identify.")
 					result.cost_gold = maxi(20, ceili(float(definition.value) * 0.3))
 					if not _spend(next, result.cost_gold):
-						return _failure("You need %d gold for appraisal." % int(result.cost_gold), result)
+						return _failure("You need %d DM for appraisal." % int(result.cost_gold), result)
 					entry.identified = true
 					result.message = "Identified " + definition.label
 				&"use":

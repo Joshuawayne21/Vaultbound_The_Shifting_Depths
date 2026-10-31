@@ -5,6 +5,8 @@ extends Node
 signal changed(data: Dictionary)
 signal notice(message: String)
 signal reward_collected(reward: Dictionary)
+signal treasure_activated(reward: Dictionary)
+signal loot_changed()
 signal results_ready(data: Dictionary)
 signal ui_requested(kind: StringName, context: Dictionary)
 
@@ -12,6 +14,7 @@ var store := VaultProfileStore.new()
 var profile: Dictionary = VaultProfileStore.empty_profile()
 var active := false
 var run_seed := 0
+var run_generation := 0
 var unsecured_gold := 0
 var run_items: Dictionary = {}
 var boss_defeated := false
@@ -30,6 +33,11 @@ var _service_kind: StringName = &""
 var _service_context: Dictionary = {}
 var _quotes: Dictionary = {}
 var _quote_sequence := 0
+var _loot_ledger := VaultLootLedger.new()
+var _loot_view: Node3D
+var _loot_id := ""
+var _loot_binding := 0
+var _loot_quotes: Dictionary = {}
 
 func _ready() -> void:
 	profile = store.load_profile()
@@ -69,6 +77,9 @@ func begin_run(seed_value: int) -> bool:
 		return false
 	active = true
 	run_seed = seed_value
+	run_generation += 1
+	close_service()
+	_loot_ledger.reset()
 	unsecured_gold = 0
 	run_items.clear()
 	_claimed.clear()
@@ -89,32 +100,174 @@ func collect_reward(reward: Dictionary) -> bool:
 	if not active:
 		return false
 	var validated := _validate_reward(reward)
-	if validated.is_empty() or _claimed.has(validated.chest_id):
+	if validated.is_empty() or _claimed.has(validated.chest_id) or _loot_ledger.has_source(validated.chest_id):
 		return false
-	if unsecured_gold > VaultProfileStore.MAX_COUNT - int(validated.gold):
+	var prepared := _prepare_reward(validated)
+	if prepared.is_empty():
 		return false
+	_claimed[validated.chest_id] = true
+	_apply_reward(validated, prepared)
+	_publish_reward(validated, [validated], run_generation)
+	return true
+
+func _prepare_reward(validated: Dictionary) -> Dictionary:
+	# All reward paths share the original unsecured bag and its eventual secured
+	# inventory capacity. Planning does not mutate either balance or instance IDs.
+	if unsecured_gold > VaultProfileStore.MAX_COUNT - int(validated.gold) or int(profile.gold) > VaultProfileStore.MAX_COUNT - unsecured_gold - int(validated.gold):
+		return {}
 	for item: Dictionary in validated.items:
 		if int(run_items.get(item.id, 0)) > VaultProfileStore.MAX_COUNT - int(item.quantity):
-			return false
+			return {}
 	var pending_items := run_items.duplicate(true)
 	for item: Dictionary in validated.items:
 		pending_items[item.id] = int(pending_items.get(item.id, 0)) + int(item.quantity)
 	var capacity_preview := profile.duplicate(true)
 	if not VaultInventory.add_items(capacity_preview, pending_items, run_seed):
 		notice.emit("Your 40-slot inventory cannot hold this chest. Consume supplies or make room before claiming it.")
-		return false
-	_claimed[validated.chest_id] = true
+		return {}
+	return {"items": pending_items}
+
+func _apply_reward(validated: Dictionary, prepared: Dictionary) -> void:
 	unsecured_gold += int(validated.gold)
+	run_items = prepared.items
 	for item: Dictionary in validated.items:
-		run_items[item.id] = int(run_items.get(item.id, 0)) + int(item.quantity)
 		_run_discoveries[item.id] = true
+
+func _publish_reward(validated: Dictionary, activated_sources: Array, generation: int) -> void:
+	# A listener may close the run or start another expedition. Never publish old
+	# awareness, currency or treasure notifications into that new generation.
+	if not active or generation != run_generation:
+		return
 	_emit_changed()
+	for source: Dictionary in activated_sources:
+		if not active or generation != run_generation:
+			return
+		treasure_activated.emit(source.duplicate(true))
+	if not active or generation != run_generation:
+		return
 	reward_collected.emit(validated.duplicate(true))
-	var summary := "+%d gold" % int(validated.gold)
+	if not active or generation != run_generation:
+		return
+	var parts := PackedStringArray()
+	if int(validated.gold) > 0:
+		parts.append("+%d DM" % int(validated.gold))
 	for item: Dictionary in validated.items:
 		var definition := VaultLootTable.item_for(item.id)
-		summary += " · %s ×%d" % [definition.label, int(item.quantity)]
-	notice.emit(summary + " · unsecured")
+		parts.append("%s ×%d" % [definition.label, int(item.quantity)])
+	notice.emit(" · ".join(parts) + " · unsecured")
+
+func register_loot(reward: Dictionary, room_id: int, at: Vector3, kind: String, merge_id: String = "") -> Dictionary:
+	if not active:
+		return {"ok": false, "id": "", "created": false}
+	var validated := _validate_reward(reward)
+	if validated.is_empty() or _claimed.has(validated.chest_id):
+		return {"ok": false, "id": "", "created": false}
+	var result := _loot_ledger.register(validated, room_id, at, kind, merge_id)
+	if bool(result.get("ok", false)):
+		loot_changed.emit()
+	return result
+
+func loot_merge_candidate(room_id: int, at: Vector3, reward: Dictionary) -> String:
+	var validated := _validate_reward(reward)
+	return _loot_ledger.merge_candidate(room_id, at, validated) if active and not validated.is_empty() else ""
+
+func loot_records() -> Array[Dictionary]:
+	var records := _loot_ledger.records()
+	for record: Dictionary in records:
+		record["run_generation"] = run_generation
+	return records
+
+func loot_snapshot(id: String = "") -> Dictionary:
+	var record := _loot_ledger.snapshot(id if not id.is_empty() else _loot_id)
+	if record.is_empty():
+		return {}
+	record["run_generation"] = run_generation
+	record["entries"] = _describe_items(record.items)
+	return record
+
+func open_loot(view: Node3D, actor: Node) -> bool:
+	if not _loot_access_valid(view, actor) or not _player.controls_enabled or not InputHub.controls_enabled:
+		return false
+	close_service()
+	_loot_view = view
+	_loot_id = String(view.get("cache_id"))
+	_loot_binding = int(view.get("binding_generation"))
+	_service_kind = &"loot"
+	ui_requested.emit(&"loot", loot_snapshot())
+	return true
+
+func _loot_access_valid(view: Node3D, actor: Node) -> bool:
+	if not active or _location != &"rootbound_abyss" or actor != _player or not _actor_ready():
+		return false
+	if not _player is VaultPlayer or not _player.is_inside_tree() or not _player.is_in_group("player") or _player.downed or _player.eliminated:
+		return false
+	if not is_instance_valid(view) or not view.is_inside_tree() or not view.is_visible_in_tree() or not view.is_in_group("searchable_loot_caches"):
+		return false
+	# Group membership alone is not authority. Only the actual pooled cache view
+	# participates in the local binding protocol; arbitrary Nodes cannot impersonate it.
+	var script := view.get_script() as Script
+	if script == null or script.resource_path != "res://scripts/treasure/loot_cache.gd":
+		return false
+	var scene := get_tree().current_scene
+	var world_root := scene.get_node_or_null("WorldRoot") if is_instance_valid(scene) else null
+	if world_root == null or not world_root.is_ancestor_of(view) or not scene.is_ancestor_of(_player) or view.get_world_3d() != _player.get_world_3d():
+		return false
+	var id := String(view.get("cache_id"))
+	var record := _loot_ledger.snapshot(id)
+	if record.is_empty() or record.empty or record.owner_id != "local_player" or view.get("owner_id") != record.owner_id:
+		return false
+	if not view.bound_to(self) or int(view.cache_snapshot().get("run_generation", -1)) != run_generation \
+			or not view.binding_valid(id, int(view.get("binding_generation"))) or not view.can_search(_player):
+		return false
+	var radius := float(view.get("interaction_radius"))
+	return is_finite(radius) and radius > 0.0 and radius <= 4.0 and _player.global_position.distance_to(view.global_position) <= radius \
+		and CombatRules.visible_from(_player, _player.global_position + Vector3.UP * 1.2, view.global_position + Vector3.UP * 0.65)
+
+func _loot_context_valid() -> bool:
+	# A replaced world can free the view before a late touch confirmation arrives.
+	# Guard here: passing a freed object to a typed Node3D parameter already errors.
+	return _service_kind == &"loot" and is_instance_valid(_loot_view) and _loot_access_valid(_loot_view, _player) \
+		and String(_loot_view.get("cache_id")) == _loot_id and _loot_view.binding_valid(_loot_id, _loot_binding)
+
+func quote_loot_take(item_id: String = "", quantity: int = 0) -> Dictionary:
+	if not _loot_context_valid():
+		return {"ok": false, "error": "Move closer to this loot cache to search it."}
+	var plan := _loot_ledger.plan_take(_loot_id, item_id, quantity)
+	if plan.is_empty():
+		return {"ok": false, "error": "Those rewards are no longer available."}
+	var reward := _validate_reward(plan.reward)
+	if reward.is_empty() or _prepare_reward(reward).is_empty():
+		return {"ok": false, "error": "Make room in your inventory before taking these rewards."}
+	_quote_sequence += 1
+	var request_id := "loot_%d_%d" % [run_generation, _quote_sequence]
+	_loot_quotes[request_id] = {"generation": run_generation, "view_id": _loot_view.get_instance_id(), "plan": plan.duplicate(true)}
+	if _loot_quotes.size() > 24:
+		_loot_quotes.erase(_loot_quotes.keys()[0])
+	return {"ok": true, "request_id": request_id, "preview": reward.duplicate(true)}
+
+func commit_loot_take(confirmation: Dictionary) -> bool:
+	var request_id := String(confirmation.get("request_id", ""))
+	if not _loot_quotes.has(request_id):
+		return false
+	var trusted: Dictionary = _loot_quotes[request_id]
+	_loot_quotes.erase(request_id)
+	if not _loot_context_valid() or int(trusted.generation) != run_generation or int(trusted.view_id) != _loot_view.get_instance_id():
+		return false
+	var plan: Dictionary = trusted.plan
+	var reward := _validate_reward(plan.reward)
+	var prepared := _prepare_reward(reward) if not reward.is_empty() else {}
+	if prepared.is_empty() or not _loot_ledger.commit_take(plan):
+		return false
+	# The ledger subtraction, bag addition, receipts and quote invalidation all
+	# finish before any signal. Reentrant UI listeners cannot take the same contents.
+	_apply_reward(reward, prepared)
+	_loot_quotes.clear()
+	if plan.next_record.empty:
+		for source: String in plan.next_record.source_ids:
+			_claimed[source] = true
+	var generation := run_generation
+	loot_changed.emit()
+	_publish_reward(reward, plan.activated_sources, generation)
 	return true
 
 func _validate_reward(reward: Dictionary) -> Dictionary:
@@ -249,6 +402,9 @@ func _clear_run() -> void:
 	_run_monsters.clear()
 	boss_defeated = false
 	_emit_elapsed = 0.0
+	close_service()
+	_loot_ledger.reset()
+	loot_changed.emit()
 
 func describe_item(item_id: String) -> Dictionary:
 	var definition := VaultLootTable.item_for(item_id)
@@ -268,7 +424,7 @@ func _describe_items(items: Dictionary) -> Array[Dictionary]:
 func snapshot() -> Dictionary:
 	var bag := _describe_items(run_items)
 	var inventory := _describe_items(profile.items)
-	return {"active": active, "run_seed": run_seed, "unsecured_gold": unsecured_gold,
+	return {"active": active, "run_seed": run_seed, "run_generation": run_generation, "unsecured_gold": unsecured_gold,
 		"secured_gold": int(profile.gold), "bag": bag, "run_items": bag,
 		"inventory": inventory, "secured_items": inventory, "discoveries": profile.discoveries.duplicate(),
 		"boss_defeated": boss_defeated, "kills": kills, "elapsed": elapsed, "elapsed_seconds": elapsed,
@@ -418,6 +574,10 @@ func close_service() -> void:
 	_service_kind = &""
 	_service_context.clear()
 	_quotes.clear()
+	_loot_view = null
+	_loot_id = ""
+	_loot_binding = 0
+	_loot_quotes.clear()
 
 func open_service(kind: StringName, context: Dictionary = {}) -> bool:
 	if not _actor_ready():
@@ -552,7 +712,7 @@ func commit_action(confirmation: Dictionary) -> bool:
 	var previous_weapon := String(VaultInventory.active_weapon_entry(profile).get("uid", ""))
 	if not store.save_profile(next):
 		storage_error = store.last_error
-		notice.emit("Could not save this action. Gold, items and progression were preserved. " + storage_error)
+		notice.emit("Could not save this action. Depthmarks, items and progression were preserved. " + storage_error)
 		_emit_changed()
 		return false
 	profile = next

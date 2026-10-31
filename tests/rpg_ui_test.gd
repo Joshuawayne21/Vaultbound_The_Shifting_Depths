@@ -52,6 +52,12 @@ func _prepare() -> void:
 		if item.category != "gold":
 			items[id] = 20 if item.category in ["material", "consumable"] else 1
 	check(Inventory.add_items(profile, items, 561), "Touch fixture contains the full usable catalog within forty slots")
+	# A higher-base-value damaged staff should sort below the intact starter sword
+	# when a merchant shows the actual per-item sale proceeds.
+	for entry: Dictionary in profile.inventory:
+		if entry.item_id == "runic_staff":
+			entry.durability = 0
+			entry.enhancement = 1
 	check(Store.new(PROFILE).save_profile(profile), "Touch fixture is saved before startup")
 
 func _tap(point: Vector2, index: int = 77) -> void:
@@ -204,7 +210,32 @@ func _trade_confirmation() -> void:
 	check(session.profile.gold == gold and not bool(panel.pending_quote.get("ok", false)), "Locked or favorite equipment cannot be sold through touch UI")
 	if not panel.pending_quote.is_empty():
 		_tap(panel.confirm_rect(false).get_center())
+	await _sale_values()
 	game.hud.close_modals()
+
+func _sale_values() -> void:
+	for index in range(panel.SORTS.size()):
+		if panel.SORTS[panel.sort_index] == "value": break
+		_tap(panel.sort_rect().get_center())
+	var entries: Array = panel._entries()
+	var sword_index := -1
+	var staff_index := -1
+	for index in range(entries.size()):
+		if entries[index].item_id == "temple_blade": sword_index = index
+		if entries[index].item_id == "runic_staff": staff_index = index
+	check(sword_index >= 0 and staff_index > sword_index, "Merchant value sorting accounts for damage and enhancement rather than catalog base price")
+	check(_select("runic_staff"), "A damaged owned weapon remains selectable for a merchant sale")
+	var uid: String = panel.selected_uid
+	var display: Dictionary = panel._display_entry(panel.selected_entry())
+	var gold: int = session.profile.gold
+	_tap(panel.action_rect(0, 1).get_center())
+	check(display.sell_value == 6 and Dictionary(panel.pending_quote.get("preview", {})).get("gold_gain", -1) == display.sell_value and session.profile.gold == gold, "The displayed condition-adjusted sale price matches the trusted confirmation quote")
+	var confirmation: Vector2 = panel.confirm_rect(true).get_center()
+	touch(overlay, 95, confirmation, true)
+	touch(overlay, 96, confirmation, true)
+	touch(overlay, 95, confirmation, false)
+	touch(overlay, 96, confirmation, false)
+	check(session.profile.gold == gold + int(display.sell_value) and Inventory.find(session.profile, uid).is_empty(), "Two confirmation fingers sell the selected unique instance once for the displayed Depthmarks")
 
 func _craft_and_collection() -> void:
 	if check(await _visit(&"blacksmith"), "Blacksmith interaction opens its mobile workbench"):

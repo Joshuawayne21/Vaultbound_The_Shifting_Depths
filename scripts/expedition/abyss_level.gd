@@ -14,6 +14,8 @@ const Hazard = preload("res://scripts/expedition/abyss_hazard.gd")
 const SecretPassage = preload("res://scripts/expedition/secret_passage.gd")
 const Architecture = preload("res://scripts/world/architecture.gd")
 const Portal = preload("res://scenes/world/portal.tscn")
+const LootCaches = preload("res://scripts/treasure/loot_cache_manager.gd")
+const MonsterRewards = preload("res://resources/loot/monster_rewards.tres")
 
 var display_name := "THE ROOTBOUND ABYSS"
 var objective := "Find the Rootwarden • Defeat the guardian • Extract your treasure"
@@ -28,6 +30,7 @@ var encounters: EncounterManager
 var awareness: AwarenessDirector
 var extraction: Node3D
 var boss_reward_chest: Node3D
+var loot_caches: VaultLootCacheManager
 var _session: Node
 var _player: Node3D
 var _hazards: Array[AbyssHazard] = []
@@ -36,6 +39,7 @@ var _trap_visited: Dictionary = {}
 var _elapsed := 0.0
 var _refresh_time := 0.0
 var _boss_dead := false
+var _rewarded_deaths: Dictionary = {}
 
 func configure(expedition_seed: int) -> void:
 	seed_value = expedition_seed
@@ -78,6 +82,10 @@ func _ready() -> void:
 		geometry.add_child(instance)
 		_keep_static_collisions(instance)
 		rooms[int(room.id)] = instance
+	loot_caches = LootCaches.new()
+	loot_caches.name = "LootCaches"
+	loot_caches.configure(_session, rooms, _player)
+	add_child(loot_caches)
 	encounters = Encounters.new()
 	encounters.name = "EncounterManager"
 	encounters.configure(layout, rooms, self, seed_value)
@@ -86,8 +94,8 @@ func _ready() -> void:
 	awareness = Awareness.new()
 	awareness.warning_changed.connect(_on_warning)
 	awareness.event_requested.connect(_on_awareness_event)
-	if _session != null and _session.has_signal("reward_collected"):
-		_session.reward_collected.connect(awareness.treasure_collected)
+	if _session != null and _session.has_signal("treasure_activated"):
+		_session.treasure_activated.connect(awareness.treasure_collected)
 	for i in range(2):
 		var hazard := Hazard.new()
 		hazard.name = "PooledRoots_%d" % i
@@ -102,9 +110,9 @@ func _ready() -> void:
 	_refresh_rooms()
 
 func _exit_tree() -> void:
-	if is_instance_valid(_session) and awareness != null and _session.has_signal("reward_collected"):
-		if _session.reward_collected.is_connected(awareness.treasure_collected):
-			_session.reward_collected.disconnect(awareness.treasure_collected)
+	if is_instance_valid(_session) and awareness != null and _session.has_signal("treasure_activated"):
+		if _session.treasure_activated.is_connected(awareness.treasure_collected):
+			_session.treasure_activated.disconnect(awareness.treasure_collected)
 
 func _process(delta: float) -> void:
 	if validation_errors.size() > 0 or awareness == null:
@@ -169,6 +177,8 @@ func _refresh_rooms() -> void:
 			nearby = false
 		rooms[id].visible = nearby
 		rooms[id].process_mode = Node.PROCESS_MODE_INHERIT if nearby else Node.PROCESS_MODE_DISABLED
+	if loot_caches != null:
+		loot_caches.refresh()
 
 func _keep_static_collisions(node: Node) -> void:
 	# Processing distant room animations may stop, but their safety floors and
@@ -235,6 +245,7 @@ func _create_boss() -> void:
 	boss.configure(seed_value)
 	boss.combat_active = false
 	boss.position = Vector3(0, 0.15, 0)
+	boss.set_meta("loot_receipt", "rootwarden_reward")
 	rooms[int(layout.boss_id)].add_child(boss)
 	boss.died.connect(_on_boss_died)
 
@@ -256,23 +267,58 @@ func _create_retreat() -> void:
 	portal.title = "RETREAT · UNSECURED LOOT IS LOST"
 	rooms[int(layout.entrance_id)].add_child(portal)
 
-func _on_enemy_defeated(_enemy: Node3D) -> void:
-	awareness.enemy_defeated()
-	if _session != null:
-		_session.add_kill(String(_enemy.data.archetype))
-
-func _on_boss_died(_enemy: Node3D) -> void:
-	if _boss_dead:
+func _on_enemy_defeated(enemy: Node3D) -> void:
+	if _session == null or not _session.active or loot_caches == null:
 		return
+	var record := encounters.death_record(enemy)
+	if record.is_empty() or _rewarded_deaths.has(record.receipt):
+		return
+	var source := MonsterRewards.source_for(record.archetype, record.elite)
+	var reward := MonsterRewards.roll(seed_value, record.receipt, source, int(layout.rooms[int(record.room_id)].depth))
+	# Registration publishes loot_changed synchronously. Reserve the death before
+	# notifying listeners so a reentrant died signal cannot count the kill twice.
+	_rewarded_deaths[record.receipt] = true
+	var id := loot_caches.register_reward(reward, int(record.room_id), _loot_drop_point(enemy, 1.1),
+		"elite" if record.elite else "regular")
+	if id.is_empty():
+		_rewarded_deaths.erase(record.receipt)
+		notice.emit("Encounter reward could not be reserved. Please report seed %d." % seed_value)
+		return
+	awareness.enemy_defeated()
+	_session.add_kill(record.archetype)
+
+func _on_boss_died(enemy: Node3D) -> void:
+	if _boss_dead or not is_instance_valid(enemy) or enemy != boss or not enemy.is_inside_tree() \
+			or float(enemy.health) != 0.0 or enemy.state != &"dead" \
+			or _session == null or not _session.active or loot_caches == null:
+		return
+	var room_id := int(layout.boss_id)
+	var reward := MonsterRewards.roll(seed_value, "rootwarden_reward", "boss", int(layout.rooms[room_id].depth))
 	_boss_dead = true
-	if _session != null:
-		_session.mark_boss_defeated()
-	boss_reward_chest = _spawn_chest(int(layout.boss_id), &"boss", "rootwarden_reward")
+	if loot_caches.register_reward(reward, room_id, _loot_drop_point(boss, 2.6), "boss").is_empty():
+		_boss_dead = false
+		notice.emit("Boss reward could not be reserved. Please report seed %d." % seed_value)
+		return
+	_session.mark_boss_defeated()
+	# Compatibility handle stays on the dedicated pooled boss view. There is no
+	# second ordinary chest, and hiding its room never discards the reward record.
+	boss_reward_chest = loot_caches.views[0]
 	# The shell initially wires travel signals once. Dynamically spawned loot has
 	# no travel signal; the extraction point already exists and is now unlocked.
-	notice.emit("The Rootwarden falls · Claim its chest, then follow the extraction spring")
+	notice.emit("The Rootwarden falls · Search its reliquary, then follow the extraction spring")
 	boss_defeated.emit()
 	snapshot_changed.emit(snapshot())
+
+func _loot_drop_point(enemy: Node3D, distance: float) -> Vector3:
+	# Rest beside the corpse, toward its attacker when available. Placement still
+	# projects onto a clear reachable floor and never trusts this offset blindly.
+	var direction := Vector3.BACK
+	if is_instance_valid(_player):
+		direction = _player.global_position - enemy.global_position
+		direction.y = 0.0
+		if direction.length_squared() < 0.01:
+			direction = Vector3.BACK
+	return enemy.global_position + direction.normalized() * distance
 
 func _on_warning(message: String) -> void:
 	if not message.is_empty():

@@ -91,7 +91,7 @@ The existing procedural avatar gains rounded body surfaces, improved proportions
 
 The native avatar contains **53 mesh instances, 5,216 primitive triangles plus 38 existing cue triangles**, with 25 rounded surfaces sharing one sphere mesh. These are scene geometry counts, not a GPU timing result. Equipment tint materials remain independent per actor and preview; repeated appearance refresh does not compound coloration.
 
-**The focused integration gate passed 274 assertions across six engine invocations**, with clean final game-test logs. Repeated or overlapping checkpoint runs are not added to this total.
+**The final exact-source archive gate passed 925 assertions across nine engine invocations** for local commit `9f2362b`, published as `fb394193`. The six focused suites below contributed 274 assertions; the archive additionally repeated combat (177), mobile UI integration (152) and smoke (322). The final archive total supersedes the earlier focused gate and does not add repeated runs together. All final game-test logs were clean.
 
 | Suite | Passed assertions | Checkpoint coverage |
 | --- | ---: | --- |
@@ -102,6 +102,58 @@ The native avatar contains **53 mesh instances, 5,216 primitive triangles plus 3
 | `companion_behavior_test.gd` | 38 | Existing Guardian blocking, Mystic support, combat decisions and boss warnings |
 | `loadout_integration_test.gd` | 78 | Owned weapon switching, model/ability updates, preserved attack/cooldown rules, touch/cameras and save rollback |
 
-The independent real-party evidence is `/tmp/vaultbound-m56-party-character-integration.log`. The avatar design, budgets and remaining art requirements are documented in [character presentation](character-presentation.md). This checkpoint's source-archive verification follows its isolated commit; the focused results above do not substitute for that publication gate.
+The independent real-party evidence is `/tmp/vaultbound-m56-party-character-integration.log`; final exact-source evidence is `/tmp/vaultbound-56-c3-source-checks/results.json` and adjacent logs. The avatar design, budgets and remaining art requirements are documented in [character presentation](character-presentation.md).
 
 This is an original native-mesh/procedural-animation improvement, **not an imported production skeletal rig or an authored animation pack**. Tests establish finite transforms, preserved anchors/colliders and consistent representation; they cannot prove every rendered pose is free of clipping or that animation quality meets a final art bar. Physical Android/GPU review still needs to inspect hands, feet, armor, weapon silhouettes, animation transitions and both camera distances during movement, combat, dodge, block, damage and death. No physical-device test or frame-rate result is claimed.
+
+## Checkpoint 4 — searchable encounter loot and Depthmarks
+
+Registered Rootbound enemy deaths now reserve one reward source and present a searchable regular or reinforced cache. The Rootwarden owns one grand cache with its guaranteed Heart. Search opens the existing paused modal flow; selected Take, quantity controls and Take All transfer only the remaining contents into the existing unsecured expedition bag. Empty views disappear. Replayed death events, stale views, repeated confirmations and foreign/unregistered actors cannot regenerate a reward.
+
+The existing gold balance is presented as **Depthmarks (DM)** without creating another writable currency balance or resetting a save. Configured monster ranges begin at 4–8 DM, stronger monsters at 8–18, elites at 25–50 and the boss at 120–250. Rewards become permanent through the existing verified extraction boundary. Sanctuary practice produces no bankable reward, and no quest/PvP reward system is represented as implemented. Merchant sale values and sale sorting use the actual condition/enhancement-aware quote calculation. Positive accepted reward transfers alone create bounded floating currency notifications.
+
+Eight reusable cache views include one reserved boss view. The per-run ledger retains rewards when rooms are hidden or views are recycled; eligible nearby low-tier sources can consolidate. Floor projection and clearance checks keep visual caches approachable, and caches add no navigation collision. There is no second inventory system, multiplayer loot authority or client-controlled online reward flow.
+
+### Automated gate and regression fixes
+
+**The working-tree checkpoint gate passed 2,183 assertions across 30 engine invocations.** Counts include each final listed invocation once; earlier failed/debugging runs and repeated suites are excluded. All final game-test logs were inspected and clean. An exact-source archive gate remains part of publication validation.
+
+| Suite | Passed assertions | Coverage |
+| --- | ---: | --- |
+| `searchable_loot_integration_test.gd`, runtime/read | 149 + 14 | Real regular/elite/boss deaths across seeds 7/23/81; actual Search prompts, both cameras, quantity/Take/Take All, two-finger deduplication, canceled/dragged input, three landscape layouts, full-inventory retry, room reentry, three extractions and independent restart/later death |
+| `loot_ledger_test.gd` | 44 | Stable sources, partial plans, receipts, bounded consolidation and configured encounter rewards |
+| `loot_cache_world_test.gd` | 30 | Native floor/clearance checks over multiple layouts, eight-view budget, boss reservation, culling/recycling, obstruction and nonblocking models |
+| `encounter_loot_test.gd` | 36 | Real basic/stronger/elite/boss hooks, alive/foreign rejection, reentrant/sequential duplicate deaths, source awareness and no practice farming |
+| `session_loot_test.gd` | 75 | Real Session ownership, opaque quotes, partial currency/items, pending capacity, overflow, stale/reentrant requests, access checks and freed view/manager safety |
+| `profile_roundtrip_test.gd`, main/read | 47 + 3 | Exact encoded save verification, floating-point boundaries, integer/identity protection, backups and independent restart |
+| `expedition_test.gd` | 115 | Existing expedition/awareness/treasure/extraction/death rules, with boss collection adapted to real Search and Take All |
+| `inventory_economy_test.gd` | 114 | Existing inventory capacity, ownership protection and atomic economy rules |
+| `loot_persistence_test.gd` | 47 | Five thousand seeded chest samples, original rarity contract, save precision and recovery |
+| `item_catalog_test.gd` | 348 | Existing catalog, recipes, stock, rarity/resources and acquisition contracts |
+| `save_migration_test.gd`, main/write/read | 42 + 3 + 19 | Legacy progression, reserves, protected gear, displays and separate-process persistence |
+| `party_persistence_test.gd`, main/write/read | 70 + 5 + 8 | Recruited companion identity/progression and separate-process persistence |
+| `persistence_restart_test.gd`, write/read | 8 + 13 | Existing extracted ownership survives restart and later loss |
+| `rpg_integration_test.gd` | 117 | Existing merchants, Blacksmith, Hall, equipped player/companions, extraction and wipe |
+| `party_test.gd` | 88 | Existing recruitment, commands, rescue/wipe, combat and extraction |
+| `companion_navigation_test.gd` | 26 | Physical companion traversal across seeds 7/23/81 |
+| `ui_layout_test.gd` | 247 | Existing touch geometry/ownership and focus handling |
+| `loadout_ui_test.gd` | 87 | Existing owned-weapon controls and equipment assignment |
+| `rpg_ui_test.gd` | 66 | Existing transaction UI plus real sale-price sorting, matching trusted quote values and one sale from two fingers |
+| `party_ui_test.gd` | 137 | Existing recruitment/commands/revive touch flow |
+| `expedition_ui_test.gd` | 19 | Existing dungeon HUD/results and modal isolation |
+| `visual_settings_test.gd` | 54 | Existing graphics/preferences behavior |
+| `mobile_ui_integration_test.gd` | 152 | Existing scale/safe-area geometry, separate menus, inspection and accessibility |
+
+The live Search test uses controlled lethal hits and positions, not a balanced human playthrough. Its capacity exercise injects disposable filler into its isolated test profile, then frees space through real consumable use and verifies partial retry. Only that injected filler is removed afterward. The death reader checks exact owned instances and the existing eight-point equipped-item durability loss; it does not incorrectly require death to leave condition unchanged.
+
+A critical save regression surfaced during the second actual extraction: Godot's JSON parser selected an adjacent floating-point representation for a valid full-precision elapsed time (`0.9583029999999999` became `0.958303`). The previous exact comparison against the pre-encoding binary value rejected the healthy temporary file. The fix verifies the exact emitted bytes, validates the decoded representation of that same encoded intent and preserves exact discrete values recursively. It does not introduce approximate currency/count comparisons or reset saves. The failed extraction retained the existing primary and retryable bag; the corrected gate completes all three extractions, independent restart and later death.
+
+Source review also removed the Rootwarden Heart from all four non-boss chest tables. Its former tiny probability now uses the existing Legendary Ancient Shard. This preserves the original five-rarity common-chest assertion while keeping the boss trophy tied to its completed encounter; the assertion was not weakened.
+
+Evidence paths include `/tmp/vaultbound-56-checkpoint4-regression/results.json` (988 assertions across 16 final invocations), `/tmp/vaultbound-m56-search-{integration,read,expedition}.log`, `/tmp/vaultbound-m56-{loot-ledger,loot-world,session-loot,profile-roundtrip}.log` and `/tmp/vaultbound-stage4-*.log`. Additional focused independent-reader output was checked during the same session. No unresolved critical regression remains in this working-tree gate.
+
+### Android review and limits
+
+On a physical Android device, defeat a normal enemy, elite and Rootwarden, inspect cache placement/rarity cues from both cameras and verify Search/Take controls with two fingers. Fill the inventory, try Take All, collect only DM, use supplies to free space and retry the remaining items. Leave and revisit the room, extract, restart and lose a subsequent expedition; verify secured ownership survives. Check scrolling, canceled touches, app focus changes, modal pause, merchant sell-value previews and reduced-motion/effects behavior. Cache and currency feedback must stay readable without obscuring combat or causing visible frame stalls.
+
+The prototype remains offline. Unsecured expedition rewards follow the existing run lifecycle and are lost on death/abandonment; this is not a mid-expedition application-crash resume system. Local save files are not an online security boundary. Shared family art and native cache geometry remain the available visual assets. No physical Android touch, rendered GPU placement, sustained frame-rate, thermal, APK export or multiplayer validation is claimed.

@@ -381,8 +381,8 @@ func _entries() -> Array:
 			continue
 		result.append(entry)
 	result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		if SORTS[sort_index] == "value" and int(a.get("value", 0)) != int(b.get("value", 0)):
-			return int(a.get("value", 0)) > int(b.get("value", 0))
+		if SORTS[sort_index] == "value" and _sort_value(a) != _sort_value(b):
+			return _sort_value(a) > _sort_value(b)
 		if SORTS[sort_index] == "rarity_low" and a.get("rarity", "common") != b.get("rarity", "common"):
 			return RARITIES.find(String(a.get("rarity", "common"))) < RARITIES.find(String(b.get("rarity", "common")))
 		if SORTS[sort_index] == "category" and a.get("category", "") != b.get("category", ""):
@@ -396,6 +396,9 @@ func _entries() -> Array:
 			return int(a.get("required_level", 1)) > int(b.get("required_level", 1))
 		return String(a.get("label", "")).naturalnocasecmp_to(String(b.get("label", ""))) < 0)
 	return result
+
+func _sort_value(entry: Dictionary) -> int:
+	return VaultEconomy.sell_price(entry) if section == &"sell" else int(entry.get("value", 0))
 
 func _display_count() -> int:
 	var count := _entries().size()
@@ -583,7 +586,7 @@ func _draw() -> void:
 	_panel(rect, PANEL)
 	draw_rect(Rect2(rect.position + Vector2(1, 1), Vector2(rect.size.x - 2, 68)), Color("17373b"))
 	_text(_title(), rect.position + Vector2(24, 35), 25, GOLD)
-	var subtitle := "%d SECURED GOLD  ·  %d / %d SLOTS" % [int(data.get("gold", data.get("secured_gold", 0))), int(data.get("used_slots", 0)), int(data.get("capacity", 40))]
+	var subtitle := "%d SECURED DM  ·  %d / %d SLOTS" % [int(data.get("gold", data.get("secured_gold", 0))), int(data.get("used_slots", 0)), int(data.get("capacity", 40))]
 	_text(subtitle, rect.position + Vector2(24, 59), 12, IVORY)
 	_button(close_rect(), "CLOSE", true)
 	for index in range(tabs().size()):
@@ -620,7 +623,7 @@ func _stand_label() -> String:
 func _context_hint() -> String:
 	if section == &"bag": return "Unsecured finds become inventory items only after extraction. Death preserves secured equipment."
 	if section == &"display": return "Display references your owned item. It stays in your inventory and cannot be sold while displayed."
-	if section == &"craft": return "Choose a recipe to review the exact materials and gold cost before crafting."
+	if section == &"craft": return "Choose a recipe to review the exact materials and Depthmark cost before crafting."
 	if section == &"upgrade": return "Deterministic upgrades · Maximum +5 · Review the next enhancement before paying."
 	if section == &"journal": return "The journal records acquired items and monsters from completed expeditions."
 	if not Dictionary(data.get("legacy_reserve", {})).is_empty(): return "An older save has preserved overflow. Choose Filter: Reserve to claim items into free slots."
@@ -629,13 +632,13 @@ func _context_hint() -> String:
 func _draw_collection() -> void:
 	if section not in [&"buy", &"craft", &"bag", &"journal"]:
 		_button(filter_rect(), "FILTER · " + String(FILTERS[filter_index]).to_upper(), true)
-		var sort_label := "BASE VALUE" if SORTS[sort_index] == "value" else String(SORTS[sort_index]).replace("_", " ").to_upper()
+		var sort_label := ("SELL VALUE" if section == &"sell" else "BASE VALUE") if SORTS[sort_index] == "value" else String(SORTS[sort_index]).replace("_", " ").to_upper()
 		_button(sort_rect(), "SORT · " + sort_label, true)
 	elif section == &"journal":
 		_button(filter_rect(), "JOURNAL · " + ["ALL", "ITEMS", "MONSTERS"][journal_filter], true)
 		_text("%d DISCOVERIES" % _entries().size(), sort_rect().position + Vector2(8, 29), 12, GOLD)
 	else:
-		var caption := "UNSECURED · %d GOLD" % int(data.get("unsecured_gold", 0)) if section == &"bag" else "AVAILABLE RECIPES" if section == &"craft" else "COLLECTION & MONSTER JOURNAL" if section == &"journal" else "STOCK · EXPEDITION ROTATION %d" % int(Dictionary(data.get("statistics", {})).get("completed", 0))
+		var caption := "UNSECURED · %d DM" % int(data.get("unsecured_gold", 0)) if section == &"bag" else "AVAILABLE RECIPES" if section == &"craft" else "COLLECTION & MONSTER JOURNAL" if section == &"journal" else "STOCK · EXPEDITION ROTATION %d" % int(Dictionary(data.get("statistics", {})).get("completed", 0))
 		_text(caption, filter_rect().position + Vector2(0, 28), 12, GOLD)
 
 func draw_list(canvas: Control) -> void:
@@ -664,6 +667,7 @@ func draw_list(canvas: Control) -> void:
 			_list_text(canvas, _fit(String(item.get("label", "Unknown")), item_rect.size.x - 12, 11), item_rect.position + Vector2(6, 62 * ui_scale), 11, tint)
 			var tag := "×%d" % int(item.get("quantity", 1))
 			if item.get("category", "") == "equipment": tag = "+%d · %d%%" % [int(item.get("enhancement", 0)), int(item.get("durability", 100))]
+			if section == &"sell": tag = "%d DM / EACH" % VaultEconomy.sell_price(entries[index])
 			_list_text(canvas, tag, item_rect.position + Vector2(6, 81 * ui_scale), 10, MUTED)
 			var mark := "L" if bool(item.get("locked", false)) else "★" if bool(item.get("favorite", false)) else "E" if bool(item.get("equipped", false)) else "D" if bool(item.get("displayed", false)) else "?" if not bool(item.get("identified", true)) else ""
 			_list_text(canvas, mark, item_rect.position + Vector2(item_rect.size.x - 18, 24), 14, GOLD)
@@ -671,8 +675,8 @@ func draw_list(canvas: Control) -> void:
 			_draw_icon(item, Rect2(item_rect.position + Vector2(9, 10), Vector2(42, 42) * ui_scale), tint, canvas)
 			_list_text(canvas, _fit(String(item.get("label", item.get("name", "Unknown"))), item_rect.size.x - 80 * ui_scale, 15), item_rect.position + Vector2(62, 27) * ui_scale, 15, tint)
 			var detail := String(item.get("category", "" )).replace("_", " ").capitalize()
-			if section == &"buy": detail = "%d gold · %d remaining" % [int(item.get("price", 0)), int(item.get("remaining", item.get("quantity", 0)))]
-			elif section == &"craft": detail = "%d gold · Level %d" % [int(item.get("gold", 0)), int(item.get("required_level", 1))]
+			if section == &"buy": detail = "%d DM · %d remaining" % [int(item.get("price", 0)), int(item.get("remaining", item.get("quantity", 0)))]
+			elif section == &"craft": detail = "%d DM · Level %d" % [int(item.get("gold", 0)), int(item.get("required_level", 1))]
 			elif section == &"bag" or FILTERS[filter_index] == "reserve": detail = "× %d" % int(item.get("quantity", 1))
 			_list_text(canvas, _fit(detail, item_rect.size.x - 80 * ui_scale, 12), item_rect.position + Vector2(62, 49) * ui_scale, 12, MUTED)
 	if entries.is_empty():
@@ -700,6 +704,8 @@ func _display_entry(entry: Dictionary) -> Dictionary:
 		result.effective_stats = {}
 		result.modifiers = {}
 		result.special_effects = []
+	if result.has("uid"):
+		result.sell_value = VaultEconomy.sell_price(entry)
 	return result
 
 func _draw_details() -> void:
@@ -730,7 +736,8 @@ func _draw_details() -> void:
 			_text("%s ×%d" % [definition.label if definition != null else id, int(item.ingredients[id])], at + Vector2(0, 24 + row * 21), 13, IVORY)
 			row += 1
 	elif item.get("category", "") == "equipment":
-		_text("LEVEL %d · %s · +%d · DURABILITY %d%%" % [int(item.get("required_level", 1)), String(item.get("slot", "equipment")).replace("_", " ").to_upper(), int(item.get("enhancement", 0)), int(item.get("durability", 100))], at, 11, MUTED)
+		var price := "SELL %d DM" % int(item.sell_value) if item.has("sell_value") else "BASE %d DM" % int(item.get("value", 0))
+		_text(_fit("LV %d · %s · +%d · %d%% · %s" % [int(item.get("required_level", 1)), String(item.get("slot", "equipment")).replace("_", " ").to_upper(), int(item.get("enhancement", 0)), int(item.get("durability", 100)), price], rect.size.x - 40, 11), at, 11, MUTED)
 		var stats: Dictionary = item.get("effective_stats", item.get("base_stats", {}))
 		var row := 0
 		for key: String in stats:
@@ -743,7 +750,8 @@ func _draw_details() -> void:
 		else:
 			_draw_comparison(item, at + Vector2(rect.size.x * 0.51, 25), rect.size.x * 0.45)
 	else:
-		_text("VALUE  %d GOLD  ·  STACK %d / %d" % [int(item.get("value", 0)), int(item.get("quantity", 1)), int(item.get("stack_limit", 99))], at, 12, GOLD)
+		var price := "SELL %d DM / EACH" % int(item.sell_value) if item.has("sell_value") else "BASE VALUE %d DM" % int(item.get("value", 0))
+		_text(_fit("%s · STACK %d / %d" % [price, int(item.get("quantity", 1)), int(item.get("stack_limit", 99))], rect.size.x - 40, 12), at, 12, GOLD)
 		if float(item.get("healing", 0)) > 0:
 			_text("Restores %d health" % int(item.healing), at + Vector2(0, 25), 13, TEAL)
 		if float(item.get("stamina_restore", 0)) > 0:
@@ -847,8 +855,8 @@ func _draw_confirmation() -> void:
 	var preview: Dictionary = pending_quote.get("preview", pending_quote)
 	_wrap(String(preview.get("message", pending_quote.get("ui_item", "Review this transaction"))), rect.position + Vector2(28, 78), rect.size.x - 56, 16, IVORY, 2)
 	var lines: Array[String] = []
-	if int(preview.get("cost_gold", 0)) > 0: lines.append("Gold cost · %d" % int(preview.cost_gold))
-	if int(preview.get("gold_gain", 0)) > 0: lines.append("Gold received · %d" % int(preview.gold_gain))
+	if int(preview.get("cost_gold", 0)) > 0: lines.append("Depthmarks required · %d DM" % int(preview.cost_gold))
+	if int(preview.get("gold_gain", 0)) > 0: lines.append("Sale proceeds · %d DM" % int(preview.gold_gain))
 	for key: String in ["materials", "outputs"]:
 		for id: String in preview.get(key, {}):
 			var definition := VaultLootTable.item_for(id)
