@@ -6,7 +6,7 @@ const Portal = preload("res://scenes/world/portal.tscn")
 const TrainingTarget = preload("res://scenes/world/training_target.tscn")
 
 var display_name := "THE SANCTUARY"
-var objective := "Find the archway • Enter the Shifting Depths"
+var objective := "North: practice vault • East: Rootbound expedition"
 
 func _ready() -> void:
 	var kit := Architecture.new(self)
@@ -22,6 +22,14 @@ func _ready() -> void:
 	portal.entry_id = &"from_sanctuary"
 	portal.title = "THE SHIFTING DEPTHS"
 	add_child(portal)
+	var expedition_gate := Portal.instantiate()
+	expedition_gate.name = "RootboundExpeditionGate"
+	expedition_gate.position = Vector3(7.0, 0, -5.5)
+	expedition_gate.rotation.y = -PI / 2.0
+	expedition_gate.destination = &"rootbound_abyss"
+	expedition_gate.entry_id = &"default"
+	expedition_gate.title = "ROOTBOUND ABYSS · EXPEDITION"
+	add_child(expedition_gate)
 	var target := TrainingTarget.instantiate()
 	target.position = Vector3(5.0, 0, 0.2)
 	add_child(target)
@@ -78,4 +86,6 @@ func get_spawn_transform(entry_id: StringName) -> Transform3D:
 	var position := Vector3(0, 0.15, 8.0)
 	if entry_id == &"from_dungeon":
 		position = Vector3(0, 0.15, -5.4)
+	if entry_id == &"from_abyss":
+		return Transform3D(Basis(Vector3.UP, -PI / 2.0), Vector3(3.5, 0.15, -5.5))
 	return Transform3D(Basis.IDENTITY, position)

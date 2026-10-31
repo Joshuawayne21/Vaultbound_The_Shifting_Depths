@@ -2,8 +2,88 @@ class_name VaultHUD
 extends CanvasLayer
 ## Persistent presentation only. All gameplay commands go through InputHub.
 
+signal modal_changed(open: bool)
+signal results_closed
+signal consumable_requested
+signal equipment_requested(item_id: String)
+
 @onready var surface: Control = $TouchSurface
+@onready var expedition_overlay: Control = $ExpeditionOverlay
 var _player: Node
+var _session: Node
+var pending_results: Dictionary = {}
+
+
+func _ready() -> void:
+	expedition_overlay.source_surface = surface
+	expedition_overlay.modal_changed.connect(func(open: bool) -> void: modal_changed.emit(open))
+	expedition_overlay.results_closed.connect(func() -> void: results_closed.emit())
+	expedition_overlay.consumable_requested.connect(func() -> void: consumable_requested.emit())
+	expedition_overlay.equipment_requested.connect(func(item_id: String) -> void: equipment_requested.emit(item_id))
+
+
+func bind_expedition(session: Node) -> void:
+	_session = session
+	if session.has_signal("changed") and not session.changed.is_connected(_on_session_changed):
+		session.changed.connect(_on_session_changed)
+	if session.has_signal("notice") and not session.notice.is_connected(_on_expedition_notice):
+		session.notice.connect(_on_expedition_notice)
+	if session.has_signal("results_ready") and not session.results_ready.is_connected(_on_results_ready):
+		session.results_ready.connect(_on_results_ready)
+	if session.has_method("snapshot"):
+		_on_session_changed(session.snapshot())
+
+
+func set_dungeon_snapshot(data: Dictionary) -> void:
+	surface.dungeon_active = not data.is_empty()
+	expedition_overlay.set_dungeon_snapshot(data)
+	surface.queue_redraw()
+
+
+func toggle_inventory() -> void:
+	if expedition_overlay.mode == &"pack":
+		expedition_overlay.close_modal()
+	elif expedition_overlay.mode == &"none":
+		expedition_overlay.open_pack()
+
+
+func toggle_performance() -> void:
+	expedition_overlay.performance_visible = not expedition_overlay.performance_visible
+	expedition_overlay.queue_redraw()
+
+
+func show_results(data: Dictionary) -> void:
+	pending_results.clear()
+	expedition_overlay.show_results(data)
+
+
+func close_results() -> void:
+	if expedition_overlay.mode == &"results":
+		expedition_overlay.close_modal()
+
+
+func close_modals() -> void:
+	expedition_overlay.close_modal()
+
+
+func present_pending_results() -> void:
+	if not pending_results.is_empty():
+		var data := pending_results.duplicate(true)
+		pending_results.clear()
+		expedition_overlay.show_results(data)
+
+
+func _on_session_changed(data: Dictionary) -> void:
+	expedition_overlay.set_session_snapshot(data)
+
+
+func _on_expedition_notice(message: String) -> void:
+	expedition_overlay.add_notice(message)
+
+
+func _on_results_ready(data: Dictionary) -> void:
+	# Extraction emits before scene travel; root presents these only after arriving.
+	pending_results = data.duplicate(true)
 
 
 func bind_player(player: Node) -> void:

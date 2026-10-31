@@ -1,0 +1,172 @@
+[gd_scene load_steps=16 format=3]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_bark.tres" id="1"]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_bark_light.tres" id="2"]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_leaf.tres" id="3"]
+
+[sub_resource type="CylinderMesh" id="r1"]
+top_radius = 0.55
+bottom_radius = 0.95
+height = 5.3
+radial_segments = 7
+rings = 1
+
+[sub_resource type="CylinderShape3D" id="r2"]
+radius = 0.95
+height = 5.3
+
+[sub_resource type="CylinderMesh" id="r3"]
+top_radius = 0.85
+bottom_radius = 1.25
+height = 0.55
+radial_segments = 7
+rings = 1
+
+[sub_resource type="CylinderShape3D" id="r4"]
+radius = 1.25
+height = 0.55
+
+[sub_resource type="CylinderMesh" id="r5"]
+top_radius = 0.18
+bottom_radius = 0.56
+height = 4.03113
+radial_segments = 7
+rings = 1
+
+[sub_resource type="CylinderShape3D" id="r6"]
+radius = 0.56
+height = 4.03113
+
+[sub_resource type="CylinderMesh" id="r7"]
+top_radius = 0.12
+bottom_radius = 0.4
+height = 2.92062
+radial_segments = 7
+rings = 1
+
+[sub_resource type="CylinderShape3D" id="r8"]
+radius = 0.4
+height = 2.92062
+
+[sub_resource type="CylinderMesh" id="r9"]
+top_radius = 0.05
+bottom_radius = 0.19
+height = 1.9105
+radial_segments = 7
+rings = 1
+
+[sub_resource type="CylinderShape3D" id="r10"]
+radius = 0.19
+height = 1.9105
+
+[sub_resource type="BoxMesh" id="r11"]
+size = Vector3(0.065, 1.2, 0.08)
+
+[sub_resource type="SphereMesh" id="r12"]
+radius = 0.8
+height = 1.6
+radial_segments = 8
+rings = 3
+
+[node name="AncientRoot" type="Node3D"]
+
+[node name="Trunk" type="MeshInstance3D" parent="."]
+position = Vector3(0, 2.6, 0)
+mesh = SubResource("r1")
+material_override = ExtResource("1")
+
+[node name="Body" type="StaticBody3D" parent="Trunk"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="Trunk/Body"]
+shape = SubResource("r2")
+
+[node name="Foot" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.25, 0)
+mesh = SubResource("r3")
+material_override = ExtResource("2")
+
+[node name="Body" type="StaticBody3D" parent="Foot"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="Foot/Body"]
+shape = SubResource("r4")
+
+[node name="CrownRootPivot" type="Node3D" parent="."]
+position = Vector3(1.75, 5.5, 0)
+rotation = Vector3(0, 1.5708, 0)
+
+[node name="CrownRoot" type="MeshInstance3D" parent="CrownRootPivot"]
+position = Vector3(0, 0, 0)
+mesh = SubResource("r5")
+material_override = ExtResource("1")
+rotation = Vector3(1.05165, 0, 0)
+
+[node name="Body" type="StaticBody3D" parent="CrownRootPivot/CrownRoot"]
+collision_layer = 8
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="CrownRootPivot/CrownRoot/Body"]
+shape = SubResource("r6")
+
+[node name="BackRootPivot" type="Node3D" parent="."]
+position = Vector3(-0.6, 4.7, 0.75)
+rotation = Vector3(0, -0.67474, 0)
+
+[node name="BackRoot" type="MeshInstance3D" parent="BackRootPivot"]
+position = Vector3(0, 0, 0)
+mesh = SubResource("r7")
+material_override = ExtResource("1")
+rotation = Vector3(0.71778, 0, 0)
+
+[node name="Body" type="StaticBody3D" parent="BackRootPivot/BackRoot"]
+collision_layer = 8
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="BackRootPivot/BackRoot/Body"]
+shape = SubResource("r8")
+
+[node name="HangingRootPivot" type="Node3D" parent="."]
+position = Vector3(3.6, 5.5, 0.15)
+rotation = Vector3(0, 1.27934, 0)
+
+[node name="HangingRoot" type="MeshInstance3D" parent="HangingRootPivot"]
+position = Vector3(0, 0, 0)
+mesh = SubResource("r9")
+material_override = ExtResource("1")
+rotation = Vector3(2.56345, 0, 0)
+
+[node name="Body" type="StaticBody3D" parent="HangingRootPivot/HangingRoot"]
+collision_layer = 8
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="HangingRootPivot/HangingRoot/Body"]
+shape = SubResource("r10")
+
+[node name="BarkScar0" type="MeshInstance3D" parent="."]
+position = Vector3(0.53, 1.1, -0.62)
+mesh = SubResource("r11")
+material_override = ExtResource("2")
+rotation = Vector3(0, 0.25, 0.1)
+
+[node name="BarkScar1" type="MeshInstance3D" parent="."]
+position = Vector3(0.53, 2.2, -0.62)
+mesh = SubResource("r11")
+material_override = ExtResource("2")
+rotation = Vector3(0, 0.25, 0.1)
+
+[node name="BarkScar2" type="MeshInstance3D" parent="."]
+position = Vector3(0.53, 3.3, -0.62)
+mesh = SubResource("r11")
+material_override = ExtResource("2")
+rotation = Vector3(0, 0.25, 0.1)
+
+[node name="MossCrown" type="MeshInstance3D" parent="."]
+position = Vector3(0.2, 4.85, 0.2)
+mesh = SubResource("r12")
+material_override = ExtResource("3")
+scale = Vector3(1.4, 0.5, 1.2)

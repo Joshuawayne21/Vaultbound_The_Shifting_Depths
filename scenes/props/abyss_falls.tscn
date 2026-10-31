@@ -1,0 +1,59 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/props/abyss_stream.tscn" id="1"]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_stone.tres" id="2"]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_water.tres" id="3"]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_foam.tres" id="4"]
+
+[sub_resource type="BoxMesh" id="r1"]
+size = Vector3(2.1, 6, 0.5)
+
+[sub_resource type="BoxShape3D" id="r2"]
+size = Vector3(2.1, 6, 0.5)
+
+[sub_resource type="CylinderMesh" id="r3"]
+top_radius = 1.7
+bottom_radius = 1.7
+height = 0.07
+radial_segments = 16
+rings = 1
+
+[sub_resource type="TorusMesh" id="r4"]
+inner_radius = 0.9
+outer_radius = 1.4
+rings = 24
+ring_segments = 4
+
+[node name="FallingSpring" type="Node3D"]
+
+[node name="Flow" parent="." instance=ExtResource("1")]
+position = Vector3(0, 3, 0)
+rotation = Vector3(1.5708, 0, 0)
+scale = Vector3(0.75, 1, 0.6)
+
+[node name="RockBack" type="MeshInstance3D" parent="."]
+position = Vector3(0, 3, -0.2)
+mesh = SubResource("r1")
+material_override = ExtResource("2")
+
+[node name="Body" type="StaticBody3D" parent="RockBack"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="RockBack/Body"]
+shape = SubResource("r2")
+
+[node name="Pool" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.05, 0.8)
+mesh = SubResource("r3")
+material_override = ExtResource("3")
+cast_shadow = 0
+
+[node name="Foam" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.1, 0.8)
+mesh = SubResource("r4")
+material_override = ExtResource("4")
+cast_shadow = 0

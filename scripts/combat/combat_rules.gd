@@ -4,13 +4,22 @@ extends RefCounted
 ## this service validates and deduplicates damage commands for all perspectives.
 ## IDs are local only. No transport, remote trust, or multiplayer is implemented.
 
-static var _sequence: int = 0
-static var _hit_receipts: Dictionary = {}
-static var _receipt_order: Array[int] = []
+static func _runtime_state() -> Dictionary:
+	# The SceneTree owns session state so freeing the last combat actor also frees
+	# every script resource cleanly. No Node references enter the receipt ledger.
+	# This state survives level swaps and ends with the application, not a room.
+	var loop := Engine.get_main_loop() as SceneTree
+	if not loop.has_meta(&"vaultbound_combat_runtime"):
+		loop.set_meta(&"vaultbound_combat_runtime", {
+			"sequence": 0, "hit_receipts": {}, "receipt_order": [],
+		})
+	var state: Dictionary = loop.get_meta(&"vaultbound_combat_runtime")
+	return state
 
 static func next_attack_id() -> int:
-	_sequence += 1
-	return _sequence
+	var state := _runtime_state()
+	state["sequence"] = int(state["sequence"]) + 1
+	return int(state["sequence"])
 
 static func has_line_of_sight(source: Node3D, target: Node3D) -> bool:
 	if not is_instance_valid(source) or not is_instance_valid(target):
@@ -36,12 +45,15 @@ static func apply_hit(source: Node3D, target: Node3D, amount: float, attack_id: 
 		return false
 	if not target.has_method("receive_hit") and not target.has_method("take_hit") and not target.has_method("take_damage"):
 		return false
-	if not _hit_receipts.has(attack_id):
-		_hit_receipts[attack_id] = {}
-		_receipt_order.append(attack_id)
-		if _receipt_order.size() > 256:
-			_hit_receipts.erase(_receipt_order.pop_front())
-	var receipts: Dictionary = _hit_receipts[attack_id]
+	var runtime := _runtime_state()
+	var hit_receipts: Dictionary = runtime["hit_receipts"]
+	var receipt_order: Array = runtime["receipt_order"]
+	if not hit_receipts.has(attack_id):
+		hit_receipts[attack_id] = {}
+		receipt_order.append(attack_id)
+		if receipt_order.size() > 256:
+			hit_receipts.erase(receipt_order.pop_front())
+	var receipts: Dictionary = hit_receipts[attack_id]
 	var receiver_id := target.get_instance_id()
 	if receipts.has(receiver_id):
 		return false

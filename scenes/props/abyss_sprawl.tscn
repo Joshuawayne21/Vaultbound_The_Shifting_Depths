@@ -1,0 +1,89 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_bark.tres" id="1"]
+
+[sub_resource type="CylinderMesh" id="r1"]
+top_radius = 0.12
+bottom_radius = 0.3
+height = 3.68917
+radial_segments = 7
+rings = 1
+
+[sub_resource type="CylinderShape3D" id="r2"]
+radius = 0.3
+height = 3.68917
+
+[sub_resource type="CylinderMesh" id="r3"]
+top_radius = 0.12
+bottom_radius = 0.3
+height = 3.30492
+radial_segments = 7
+rings = 1
+
+[sub_resource type="CylinderShape3D" id="r4"]
+radius = 0.3
+height = 3.30492
+
+[sub_resource type="CylinderMesh" id="r5"]
+top_radius = 0.12
+bottom_radius = 0.3
+height = 2.19829
+radial_segments = 7
+rings = 1
+
+[sub_resource type="CylinderShape3D" id="r6"]
+radius = 0.3
+height = 2.19829
+
+[node name="RootSprawl" type="Node3D"]
+
+[node name="Root0Pivot" type="Node3D" parent="."]
+position = Vector3(0, 0.4, 0.35)
+rotation = Vector3(0, 1.37875, 0)
+
+[node name="Root0" type="MeshInstance3D" parent="Root0Pivot"]
+position = Vector3(0, 0, 0)
+mesh = SubResource("r1")
+material_override = ExtResource("1")
+rotation = Vector3(1.46216, 0, 0)
+
+[node name="Body" type="StaticBody3D" parent="Root0Pivot/Root0"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="Root0Pivot/Root0/Body"]
+shape = SubResource("r2")
+
+[node name="Root1Pivot" type="Node3D" parent="."]
+position = Vector3(-0.05, 0.225, 0.15)
+rotation = Vector3(0, 2.184, 0)
+
+[node name="Root1" type="MeshInstance3D" parent="Root1Pivot"]
+position = Vector3(0, 0, 0)
+mesh = SubResource("r3")
+material_override = ExtResource("1")
+rotation = Vector3(1.52539, 0, 0)
+
+[node name="Body" type="StaticBody3D" parent="Root1Pivot/Root1"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="Root1Pivot/Root1/Body"]
+shape = SubResource("r4")
+
+[node name="Root2Pivot" type="Node3D" parent="."]
+position = Vector3(1.15, 0.275, -0.3)
+rotation = Vector3(0, 0.75315, 0)
+
+[node name="Root2" type="MeshInstance3D" parent="Root2Pivot"]
+position = Vector3(0, 0, 0)
+mesh = SubResource("r5")
+material_override = ExtResource("1")
+rotation = Vector3(1.50251, 0, 0)
+
+[node name="Body" type="StaticBody3D" parent="Root2Pivot/Root2"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="Root2Pivot/Root2/Body"]
+shape = SubResource("r6")

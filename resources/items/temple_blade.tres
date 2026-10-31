@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"temple_blade"
+label = "Temple Blade"
+category = "equipment"
+rarity = "uncommon"
+value = 28
+quantity_min = 1
+quantity_max = 1
+weapon_style = &"sword"
+healing = 0.0

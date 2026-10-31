@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="VaultLootTable" load_steps=15 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/loot_table.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/items/gold_coin.tres" id="2"]
+[ext_resource type="Resource" path="res://resources/items/root_fiber.tres" id="3"]
+[ext_resource type="Resource" path="res://resources/items/mooncap_tonic.tres" id="4"]
+[ext_resource type="Resource" path="res://resources/items/emerald_dust.tres" id="5"]
+[ext_resource type="Resource" path="res://resources/items/sunfruit_elixir.tres" id="6"]
+[ext_resource type="Resource" path="res://resources/items/temple_blade.tres" id="7"]
+[ext_resource type="Resource" path="res://resources/items/runic_staff.tres" id="8"]
+[ext_resource type="Resource" path="res://resources/items/warden_shield.tres" id="9"]
+[ext_resource type="Resource" path="res://resources/items/ancient_seed.tres" id="10"]
+[ext_resource type="Resource" path="res://resources/items/aurora_bloom.tres" id="11"]
+[ext_resource type="Resource" path="res://resources/items/heartwood_blade.tres" id="12"]
+[ext_resource type="Resource" path="res://resources/items/rootwarden_heart.tres" id="13"]
+
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="14"]
+
+[resource]
+script = ExtResource("1")
+category = &"cursed"
+label = "Cursed Chest"
+gold_min = 60
+gold_max = 100
+minimum_rolls = 3
+maximum_rolls = 4
+entries = Array[ExtResource("14")]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13")])
+weights = PackedFloat32Array(2, 4, 7, 10, 9, 10, 14, 12, 12, 8, 6, 2)

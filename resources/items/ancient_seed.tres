@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"ancient_seed"
+label = "Ancient Seed"
+category = "collectible"
+rarity = "rare"
+value = 80
+quantity_min = 1
+quantity_max = 1
+weapon_style = &""
+healing = 0.0

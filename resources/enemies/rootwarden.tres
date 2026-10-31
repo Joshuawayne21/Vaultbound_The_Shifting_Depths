@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="RootwardenData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/rootwarden_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+max_health = 480.0
+armor = 0.08
+move_speed = 1.6
+detection_range = 11.0
+leash_radius = 12.0
+movement_radius = 7.5
+windup_slam = 1.1
+windup_thorns = 1.2
+windup_grasp = 1.0
+windup_fury = 1.2
+recovery = 1.35
+phase_transition_time = 1.6
+slam_damage = 24.0
+thorn_damage = 18.0
+grasp_damage = 16.0
+fury_damage = 28.0
+slam_range = 4.6
+thorn_radius = 1.45
+grasp_radius = 1.8
+fury_radius = 5.0
+thorn_interval = 0.55
+active_window = 0.2

@@ -1,0 +1,82 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_bark_light.tres" id="1"]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_soil.tres" id="2"]
+
+[sub_resource type="CylinderMesh" id="r1"]
+top_radius = 0
+bottom_radius = 0.18
+height = 0.7
+radial_segments = 4
+rings = 1
+
+[sub_resource type="CylinderMesh" id="r2"]
+top_radius = 0
+bottom_radius = 0.18
+height = 0.9
+radial_segments = 4
+rings = 1
+
+[sub_resource type="CylinderMesh" id="r3"]
+top_radius = 0
+bottom_radius = 0.18
+height = 1.1
+radial_segments = 4
+rings = 1
+
+[sub_resource type="CylinderMesh" id="r4"]
+top_radius = 1.1
+bottom_radius = 1.1
+height = 0.12
+radial_segments = 10
+rings = 1
+
+[node name="ThornBed" type="Node3D"]
+
+[node name="Thorn0" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.45, 0.7)
+mesh = SubResource("r1")
+material_override = ExtResource("1")
+rotation = Vector3(0.3, 0, 0)
+
+[node name="Thorn1" type="MeshInstance3D" parent="."]
+position = Vector3(0.54728, 0.45, 0.43644)
+mesh = SubResource("r2")
+material_override = ExtResource("1")
+rotation = Vector3(0.18705, 0, 0.23455)
+
+[node name="Thorn2" type="MeshInstance3D" parent="."]
+position = Vector3(0.68245, 0.45, -0.15576)
+mesh = SubResource("r3")
+material_override = ExtResource("1")
+rotation = Vector3(-0.06676, 0, 0.29248)
+
+[node name="Thorn3" type="MeshInstance3D" parent="."]
+position = Vector3(0.30372, 0.45, -0.63068)
+mesh = SubResource("r1")
+material_override = ExtResource("1")
+rotation = Vector3(-0.27029, 0, 0.13017)
+
+[node name="Thorn4" type="MeshInstance3D" parent="."]
+position = Vector3(-0.30372, 0.45, -0.63068)
+mesh = SubResource("r2")
+material_override = ExtResource("1")
+rotation = Vector3(-0.27029, 0, -0.13017)
+
+[node name="Thorn5" type="MeshInstance3D" parent="."]
+position = Vector3(-0.68245, 0.45, -0.15576)
+mesh = SubResource("r3")
+material_override = ExtResource("1")
+rotation = Vector3(-0.06676, 0, -0.29248)
+
+[node name="Thorn6" type="MeshInstance3D" parent="."]
+position = Vector3(-0.54728, 0.45, 0.43644)
+mesh = SubResource("r1")
+material_override = ExtResource("1")
+rotation = Vector3(0.18705, 0, -0.23455)
+
+[node name="Bed" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.06, 0)
+mesh = SubResource("r4")
+material_override = ExtResource("2")

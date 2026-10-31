@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"sunfruit_elixir"
+label = "Sunfruit Elixir"
+category = "consumable"
+rarity = "uncommon"
+value = 20
+quantity_min = 1
+quantity_max = 1
+weapon_style = &""
+healing = 60.0

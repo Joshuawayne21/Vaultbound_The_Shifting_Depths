@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"runic_staff"
+label = "Runic Staff"
+category = "equipment"
+rarity = "rare"
+value = 60
+quantity_min = 1
+quantity_max = 1
+weapon_style = &"staff"
+healing = 0.0

@@ -1,10 +1,10 @@
-; Vaultbound: The Shifting Depths — milestone 2 combat prototype.
+; Vaultbound: The Shifting Depths — milestone 3 expedition prototype.
 ; Import this file with Godot 4.4+ (validated with 4.6.3).
 config_version=5
 
 [application]
 config/name="Vaultbound: The Shifting Depths"
-config/version="0.2.0"
+config/version="0.3.0"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.4", "GL Compatibility")
 config/icon="res://assets/icon.svg"
@@ -12,6 +12,7 @@ config/quit_on_go_back=false
 
 [autoload]
 InputHub="*res://scripts/systems/input_hub.gd"
+ExpeditionSession="*res://scripts/progression/expedition_session.gd"
 
 [display]
 window/size/viewport_width=1280

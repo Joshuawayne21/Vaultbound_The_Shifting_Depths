@@ -30,6 +30,8 @@ var displayed_health := 100.0
 var displayed_stamina := 100.0
 var combat_snapshot: Dictionary = {}
 var damage_flash := 0.0
+var dungeon_active := false
+var modal_blocked := false
 
 var _joystick_finger := -1
 var _swipe_finger := -1
@@ -113,6 +115,9 @@ func _notification(what: int) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if modal_blocked:
+		get_viewport().set_input_as_handled()
+		return
 	# Releases are processed even if the game became disabled between press/release.
 	var releasing_touch: bool = event is InputEventScreenTouch and (not event.pressed or event.canceled)
 	var releasing_mouse: bool = event is InputEventMouseButton and not event.pressed
@@ -278,7 +283,8 @@ func _draw() -> void:
 		return
 	_draw_identity()
 	_draw_location()
-	_draw_minimap()
+	if not dungeon_active:
+		_draw_minimap()
 	_draw_camera_button()
 	_draw_joystick()
 	_draw_action_buttons()
@@ -499,7 +505,7 @@ func _draw_prompts() -> void:
 		var rect := Rect2(center_x - width * 0.5, bottom - 108.0, width, 34.0)
 		draw_rect(rect, Color(0.02, 0.06, 0.07, 0.8 * alpha))
 		_text(message, Vector2(center_x, bottom - 86.0), 14, Color(IVORY, alpha), true)
-	if has_target:
+	if has_target and not dungeon_active:
 		var target_name := String(combat_snapshot.get("target_name", "TARGET LOCKED"))
 		_text(target_name.to_upper(), Vector2(center_x, 153.0 + _safe_inset.y), 11, GOLD, true)
 	var tip := "WASD Move  ·  J Attack  ·  K Hold heavy  ·  L Guard  ·  Q/E Abilities  ·  T Lock  ·  R Weapon  ·  C View"

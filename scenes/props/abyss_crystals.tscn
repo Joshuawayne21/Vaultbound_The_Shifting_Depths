@@ -1,0 +1,85 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_glow.tres" id="1"]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_stone.tres" id="2"]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_crystal.tres" id="3"]
+
+[sub_resource type="CylinderMesh" id="r1"]
+top_radius = 0
+bottom_radius = 0.45
+height = 2.1
+radial_segments = 5
+rings = 1
+
+[sub_resource type="CylinderMesh" id="r2"]
+top_radius = 0.45
+bottom_radius = 0.315
+height = 0.4
+radial_segments = 5
+rings = 1
+
+[sub_resource type="CylinderMesh" id="r3"]
+top_radius = 0
+bottom_radius = 0.3
+height = 1.25
+radial_segments = 5
+rings = 1
+
+[sub_resource type="CylinderMesh" id="r4"]
+top_radius = 0.3
+bottom_radius = 0.21
+height = 0.4
+radial_segments = 5
+rings = 1
+
+[sub_resource type="CylinderMesh" id="r5"]
+top_radius = 0
+bottom_radius = 0.32
+height = 1.5
+radial_segments = 5
+rings = 1
+
+[sub_resource type="CylinderMesh" id="r6"]
+top_radius = 0.32
+bottom_radius = 0.224
+height = 0.4
+radial_segments = 5
+rings = 1
+
+[node name="EmeraldCrystals" type="Node3D"]
+
+[node name="Shard0" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.05, 0)
+mesh = SubResource("r1")
+material_override = ExtResource("1")
+rotation = Vector3(0, 0, -0.12)
+cast_shadow = 0
+
+[node name="Base0" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.2, 0)
+mesh = SubResource("r2")
+material_override = ExtResource("2")
+
+[node name="Shard1" type="MeshInstance3D" parent="."]
+position = Vector3(0.6, 0.625, 0.3)
+mesh = SubResource("r3")
+material_override = ExtResource("3")
+rotation = Vector3(0.1, 0, 0)
+
+[node name="Base1" type="MeshInstance3D" parent="."]
+position = Vector3(0.6, 0.2, 0.3)
+mesh = SubResource("r4")
+material_override = ExtResource("2")
+
+[node name="Shard2" type="MeshInstance3D" parent="."]
+position = Vector3(-0.5, 0.75, 0.2)
+mesh = SubResource("r5")
+material_override = ExtResource("3")
+rotation = Vector3(0.2, 0, 0.12)
+
+[node name="Base2" type="MeshInstance3D" parent="."]
+position = Vector3(-0.5, 0.2, 0.2)
+mesh = SubResource("r6")
+material_override = ExtResource("2")

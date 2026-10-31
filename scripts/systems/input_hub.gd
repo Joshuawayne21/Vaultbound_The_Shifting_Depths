@@ -32,6 +32,9 @@ const ACTION_KEYS := {
 	&"defense": [KEY_L],
 	&"target_lock": [KEY_T],
 	&"weapon_swap": [KEY_R],
+	&"use_consumable": [KEY_H],
+	&"inventory": [KEY_I],
+	&"perf_toggle": [KEY_P],
 }
 
 func _ready() -> void:

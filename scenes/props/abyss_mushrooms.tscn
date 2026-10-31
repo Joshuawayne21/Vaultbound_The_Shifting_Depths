@@ -1,0 +1,123 @@
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_stone_light.tres" id="1"]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_mushroom.tres" id="2"]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_glow.tres" id="3"]
+
+[sub_resource type="CylinderMesh" id="r1"]
+top_radius = 0.085
+bottom_radius = 0.12
+height = 1.5
+radial_segments = 6
+rings = 1
+
+[sub_resource type="SphereMesh" id="r2"]
+radius = 0.65
+height = 1.3
+radial_segments = 10
+rings = 4
+
+[sub_resource type="TorusMesh" id="r3"]
+inner_radius = 0.195
+outer_radius = 0.52
+rings = 24
+ring_segments = 4
+
+[sub_resource type="CylinderMesh" id="r4"]
+top_radius = 0.085
+bottom_radius = 0.12
+height = 0.8
+radial_segments = 6
+rings = 1
+
+[sub_resource type="SphereMesh" id="r5"]
+radius = 0.4
+height = 0.8
+radial_segments = 10
+rings = 4
+
+[sub_resource type="TorusMesh" id="r6"]
+inner_radius = 0.12
+outer_radius = 0.32
+rings = 24
+ring_segments = 4
+
+[sub_resource type="CylinderMesh" id="r7"]
+top_radius = 0.085
+bottom_radius = 0.12
+height = 1
+radial_segments = 6
+rings = 1
+
+[sub_resource type="SphereMesh" id="r8"]
+radius = 0.48
+height = 0.96
+radial_segments = 10
+rings = 4
+
+[sub_resource type="TorusMesh" id="r9"]
+inner_radius = 0.144
+outer_radius = 0.384
+rings = 24
+ring_segments = 4
+
+[node name="LuminousMushrooms" type="Node3D"]
+
+[node name="Stem0" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.75, 0)
+mesh = SubResource("r1")
+material_override = ExtResource("1")
+
+[node name="Cap0" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.5, 0)
+mesh = SubResource("r2")
+material_override = ExtResource("2")
+scale = Vector3(1, 0.32, 1)
+cast_shadow = 0
+
+[node name="Gills0" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.45, 0)
+mesh = SubResource("r3")
+material_override = ExtResource("3")
+scale = Vector3(1, 0.3, 1)
+cast_shadow = 0
+
+[node name="Stem1" type="MeshInstance3D" parent="."]
+position = Vector3(0.7, 0.4, 0.25)
+mesh = SubResource("r4")
+material_override = ExtResource("1")
+
+[node name="Cap1" type="MeshInstance3D" parent="."]
+position = Vector3(0.7, 0.8, 0.25)
+mesh = SubResource("r5")
+material_override = ExtResource("2")
+scale = Vector3(1, 0.32, 1)
+cast_shadow = 0
+
+[node name="Gills1" type="MeshInstance3D" parent="."]
+position = Vector3(0.7, 0.75, 0.25)
+mesh = SubResource("r6")
+material_override = ExtResource("3")
+scale = Vector3(1, 0.3, 1)
+cast_shadow = 0
+
+[node name="Stem2" type="MeshInstance3D" parent="."]
+position = Vector3(-0.65, 0.5, 0.4)
+mesh = SubResource("r7")
+material_override = ExtResource("1")
+
+[node name="Cap2" type="MeshInstance3D" parent="."]
+position = Vector3(-0.65, 1, 0.4)
+mesh = SubResource("r8")
+material_override = ExtResource("2")
+scale = Vector3(1, 0.32, 1)
+cast_shadow = 0
+
+[node name="Gills2" type="MeshInstance3D" parent="."]
+position = Vector3(-0.65, 0.95, 0.4)
+mesh = SubResource("r9")
+material_override = ExtResource("3")
+scale = Vector3(1, 0.3, 1)
+cast_shadow = 0

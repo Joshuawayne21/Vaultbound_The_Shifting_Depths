@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"root_fiber"
+label = "Root Fiber"
+category = "material"
+rarity = "common"
+value = 3
+quantity_min = 2
+quantity_max = 6
+weapon_style = &""
+healing = 0.0

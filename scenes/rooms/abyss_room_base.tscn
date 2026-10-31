@@ -1,0 +1,324 @@
+[gd_scene load_steps=21 format=3]
+
+[ext_resource type="Script" path="res://scripts/world/abyss_room.gd" id="1"]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_soil.tres" id="2"]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_paving.tres" id="3"]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_moss.tres" id="4"]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_stone.tres" id="5"]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_gold.tres" id="6"]
+
+[sub_resource type="BoxMesh" id="r1"]
+size = Vector3(24, 0.5, 24)
+
+[sub_resource type="BoxShape3D" id="r2"]
+size = Vector3(24, 0.5, 24)
+
+[sub_resource type="BoxMesh" id="r3"]
+size = Vector3(1.92, 0.035, 1.92)
+
+[sub_resource type="MultiMesh" id="r4"]
+transform_format = 1
+mesh = SubResource("r3")
+instance_count = 72
+buffer = PackedFloat32Array(1, 0, 0, -11, 0, 1, 0, 0.005, 0, 0, 1, -11, 1, 0, 0, -11, 0, 1, 0, 0.005, 0, 0, 1, -7, 1, 0, 0, -11, 0, 1, 0, 0.005, 0, 0, 1, -3, 1, 0, 0, -11, 0, 1, 0, 0.005, 0, 0, 1, 1, 1, 0, 0, -11, 0, 1, 0, 0.005, 0, 0, 1, 5, 1, 0, 0, -11, 0, 1, 0, 0.005, 0, 0, 1, 9, 1, 0, 0, -9, 0, 1, 0, 0.005, 0, 0, 1, -9, 1, 0, 0, -9, 0, 1, 0, 0.005, 0, 0, 1, -5, 1, 0, 0, -9, 0, 1, 0, 0.005, 0, 0, 1, -1, 1, 0, 0, -9, 0, 1, 0, 0.005, 0, 0, 1, 3, 1, 0, 0, -9, 0, 1, 0, 0.005, 0, 0, 1, 7, 1, 0, 0, -9, 0, 1, 0, 0.005, 0, 0, 1, 11, 1, 0, 0, -7, 0, 1, 0, 0.005, 0, 0, 1, -11, 1, 0, 0, -7, 0, 1, 0, 0.005, 0, 0, 1, -7, 1, 0, 0, -7, 0, 1, 0, 0.005, 0, 0, 1, -3, 1, 0, 0, -7, 0, 1, 0, 0.005, 0, 0, 1, 1, 1, 0, 0, -7, 0, 1, 0, 0.005, 0, 0, 1, 5, 1, 0, 0, -7, 0, 1, 0, 0.005, 0, 0, 1, 9, 1, 0, 0, -5, 0, 1, 0, 0.005, 0, 0, 1, -9, 1, 0, 0, -5, 0, 1, 0, 0.005, 0, 0, 1, -5, 1, 0, 0, -5, 0, 1, 0, 0.005, 0, 0, 1, -1, 1, 0, 0, -5, 0, 1, 0, 0.005, 0, 0, 1, 3, 1, 0, 0, -5, 0, 1, 0, 0.005, 0, 0, 1, 7, 1, 0, 0, -5, 0, 1, 0, 0.005, 0, 0, 1, 11, 1, 0, 0, -3, 0, 1, 0, 0.005, 0, 0, 1, -11, 1, 0, 0, -3, 0, 1, 0, 0.005, 0, 0, 1, -7, 1, 0, 0, -3, 0, 1, 0, 0.005, 0, 0, 1, -3, 1, 0, 0, -3, 0, 1, 0, 0.005, 0, 0, 1, 1, 1, 0, 0, -3, 0, 1, 0, 0.005, 0, 0, 1, 5, 1, 0, 0, -3, 0, 1, 0, 0.005, 0, 0, 1, 9, 1, 0, 0, -1, 0, 1, 0, 0.005, 0, 0, 1, -9, 1, 0, 0, -1, 0, 1, 0, 0.005, 0, 0, 1, -5, 1, 0, 0, -1, 0, 1, 0, 0.005, 0, 0, 1, -1, 1, 0, 0, -1, 0, 1, 0, 0.005, 0, 0, 1, 3, 1, 0, 0, -1, 0, 1, 0, 0.005, 0, 0, 1, 7, 1, 0, 0, -1, 0, 1, 0, 0.005, 0, 0, 1, 11, 1, 0, 0, 1, 0, 1, 0, 0.005, 0, 0, 1, -11, 1, 0, 0, 1, 0, 1, 0, 0.005, 0, 0, 1, -7, 1, 0, 0, 1, 0, 1, 0, 0.005, 0, 0, 1, -3, 1, 0, 0, 1, 0, 1, 0, 0.005, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0.005, 0, 0, 1, 5, 1, 0, 0, 1, 0, 1, 0, 0.005, 0, 0, 1, 9, 1, 0, 0, 3, 0, 1, 0, 0.005, 0, 0, 1, -9, 1, 0, 0, 3, 0, 1, 0, 0.005, 0, 0, 1, -5, 1, 0, 0, 3, 0, 1, 0, 0.005, 0, 0, 1, -1, 1, 0, 0, 3, 0, 1, 0, 0.005, 0, 0, 1, 3, 1, 0, 0, 3, 0, 1, 0, 0.005, 0, 0, 1, 7, 1, 0, 0, 3, 0, 1, 0, 0.005, 0, 0, 1, 11, 1, 0, 0, 5, 0, 1, 0, 0.005, 0, 0, 1, -11, 1, 0, 0, 5, 0, 1, 0, 0.005, 0, 0, 1, -7, 1, 0, 0, 5, 0, 1, 0, 0.005, 0, 0, 1, -3, 1, 0, 0, 5, 0, 1, 0, 0.005, 0, 0, 1, 1, 1, 0, 0, 5, 0, 1, 0, 0.005, 0, 0, 1, 5, 1, 0, 0, 5, 0, 1, 0, 0.005, 0, 0, 1, 9, 1, 0, 0, 7, 0, 1, 0, 0.005, 0, 0, 1, -9, 1, 0, 0, 7, 0, 1, 0, 0.005, 0, 0, 1, -5, 1, 0, 0, 7, 0, 1, 0, 0.005, 0, 0, 1, -1, 1, 0, 0, 7, 0, 1, 0, 0.005, 0, 0, 1, 3, 1, 0, 0, 7, 0, 1, 0, 0.005, 0, 0, 1, 7, 1, 0, 0, 7, 0, 1, 0, 0.005, 0, 0, 1, 11, 1, 0, 0, 9, 0, 1, 0, 0.005, 0, 0, 1, -11, 1, 0, 0, 9, 0, 1, 0, 0.005, 0, 0, 1, -7, 1, 0, 0, 9, 0, 1, 0, 0.005, 0, 0, 1, -3, 1, 0, 0, 9, 0, 1, 0, 0.005, 0, 0, 1, 1, 1, 0, 0, 9, 0, 1, 0, 0.005, 0, 0, 1, 5, 1, 0, 0, 9, 0, 1, 0, 0.005, 0, 0, 1, 9, 1, 0, 0, 11, 0, 1, 0, 0.005, 0, 0, 1, -9, 1, 0, 0, 11, 0, 1, 0, 0.005, 0, 0, 1, -5, 1, 0, 0, 11, 0, 1, 0, 0.005, 0, 0, 1, -1, 1, 0, 0, 11, 0, 1, 0, 0.005, 0, 0, 1, 3, 1, 0, 0, 11, 0, 1, 0, 0.005, 0, 0, 1, 7, 1, 0, 0, 11, 0, 1, 0, 0.005, 0, 0, 1, 11)
+
+[sub_resource type="MultiMesh" id="r5"]
+transform_format = 1
+mesh = SubResource("r3")
+instance_count = 72
+buffer = PackedFloat32Array(1, 0, 0, -11, 0, 1, 0, 0.005, 0, 0, 1, -9, 1, 0, 0, -11, 0, 1, 0, 0.005, 0, 0, 1, -5, 1, 0, 0, -11, 0, 1, 0, 0.005, 0, 0, 1, -1, 1, 0, 0, -11, 0, 1, 0, 0.005, 0, 0, 1, 3, 1, 0, 0, -11, 0, 1, 0, 0.005, 0, 0, 1, 7, 1, 0, 0, -11, 0, 1, 0, 0.005, 0, 0, 1, 11, 1, 0, 0, -9, 0, 1, 0, 0.005, 0, 0, 1, -11, 1, 0, 0, -9, 0, 1, 0, 0.005, 0, 0, 1, -7, 1, 0, 0, -9, 0, 1, 0, 0.005, 0, 0, 1, -3, 1, 0, 0, -9, 0, 1, 0, 0.005, 0, 0, 1, 1, 1, 0, 0, -9, 0, 1, 0, 0.005, 0, 0, 1, 5, 1, 0, 0, -9, 0, 1, 0, 0.005, 0, 0, 1, 9, 1, 0, 0, -7, 0, 1, 0, 0.005, 0, 0, 1, -9, 1, 0, 0, -7, 0, 1, 0, 0.005, 0, 0, 1, -5, 1, 0, 0, -7, 0, 1, 0, 0.005, 0, 0, 1, -1, 1, 0, 0, -7, 0, 1, 0, 0.005, 0, 0, 1, 3, 1, 0, 0, -7, 0, 1, 0, 0.005, 0, 0, 1, 7, 1, 0, 0, -7, 0, 1, 0, 0.005, 0, 0, 1, 11, 1, 0, 0, -5, 0, 1, 0, 0.005, 0, 0, 1, -11, 1, 0, 0, -5, 0, 1, 0, 0.005, 0, 0, 1, -7, 1, 0, 0, -5, 0, 1, 0, 0.005, 0, 0, 1, -3, 1, 0, 0, -5, 0, 1, 0, 0.005, 0, 0, 1, 1, 1, 0, 0, -5, 0, 1, 0, 0.005, 0, 0, 1, 5, 1, 0, 0, -5, 0, 1, 0, 0.005, 0, 0, 1, 9, 1, 0, 0, -3, 0, 1, 0, 0.005, 0, 0, 1, -9, 1, 0, 0, -3, 0, 1, 0, 0.005, 0, 0, 1, -5, 1, 0, 0, -3, 0, 1, 0, 0.005, 0, 0, 1, -1, 1, 0, 0, -3, 0, 1, 0, 0.005, 0, 0, 1, 3, 1, 0, 0, -3, 0, 1, 0, 0.005, 0, 0, 1, 7, 1, 0, 0, -3, 0, 1, 0, 0.005, 0, 0, 1, 11, 1, 0, 0, -1, 0, 1, 0, 0.005, 0, 0, 1, -11, 1, 0, 0, -1, 0, 1, 0, 0.005, 0, 0, 1, -7, 1, 0, 0, -1, 0, 1, 0, 0.005, 0, 0, 1, -3, 1, 0, 0, -1, 0, 1, 0, 0.005, 0, 0, 1, 1, 1, 0, 0, -1, 0, 1, 0, 0.005, 0, 0, 1, 5, 1, 0, 0, -1, 0, 1, 0, 0.005, 0, 0, 1, 9, 1, 0, 0, 1, 0, 1, 0, 0.005, 0, 0, 1, -9, 1, 0, 0, 1, 0, 1, 0, 0.005, 0, 0, 1, -5, 1, 0, 0, 1, 0, 1, 0, 0.005, 0, 0, 1, -1, 1, 0, 0, 1, 0, 1, 0, 0.005, 0, 0, 1, 3, 1, 0, 0, 1, 0, 1, 0, 0.005, 0, 0, 1, 7, 1, 0, 0, 1, 0, 1, 0, 0.005, 0, 0, 1, 11, 1, 0, 0, 3, 0, 1, 0, 0.005, 0, 0, 1, -11, 1, 0, 0, 3, 0, 1, 0, 0.005, 0, 0, 1, -7, 1, 0, 0, 3, 0, 1, 0, 0.005, 0, 0, 1, -3, 1, 0, 0, 3, 0, 1, 0, 0.005, 0, 0, 1, 1, 1, 0, 0, 3, 0, 1, 0, 0.005, 0, 0, 1, 5, 1, 0, 0, 3, 0, 1, 0, 0.005, 0, 0, 1, 9, 1, 0, 0, 5, 0, 1, 0, 0.005, 0, 0, 1, -9, 1, 0, 0, 5, 0, 1, 0, 0.005, 0, 0, 1, -5, 1, 0, 0, 5, 0, 1, 0, 0.005, 0, 0, 1, -1, 1, 0, 0, 5, 0, 1, 0, 0.005, 0, 0, 1, 3, 1, 0, 0, 5, 0, 1, 0, 0.005, 0, 0, 1, 7, 1, 0, 0, 5, 0, 1, 0, 0.005, 0, 0, 1, 11, 1, 0, 0, 7, 0, 1, 0, 0.005, 0, 0, 1, -11, 1, 0, 0, 7, 0, 1, 0, 0.005, 0, 0, 1, -7, 1, 0, 0, 7, 0, 1, 0, 0.005, 0, 0, 1, -3, 1, 0, 0, 7, 0, 1, 0, 0.005, 0, 0, 1, 1, 1, 0, 0, 7, 0, 1, 0, 0.005, 0, 0, 1, 5, 1, 0, 0, 7, 0, 1, 0, 0.005, 0, 0, 1, 9, 1, 0, 0, 9, 0, 1, 0, 0.005, 0, 0, 1, -9, 1, 0, 0, 9, 0, 1, 0, 0.005, 0, 0, 1, -5, 1, 0, 0, 9, 0, 1, 0, 0.005, 0, 0, 1, -1, 1, 0, 0, 9, 0, 1, 0, 0.005, 0, 0, 1, 3, 1, 0, 0, 9, 0, 1, 0, 0.005, 0, 0, 1, 7, 1, 0, 0, 9, 0, 1, 0, 0.005, 0, 0, 1, 11, 1, 0, 0, 11, 0, 1, 0, 0.005, 0, 0, 1, -11, 1, 0, 0, 11, 0, 1, 0, 0.005, 0, 0, 1, -7, 1, 0, 0, 11, 0, 1, 0, 0.005, 0, 0, 1, -3, 1, 0, 0, 11, 0, 1, 0, 0.005, 0, 0, 1, 1, 1, 0, 0, 11, 0, 1, 0, 0.005, 0, 0, 1, 5, 1, 0, 0, 11, 0, 1, 0, 0.005, 0, 0, 1, 9)
+
+[sub_resource type="BoxMesh" id="r6"]
+size = Vector3(9, 2.4, 0.5)
+
+[sub_resource type="BoxShape3D" id="r7"]
+size = Vector3(9, 2.4, 0.5)
+
+[sub_resource type="BoxMesh" id="r8"]
+size = Vector3(9.15, 0.2, 0.65)
+
+[sub_resource type="BoxMesh" id="r9"]
+size = Vector3(0.5, 2.4, 9)
+
+[sub_resource type="BoxShape3D" id="r10"]
+size = Vector3(0.5, 2.4, 9)
+
+[sub_resource type="BoxMesh" id="r11"]
+size = Vector3(0.65, 0.2, 9.15)
+
+[sub_resource type="BoxShape3D" id="r12"]
+size = Vector3(6, 2.4, 0.5)
+
+[sub_resource type="BoxMesh" id="r13"]
+size = Vector3(6, 2.4, 0.5)
+
+[sub_resource type="BoxMesh" id="r14"]
+size = Vector3(0.65, 0.65, 0.06)
+
+[node name="AbyssRoom" type="Node3D"]
+script = ExtResource("1")
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.25, 0)
+mesh = SubResource("r1")
+material_override = ExtResource("2")
+
+[node name="Body" type="StaticBody3D" parent="Floor"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="Floor/Body"]
+shape = SubResource("r2")
+
+[node name="Paving0" type="MultiMeshInstance3D" parent="."]
+multimesh = SubResource("r4")
+material_override = ExtResource("3")
+cast_shadow = 0
+
+[node name="Paving1" type="MultiMeshInstance3D" parent="."]
+multimesh = SubResource("r5")
+material_override = ExtResource("4")
+cast_shadow = 0
+
+[node name="NorthLeft" type="MeshInstance3D" parent="."]
+position = Vector3(-7.5, 1.2, -11.75)
+mesh = SubResource("r6")
+material_override = ExtResource("5")
+
+[node name="Body" type="StaticBody3D" parent="NorthLeft"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="NorthLeft/Body"]
+shape = SubResource("r7")
+
+[node name="NorthCap-1" type="MeshInstance3D" parent="."]
+position = Vector3(-7.5, 2.5, -11.75)
+mesh = SubResource("r8")
+material_override = ExtResource("4")
+
+[node name="NorthRight" type="MeshInstance3D" parent="."]
+position = Vector3(7.5, 1.2, -11.75)
+mesh = SubResource("r6")
+material_override = ExtResource("5")
+
+[node name="Body" type="StaticBody3D" parent="NorthRight"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="NorthRight/Body"]
+shape = SubResource("r7")
+
+[node name="NorthCap1" type="MeshInstance3D" parent="."]
+position = Vector3(7.5, 2.5, -11.75)
+mesh = SubResource("r8")
+material_override = ExtResource("4")
+
+[node name="SouthLeft" type="MeshInstance3D" parent="."]
+position = Vector3(-7.5, 1.2, 11.75)
+mesh = SubResource("r6")
+material_override = ExtResource("5")
+
+[node name="Body" type="StaticBody3D" parent="SouthLeft"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="SouthLeft/Body"]
+shape = SubResource("r7")
+
+[node name="SouthCap-1" type="MeshInstance3D" parent="."]
+position = Vector3(-7.5, 2.5, 11.75)
+mesh = SubResource("r8")
+material_override = ExtResource("4")
+
+[node name="SouthRight" type="MeshInstance3D" parent="."]
+position = Vector3(7.5, 1.2, 11.75)
+mesh = SubResource("r6")
+material_override = ExtResource("5")
+
+[node name="Body" type="StaticBody3D" parent="SouthRight"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="SouthRight/Body"]
+shape = SubResource("r7")
+
+[node name="SouthCap1" type="MeshInstance3D" parent="."]
+position = Vector3(7.5, 2.5, 11.75)
+mesh = SubResource("r8")
+material_override = ExtResource("4")
+
+[node name="EastLeft" type="MeshInstance3D" parent="."]
+position = Vector3(11.75, 1.2, -7.5)
+mesh = SubResource("r9")
+material_override = ExtResource("5")
+
+[node name="Body" type="StaticBody3D" parent="EastLeft"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="EastLeft/Body"]
+shape = SubResource("r10")
+
+[node name="EastCap-1" type="MeshInstance3D" parent="."]
+position = Vector3(11.75, 2.5, -7.5)
+mesh = SubResource("r11")
+material_override = ExtResource("4")
+
+[node name="EastRight" type="MeshInstance3D" parent="."]
+position = Vector3(11.75, 1.2, 7.5)
+mesh = SubResource("r9")
+material_override = ExtResource("5")
+
+[node name="Body" type="StaticBody3D" parent="EastRight"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="EastRight/Body"]
+shape = SubResource("r10")
+
+[node name="EastCap1" type="MeshInstance3D" parent="."]
+position = Vector3(11.75, 2.5, 7.5)
+mesh = SubResource("r11")
+material_override = ExtResource("4")
+
+[node name="WestLeft" type="MeshInstance3D" parent="."]
+position = Vector3(-11.75, 1.2, -7.5)
+mesh = SubResource("r9")
+material_override = ExtResource("5")
+
+[node name="Body" type="StaticBody3D" parent="WestLeft"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="WestLeft/Body"]
+shape = SubResource("r10")
+
+[node name="WestCap-1" type="MeshInstance3D" parent="."]
+position = Vector3(-11.75, 2.5, -7.5)
+mesh = SubResource("r11")
+material_override = ExtResource("4")
+
+[node name="WestRight" type="MeshInstance3D" parent="."]
+position = Vector3(-11.75, 1.2, 7.5)
+mesh = SubResource("r9")
+material_override = ExtResource("5")
+
+[node name="Body" type="StaticBody3D" parent="WestRight"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="WestRight/Body"]
+shape = SubResource("r10")
+
+[node name="WestCap1" type="MeshInstance3D" parent="."]
+position = Vector3(-11.75, 2.5, 7.5)
+mesh = SubResource("r11")
+material_override = ExtResource("4")
+
+[node name="DoorFillers" type="Node3D" parent="."]
+
+[node name="North" type="Node3D" parent="DoorFillers"]
+position = Vector3(0, 1.2, -11.75)
+rotation = Vector3(0, 0, 0)
+
+[node name="Body" type="StaticBody3D" parent="DoorFillers/North"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="DoorFillers/North/Body"]
+shape = SubResource("r12")
+
+[node name="Stone" type="MeshInstance3D" parent="DoorFillers/North"]
+position = Vector3(0, 0, 0)
+mesh = SubResource("r13")
+material_override = ExtResource("5")
+
+[node name="Crest" type="MeshInstance3D" parent="DoorFillers/North"]
+position = Vector3(0, 0.1, 0.28)
+mesh = SubResource("r14")
+material_override = ExtResource("6")
+rotation = Vector3(0, 0, 0.7854)
+
+[node name="South" type="Node3D" parent="DoorFillers"]
+position = Vector3(0, 1.2, 11.75)
+rotation = Vector3(0, 0, 0)
+
+[node name="Body" type="StaticBody3D" parent="DoorFillers/South"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="DoorFillers/South/Body"]
+shape = SubResource("r12")
+
+[node name="Stone" type="MeshInstance3D" parent="DoorFillers/South"]
+position = Vector3(0, 0, 0)
+mesh = SubResource("r13")
+material_override = ExtResource("5")
+
+[node name="Crest" type="MeshInstance3D" parent="DoorFillers/South"]
+position = Vector3(0, 0.1, 0.28)
+mesh = SubResource("r14")
+material_override = ExtResource("6")
+rotation = Vector3(0, 0, 0.7854)
+
+[node name="East" type="Node3D" parent="DoorFillers"]
+position = Vector3(11.75, 1.2, 0)
+rotation = Vector3(0, 1.5708, 0)
+
+[node name="Body" type="StaticBody3D" parent="DoorFillers/East"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="DoorFillers/East/Body"]
+shape = SubResource("r12")
+
+[node name="Stone" type="MeshInstance3D" parent="DoorFillers/East"]
+position = Vector3(0, 0, 0)
+mesh = SubResource("r13")
+material_override = ExtResource("5")
+
+[node name="Crest" type="MeshInstance3D" parent="DoorFillers/East"]
+position = Vector3(0, 0.1, 0.28)
+mesh = SubResource("r14")
+material_override = ExtResource("6")
+rotation = Vector3(0, 0, 0.7854)
+
+[node name="West" type="Node3D" parent="DoorFillers"]
+position = Vector3(-11.75, 1.2, 0)
+rotation = Vector3(0, 1.5708, 0)
+
+[node name="Body" type="StaticBody3D" parent="DoorFillers/West"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="DoorFillers/West/Body"]
+shape = SubResource("r12")
+
+[node name="Stone" type="MeshInstance3D" parent="DoorFillers/West"]
+position = Vector3(0, 0, 0)
+mesh = SubResource("r13")
+material_override = ExtResource("5")
+
+[node name="Crest" type="MeshInstance3D" parent="DoorFillers/West"]
+position = Vector3(0, 0.1, 0.28)
+mesh = SubResource("r14")
+material_override = ExtResource("6")
+rotation = Vector3(0, 0, 0.7854)
+
+[node name="PlayerSpawn" type="Marker3D" parent="."]
+position = Vector3(0, 0.15, 6)
+
+[node name="BossSpawn" type="Marker3D" parent="."]
+position = Vector3(0, 0.15, -2)
+
+[node name="ExtractionAnchor" type="Marker3D" parent="."]
+position = Vector3(0, 0, -4)
+
+[node name="ChestAnchor" type="Marker3D" parent="."]
+position = Vector3(6, 0, 6)
