@@ -1,8 +1,8 @@
 # Vaultbound: The Shifting Depths
 
-**Milestone 3 — The Rootbound Abyss.** A Godot 4 / GDScript-only, offline expedition prototype for Android landscape. Explore a seeded 8–12-room underground jungle, fight existing monsters, open treasure chests, defeat the Rootwarden, and extract to secure your rewards.
+**Milestone 4 — Intelligent AI Adventurers.** A Godot 4 / GDScript-only, offline party expedition prototype for Android landscape. Recruit a Guardian and Mystic in the Sanctuary, lead them through a seeded 8–12-room underground jungle, fight monsters and the Rootwarden, revive fallen allies, and extract to secure your rewards.
 
-The Sanctuary, practice dungeon and arena, player movement, sword/shield and staff combat, health/stamina, touch controls, and smoothly switchable cameras from Milestones 1–2 remain available. `project.godot` stays at the repository root. No multiplayer, AI teammates, additional biomes or marketplace are implemented.
+The Sanctuary, practice dungeon and arena, player movement, sword/shield and staff combat, touch controls, both smoothly switchable cameras, procedural dungeons, treasure, boss encounters and secured progression from Milestones 1–3 remain available. `project.godot` stays at the repository root. The active party supports one human leader and up to two local AI companions. No online multiplayer, additional biomes or marketplace are implemented.
 
 ## Import and play on Android
 
@@ -10,7 +10,7 @@ The Sanctuary, practice dungeon and arena, player movement, sword/shield and sta
 2. Download/extract the full repository or source ZIP into storage the editor can access. Grant the editor file access if requested.
 3. Choose **Import**, select the root `project.godot`, then open it with the **Compatibility** renderer. Wait for resource import to finish.
 4. Keep the device in landscape and choose **Run Project**. The main scene is `scenes/main.tscn`.
-5. In the Sanctuary, the **east-facing Rootbound Abyss archway** begins an expedition. The original northern arch still leads to the Sunken Vault and combat practice arena.
+5. In Sanctuary, visit the **Tavern on the west side** and tap **USE** to recruit the Guardian and Mystic. Recruitment is optional; solo play remains available. The **east-facing Rootbound Abyss archway** begins an expedition, and the northern arch still leads to the original practice dungeon and arena.
 6. Open the entrance supply chest, follow the discovered-room minimap, explore branches, and approach whispering vine walls to reveal hidden rooms. Walk through open doorways; rooms connect continuously.
 7. Defeat the Rootwarden, claim its reward chest, then find the **extraction spring in the connected chamber beyond the boss**. Tap **USE** to save rewards and return to the Sanctuary.
 8. Review the results screen and open **PACK → SECURED** to inspect saved items. Collected gear can select an existing weapon style; tonics restore health.
@@ -37,10 +37,30 @@ Running inside the Android editor requires no APK export. The included ARM64 exp
 | Inventory | PACK | I |
 | Healing consumable | TONIC | H |
 | Performance display | METRICS inside PACK | P |
+| Party commands | PARTY | B |
+| Recruit / dismiss | USE at the Sanctuary Tavern | F at the Tavern |
+| Revive nearby ally | REVIVE prompt | Party menu / interact |
 
 Sword/shield retains its three-hit combo, charged heavy, Shield Bash and Cleave. Staff retains bolts, charged splash, Arcane Burst and Frost Nova. Both use identical damage, costs, cooldowns, range and targeting in either camera view. Charge, block and joystick touches cancel safely on focus loss, Android pause, travel and modal opening.
 
-PACK and expedition results pause the local player and active world. Closing them restores input without resuming stale held buttons. Basic movement is grounded; jumping is intentionally omitted. The elevated tactical camera uses a narrow perspective lens for a continuous transition rather than a strict orthographic projection.
+PACK, party/recruitment menus and expedition results pause the local player, companions and active world. Closing them restores input without resuming stale held buttons. Basic movement is grounded; jumping is intentionally omitted. The elevated tactical camera uses a narrow perspective lens for a continuous transition rather than a strict orthographic projection.
+
+## Party and companions
+
+Visit the west-side Sanctuary Tavern to recruit or dismiss either companion. The roster is saved before it changes; dismissal preserves earned progression. Party records distinguish human and AI members instead of reserving permanent AI-only replacements for future human slots. This is a local party model, not a network implementation.
+
+- **Rowan — Guardian / Steadfast:** sword and shield, nearby threat interception, protection of injured allies, three-hit melee attacks, directional blocking and major-telegraph avoidance.
+- **Lyra — Mystic / Careful:** staff projectiles, ranged spacing, retreat from melee pressure, cooldown-limited healing and safe revive attempts.
+
+Both reuse the player's weapon timing, stamina costs, damage rules and obstruction checks. Decisions run at configurable intervals with reaction jitter and imperfect ranged accuracy. They do not read camera mode or call external AI services. Health, combat state and navigation remain individual; changing cameras does not recreate the party.
+
+The **PARTY** menu provides **Follow Me**, **Attack My Target**, **Hold Position**, **Retreat** and **Revive Teammate**. Lock a visible enemy within the companions' pursuit range (12 m by default) before issuing the attack command. Orders can be delayed by valid safety constraints such as a major ground warning, an unreachable target or an interrupted revive. Feedback explains rejected orders. Companions do not open chests or consume the player's collected treasure.
+
+The leader and companions can be downed while a teammate remains able to help. A revive requires line of sight, a distance of at most 2.4 m and a 3-second uninterrupted channel, restoring 35% health by default. Damage, separation and new combat actions interrupt it. Each member can be revived twice per expedition; a 30-second bleedout ends rescue eligibility. These values are configurable on the party component. If no active member remains, the expedition ends under the existing death rules: unsecured loot is lost, secured possessions remain, and recruited companions return to Sanctuary. If the human leader bleeds out, this offline prototype also ends the expedition so the player cannot remain stranded watching AI indefinitely. Solo lethal damage retains immediate Sanctuary recovery.
+
+Recruitment, name, role, personality trait, level, experience and combat proficiency persist in the local profile. Successful extraction awards each recruited companion 150 experience plus 10 per defeated enemy through the same verified save transaction as loot. Cumulative level thresholds begin at 100 experience for level 2 and 300 for level 3; progression caps at level 20. Combat proficiency rises with level and modestly improves ranged accuracy; weapon damage and stamina costs still use the shared weapon data. Failed, abandoned or unsaved expeditions award no experience. There is no companion gear or talent tree in this milestone.
+
+Companion navigation uses the existing modular room graph, bounded local A* and cached world collision for flat authored floors. Paths normally refresh every 0.65 seconds; moved goals are limited to four replans per second. Formation spacing, obstacle and hazard avoidance, and safe recovery handle separation. Companions do not teleport to keep up during active combat. Party state and commands are separate from presentation so authority can move to a server in a later milestone.
 
 ## The expedition
 
@@ -85,6 +105,7 @@ Awareness grows from kills, treasure value, cursed chests and time. Configurable
 - `scripts/systems/`: persistent game shell, one input vocabulary and transitions.
 - `scripts/player/`, `scripts/combat/`, `resources/weapons/`: preserved movement and combat components.
 - `scripts/enemies/`, `resources/enemies/`: three original archetypes and Rootwarden data/AI.
+- `scripts/party/`, `resources/companions/`, `scenes/party/`: party lifecycle, AI decisions, navigation, companion data and Tavern recruitment.
 - `scenes/rooms/`, `scenes/props/`, `resources/materials/`: authored reusable Abyss geometry and materials.
 - `scripts/expedition/`: pure layout generation, room activation, encounters, pooled hazards, awareness, secrets and extraction.
 - `scripts/progression/`, `resources/items/`, `resources/loot/`: item definitions, weighted loot, transient run ledger and secured local profile.
@@ -107,6 +128,12 @@ godot4 --headless --path . --script res://tests/loot_persistence_test.gd
 godot4 --headless --path . --script res://tests/rootwarden_test.gd
 godot4 --headless --path . --script res://tests/expedition_test.gd
 godot4 --headless --path . --script res://tests/expedition_ui_test.gd
+godot4 --headless --path . --script res://tests/party_test.gd
+godot4 --headless --path . --script res://tests/party_ui_test.gd
+godot4 --headless --path . --script res://tests/companion_behavior_test.gd
+godot4 --headless --path . --script res://tests/party_targeting_test.gd
+godot4 --headless --path . --script res://tests/companion_navigation_test.gd
+godot4 --headless --path . --script res://tests/party_persistence_test.gd
 ```
 
 The persistence restart fixture uses **two separate engine processes**, with a disposable `/tmp` path on desktop/cloud (not an Android shell instruction):
@@ -114,16 +141,18 @@ The persistence restart fixture uses **two separate engine processes**, with a d
 ```sh
 godot4 --headless --path . --script res://tests/persistence_restart_test.gd -- --write /tmp/vaultbound-restart/profile.json
 godot4 --headless --path . --script res://tests/persistence_restart_test.gd -- --read /tmp/vaultbound-restart/profile.json
+godot4 --headless --path . --script res://tests/party_persistence_test.gd -- --write /tmp/vaultbound-roster-restart/profile.json
+godot4 --headless --path . --script res://tests/party_persistence_test.gd -- --read /tmp/vaultbound-roster-restart/profile.json
 ```
 
 Import first to index global GDScript classes. Assertions exit nonzero on failure; inspect logs for runtime errors too. Restricted Linux runners may need writable `XDG_DATA_HOME`, `XDG_CONFIG_HOME` and `XDG_CACHE_HOME`. Android SDK/build-tools warnings affect APK export setup, not scene resources.
 
-See [Milestone 3 validation](docs/milestone-3-validation.md) for observed results and [the Android test plan](docs/test-plan.md) for the manual checklist. The [Milestone 2 guide](docs/milestone-2-guide.md) retains earlier combat details. The original GitHub roadmap is [archived separately](docs/original-github-roadmap.md) and describes future ideas, not shipped functionality.
+See [Milestone 4 validation](docs/milestone-4-validation.md) for current observed results and [Milestone 3 validation](docs/milestone-3-validation.md) for the archived expedition baseline and [the Android test plan](docs/test-plan.md) for the manual checklist. The [Milestone 2 guide](docs/milestone-2-guide.md) retains earlier combat details. The original GitHub roadmap is [archived separately](docs/original-github-roadmap.md) and describes future ideas, not shipped functionality.
 
 ## Remaining limits
 
-This is a complete expedition loop prototype, not a finished commercial game. Equipment stat affixes, crafting, additional floors/biomes, expedition resume and advanced maze navigation are outside this milestone. Enemy steering is intended for the authored open room modules. Geometry, procedural character animation and synthesized sounds are stylized placeholders.
+This is a complete expedition loop prototype, not a finished commercial game. Equipment stat affixes, crafting, additional floors/biomes, expedition resume, arbitrary stairs or multilevel navigation, companion gear/talents and additional classes are outside this milestone. Companion pathfinding targets the authored flat modular floors; enemy steering remains intended for the open room modules. Geometry, procedural character animation and synthesized sounds are stylized placeholders.
 
 **No physical Android testing is claimed.** Rendered visual review, touchscreen comfort, APK export/signing, audio output, frame pacing, heat and battery use still need device verification. Headless checks establish logic and resource validity, not final game feel or a measured mobile frame rate.
 
-Work stops after Milestone 3 for review. No later milestone is implemented.
+Work stops after Milestone 4 for review. Online multiplayer, additional companion classes and later milestones are not implemented.

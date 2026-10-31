@@ -21,6 +21,24 @@ static func next_attack_id() -> int:
 	state["sequence"] = int(state["sequence"]) + 1
 	return int(state["sequence"])
 
+static func party_target_available(actor: Variant) -> bool:
+	# Both human and AI members use the same damage eligibility. A downed member
+	# leaves enemy selection without losing their roster slot or secured equipment.
+	return is_instance_valid(actor) and actor is Node3D and actor.is_inside_tree() \
+		and float(actor.get("health")) > 0.0 and bool(actor.get("controls_enabled"))
+
+static func party_targets(context: Node) -> Array[Node3D]:
+	var result: Array[Node3D] = []
+	if not is_instance_valid(context) or not context.is_inside_tree():
+		return result
+	# Keep the player fallback for isolated combat scenes and existing saved builds.
+	# A member can belong to both groups, so deduplicate before resolving attacks.
+	for group: StringName in [&"party_members", &"player"]:
+		for candidate: Node in context.get_tree().get_nodes_in_group(group):
+			if party_target_available(candidate) and not result.has(candidate):
+				result.append(candidate as Node3D)
+	return result
+
 static func has_line_of_sight(source: Node3D, target: Node3D) -> bool:
 	if not is_instance_valid(source) or not is_instance_valid(target):
 		return false
@@ -108,9 +126,10 @@ static func effect(origin: Vector3, color: Color, radius: float, duration: float
 	burst.tint = color
 	burst.radius = radius
 	burst.duration = maxf(duration, 0.08)
-	# Player callers may supply the persistent shell; keep visual transients local
-	# to the level just like projectiles so travel clears every pending effect.
-	var world_root := parent.get_node_or_null("WorldRoot")
+	# Player and companion callers can supply either the persistent shell or its
+	# Party child. Both must route transients to the same replaceable level.
+	var scene := parent.get_tree().current_scene
+	var world_root := scene.get_node_or_null("WorldRoot") if is_instance_valid(scene) else null
 	if world_root != null and world_root.get_child_count() > 0:
 		parent = world_root.get_child(0)
 	parent.add_child(burst)

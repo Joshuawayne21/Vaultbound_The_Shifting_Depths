@@ -4,9 +4,10 @@ extends Node3D
 const Architecture = preload("res://scripts/world/architecture.gd")
 const Portal = preload("res://scenes/world/portal.tscn")
 const TrainingTarget = preload("res://scenes/world/training_target.tscn")
+const Tavern = preload("res://scenes/party/tavern.tscn")
 
 var display_name := "THE SANCTUARY"
-var objective := "North: practice vault • East: Rootbound expedition"
+var objective := "West: Tavern · North: practice vault · East: expedition"
 
 func _ready() -> void:
 	var kit := Architecture.new(self)
@@ -16,6 +17,9 @@ func _ready() -> void:
 	_build_border(kit)
 	_build_heart(kit)
 	_build_garden(kit)
+	var tavern := Tavern.instantiate()
+	tavern.position = Vector3(-6.8, 0, 0)
+	add_child(tavern)
 	var portal := Portal.instantiate()
 	portal.position = Vector3(0, 0, -10.0)
 	portal.destination = &"dungeon"

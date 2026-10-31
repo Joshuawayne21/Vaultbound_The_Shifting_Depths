@@ -103,6 +103,8 @@ func spawn_patrol(room_id: int, elite: bool = false) -> bool:
 	for point: Vector3 in choices:
 		var world_point: Vector3 = rooms[room_id].to_global(point)
 		var distance := world_point.distance_to(player.global_position)
+		for teammate: Node3D in CombatRules.party_targets(self):
+			distance = minf(distance, world_point.distance_to(teammate.global_position))
 		if distance <= best_distance:
 			continue
 		var occupied := false

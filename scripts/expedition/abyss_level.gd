@@ -118,7 +118,9 @@ func _process(delta: float) -> void:
 		return
 	if not is_instance_valid(_player):
 		_player = get_tree().get_first_node_in_group("player") as Node3D
-	if _player == null or not bool(_player.get("controls_enabled")) or float(_player.get("health")) <= 0.0:
+	# The leader's body remains the room/discovery anchor while companions revive
+	# them. Combat and awareness continue as long as a party member can act.
+	if _player == null or CombatRules.party_targets(self).is_empty():
 		return
 	_elapsed += delta
 	_refresh_time += delta

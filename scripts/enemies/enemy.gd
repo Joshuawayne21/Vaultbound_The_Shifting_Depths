@@ -38,6 +38,9 @@ var _damage_label_remaining: float = 0.0
 var _lost_sight_time: float = 0.0
 var _recent_attacks: Dictionary = {}
 var _steer_bias: float = 1.0
+var _target_interval := 0.0
+var _aggressor: Node3D
+var _aggression_remaining := 0.0
 
 
 func _ready() -> void:
@@ -53,6 +56,7 @@ func _ready() -> void:
 	collision_mask = 3
 	add_to_group("combat_targets")
 	add_to_group("enemies")
+	add_to_group("combat_telegraphs")
 	_build_collision()
 	_visual = VisualScript.new()
 	_visual.configure(data.archetype)
@@ -71,8 +75,12 @@ func _physics_process(delta: float) -> void:
 		if slow_remaining <= 0.0:
 			slow_factor = 1.0
 			_visual.set_slowed(false)
-	if not is_instance_valid(_player):
-		_player = get_tree().get_first_node_in_group("player") as Node3D
+	_target_interval -= delta
+	_aggression_remaining = maxf(0.0, _aggression_remaining - delta)
+	# Decisions are throttled, and an existing windup keeps its locked direction.
+	if not _player_is_available() or (_target_interval <= 0.0 and state in [&"idle", &"patrol", &"chase", &"hit", &"recovery"]):
+		_select_party_target()
+		_target_interval = 0.35
 	# The persistent shell disables the player during fades and death. No enemy
 	# attack is allowed to progress against an arriving or departing character.
 	if not combat_active or not _player_is_available():
@@ -173,11 +181,60 @@ func _process(delta: float) -> void:
 
 
 func _player_is_available() -> bool:
-	if not is_instance_valid(_player):
-		return false
-	if float(_player.get("health")) <= 0.0:
-		return false
-	return bool(_player.get("controls_enabled"))
+	return CombatRules.party_target_available(_player)
+
+
+func _select_party_target() -> void:
+	var selected: Node3D = _player if _player_is_available() and _horizontal_distance(_player.global_position, spawn_position) <= data.leash_radius + 2.0 else null
+	var best := INF
+	if selected != null and CombatRules.has_line_of_sight(self, selected):
+		best = _target_score(selected) * 0.82 # Hysteresis prevents aggro oscillation.
+	for candidate: Node3D in CombatRules.party_targets(self):
+		if _horizontal_distance(candidate.global_position, spawn_position) > data.leash_radius + 2.0:
+			continue
+		if not CombatRules.has_line_of_sight(self, candidate):
+			continue
+		var score := _target_score(candidate)
+		if score < best:
+			best = score
+			selected = candidate
+	# Retain an out-of-leash target only when no party member remains nearby;
+	# the existing return state then handles disengagement without healing.
+	if selected != null or not _player_is_available():
+		_player = selected
+
+
+func _target_score(candidate: Node3D) -> float:
+	var score := _horizontal_distance(global_position, candidate.global_position)
+	# Proximity still dominates: a nearby shield bearer can intercept, but does
+	# not magically taunt an enemy through a wall or from the other end of a room.
+	if candidate.get("companion_id") == &"guardian" and score < 4.5:
+		score *= 0.8
+	if _aggression_remaining > 0.0 and candidate == _aggressor:
+		score *= 0.7
+	return score
+
+
+func get_combat_target() -> Node3D:
+	return _player if _player_is_available() else null
+
+
+func get_danger_zones() -> Array[Dictionary]:
+	var zones: Array[Dictionary] = []
+	if not combat_active or state != &"windup":
+		return zones
+	if data.ranged:
+		# A few overlapping circles describe the committed projectile corridor.
+		var start := global_position
+		var end := _attack_target_position - Vector3.UP * 1.05
+		for weight: float in [0.25, 0.5, 0.75, 1.0]:
+			zones.append({"position": start.lerp(end, weight), "radius": 0.7,
+				"remaining": _timer, "kind": &"ranged"})
+	else:
+		zones.append({"position": global_position if data.radial_attack else global_position + _attack_direction * data.attack_range * 0.45,
+			"radius": data.attack_range if data.radial_attack else data.attack_range * 0.75,
+			"remaining": _timer, "kind": &"heavy_melee" if data.radial_attack else &"melee"})
+	return zones
 
 
 func _can_detect_player() -> bool:
@@ -198,24 +255,22 @@ func _commit_attack() -> void:
 	_set_state(&"attack", data.attack_active_time)
 	var attack_id: int = CombatRules.next_attack_id()
 	attacked.emit(attack_id)
-	if not _player_is_available():
-		return
 	if data.ranged:
 		var origin: Vector3 = global_position + Vector3.UP * 1.2 + _attack_direction * 0.48
 		var direction: Vector3 = (_attack_target_position - origin).normalized()
-		CombatRules.spawn_projectile(self, origin, direction, data.damage, data.projectile_speed, data.projectile_lifetime, attack_id, &"player", Color("eba778"))
+		CombatRules.spawn_projectile(self, origin, direction, data.damage, data.projectile_speed, data.projectile_lifetime, attack_id, &"party_members", Color("eba778"))
 		return
-	var toward: Vector3 = _player.global_position - global_position
-	if absf(toward.y) > 2.0:
-		return
-	toward.y = 0.0
-	if toward.length() > data.attack_range:
-		return
-	if not data.radial_attack and toward.length() > 0.01 and _attack_direction.dot(toward.normalized()) < data.attack_cone_dot:
-		return
-	if not CombatRules.has_line_of_sight(self, _player):
-		return
-	CombatRules.apply_hit(self, _player, data.damage, attack_id, &"enemy_melee", 0.3 if data.radial_attack else 0.12)
+	for candidate: Node3D in CombatRules.party_targets(self):
+		var toward := candidate.global_position - global_position
+		if absf(toward.y) > 2.0:
+			continue
+		toward.y = 0.0
+		if toward.length() > data.attack_range:
+			continue
+		if not data.radial_attack and toward.length() > 0.01 and _attack_direction.dot(toward.normalized()) < data.attack_cone_dot:
+			continue
+		if CombatRules.has_line_of_sight(self, candidate):
+			CombatRules.apply_hit(self, candidate, data.damage, attack_id, &"enemy_melee", 0.3 if data.radial_attack else 0.12)
 	if data.radial_attack:
 		CombatRules.effect(global_position + Vector3.UP * 0.08, Color("ec875f"), data.attack_range, 0.3, get_parent())
 
@@ -242,6 +297,12 @@ func receive_hit(packet: Dictionary) -> bool:
 	_damage_label.visible = true
 	_damage_label_remaining = 0.7
 	hit_received.emit(applied)
+	var source_id := int(packet.get("source_id", 0))
+	var source: Object = instance_from_id(source_id) if source_id > 0 else null
+	if source is Node3D and CombatRules.party_target_available(source) and (source.is_in_group("party_members") or source.is_in_group("player")):
+		_aggressor = source
+		_aggression_remaining = 3.0
+		_target_interval = 0.0
 	if health <= 0.0:
 		_die()
 		return true

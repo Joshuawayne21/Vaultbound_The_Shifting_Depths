@@ -32,6 +32,8 @@ var combat_snapshot: Dictionary = {}
 var damage_flash := 0.0
 var dungeon_active := false
 var modal_blocked := false
+var party_visible := false
+var party_revive_prompt_active := false
 
 var _joystick_finger := -1
 var _swipe_finger := -1
@@ -303,9 +305,17 @@ func _draw() -> void:
 func _draw_identity() -> void:
 	var origin := Vector2(31.0, 29.0) + _safe_inset
 	_panel(Rect2(origin, Vector2(284.0, 132.0)), Color(0.03, 0.07, 0.09, 0.8))
-	_diamond(origin + Vector2(22.0, 25.0), 7.0, GOLD)
+	if party_visible:
+		# The leader keeps the original full-size health/stamina panel; companions
+		# have compact portraits below. The small crown distinguishes leadership.
+		var portrait := origin + Vector2(22, 27)
+		draw_circle(portrait + Vector2(0, -3), 4.5, GOLD, true, -1, true)
+		draw_arc(portrait + Vector2(0, 10), 9, PI, TAU, 12, GOLD, 3, true)
+		draw_polyline(PackedVector2Array([portrait + Vector2(-6, -14), portrait + Vector2(-3, -10), portrait + Vector2(0, -15), portrait + Vector2(3, -10), portrait + Vector2(6, -14)]), GOLD, 1.5, true)
+	else:
+		_diamond(origin + Vector2(22.0, 25.0), 7.0, GOLD)
 	_text("VAULTBOUND", origin + Vector2(40.0, 31.0), 20, IVORY)
-	_text("WAYFARER  /  01", origin + Vector2(17.0, 53.0), 11, MUTED)
+	_text("WAYFARER  /  PARTY LEADER" if party_visible else "WAYFARER  /  01", origin + Vector2(17.0, 53.0), 11, MUTED)
 	_bar(origin + Vector2(17.0, 72.0), 250.0, displayed_health / maxf(1.0, max_health), HEALTH)
 	_text("HEALTH", origin + Vector2(17.0, 68.0), 10, IVORY)
 	_text("%d / %d" % [health, max_health], origin + Vector2(267.0, 68.0), 10, IVORY, false, true)
@@ -492,9 +502,9 @@ func _draw_icon(action: StringName, center: Vector2, color: Color) -> void:
 func _draw_prompts() -> void:
 	var center_x := size.x * 0.5
 	var bottom := size.y - _safe_inset.y
-	if not interaction.is_empty():
+	if not interaction.is_empty() and not party_revive_prompt_active:
 		var width := clampf(_font.get_string_size(interaction, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x + 76.0, 270.0, 480.0)
-		var rect := Rect2(center_x - width * 0.5, bottom - 176.0, width, 44.0)
+		var rect := Rect2(center_x - width * 0.5, bottom - (268.0 if party_visible else 176.0), width, 44.0)
 		_panel(rect, PANEL)
 		_text("F", rect.position + Vector2(22.0, 28.0), 15, GOLD, true)
 		draw_line(rect.position + Vector2(41.0, 11.0), rect.position + Vector2(41.0, 33.0), Color(GOLD, 0.35), 1.0)
@@ -502,9 +512,10 @@ func _draw_prompts() -> void:
 	if message_remaining > 0.0 and not message.is_empty():
 		var alpha := minf(1.0, message_remaining)
 		var width := minf(550.0, _font.get_string_size(message, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 32.0)
-		var rect := Rect2(center_x - width * 0.5, bottom - 108.0, width, 34.0)
+		var message_y := bottom - (306.0 if party_visible else 108.0)
+		var rect := Rect2(center_x - width * 0.5, message_y, width, 34.0)
 		draw_rect(rect, Color(0.02, 0.06, 0.07, 0.8 * alpha))
-		_text(message, Vector2(center_x, bottom - 86.0), 14, Color(IVORY, alpha), true)
+		_text(message, Vector2(center_x, message_y + 22.0), 14, Color(IVORY, alpha), true)
 	if has_target and not dungeon_active:
 		var target_name := String(combat_snapshot.get("target_name", "TARGET LOCKED"))
 		_text(target_name.to_upper(), Vector2(center_x, 153.0 + _safe_inset.y), 11, GOLD, true)

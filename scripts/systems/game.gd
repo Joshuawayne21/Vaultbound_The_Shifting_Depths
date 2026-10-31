@@ -26,11 +26,19 @@ var _modal_open := false
 var _snapshot_elapsed := 0.0
 var _world_process_mode := Node.PROCESS_MODE_INHERIT
 var _player_process_mode := Node.PROCESS_MODE_INHERIT
+var party: VaultParty
 
 func _ready() -> void:
 	InputHub.controls_enabled = false
 	player.camera_rig = camera_rig
 	player.set_controls_enabled(false)
+	party = VaultParty.new()
+	party.name = "Party"
+	add_child(party)
+	party.bind(player, ExpeditionSession)
+	party.party_wiped.connect(_on_party_wipe)
+	party.notice.connect(hud.show_message)
+	hud.bind_party(party)
 	camera_rig.set_target(player)
 	hud.bind_player(player)
 	hud.bind_expedition(ExpeditionSession)
@@ -70,6 +78,10 @@ func _on_action(action: StringName) -> void:
 		hud.toggle_inventory()
 	elif action == &"perf_toggle":
 		hud.toggle_performance()
+	elif action == &"party_menu" and not transitioning:
+		hud.toggle_party_menu()
+	elif action == &"revive_teammate" and not transitioning:
+		party.request_player_revive()
 
 func start_expedition(seed_value: int = -1) -> void:
 	await change_location(&"rootbound_abyss", &"default", seed_value)
@@ -113,6 +125,7 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 		# discards only its unsecured bag; the secured profile is untouched.
 		ExpeditionSession.fail_run("abandoned")
 	transitioning = true
+	party.set_paused(true)
 	if _modal_open:
 		hud.close_modals()
 	InputHub.controls_enabled = false
@@ -125,9 +138,11 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 		world_root.remove_child(active_world)
 		active_world.queue_free()
 	world_root.add_child(next_world)
+	_keep_world_collision(next_world)
 	active_world = next_world
 	current_location = destination
 	player.reset_for_spawn(active_world.get_spawn_transform(entry_id))
+	party.enter_world(active_world, destination)
 	camera_rig.reset_position()
 	for portal: Node in get_tree().get_nodes_in_group("interactables"):
 		if portal.has_signal("travel_requested") and not portal.travel_requested.is_connected(_on_travel):
@@ -143,16 +158,26 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 		hud.set_dungeon_snapshot({})
 	# Let the physics server register the new floor before releasing the player.
 	await get_tree().physics_frame
+	party.ensure_safe_arrivals()
 	var fade_in := create_tween()
 	fade_in.tween_method(hud.set_transition, 1.0, 0.0, 0.25)
 	await fade_in.finished
 	transitioning = false
+	party.set_paused(false)
 	player.set_controls_enabled(true)
 	InputHub.controls_enabled = true
 	hud.set_input_enabled(true)
 	scene_changed.emit(destination)
 	if destination == &"sanctuary":
 		hud.present_pending_results()
+
+func _keep_world_collision(node: Node) -> void:
+	# Modals pause scripts/animation while retaining floor and obstacle queries.
+	# Tavern recruitment must validate new companion positions during that pause.
+	if node is StaticBody3D:
+		node.disable_mode = CollisionObject3D.DISABLE_MODE_KEEP_ACTIVE
+	for child: Node in node.get_children():
+		_keep_world_collision(child)
 
 func _on_travel(destination: StringName, entry_id: StringName) -> void:
 	# Interactions can originate in the physics step; tree mutation must be deferred.
@@ -171,10 +196,20 @@ func _on_respawn() -> void:
 		# Death always returns to the safe hub; falling only reloads the current area.
 		change_location.call_deferred(&"sanctuary" if player.health <= 0.0 else current_location, &"default")
 
+func _on_party_wipe() -> void:
+	if transitioning:
+		return
+	party.set_paused(true)
+	hud.show_message("The party falls · Returning safely to Sanctuary")
+	if current_location == &"rootbound_abyss" and ExpeditionSession.active:
+		ExpeditionSession.fail_run("defeated")
+	change_location.call_deferred(&"sanctuary", &"default")
+
 func _on_modal_changed(open: bool) -> void:
 	if _modal_open == open:
 		return
 	_modal_open = open
+	party.set_paused(open or transitioning)
 	if open:
 		InputHub.controls_enabled = false
 		player.set_controls_enabled(false)

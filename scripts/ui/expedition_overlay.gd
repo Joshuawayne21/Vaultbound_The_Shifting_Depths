@@ -19,11 +19,20 @@ const RARITY_COLORS := {
 	"legendary": Color("edbf70"),
 }
 const PAGE_SIZE := 5
+const PARTY_COMMANDS := [
+	[&"follow", "FOLLOW ME", "Regroup in formation behind the leader."],
+	[&"attack", "ATTACK MY TARGET", "Focus the leader's visible locked target."],
+	[&"hold", "HOLD POSITION", "Defend this position; move only to avoid danger."],
+	[&"retreat", "RETREAT", "Break away and return to the leader."],
+	[&"revive", "REVIVE TEAMMATE", "Reach a downed ally when the approach is safe."],
+]
 
 var source_surface: Control
 var session_snapshot: Dictionary = {}
 var dungeon_snapshot: Dictionary = {}
 var results_snapshot: Dictionary = {}
+var party_snapshot: Dictionary = {}
+var party: Node
 var mode: StringName = &"none"
 var pack_tab: StringName = &"bank"
 var page := 0
@@ -32,6 +41,10 @@ var performance_visible := false
 var _font: Font
 var _elapsed := 0.0
 var _notifications: Array[Dictionary] = []
+var _party_health: Dictionary = {}
+var _owned_touches: Dictionary = {}
+var _owned_mouse := false
+var _party_notice := ""
 
 
 func _ready() -> void:
@@ -41,6 +54,10 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	for member: Dictionary in party_snapshot.get("members", []):
+		var id := String(member.get("id", ""))
+		var current := float(member.get("health", 0.0))
+		_party_health[id] = lerpf(float(_party_health.get(id, current)), current, 1.0 - exp(-12.0 * delta))
 	for notice: Dictionary in _notifications:
 		notice.remaining = maxf(0.0, float(notice.remaining) - delta)
 	while not _notifications.is_empty() and float(_notifications[0].remaining) <= 0.0:
@@ -55,6 +72,40 @@ func set_session_snapshot(data: Dictionary) -> void:
 	session_snapshot = data.duplicate(true)
 	page = mini(page, maxi(0, (_pack_items().size() - 1) / PAGE_SIZE))
 	queue_redraw()
+
+
+func bind_party(value: Node) -> void:
+	party = value
+	if not party.notice.is_connected(_on_party_notice):
+		party.notice.connect(_on_party_notice)
+	set_party_snapshot(party.snapshot())
+
+
+func _on_party_notice(message: String) -> void:
+	_party_notice = message
+	queue_redraw()
+
+
+func set_party_snapshot(data: Dictionary) -> void:
+	party_snapshot = data.duplicate(true)
+	queue_redraw()
+
+
+func open_party_menu() -> void:
+	if is_instance_valid(party) and mode in [&"none", &"party"]:
+		_open_modal(&"party")
+
+
+func open_recruitment() -> void:
+	if is_instance_valid(party):
+		_party_notice = ""
+		_open_modal(&"recruit")
+
+
+func _notification(what: int) -> void:
+	if what in [NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED]:
+		_owned_touches.clear()
+		_owned_mouse = false
 
 
 func set_dungeon_snapshot(data: Dictionary) -> void:
@@ -130,19 +181,54 @@ func close_modal() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# Keep ownership of overlay presses until release, including the finger that
+	# closes a modal. It must never become a world swipe or click-to-attack.
+	if event is InputEventScreenTouch and (not event.pressed or event.canceled) and _owned_touches.has(event.index):
+		_owned_touches.erase(event.index)
+		get_viewport().set_input_as_handled()
+		return
+	if event is InputEventScreenDrag and _owned_touches.has(event.index):
+		get_viewport().set_input_as_handled()
+		return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed and _owned_mouse:
+		_owned_mouse = false
+		get_viewport().set_input_as_handled()
+		return
 	if mode != &"none":
 		# Consume the complete event stream while open, including releases/drags;
 		# a finger that opened/closed a panel must never become a world attack.
 		get_viewport().set_input_as_handled()
 		if event is InputEventKey and event.pressed and not event.echo:
-			if event.physical_keycode in [KEY_ESCAPE, KEY_ENTER, KEY_KP_ENTER] or (mode == &"pack" and event.physical_keycode == KEY_I):
+			if event.physical_keycode in [KEY_ESCAPE, KEY_ENTER, KEY_KP_ENTER] or (mode == &"pack" and event.physical_keycode == KEY_I) or (mode == &"party" and event.physical_keycode == KEY_B):
 				close_modal()
 		elif event is InputEventScreenTouch and event.pressed and not event.canceled:
+			_owned_touches[event.index] = true
 			_modal_press(_local_point(event.position))
 		elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			_owned_mouse = true
 			_modal_press(_local_point(event.position))
 		return
-	if is_instance_valid(source_surface) and (not source_surface.input_enabled or source_surface.transition_alpha > 0.01):
+	if is_instance_valid(source_surface) and source_surface.transition_alpha > 0.01:
+		return
+	# A downed leader can still give orders while their combat controls are off.
+	var allow_party: bool = is_instance_valid(party) and (not is_instance_valid(source_surface) or source_surface.input_enabled or _leader_downed())
+	if allow_party and event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_B:
+		get_viewport().set_input_as_handled()
+		open_party_menu()
+		return
+	var point := Vector2(-1000, -1000)
+	if event is InputEventScreenTouch and event.pressed and not event.canceled:
+		point = _local_point(event.position)
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		point = _local_point(event.position)
+	if allow_party and (_party_rect().has_point(point) or (_can_revive() and _revive_rect().has_point(point))):
+		_claim_press(event)
+		if _party_rect().has_point(point):
+			open_party_menu()
+		else:
+			party.request_player_revive()
+		return
+	if is_instance_valid(source_surface) and not source_surface.input_enabled:
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.physical_keycode == KEY_I:
@@ -152,22 +238,58 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			performance_visible = not performance_visible
 		return
-	var point := Vector2(-1000, -1000)
-	if event is InputEventScreenTouch and event.pressed and not event.canceled:
-		point = _local_point(event.position)
-	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		point = _local_point(event.position)
 	if _pack_rect().has_point(point):
-		get_viewport().set_input_as_handled()
+		_claim_press(event)
 		open_pack()
 	elif _tonic_rect().has_point(point):
-		get_viewport().set_input_as_handled()
+		_claim_press(event)
 		consumable_requested.emit()
+
+
+func _claim_press(event: InputEvent) -> void:
+	get_viewport().set_input_as_handled()
+	if event is InputEventScreenTouch:
+		_owned_touches[event.index] = true
+	elif event is InputEventMouseButton:
+		_owned_mouse = true
+
+
+func _leader_downed() -> bool:
+	for member: Dictionary in party_snapshot.get("members", []):
+		if String(member.get("id", "")) == String(party_snapshot.get("leader_id", "player")):
+			return bool(member.get("downed", false))
+	return false
+
+
+func _can_revive() -> bool:
+	return not String(party_snapshot.get("revive_prompt", "")).is_empty() and not _leader_downed()
 
 
 func _modal_press(point: Vector2) -> void:
 	if _continue_rect().has_point(point):
 		close_modal()
+		return
+	if mode == &"party":
+		for index in range(PARTY_COMMANDS.size()):
+			if _command_rect(index).has_point(point):
+				var command: StringName = PARTY_COMMANDS[index][0]
+				# Unpause before dispatch, so revive orders may begin their channel.
+				close_modal()
+				if is_instance_valid(party):
+					party.issue_command(command)
+				return
+		return
+	if mode == &"recruit":
+		var roster: Array = party_snapshot.get("roster", [])
+		for index in range(mini(2, roster.size())):
+			if _recruit_rect(index).has_point(point) and is_instance_valid(party):
+				var member: Dictionary = roster[index]
+				if bool(member.get("recruited", false)):
+					party.dismiss(String(member.get("id", "")))
+				else:
+					party.recruit(String(member.get("id", "")))
+				set_party_snapshot(party.snapshot())
+				return
 		return
 	if mode != &"pack":
 		return
@@ -218,6 +340,34 @@ func _pack_rect() -> Rect2:
 
 func _tonic_rect() -> Rect2:
 	return Rect2(Vector2(205, 331) + _safe(), Vector2(110, 62))
+
+
+func _party_rect() -> Rect2:
+	return Rect2(Vector2(size.x * 0.5 - 110, size.y - 188 - _safe().y), Vector2(220, 62))
+
+
+func _party_member_rect(index: int) -> Rect2:
+	return Rect2(Vector2(size.x * 0.5 - 211 + index * 216, size.y - 112 - _safe().y), Vector2(206, 68))
+
+
+func _revive_rect() -> Rect2:
+	return Rect2(Vector2(size.x * 0.5 - 211, size.y - 268 - _safe().y), Vector2(422, 62))
+
+
+func _command_rect(index: int) -> Rect2:
+	var rect := _modal_rect()
+	return Rect2(rect.position + Vector2(32, 106 + index * 70), Vector2(rect.size.x - 64, 62))
+
+
+func _recruit_card_rect(index: int) -> Rect2:
+	var rect := _modal_rect()
+	var width := (rect.size.x - 84) * 0.5
+	return Rect2(rect.position + Vector2(32 + index * (width + 20), 113), Vector2(width, rect.size.y - 216))
+
+
+func _recruit_rect(index: int) -> Rect2:
+	var card := _recruit_card_rect(index)
+	return Rect2(card.position + Vector2(18, card.size.y - 80), Vector2(card.size.x - 36, 62))
 
 
 func _modal_rect() -> Rect2:
@@ -302,6 +452,8 @@ func _draw() -> void:
 	if is_instance_valid(source_surface) and source_surface.transition_alpha > 0.01:
 		return
 	_draw_pack_controls()
+	if is_instance_valid(party):
+		_draw_party_controls()
 	_draw_storage_warning()
 	if not dungeon_snapshot.is_empty():
 		_draw_dungeon_map()
@@ -313,10 +465,138 @@ func _draw() -> void:
 		_text(value, Vector2(size.x * 0.5, size.y - 42 - _safe().y), 11, MUTED, true)
 	if mode != &"none":
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0.012, 0.025, 0.035, 0.88))
-		if mode == &"pack":
-			_draw_pack()
-		else:
-			_draw_results()
+		match mode:
+			&"pack": _draw_pack()
+			&"results": _draw_results()
+			&"party": _draw_party_menu()
+			&"recruit": _draw_recruitment()
+
+
+func _companions() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for member: Dictionary in party_snapshot.get("members", []):
+		if String(member.get("id", "")) != String(party_snapshot.get("leader_id", "player")):
+			result.append(member)
+	return result
+
+
+func _draw_party_controls() -> void:
+	var rect := _party_rect()
+	_panel(rect, PANEL)
+	var count: int = party_snapshot.get("members", []).size()
+	_text("PARTY ORDERS" if OS.has_feature("mobile") else "PARTY ORDERS  ·  B", rect.get_center() + Vector2(0, -8), 13, GOLD, true)
+	var command := String(party_snapshot.get("command", "follow")).replace("_", " ").to_upper()
+	_text("%d / 3 MEMBERS  ·  %s" % [count, command], rect.get_center() + Vector2(0, 14), 10, MUTED, true)
+	var companions := _companions()
+	for index in range(2):
+		var card := _party_member_rect(index)
+		_panel(card, PANEL)
+		if index >= companions.size():
+			_text("OPEN PARTY SLOT", card.position + Vector2(14, 27), 11, MUTED)
+			_text("Recruit at the Sanctuary Tavern", card.position + Vector2(14, 49), 10, MUTED)
+			continue
+		var member: Dictionary = companions[index]
+		var id := String(member.get("id", ""))
+		var downed := bool(member.get("downed", false))
+		var eliminated := bool(member.get("eliminated", false))
+		var tint := WARNING if downed or eliminated else (GOLD if id == "guardian" else TEAL)
+		_portrait(card.position + Vector2(28, 31), id, tint, 20)
+		_text(_fit_text(String(member.get("name", id.capitalize())), 125, 13), card.position + Vector2(56, 20), 13, IVORY)
+		var health := float(member.get("health", 0.0))
+		var maximum := maxf(1, float(member.get("max_health", 1.0)))
+		var status := "LV %d · %s" % [int(member.get("level", 1)), "TANK" if id == "guardian" else "SUPPORT"]
+		if eliminated:
+			status = "RECOVER AT SANCTUARY"
+		elif downed:
+			status = "DOWNED · %ds" % int(ceil(float(member.get("bleedout_remaining", member.get("bleedout", 0.0)))))
+		_text(status, card.position + Vector2(56, 37), 9, tint)
+		var track := Rect2(card.position + Vector2(56, 45), Vector2(136, 6))
+		draw_rect(track, Color(0.01, 0.03, 0.04))
+		var fraction := clampf(float(_party_health.get(id, health)) / maximum, 0, 1)
+		draw_rect(Rect2(track.position, Vector2(track.size.x * fraction, 6)), tint)
+		var revive := clampf(float(member.get("revive_progress", 0.0)), 0, 1)
+		if downed and revive > 0.0:
+			draw_rect(Rect2(track.position, Vector2(track.size.x * revive, 6)), TEAL)
+		var state := String(member.get("state", "follow")).replace("_", " ")
+		_text("Reviving…" if revive > 0.0 else state.capitalize(), card.position + Vector2(56, 62), 9, MUTED)
+	if _can_revive():
+		var revive := _revive_rect()
+		_panel(revive, Color(0.055, 0.19, 0.19, 0.96))
+		_text("REVIVE TEAMMATE", revive.get_center() + Vector2(0, -8), 14, TEAL, true)
+		_text(_fit_text(String(party_snapshot.get("revive_prompt", "")), revive.size.x - 24, 11), revive.get_center() + Vector2(0, 15), 11, IVORY, true)
+	elif _leader_downed():
+		var downed := _revive_rect()
+		_panel(downed, PANEL)
+		_text("YOU ARE DOWNED", downed.get_center() + Vector2(0, -8), 15, WARNING, true)
+		_text("Give a Revive order. Allies need a safe approach.", downed.get_center() + Vector2(0, 15), 11, IVORY, true)
+
+
+func _draw_party_menu() -> void:
+	var rect := _modal_rect()
+	_panel(rect, PANEL)
+	_text("ADVENTURER ORDERS", rect.position + Vector2(32, 44), 25, IVORY)
+	_text("You lead the party. Orders apply to both recruited companions.", rect.position + Vector2(32, 74), 13, MUTED)
+	var current := StringName(party_snapshot.get("command", &"follow"))
+	for index in range(PARTY_COMMANDS.size()):
+		var button := _command_rect(index)
+		var selected: bool = current == PARTY_COMMANDS[index][0]
+		_panel(button, Color(0.07, 0.2, 0.21, 1) if selected else Color(0.035, 0.105, 0.12, 1))
+		_diamond(button.position + Vector2(19, 31), 5, TEAL if selected else GOLD)
+		_text(PARTY_COMMANDS[index][1], button.position + Vector2(37, 25), 14, TEAL if selected else IVORY)
+		_text(PARTY_COMMANDS[index][2], button.position + Vector2(37, 47), 12, MUTED)
+	_text("Orders wait while this menu is open.", rect.position + Vector2(32, rect.size.y - 45), 12, MUTED)
+	_button(_continue_rect(), "RETURN TO GAME", true)
+
+
+func _draw_recruitment() -> void:
+	var rect := _modal_rect()
+	_panel(rect, PANEL)
+	_text("THE LANTERN & ROOT", rect.position + Vector2(32, 44), 25, GOLD)
+	_text("Sanctuary Tavern · Recruit up to two adventurers for your next expedition.", rect.position + Vector2(32, 74), 13, IVORY)
+	var roster: Array = party_snapshot.get("roster", [])
+	for index in range(mini(2, roster.size())):
+		var member: Dictionary = roster[index]
+		var card := _recruit_card_rect(index)
+		var id := String(member.get("id", ""))
+		var tint := GOLD if id == "guardian" else TEAL
+		_panel(card, Color(0.04, 0.115, 0.13, 1))
+		_portrait(card.position + Vector2(51, 53), id, tint, 31)
+		_text(String(member.get("name", id.capitalize())), card.position + Vector2(96, 42), 23, IVORY)
+		_text(id.to_upper(), card.position + Vector2(96, 64), 12, tint)
+		_text(_fit_text(String(member.get("role", "Adventurer")), card.size.x - 36, 13), card.position + Vector2(18, 108), 13, IVORY)
+		_text("Sword & Shield" if id == "guardian" else "Magic Staff", card.position + Vector2(18, 132), 13, MUTED)
+		_text("Intercepts threats · blocks attacks" if id == "guardian" else "Ranged support · healing · revives", card.position + Vector2(18, 157), 12, MUTED)
+		_text("LEVEL %d  ·  %d XP" % [int(member.get("level", 1)), int(member.get("experience", 0))], card.position + Vector2(18, 193), 13, GOLD)
+		_text("TRAIT  " + String(member.get("trait", "Steadfast")), card.position + Vector2(18, 216), 12, IVORY)
+		_text("COMBAT PROFICIENCY  %d%%" % int(round(float(member.get("proficiency", 0.7)) * 100)), card.position + Vector2(18, 239), 11, MUTED)
+		_button(_recruit_rect(index), "DISMISS FROM PARTY" if bool(member.get("recruited", false)) else "RECRUIT TO PARTY", true)
+	var status := _party_notice if not _party_notice.is_empty() else "Roster and experience are saved locally."
+	_text(_fit_text(status, rect.size.x - 310, 12), rect.position + Vector2(32, rect.size.y - 62), 12, GOLD if not _party_notice.is_empty() else MUTED)
+	_text("Dismissed companions keep their progress.", rect.position + Vector2(32, rect.size.y - 40), 12, MUTED)
+	_button(_continue_rect(), "BACK TO SANCTUARY", true)
+
+
+func _portrait(center: Vector2, role: String, tint: Color, radius: float) -> void:
+	# Tiny geometric portraits and distinct role silhouettes use no texture atlas.
+	draw_circle(center, radius, Color(0.018, 0.055, 0.065), true, -1, true)
+	draw_arc(center, radius, 0, TAU, 24, Color(tint, 0.55), 1, true)
+	var unit := radius / 20.0
+	if role == "guardian":
+		var shield := PackedVector2Array([Vector2(-11, -13), Vector2(11, -13), Vector2(11, 4), Vector2(0, 14), Vector2(-11, 4)])
+		for index in range(shield.size()):
+			shield[index] = center + shield[index] * unit
+		draw_colored_polygon(shield, Color(tint, 0.3))
+		shield.append(shield[0])
+		draw_polyline(shield, tint, 1.6, true)
+		draw_line(center + Vector2(-6, -3) * unit, center + Vector2(6, -3) * unit, tint, 2, true)
+		draw_line(center + Vector2(0, -9) * unit, center + Vector2(0, 8) * unit, tint, 2, true)
+	else:
+		var hood := PackedVector2Array([center + Vector2(0, -15) * unit, center + Vector2(12, 9) * unit, center + Vector2(-12, 9) * unit])
+		draw_colored_polygon(hood, Color(tint, 0.3))
+		hood.append(hood[0])
+		draw_polyline(hood, tint, 1.6, true)
+		_diamond(center + Vector2(0, -2) * unit, 4 * unit, tint)
+		draw_line(center + Vector2(-7, 14) * unit, center + Vector2(7, 14) * unit, tint, 2, true)
 
 
 func _draw_pack_controls() -> void:

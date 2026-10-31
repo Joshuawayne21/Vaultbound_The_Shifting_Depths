@@ -69,6 +69,7 @@ var _patch_hits: Array[bool] = []
 var _recent_attacks: Dictionary = {}
 var _hit_label_time := 0.0
 var _fury_pending := false
+var _target_interval := 0.0
 
 func configure(seed: int) -> void:
 	# Configuration is a pre-spawn operation, never an encounter reset command.
@@ -99,6 +100,7 @@ func _ready() -> void:
 	add_to_group("combat_targets")
 	add_to_group("enemies")
 	add_to_group("bosses")
+	add_to_group("combat_telegraphs")
 	_visual = Visual.new()
 	add_child(_visual)
 	_build_warnings()
@@ -114,8 +116,10 @@ func _physics_process(delta: float) -> void:
 		slow_remaining = maxf(0.0, slow_remaining - delta)
 		if slow_remaining <= 0.0:
 			slow_factor = 1.0
-	if not is_instance_valid(_player):
-		_player = get_tree().get_first_node_in_group("player") as Node3D
+	_target_interval -= delta
+	if not _player_available() or (_target_interval <= 0.0 and state in [&"idle", &"approach", &"recovery"]):
+		_select_party_target()
+		_target_interval = 0.4
 	if not combat_active or not _player_available():
 		_cancel_pending()
 		_set_state(&"idle", 0.7)
@@ -264,23 +268,26 @@ func _begin_active() -> void:
 	attack_committed.emit(attack_id)
 	match attack_name:
 		&"root_slam":
-			var toward := _player.global_position - _attack_origin
-			toward.y = 0.0
-			if toward.length() <= data.slam_range and (toward.length() < 0.1 or _attack_direction.dot(toward.normalized()) >= cos(0.78)):
-				_deliver(data.slam_damage, 0.28)
+			for candidate: Node3D in CombatRules.party_targets(self):
+				var toward := candidate.global_position - _attack_origin
+				toward.y = 0.0
+				if toward.length() <= data.slam_range and (toward.length() < 0.1 or _attack_direction.dot(toward.normalized()) >= cos(0.78)):
+					_deliver(candidate, data.slam_damage, 0.28)
 			CombatRules.effect(_attack_origin + _attack_direction * 2.2 + Vector3.UP * 0.12, Color("a0d97c"), 1.5, 0.3, get_parent())
 		&"thorn_eruption":
 			_hit_patch(0)
 		&"vine_grasp":
-			if _flat_distance(_player.global_position, _patches[0]) <= data.grasp_radius:
-				_deliver(data.grasp_damage, 0.55)
+			for candidate: Node3D in CombatRules.party_targets(self):
+				if _flat_distance(candidate.global_position, _patches[0]) <= data.grasp_radius:
+					_deliver(candidate, data.grasp_damage, 0.55)
 			_warnings[0].mesh = _vine_mesh
 			_warnings[0].material_override = _root_material
 			_warnings[0].scale = Vector3(data.grasp_radius, 1.0, data.grasp_radius)
 			CombatRules.effect(_patches[0] + Vector3.UP * 0.12, Color("82e2a4"), data.grasp_radius, 0.4, get_parent())
 		&"guardian_fury":
-			if _flat_distance(_player.global_position, _attack_origin) <= data.fury_radius:
-				_deliver(data.fury_damage, 0.35)
+			for candidate: Node3D in CombatRules.party_targets(self):
+				if _flat_distance(candidate.global_position, _attack_origin) <= data.fury_radius:
+					_deliver(candidate, data.fury_damage, 0.35)
 			CombatRules.effect(_attack_origin + Vector3.UP * 0.14, Color("d2e58c"), data.fury_radius, 0.45, get_parent())
 
 func _hit_patch(index: int) -> void:
@@ -293,19 +300,20 @@ func _hit_patch(index: int) -> void:
 	_warnings[index].scale = Vector3(data.thorn_radius * 0.55, 0.1, data.thorn_radius * 0.55)
 	_warnings[index].global_position.y = spawn_position.y + 0.18
 	var center := _patches[index]
-	if _flat_distance(_player.global_position, center) <= data.thorn_radius and CombatRules.visible_from(self, center + Vector3.UP, _player.global_position + Vector3.UP):
-		_deliver(data.thorn_damage, 0.22)
+	for candidate: Node3D in CombatRules.party_targets(self):
+		if _flat_distance(candidate.global_position, center) <= data.thorn_radius and CombatRules.visible_from(self, center + Vector3.UP, candidate.global_position + Vector3.UP):
+			_deliver(candidate, data.thorn_damage, 0.22)
 	CombatRules.effect(center + Vector3.UP * 0.12, Color("acd576"), data.thorn_radius, 0.35, get_parent())
 
-func _deliver(amount: float, stagger: float) -> void:
-	if not _player_available() or not combat_active or state != &"active":
+func _deliver(candidate: Node3D, amount: float, stagger: float) -> void:
+	if not CombatRules.party_target_available(candidate) or not combat_active or state != &"active":
 		return
-	if absf(_player.global_position.y - global_position.y) > 2.0:
+	if absf(candidate.global_position.y - global_position.y) > 2.0:
 		return
-	if CombatRules.has_line_of_sight(self, _player):
+	if CombatRules.has_line_of_sight(self, candidate):
 		# The whole thorn sequence shares one ID: even touching two patches cannot
-		# stack hits on the player. Dodge attempts consume that cast's receipt too.
-		CombatRules.apply_hit(self, _player, amount, attack_id, &"rootwarden", stagger)
+		# stack hits on one member. Each member has their own cast receipt.
+		CombatRules.apply_hit(self, candidate, amount, attack_id, &"rootwarden", stagger)
 
 func receive_hit(packet: Dictionary) -> bool:
 	if health <= 0.0 or state == &"dead" or not combat_active:
@@ -392,7 +400,43 @@ func _cancel_pending() -> void:
 	_active_elapsed = 0.0
 
 func _player_available() -> bool:
-	return is_instance_valid(_player) and _player.is_inside_tree() and float(_player.get("health")) > 0.0 and bool(_player.get("controls_enabled"))
+	return CombatRules.party_target_available(_player)
+
+func _select_party_target() -> void:
+	var selected: Node3D = _player if _player_available() and _flat_distance(_player.global_position, spawn_position) <= data.leash_radius else null
+	var best := _flat_distance(global_position, selected.global_position) * 0.8 if selected != null and CombatRules.has_line_of_sight(self, selected) else INF
+	for candidate: Node3D in CombatRules.party_targets(self):
+		if _flat_distance(candidate.global_position, spawn_position) > data.leash_radius or not CombatRules.has_line_of_sight(self, candidate):
+			continue
+		var score := _flat_distance(global_position, candidate.global_position)
+		if score < best:
+			best = score
+			selected = candidate
+	if selected != null or not _player_available():
+		_player = selected
+
+func get_combat_target() -> Node3D:
+	return _player if _player_available() else null
+
+func get_danger_zones() -> Array[Dictionary]:
+	var zones: Array[Dictionary] = []
+	if not combat_active or state not in [&"windup", &"active"]:
+		return zones
+	var remaining := _timer if state == &"windup" else 0.0
+	match attack_name:
+		&"root_slam":
+			zones.append({"position": _attack_origin + _attack_direction * data.slam_range * 0.5,
+				"radius": data.slam_range * 0.76, "remaining": remaining, "kind": &"root_slam"})
+		&"guardian_fury":
+			zones.append({"position": _attack_origin, "radius": data.fury_radius,
+				"remaining": remaining, "kind": &"guardian_fury"})
+		&"thorn_eruption", &"vine_grasp":
+			for index in range(_patches.size()):
+				if attack_name == &"thorn_eruption" and _patch_hits[index]:
+					continue
+				zones.append({"position": _patches[index], "radius": data.thorn_radius if attack_name == &"thorn_eruption" else data.grasp_radius,
+					"remaining": remaining + (data.thorn_interval * index if attack_name == &"thorn_eruption" else 0.0), "kind": attack_name})
+	return zones
 
 func _direction_to(point: Vector3) -> Vector3:
 	var result := point - global_position

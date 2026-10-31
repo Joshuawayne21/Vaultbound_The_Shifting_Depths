@@ -31,7 +31,7 @@ func configure(actor: Node3D, heading: Vector3, amount: float, velocity: float,
 func _ready() -> void:
 	add_to_group("combat_projectiles")
 	var mesh := SphereMesh.new()
-	mesh.radius = 0.12 if target_group == &"player" else 0.18
+	mesh.radius = 0.12 if target_group in [&"player", &"party_members"] else 0.18
 	mesh.height = mesh.radius * 2.0
 	mesh.radial_segments = 8
 	mesh.rings = 4
@@ -55,7 +55,7 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 		return
 	var destination := global_position + direction * speed * delta
-	var mask := 1 | (2 if target_group == &"player" else 4)
+	var mask := 1 | (2 if target_group in [&"player", &"party_members"] else 4)
 	var ray := PhysicsRayQueryParameters3D.create(global_position, destination, mask)
 	ray.collide_with_areas = false
 	ray.hit_from_inside = true
@@ -68,12 +68,13 @@ func _physics_process(delta: float) -> void:
 	_hit = true
 	global_position = collision.position
 	var actor: Node = collision.collider
-	while actor != null and not actor.is_in_group(target_group):
+	while actor != null and not _matches_target(actor):
 		actor = actor.get_parent()
 	if actor is Node3D:
 		CombatRules.apply_hit(source, actor, damage, attack_id, &"magic", stagger)
 	if splash_radius > 0.0:
-		for target: Node in get_tree().get_nodes_in_group(target_group):
+		var targets: Array = CombatRules.party_targets(self) if target_group == &"party_members" else get_tree().get_nodes_in_group(target_group)
+		for target: Node in targets:
 			if not target is Node3D or target == actor:
 				continue
 			var center: Vector3 = target.global_position + Vector3.UP
@@ -81,3 +82,6 @@ func _physics_process(delta: float) -> void:
 				CombatRules.apply_hit(source, target, damage * 0.7, attack_id, &"magic", stagger)
 	CombatRules.effect(global_position, tint, maxf(0.35, splash_radius), 0.3, get_parent())
 	queue_free()
+
+func _matches_target(actor: Node) -> bool:
+	return actor.is_in_group(target_group) or (target_group == &"party_members" and actor.is_in_group("player"))

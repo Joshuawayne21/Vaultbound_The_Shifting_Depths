@@ -6,6 +6,16 @@ extends RefCounted
 
 const VERSION := 1
 const MAX_COUNT := 2147483647
+const MAX_COMPANION_LEVEL := 20
+const MAX_COMPANION_EXPERIENCE := 19000
+## Roster identity is independent of runtime party slots. A dismissed companion
+## retains progression; the active party decides whether an AI occupies a slot.
+const COMPANION_DEFAULTS := {
+	"guardian": {"name": "Rowan", "role": "Tank", "level": 1, "experience": 0,
+		"trait": "Steadfast", "proficiency": 0.5, "recruited": false},
+	"mystic": {"name": "Lyra", "role": "Ranged Support", "level": 1, "experience": 0,
+		"trait": "Careful", "proficiency": 0.5, "recruited": false},
+}
 var path: String
 var last_error := ""
 var read_only := false
@@ -16,7 +26,8 @@ func _init(storage_path: String = "user://vaultbound/profile.json") -> void:
 
 static func empty_profile() -> Dictionary:
 	return {"version": VERSION, "revision": 0, "gold": 0, "items": {}, "discoveries": [],
-		"equipped_item": "", "statistics": {"completed": 0, "deaths": 0,
+		"equipped_item": "", "companions": COMPANION_DEFAULTS.duplicate(true),
+		"statistics": {"completed": 0, "deaths": 0,
 			"total_gold": 0, "total_kills": 0, "best_seconds": 0.0, "last_seed": 0}}
 
 func load_profile() -> Dictionary:
@@ -129,7 +140,48 @@ static func normalize(value: Variant) -> Dictionary:
 	if not equipped is String or String(equipped).length() > 96:
 		return {}
 	result.equipped_item = equipped
+	# Milestone 3 profiles have no roster. This additive version-1 migration only
+	# supplies defaults in memory; it never rewrites a file merely by loading it.
+	var companions: Variant = value.get("companions", {})
+	if not companions is Dictionary:
+		return {}
+	for id: Variant in companions:
+		if not id is String or not COMPANION_DEFAULTS.has(id):
+			return {}
+		var entry: Variant = companions[id]
+		if not entry is Dictionary:
+			return {}
+		if not _roster_text(entry.get("name"), 40) or not _roster_text(entry.get("trait"), 48):
+			return {}
+		if entry.get("role") != COMPANION_DEFAULTS[id].role or not entry.get("recruited") is bool:
+			return {}
+		if not _integer(entry.get("level"), 1, MAX_COMPANION_LEVEL) or not _integer(entry.get("experience"), 0, MAX_COMPANION_EXPERIENCE):
+			return {}
+		if int(entry.level) != companion_level(int(entry.experience)):
+			return {}
+		var proficiency: Variant = entry.get("proficiency")
+		if not (proficiency is int or proficiency is float) or not is_finite(float(proficiency)) or float(proficiency) < 0.0 or float(proficiency) > 1.0:
+			return {}
+		result.companions[id] = {"name": String(entry.name), "role": String(entry.role),
+			"level": int(entry.level), "experience": int(entry.experience),
+			"trait": String(entry.trait), "proficiency": float(proficiency), "recruited": bool(entry.recruited)}
 	return result
+
+static func companion_level(experience: int) -> int:
+	var level := 1
+	var threshold := 100
+	while level < MAX_COMPANION_LEVEL and experience >= threshold:
+		level += 1
+		threshold += level * 100
+	return level
+
+static func _roster_text(value: Variant, maximum_length: int) -> bool:
+	if not value is String or value.strip_edges().is_empty() or value.length() > maximum_length:
+		return false
+	for index in range(value.length()):
+		if value.unicode_at(index) < 32:
+			return false
+	return true
 
 static func _integer(value: Variant, minimum: int, maximum: int) -> bool:
 	return (value is int or value is float) and is_finite(float(value)) and float(value) == floor(float(value)) and float(value) >= minimum and float(value) <= maximum

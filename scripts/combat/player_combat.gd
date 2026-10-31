@@ -195,6 +195,9 @@ func _commit_hit() -> void:
 			var direction: Vector3 = actor._facing
 			if is_instance_valid(selected):
 				direction = (selected.global_position + Vector3.UP - origin).normalized()
+			# AI actors supply their own accuracy; the human input path is unchanged.
+			if actor.has_method("combat_aim_direction"):
+				direction = actor.combat_aim_direction(direction)
 			CombatRules.spawn_projectile(actor, origin, direction, damage, data.projectile_speed,
 				data.projectile_lifetime, attack_id, &"combat_targets", weapon.effect_color,
 				data.radius, data.stagger)
@@ -304,9 +307,12 @@ func start_dodge() -> void:
 	dodge_cooldown = 0.65
 	invulnerable_remaining = dodge_iframes
 	dodge_direction = actor._facing
-	var stick: Vector2 = InputHub.get_move_vector()
-	if stick.length_squared() > 0.01 and is_instance_valid(actor.camera_rig):
-		dodge_direction = actor.camera_rig.movement_direction(stick).normalized()
+	if actor.has_method("combat_direction"):
+		dodge_direction = actor.combat_direction()
+	else:
+		var stick: Vector2 = InputHub.get_move_vector()
+		if stick.length_squared() > 0.01 and is_instance_valid(actor.camera_rig):
+			dodge_direction = actor.camera_rig.movement_direction(stick).normalized()
 	actor._facing = dodge_direction
 	actor._emit_stats()
 

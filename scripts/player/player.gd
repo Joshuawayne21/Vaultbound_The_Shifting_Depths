@@ -54,6 +54,10 @@ var target: Node3D
 var target_locked := false
 var camera_rig: Node3D
 var controls_enabled := true
+var party: Node
+var downed := false
+var eliminated := false
+var damage_sequence := 0
 var interaction_target: Node3D
 var _gravity := 20.0
 var _facing := Vector3.FORWARD
@@ -82,6 +86,11 @@ func _physics_process(delta: float) -> void:
 	var movement := Vector3.ZERO
 	if controls_enabled and InputHub.controls_enabled and health > 0.0:
 		var stick := InputHub.get_move_vector()
+		if is_instance_valid(party) and party.is_reviving(self):
+			if stick.length_squared() > 0.01:
+				party.cancel_revive(self, "Revive canceled by movement")
+			else:
+				stick = Vector2.ZERO
 		movement = camera_rig.movement_direction(stick) if is_instance_valid(camera_rig) else Vector3(stick.x, 0.0, stick.y)
 	if combat.state == &"dodge":
 		velocity.x = combat.dodge_direction.x * combat.dodge_speed
@@ -105,7 +114,7 @@ func _physics_process(delta: float) -> void:
 	var local_facing := global_basis.inverse() * _facing
 	var facing_yaw := atan2(-local_facing.x, -local_facing.z)
 	visual.rotation.y = lerp_angle(visual.rotation.y, facing_yaw, 1.0 - exp(-18.0 * delta))
-	visual.set_combat_pose(combat.state, combat.animation_progress(), combat.combo_index, combat.charge_ratio, combat.state == &"blocking")
+	visual.set_combat_pose(combat.state, 1.0 if downed else combat.animation_progress(), combat.combo_index, combat.charge_ratio, combat.state == &"blocking")
 	visual.animate(delta, Vector2(velocity.x, velocity.z).length(), attack_remaining, dodge_remaining)
 	_update_interaction()
 	_update_target_ring()
@@ -129,6 +138,8 @@ func request_action(action: StringName) -> void:
 		return
 	if not controls_enabled or not InputHub.controls_enabled or health <= 0.0:
 		return
+	if is_instance_valid(party) and party.is_reviving(self) and action not in [&"camera_toggle", &"party_menu", &"perf_toggle", &"interact", &"revive_teammate"]:
+		party.cancel_revive(self, "Revive canceled by action")
 	if action == &"interact":
 		if combat.state != &"idle":
 			return
@@ -174,14 +185,20 @@ func receive_hit(packet: Dictionary) -> bool:
 	amount = combat.block_damage(amount, incoming)
 	blocked = blocked and amount < original_amount
 	health_component.damage(amount)
+	damage_sequence += 1
+	if is_instance_valid(party):
+		party.notify_damage(self)
 	visual.flash_damage()
 	if health <= 0.0:
 		combat.kill()
 		if not _recovery_requested:
 			_recovery_requested = true
-			feedback.emit("The Sanctuary calls you home")
 			set_controls_enabled(false)
-			respawn_requested.emit()
+			if is_instance_valid(party):
+				party.on_member_defeated(self)
+			else:
+				feedback.emit("The Sanctuary calls you home")
+				respawn_requested.emit()
 	elif not blocked:
 		combat.interrupt(maxf(0.16, float(packet.get("stagger", 0.0))))
 	_emit_stats()
@@ -202,7 +219,7 @@ func restore_stamina(amount: float) -> float:
 	return restored
 
 func set_controls_enabled(enabled: bool) -> void:
-	controls_enabled = enabled
+	controls_enabled = enabled and not downed and not eliminated and health > 0.0
 	if not enabled:
 		velocity = Vector3.ZERO
 		if combat != null:
@@ -210,6 +227,8 @@ func set_controls_enabled(enabled: bool) -> void:
 
 func reset_for_spawn(spawn_transform: Transform3D) -> void:
 	global_transform = spawn_transform
+	downed = false
+	eliminated = false
 	_recovery_requested = false
 	velocity = Vector3.ZERO
 	combat.reset_for_spawn()
@@ -223,6 +242,25 @@ func reset_for_spawn(spawn_transform: Transform3D) -> void:
 	if health <= 0.0:
 		health_component.reset()
 		stamina_component.reset()
+	_emit_stats()
+
+func set_downed(value: bool = true) -> void:
+	downed = value
+	if value:
+		health = 0.0
+		combat.kill()
+		set_controls_enabled(false)
+	_emit_stats()
+
+func revive(health_fraction: float) -> void:
+	downed = false
+	eliminated = false
+	health = max_health * clampf(health_fraction, 0.1, 0.75)
+	_recovery_requested = false
+	combat.reset_for_spawn()
+	invulnerable_remaining = 1.0
+	stamina = maxf(stamina, 35.0)
+	set_controls_enabled(true)
 	_emit_stats()
 
 func _update_interaction() -> void:

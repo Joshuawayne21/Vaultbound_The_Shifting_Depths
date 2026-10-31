@@ -16,6 +16,7 @@ var _material: StandardMaterial3D
 
 func _ready() -> void:
 	add_to_group("abyss_hazards")
+	add_to_group("combat_telegraphs")
 	_material = StandardMaterial3D.new()
 	_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_material.albedo_color = Color("dc965f")
@@ -75,8 +76,8 @@ func cancel() -> void:
 func _physics_process(delta: float) -> void:
 	if not active:
 		return
-	var player := get_tree().get_first_node_in_group("player") as Node3D
-	if player == null or not bool(player.get("controls_enabled")) or float(player.get("health")) <= 0.0:
+	var members := CombatRules.party_targets(self)
+	if members.is_empty():
 		return
 	_remaining -= delta
 	if state == &"warning":
@@ -87,10 +88,18 @@ func _physics_process(delta: float) -> void:
 			_thorns.visible = true
 			_thorns.scale = Vector3(radius, 1.0, radius)
 			_attack_id = CombatRules.next_attack_id()
-			var offset := player.global_position - global_position
-			offset.y = 0.0
-			if offset.length() <= radius and CombatRules.has_line_of_sight(self, player):
-				CombatRules.apply_hit(self, player, damage, _attack_id, &"roots", 0.2)
+			for member: Node3D in members:
+				var offset := member.global_position - global_position
+				offset.y = 0.0
+				if offset.length() <= radius and CombatRules.has_line_of_sight(self, member):
+					CombatRules.apply_hit(self, member, damage, _attack_id, &"roots", 0.2)
 	elif _remaining <= 0.0:
 		cancel()
 		finished.emit()
+
+func get_danger_zones() -> Array[Dictionary]:
+	var zones: Array[Dictionary] = []
+	if active:
+		zones.append({"position": global_position, "radius": radius,
+			"remaining": _remaining if state == &"warning" else 0.0, "kind": &"roots"})
+	return zones

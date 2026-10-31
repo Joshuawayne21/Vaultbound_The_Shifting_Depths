@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="CompanionData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/party/companion_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "mystic"
+display_name = "Lyra"
+role = "Mystic"
+weapon_style = &"staff"
+personality = "Careful"
+maximum_health = 90.0
+move_speed = 4.8
+decision_interval = 0.38
+reaction_jitter = 0.15
+accuracy = 0.84
+desired_range = 7.0
+heal_amount = 30.0
+heal_cooldown = 13.0
+heal_cast_time = 0.7
+heal_range = 7.0
+heal_stamina_cost = 20.0
+tint = Color(0.54, 0.48, 0.83, 1)

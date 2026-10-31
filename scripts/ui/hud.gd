@@ -1,6 +1,6 @@
 class_name VaultHUD
 extends CanvasLayer
-## Persistent presentation only. All gameplay commands go through InputHub.
+## Persistent presentation only. Combat uses InputHub; party orders use VaultParty.
 
 signal modal_changed(open: bool)
 signal results_closed
@@ -11,6 +11,7 @@ signal equipment_requested(item_id: String)
 @onready var expedition_overlay: Control = $ExpeditionOverlay
 var _player: Node
 var _session: Node
+var _party: Node
 var pending_results: Dictionary = {}
 
 
@@ -32,6 +33,40 @@ func bind_expedition(session: Node) -> void:
 		session.results_ready.connect(_on_results_ready)
 	if session.has_method("snapshot"):
 		_on_session_changed(session.snapshot())
+
+
+func bind_party(party: Node) -> void:
+	_party = party
+	expedition_overlay.bind_party(party)
+	surface.party_visible = true
+	if not party.changed.is_connected(_on_party_changed):
+		party.changed.connect(_on_party_changed)
+	if not party.notice.is_connected(show_message):
+		party.notice.connect(show_message)
+	if not party.recruitment_requested.is_connected(open_recruitment):
+		party.recruitment_requested.connect(open_recruitment)
+	_on_party_changed(party.snapshot())
+
+
+func _on_party_changed(data: Dictionary) -> void:
+	expedition_overlay.set_party_snapshot(data)
+	surface.party_revive_prompt_active = not String(data.get("revive_prompt", "")).is_empty()
+	surface.queue_redraw()
+
+
+func open_party_menu() -> void:
+	expedition_overlay.open_party_menu()
+
+
+func toggle_party_menu() -> void:
+	if expedition_overlay.mode == &"party":
+		expedition_overlay.close_modal()
+	elif expedition_overlay.mode == &"none":
+		expedition_overlay.open_party_menu()
+
+
+func open_recruitment() -> void:
+	expedition_overlay.open_recruitment()
 
 
 func set_dungeon_snapshot(data: Dictionary) -> void:

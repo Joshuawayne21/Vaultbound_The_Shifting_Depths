@@ -161,6 +161,7 @@ func extract() -> bool:
 	next.statistics.last_seed = run_seed
 	if float(next.statistics.best_seconds) <= 0.0 or elapsed < float(next.statistics.best_seconds):
 		next.statistics.best_seconds = elapsed
+	var companion_experience := _award_extraction_experience(next)
 	next.revision = int(next.revision) + 1
 	if not store.save_profile(next):
 		storage_error = store.last_error
@@ -171,6 +172,7 @@ func extract() -> bool:
 	storage_error = ""
 	last_results = _results("extracted")
 	last_results.new_discoveries = newly_discovered
+	last_results.companion_experience = companion_experience
 	_clear_run()
 	_emit_changed()
 	results_ready.emit(last_results.duplicate(true))
@@ -234,7 +236,61 @@ func snapshot() -> Dictionary:
 		"inventory": inventory, "secured_items": inventory, "discoveries": profile.discoveries.duplicate(),
 		"boss_defeated": boss_defeated, "kills": kills, "elapsed": elapsed, "elapsed_seconds": elapsed,
 		"equipped_item": String(profile.equipped_item), "last_results": last_results.duplicate(true),
-		"storage_error": storage_error, "statistics": profile.statistics.duplicate(true)}
+		"storage_error": storage_error, "statistics": profile.statistics.duplicate(true),
+		"companions": companion_roster()}
+
+func companion_roster() -> Array[Dictionary]:
+	var roster: Array[Dictionary] = []
+	for id: String in ["guardian", "mystic"]:
+		var entry: Dictionary = profile.companions[id].duplicate(true)
+		entry.id = id
+		roster.append(entry)
+	return roster
+
+func set_companion_recruited(id: String, recruited: bool) -> bool:
+	# Sanctuary location checks belong to the party service. The persistence
+	# boundary independently forbids changing expedition participants mid-run.
+	if active:
+		notice.emit("Return to the Sanctuary Tavern to change your party.")
+		return false
+	if not VaultProfileStore.COMPANION_DEFAULTS.has(id):
+		return false
+	if store.read_only:
+		storage_error = store.last_error
+		notice.emit("The companion roster could not save: " + storage_error)
+		return false
+	if bool(profile.companions[id].recruited) == recruited:
+		return true
+	var next := profile.duplicate(true)
+	next.companions[id].recruited = recruited
+	next.revision = int(next.revision) + 1
+	if not store.save_profile(next):
+		storage_error = store.last_error
+		notice.emit("The companion roster could not save: " + storage_error)
+		_emit_changed()
+		return false
+	profile = next
+	storage_error = ""
+	_emit_changed()
+	return true
+
+func _award_extraction_experience(candidate: Dictionary) -> Dictionary:
+	# Experience is part of the same transaction as secured loot. Failed saves,
+	# repeated extraction requests, abandoned runs and defeats grant no progress.
+	var rewards: Dictionary = {}
+	var earned := mini(VaultProfileStore.MAX_COMPANION_EXPERIENCE, 150 + kills * 10)
+	for id: String in candidate.companions:
+		var entry: Dictionary = candidate.companions[id]
+		if not bool(entry.recruited):
+			continue
+		var before := int(entry.experience)
+		entry.experience = mini(VaultProfileStore.MAX_COMPANION_EXPERIENCE, before + earned)
+		entry.level = VaultProfileStore.companion_level(int(entry.experience))
+		# Integer-derived fractions avoid accumulated float rounding in the saved
+		# proficiency value, which is verified after a JSON round trip.
+		entry.proficiency = float(int(entry.level) + 19) / 40.0
+		rewards[id] = int(entry.experience) - before
+	return rewards
 
 func use_consumable(player: Node) -> bool:
 	for item_id: String in ["mooncap_tonic", "sunfruit_elixir"]:

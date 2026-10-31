@@ -35,6 +35,8 @@ const ACTION_KEYS := {
 	&"use_consumable": [KEY_H],
 	&"inventory": [KEY_I],
 	&"perf_toggle": [KEY_P],
+	&"party_menu": [KEY_B],
+	&"revive_teammate": [KEY_V],
 }
 
 func _ready() -> void:
