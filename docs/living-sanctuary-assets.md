@@ -19,6 +19,12 @@ The [city map](living-sanctuary-map.svg) is an original schematic. It is not a r
 
 The five additional resources in `resources/biome_art/` describe future **Crystal Caverns, Ember Crypt, Flooded Ruins, Hollow Sky Vault and Forgotten Catacombs** art directions. They are explicitly unavailable. They supply no playable destinations, encounters, finished models, reward sources or synchronized multiplayer content. Rootbound's entry refers to the existing playable dungeon.
 
+## Social presentation — 6D
+
+The nine emotes use finite original procedural poses on the existing avatar's torso, limb and cape pivots. Weapons keep their existing attachments. These are rigid-pivot animation placeholders, not newly acquired rigs or authored motion-capture clips; planted feet, silhouettes and transitions still need visual review in both cameras.
+
+The emote wheel and companion card reuse the existing fantasy UI theme. The chat composer uses native Godot Controls and the engine's fallback font, with no downloaded font or icon pack. Text labels identify LOCAL DEMO rows and AI companions; no artwork is presented as evidence of real online players or live message delivery.
+
 ## Performance and visual limits
 
 The source defines explicit geometry, actor and effect ceilings. Retained butterfly slots are distinct from visible/active butterflies; room motes and existing item effects have their own budgets. Counts and measurements belong in the stage's validation/performance report, not an inferred FPS claim.

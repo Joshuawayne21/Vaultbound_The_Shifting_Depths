@@ -55,6 +55,7 @@ var ui_scale := 1.0
 var reduced_motion := false
 var reduced_effects := false
 var high_contrast_prompts := false
+var native_gui_passthrough := false
 
 
 func _ready() -> void:
@@ -149,7 +150,8 @@ func _notification(what: int) -> void:
 
 func _input(event: InputEvent) -> void:
 	if modal_blocked:
-		get_viewport().set_input_as_handled()
+		if not native_gui_passthrough:
+			get_viewport().set_input_as_handled()
 		return
 	# Releases are processed even if the game became disabled between press/release.
 	var releasing_touch: bool = event is InputEventScreenTouch and (not event.pressed or event.canceled)

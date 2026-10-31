@@ -16,6 +16,8 @@ var _look_delta := Vector2.ZERO
 var _mouse_looking := false
 var _has_focus := true
 var _held: Dictionary = {}
+var _text_capture := false
+var _keyboard_release_gate: Dictionary = {}
 
 const ACTION_KEYS := {
 	&"move_left": [KEY_A, KEY_LEFT],
@@ -55,8 +57,33 @@ func _ready() -> void:
 func get_move_vector() -> Vector2:
 	if not controls_enabled or not _has_focus:
 		return Vector2.ZERO
-	var keyboard := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	var keyboard := Vector2.ZERO if _text_capture or is_keyboard_gameplay_blocked() else Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	return (_touch_move + keyboard).limit_length()
+
+func is_gameplay_input_available() -> bool:
+	return controls_enabled and _has_focus
+
+func begin_text_capture() -> void:
+	_text_capture = true
+	reset_controls()
+
+func end_text_capture() -> void:
+	if not _text_capture:
+		return
+	_text_capture = false
+	# Native GUI consumption does not clear Input's physical keyboard state.
+	# Keep the keyboard quiet until keys held while typing have been released;
+	# new touch movement and actions can resume immediately.
+	for keys: Array in ACTION_KEYS.values():
+		for key: int in keys:
+			if Input.is_physical_key_pressed(key):
+				_keyboard_release_gate[key] = true
+
+func is_keyboard_gameplay_blocked() -> bool:
+	for key: int in _keyboard_release_gate.keys():
+		if not Input.is_physical_key_pressed(key):
+			_keyboard_release_gate.erase(key)
+	return not _keyboard_release_gate.is_empty()
 
 func set_touch_move(value: Vector2) -> void:
 	_touch_move = value.limit_length() if controls_enabled and _has_focus else Vector2.ZERO
@@ -103,6 +130,9 @@ func reset_controls() -> void:
 	controls_reset.emit()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and (_text_capture or is_keyboard_gameplay_blocked()):
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey and not event.echo:
 		for action: StringName in ACTION_KEYS:
 			if action == &"heavy_attack" or action == &"defense":

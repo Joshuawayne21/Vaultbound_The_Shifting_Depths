@@ -9,6 +9,11 @@ signal feedback(message: String)
 signal interaction_changed(label: String)
 signal target_changed(target: Node3D)
 signal respawn_requested
+signal emote_changed(snapshot: Dictionary)
+
+const Emotes = preload("res://scripts/player/emote_catalog.gd")
+const EMOTE_CANCEL_ACTIONS := [&"primary_attack", &"heavy_start", &"heavy_release", &"defense_start", &"dodge",
+	&"skill_one", &"skill_two", &"weapon_swap", &"weapon_primary", &"weapon_secondary"]
 
 const MOVE_SPEED := 4.8
 const ACCELERATION := 24.0
@@ -80,6 +85,7 @@ func _ready() -> void:
 	InputHub.controls_reset.connect(_on_input_reset)
 	_create_target_ring()
 	visual.set_weapon(combat.weapon.style)
+	visual.emote_changed.connect(func(snapshot: Dictionary) -> void: emote_changed.emit(snapshot))
 	_emit_stats()
 
 func _physics_process(delta: float) -> void:
@@ -113,6 +119,8 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y -= _gravity * delta
 	move_and_slide()
+	if visual.is_emoting() and not _emote_eligible():
+		cancel_emote(&"movement_or_state")
 	var local_facing := global_basis.inverse() * _facing
 	var facing_yaw := atan2(-local_facing.x, -local_facing.z)
 	visual.rotation.y = lerp_angle(visual.rotation.y, facing_yaw, 1.0 - exp(-18.0 * delta))
@@ -133,6 +141,7 @@ func _physics_process(delta: float) -> void:
 func request_action(action: StringName) -> void:
 	# Releases/cancellations must be honored even after focus loss or travel disabled input.
 	if action in [&"input_cancel", &"heavy_cancel"]:
+		cancel_emote(&"input_reset")
 		combat.release_controls()
 		return
 	if action == &"defense_release":
@@ -140,6 +149,8 @@ func request_action(action: StringName) -> void:
 		return
 	if not controls_enabled or not InputHub.controls_enabled or health <= 0.0:
 		return
+	if action in EMOTE_CANCEL_ACTIONS:
+		cancel_emote(&"combat_intent")
 	if is_instance_valid(party) and party.is_reviving(self) and action not in [&"camera_toggle", &"party_menu", &"perf_toggle", &"interact", &"revive_teammate"]:
 		party.cancel_revive(self, "Revive canceled by action")
 	if action in [&"weapon_primary", &"weapon_secondary"]:
@@ -158,14 +169,43 @@ func request_action(action: StringName) -> void:
 	combat_changed.emit(combat.snapshot())
 
 func _on_input_reset() -> void:
+	cancel_emote(&"input_reset")
 	if combat != null:
 		combat.release_controls()
 
 func _primary_attack() -> void:
+	cancel_emote(&"combat_intent")
 	combat.light_attack()
 
 func _dodge() -> void:
+	cancel_emote(&"combat_intent")
 	combat.start_dodge()
+
+
+func _emote_eligible() -> bool:
+	return is_inside_tree() and can_process() and is_instance_valid(visual) and combat != null \
+		and controls_enabled and InputHub.is_gameplay_input_available() and health > 0.0 \
+		and not downed and not eliminated and not _recovery_requested and is_on_floor() \
+		and InputHub.get_move_vector().length_squared() <= 0.01 and Vector2(velocity.x, velocity.z).length_squared() <= 0.01 \
+		and combat.state == &"idle" and combat.weapon_switch_remaining <= 0.0 \
+		and not (is_instance_valid(party) and party.is_reviving(self))
+
+
+func request_emote(id: StringName) -> bool:
+	if not Emotes.has_emote(id) or not _emote_eligible():
+		return false
+	return visual.begin_emote(id)
+
+
+func cancel_emote(reason: StringName = &"user") -> void:
+	if is_instance_valid(visual):
+		visual.cancel_emote(reason)
+
+
+func emote_snapshot() -> Dictionary:
+	if is_instance_valid(visual):
+		return visual.emote_snapshot()
+	return {"id": &"", "active": false, "elapsed": 0.0, "duration": 0.0, "last_cancel_reason": &""}
 
 func select_target(value: Node3D, locked: bool = false) -> void:
 	target_locked = locked and is_instance_valid(value)
@@ -192,6 +232,7 @@ func receive_hit(packet: Dictionary) -> bool:
 	amount *= 1.0 - clampf(float(_derived_stats.get("armor", 0.0)), 0.0, 0.55)
 	health_component.damage(amount)
 	damage_sequence += 1
+	cancel_emote(&"damage")
 	if is_instance_valid(party):
 		party.notify_damage(self)
 	visual.flash_damage()
@@ -246,10 +287,12 @@ func loadout_snapshot() -> Dictionary:
 	return {"loadouts": loadouts, "active_loadout": VaultInventory.active_weapon_slot(_progression_profile)}
 
 func request_loadout_switch(slot: String) -> bool:
+	cancel_emote(&"weapon_switch")
 	var session := get_node_or_null("/root/ExpeditionSession")
 	return session != null and session.switch_loadout(slot, self)
 
 func request_weapon_swap() -> void:
+	cancel_emote(&"weapon_switch")
 	var data := loadout_snapshot()
 	for loadout: Dictionary in data.loadouts:
 		if loadout.available and loadout.slot != data.active_loadout:
@@ -281,6 +324,7 @@ func _refresh_progression_stats() -> void:
 	_emit_stats()
 
 func on_weapon_style_changed() -> void:
+	cancel_emote(&"weapon_switch")
 	_refresh_progression_stats()
 
 func combat_damage_multiplier() -> float:
@@ -305,12 +349,15 @@ func progression_stats() -> Dictionary:
 
 func set_controls_enabled(enabled: bool) -> void:
 	controls_enabled = enabled and not downed and not eliminated and health > 0.0
+	if not controls_enabled:
+		cancel_emote(&"controls_disabled")
 	if not enabled:
 		velocity = Vector3.ZERO
 		if combat != null:
 			combat.cancel_action()
 
 func reset_for_spawn(spawn_transform: Transform3D) -> void:
+	cancel_emote(&"spawn")
 	global_transform = spawn_transform
 	downed = false
 	eliminated = false
@@ -332,12 +379,14 @@ func reset_for_spawn(spawn_transform: Transform3D) -> void:
 func set_downed(value: bool = true) -> void:
 	downed = value
 	if value:
+		cancel_emote(&"downed")
 		health = 0.0
 		combat.kill()
 		set_controls_enabled(false)
 	_emit_stats()
 
 func revive(health_fraction: float) -> void:
+	cancel_emote(&"revive")
 	downed = false
 	eliminated = false
 	health = max_health * clampf(health_fraction, 0.1, 0.75)

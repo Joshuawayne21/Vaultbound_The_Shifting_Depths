@@ -8,6 +8,8 @@ signal consumable_requested
 signal equipment_requested(item_id: String)
 signal city_waypoint_requested(id: StringName)
 signal portal_entry_requested
+signal emote_requested(id: StringName)
+signal actor_inspection_requested(id: String)
 
 const GOLD := VaultUITheme.GOLD
 const IVORY := VaultUITheme.IVORY
@@ -66,6 +68,22 @@ var ui_scale := 1.0
 var reduced_motion := false
 var reduced_effects := false
 var high_contrast_prompts := false
+var social_session: Node
+var social_snapshot: Dictionary = {}
+var chat_panel: Control
+var social_panel: Control
+var _social_pointers: Dictionary = {}
+var _social_epoch := 0
+var _native_touches: Dictionary = {}
+var _native_touch_id := -1
+var _native_touch_start := Vector2.ZERO
+var _native_touch_dragged := false
+var _native_touch_button := false
+var _native_mouse_down := false
+var _forwarding_native := false
+var _application_focused := true
+var _last_back_frame := -1
+var _modal_epoch := 0
 
 
 func _ready() -> void:
@@ -93,6 +111,85 @@ func _ready() -> void:
 	sanctuary_panel.waypoint_requested.connect(func(id: StringName) -> void: city_waypoint_requested.emit(id))
 	sanctuary_panel.enter_requested.connect(func() -> void: portal_entry_requested.emit())
 	sanctuary_panel.map_requested.connect(open_city_map)
+	social_panel = preload("res://scripts/ui/social_panel.gd").new()
+	social_panel.name = "SocialPanel"
+	add_child(social_panel)
+	social_panel.close_requested.connect(close_modal)
+	social_panel.emote_requested.connect(_on_emote_selected)
+	chat_panel = preload("res://scripts/ui/chat_panel.gd").new()
+	chat_panel.name = "ChatPanel"
+	chat_panel.input_owner = self
+	add_child(chat_panel)
+	chat_panel.close_requested.connect(close_modal)
+	chat_panel.emotes_requested.connect(open_emotes)
+
+
+func bind_social(value: Node) -> void:
+	social_session = value
+	social_session.changed.connect(_on_social_snapshot)
+	chat_panel.bind_social(value)
+	_on_social_snapshot(value.snapshot())
+
+
+func _on_social_snapshot(data: Dictionary) -> void:
+	social_snapshot = data.duplicate(true)
+	queue_redraw()
+
+
+func open_chat(channel: String = "") -> void:
+	if mode != &"none" or not is_instance_valid(social_session): return
+	if not _open_modal(&"chat"): return
+	InputHub.begin_text_capture()
+	if is_instance_valid(source_surface): source_surface.native_gui_passthrough = true
+	chat_panel.open_panel(channel)
+
+
+func open_emotes() -> void:
+	if mode not in [&"none", &"chat"]: return
+	if not _open_modal(&"social"): return
+	social_panel.open_emotes()
+
+
+func open_actor_card(data: Dictionary) -> void:
+	if mode != &"none": return
+	social_panel.open_actor_card(data)
+	_open_modal(&"social")
+
+
+func _on_emote_selected(id: StringName) -> void:
+	if mode != &"social" or not social_panel.visible or social_panel.kind != &"emotes": return
+	close_modal()
+	emote_requested.emit(id)
+
+
+func is_native_chat_active() -> bool:
+	return mode == &"chat" and is_instance_valid(chat_panel) and chat_panel.visible and _application_focused
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		_handle_back()
+	elif what in [NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED]:
+		_owned_touches.clear()
+		_owned_mouse = false
+		_application_focused = false
+		_social_epoch += 1
+		_social_pointers.clear()
+		if mode == &"chat":
+			_cancel_native_pointers()
+			chat_panel.cancel_for_focus_loss()
+	elif what in [NOTIFICATION_APPLICATION_FOCUS_IN, NOTIFICATION_APPLICATION_RESUMED]:
+		_application_focused = true
+
+
+func _handle_back() -> void:
+	if mode == &"none" or _last_back_frame == Engine.get_process_frames(): return
+	_last_back_frame = Engine.get_process_frames()
+	var generation := _modal_epoch
+	if mode == &"chat" and chat_panel.dismiss_keyboard():
+		if generation == _modal_epoch: _cancel_native_pointers()
+		return
+	close_modal()
 
 
 func set_sanctuary_snapshot(data: Dictionary) -> void:
@@ -164,6 +261,11 @@ func apply_visual_settings(settings: Dictionary) -> void:
 	high_contrast_prompts = bool(settings.get("high_contrast_prompts", false))
 	_owned_touches.clear()
 	_owned_mouse = false
+	_social_epoch += 1
+	_social_pointers.clear()
+	if mode == &"chat":
+		_cancel_native_pointers()
+		chat_panel.cancel_for_focus_loss()
 	queue_redraw()
 
 
@@ -203,12 +305,6 @@ func open_recruitment() -> void:
 	if is_instance_valid(party):
 		_party_notice = ""
 		_open_modal(&"recruit")
-
-
-func _notification(what: int) -> void:
-	if what in [NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED]:
-		_owned_touches.clear()
-		_owned_mouse = false
 
 
 func set_dungeon_snapshot(data: Dictionary) -> void:
@@ -386,7 +482,18 @@ func open_graphics() -> void:
 	_open_modal(&"graphics")
 
 
-func _open_modal(value: StringName) -> void:
+func _open_modal(value: StringName) -> bool:
+	_modal_epoch += 1
+	var generation := _modal_epoch
+	_social_epoch += 1
+	_social_pointers.clear()
+	if mode == &"chat" and value != &"chat":
+		_stop_native_chat()
+		if generation != _modal_epoch: return false
+	if value != &"chat" and is_instance_valid(chat_panel):
+		chat_panel.hide_panel()
+	if value != &"social" and is_instance_valid(social_panel):
+		social_panel.hide_panel()
 	if value != &"sanctuary" and is_instance_valid(sanctuary_panel):
 		sanctuary_panel.hide_panel()
 	if value != &"graphics" and is_instance_valid(graphics_panel):
@@ -404,13 +511,23 @@ func _open_modal(value: StringName) -> void:
 	if not was_open:
 		modal_changed.emit(true)
 	queue_redraw()
+	return true
 
 
 func close_modal() -> void:
 	if mode == &"none":
 		return
+	_modal_epoch += 1
+	var generation := _modal_epoch
 	var was_results := mode == &"results"
+	if mode == &"chat":
+		_stop_native_chat()
+		if generation != _modal_epoch: return
+	_social_epoch += 1
+	_social_pointers.clear()
 	mode = &"none"
+	if is_instance_valid(chat_panel): chat_panel.hide_panel()
+	if is_instance_valid(social_panel): social_panel.hide_panel()
 	if is_instance_valid(sanctuary_panel):
 		sanctuary_panel.hide_panel()
 	if is_instance_valid(graphics_panel):
@@ -430,23 +547,37 @@ func close_modal() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# Only a scoped native-modal touch translation may recurse through this path.
+	if _forwarding_native:
+		return
 	# Keep ownership of overlay presses until release, including the finger that
 	# closes a modal. It must never become a world swipe or click-to-attack.
 	if event is InputEventScreenTouch and (not event.pressed or event.canceled) and _owned_touches.has(event.index):
 		_owned_touches.erase(event.index)
 		get_viewport().set_input_as_handled()
+		_finish_social_pointer(event.index, _local_point(event.position), event.canceled)
 		return
 	if event is InputEventScreenDrag and _owned_touches.has(event.index):
+		_drag_social_pointer(event.index, _local_point(event.position))
 		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed and _owned_mouse:
 		_owned_mouse = false
 		get_viewport().set_input_as_handled()
+		_finish_social_pointer(-1, _local_point(event.position), false)
 		return
+	if event is InputEventMouseMotion and _owned_mouse:
+		_drag_social_pointer(-1, _local_point(event.position))
 	if mode != &"none":
+		if mode == &"chat":
+			_native_chat_event(event)
+			return
 		# Consume the complete event stream while open, including releases/drags;
 		# a finger that opened/closed a panel must never become a world attack.
 		get_viewport().set_input_as_handled()
+		if is_instance_valid(social_panel) and social_panel.visible:
+			social_panel.handle_event(event)
+			return
 		if is_instance_valid(sanctuary_panel) and sanctuary_panel.visible:
 			sanctuary_panel.handle_event(event)
 			return
@@ -471,6 +602,9 @@ func _input(event: InputEvent) -> void:
 		return
 	if is_instance_valid(source_surface) and source_surface.transition_alpha > 0.01:
 		return
+	if event is InputEventKey and InputHub.is_keyboard_gameplay_blocked():
+		get_viewport().set_input_as_handled()
+		return
 	# A downed leader can still give orders while their combat controls are off.
 	var allow_party: bool = is_instance_valid(party) and (not is_instance_valid(source_surface) or source_surface.input_enabled or _leader_downed())
 	if allow_party and event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_B:
@@ -491,8 +625,21 @@ func _input(event: InputEvent) -> void:
 		return
 	if is_instance_valid(source_surface) and not source_surface.input_enabled:
 		return
+	if event is InputEventScreenTouch and event.pressed and not event.canceled or event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		var social_action := _social_hit(point)
+		if not social_action.is_empty():
+			_claim_press(event)
+			var id: int = event.index if event is InputEventScreenTouch else -1
+			_social_pointers[id] = {"action": social_action, "start": point, "dragged": false, "epoch": _social_epoch}
+			return
 	if event is InputEventKey and event.pressed and not event.echo:
-		if event.physical_keycode == KEY_M and not sanctuary_snapshot.is_empty():
+		if event.physical_keycode in [KEY_ENTER, KEY_KP_ENTER]:
+			get_viewport().set_input_as_handled()
+			open_chat()
+		elif event.physical_keycode == KEY_G:
+			get_viewport().set_input_as_handled()
+			open_emotes()
+		elif event.physical_keycode == KEY_M and not sanctuary_snapshot.is_empty():
 			get_viewport().set_input_as_handled()
 			open_city_map()
 		elif event.physical_keycode == KEY_I:
@@ -523,6 +670,135 @@ func _input(event: InputEvent) -> void:
 	elif _tonic_rect().has_point(point):
 		_claim_press(event)
 		consumable_requested.emit()
+
+
+func _social_hit(point: Vector2) -> String:
+	if not is_instance_valid(social_session): return ""
+	if _chat_rect().has_point(point): return "chat"
+	if _emotes_rect().has_point(point): return "emotes"
+	var companions := _companions()
+	for index in range(mini(2, companions.size())):
+		if _party_member_rect(index).has_point(point):
+			return "actor:" + String(companions[index].get("id", ""))
+	return ""
+
+
+func _drag_social_pointer(id: int, point: Vector2) -> void:
+	if _social_pointers.has(id) and point.distance_to(_social_pointers[id].start) > 12.0:
+		_social_pointers[id].dragged = true
+
+
+func _finish_social_pointer(id: int, point: Vector2, canceled: bool) -> void:
+	if not _social_pointers.has(id): return
+	var pointer: Dictionary = _social_pointers[id]
+	_social_pointers.erase(id)
+	if canceled or bool(pointer.dragged) or int(pointer.epoch) != _social_epoch or mode != &"none" or _social_hit(point) != String(pointer.action): return
+	_social_epoch += 1
+	var action := String(pointer.action)
+	if action == "chat": open_chat()
+	elif action == "emotes": open_emotes()
+	elif action.begins_with("actor:"): actor_inspection_requested.emit(action.trim_prefix("actor:"))
+
+
+func _native_chat_event(event: InputEvent) -> void:
+	if not _application_focused:
+		get_viewport().set_input_as_handled()
+		return
+	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE:
+		get_viewport().set_input_as_handled()
+		_handle_back()
+		return
+	# This project deliberately disables global touch/mouse emulation. Convert
+	# one native-modal pointer locally; every gameplay touch keeps its old router.
+	if event is InputEventScreenTouch or event is InputEventScreenDrag:
+		get_viewport().set_input_as_handled()
+		_forward_native_touch(event)
+		return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		_native_mouse_down = event.pressed
+	# Leave keyboard, real mouse and GUI focus traversal to native Controls.
+
+
+func _forward_native_touch(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		if event.pressed and not event.canceled:
+			if _native_touches.size() >= 10 or _native_touches.has(event.index): return
+			_native_touches[event.index] = true
+			if _native_touch_id >= 0: return
+			_native_touch_id = event.index
+			_native_touch_start = event.position
+			_native_touch_dragged = false
+			_native_touch_button = false
+			_push_native_mouse(event.position, true)
+			var hovered := get_viewport().gui_get_hovered_control()
+			_native_touch_button = hovered is Button
+		else:
+			_native_touches.erase(event.index)
+			if event.index != _native_touch_id: return
+			var canceled: bool = event.canceled or (_native_touch_button and _native_touch_dragged)
+			if canceled: chat_panel.cancel_native_activation()
+			_push_native_mouse(Vector2(-8192, -8192) if canceled else event.position, false)
+			_native_touch_id = -1
+			if is_instance_valid(chat_panel): chat_panel.resume_native_activation()
+	elif event is InputEventScreenDrag and event.index == _native_touch_id:
+		_native_touch_dragged = _native_touch_dragged or event.position.distance_to(_native_touch_start) > 12.0
+		_push_native_motion(event.position, event.relative)
+
+
+func _push_native_mouse(point: Vector2, pressed: bool) -> void:
+	_push_native_motion(point, Vector2.ZERO)
+	var event := InputEventMouseButton.new()
+	event.position = point
+	event.global_position = point
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.button_mask = MOUSE_BUTTON_MASK_LEFT if pressed else 0
+	event.pressed = pressed
+	_forwarding_native = true
+	get_viewport().push_input(event, true)
+	_forwarding_native = false
+
+
+func _push_native_motion(point: Vector2, relative: Vector2) -> void:
+	var event := InputEventMouseMotion.new()
+	event.position = point
+	event.global_position = point
+	event.relative = relative
+	event.button_mask = MOUSE_BUTTON_MASK_LEFT
+	_forwarding_native = true
+	get_viewport().push_input(event, true)
+	_forwarding_native = false
+
+
+func _cancel_native_pointers() -> void:
+	if not is_instance_valid(chat_panel): return
+	chat_panel.cancel_native_activation()
+	if _native_touch_id >= 0 or _native_mouse_down:
+		_push_native_mouse(Vector2(-8192, -8192), false)
+	for id: int in _native_touches: _owned_touches[id] = true
+	_native_touches.clear()
+	_native_touch_id = -1
+	if _native_mouse_down: _owned_mouse = true
+	_native_mouse_down = false
+	chat_panel.resume_native_activation()
+
+
+func _stop_native_chat() -> void:
+	_cancel_native_pointers()
+	InputHub.end_text_capture()
+	if is_instance_valid(source_surface): source_surface.native_gui_passthrough = false
+	# No old-modal mutations follow storage callbacks; nested close/open owns
+	# the new capture, generation and native pass-through flags.
+	chat_panel.hide_panel()
+
+
+func _unhandled_input(_event: InputEvent) -> void:
+	if mode == &"chat": get_viewport().set_input_as_handled()
+
+
+func _exit_tree() -> void:
+	if mode == &"chat":
+		InputHub.end_text_capture()
+		if is_instance_valid(source_surface): source_surface.native_gui_passthrough = false
 
 
 func _claim_press(event: InputEvent) -> void:
@@ -631,6 +907,22 @@ func _tonic_rect() -> Rect2:
 
 func _graphics_rect() -> Rect2:
 	return Rect2(Vector2(size.x - 315 - _safe().x, 29 + _safe().y), Vector2(110, 62 * ui_scale))
+
+
+func _chat_rect() -> Rect2:
+	var side := 60.0 * ui_scale
+	return Rect2(Vector2(253 + _safe().x, size.y - _safe().y - 60 - side), Vector2.ONE * side)
+
+
+func _emotes_rect() -> Rect2:
+	var chat := _chat_rect()
+	return Rect2(chat.position - Vector2(0, chat.size.y + 12), chat.size)
+
+
+func _chat_preview_rect() -> Rect2:
+	var top := _pack_rect().end.y + 12
+	var bottom := size.y - 143 - _safe().y - 100 - 12
+	return Rect2(Vector2(31 + _safe().x, top), Vector2(284, clampf(bottom - top, 0, 76)))
 
 
 func _party_rect() -> Rect2:
@@ -744,6 +1036,7 @@ func _draw() -> void:
 	if is_instance_valid(source_surface) and source_surface.transition_alpha > 0.01:
 		return
 	_draw_pack_controls()
+	_draw_social_controls()
 	var graphics := _graphics_rect()
 	_panel(graphics, PANEL)
 	_text("GRAPHICS", graphics.get_center() + Vector2(0, -7), 12, GOLD, true)
@@ -771,6 +1064,43 @@ func _draw() -> void:
 			&"results": _draw_results()
 			&"party": _draw_party_menu()
 			&"recruit": _draw_recruitment()
+
+
+func _draw_social_controls() -> void:
+	if social_snapshot.is_empty(): return
+	var chat := _chat_rect()
+	var emotes := _emotes_rect()
+	VaultUITheme.prompt_frame(self, chat, PANEL, TEAL, high_contrast_prompts)
+	VaultUITheme.prompt_frame(self, emotes, PANEL, GOLD, high_contrast_prompts)
+	_text("CHAT", chat.get_center() + Vector2(0, -3), 11, IVORY, true)
+	_text("DEMO", chat.get_center() + Vector2(0, 14), 8, MUTED, true)
+	_text("EMOTES", emotes.get_center() + Vector2(0, 5), 10, IVORY, true)
+	var unread := 0
+	for count: Variant in social_snapshot.get("unread", {}).values(): unread += int(count)
+	if unread > 0:
+		_text(str(unread), chat.position + Vector2(chat.size.x - 7, 12), 10, GOLD, true)
+	var preferences: Dictionary = social_snapshot.get("preferences", {})
+	if not bool(preferences.get("visible", true)): return
+	var rect := _chat_preview_rect()
+	var pixels := int(preferences.get("font_size", 16))
+	var line_height := pixels * ui_scale + 6
+	var line_count := mini(3, floori(rect.size.y / line_height))
+	if line_count <= 0: return
+	var channel := String(social_snapshot.get("active_channel", "local"))
+	var entries: Array = social_snapshot.get("histories", {}).get(channel, [])
+	var lines: Array[String] = []
+	if entries.is_empty():
+		lines.append("LOCAL · DEMO · only on this device" if channel == "local" else channel.to_upper() + " · offline · send unavailable")
+	else:
+		for index in range(maxi(0, entries.size() - line_count), entries.size()):
+			var entry: Dictionary = entries[index]
+			var prefix := "DEMO · You: "
+			if bool(preferences.get("timestamps", true)):
+				var clock := Time.get_datetime_dict_from_unix_time(int(entry.get("created_unix", 0)))
+				prefix = "[%02d:%02d] " % [clock.hour, clock.minute] + prefix
+			lines.append(prefix + String(entry.get("text", "")))
+	for index in range(lines.size()):
+		_text(_fit_text(lines[index], rect.size.x, pixels), rect.position + Vector2(0, pixels * ui_scale + index * line_height), pixels, IVORY)
 
 
 func _companions() -> Array[Dictionary]:

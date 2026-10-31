@@ -28,6 +28,8 @@ var _snapshot_elapsed := 0.0
 var _world_process_mode := Node.PROCESS_MODE_INHERIT
 var _player_process_mode := Node.PROCESS_MODE_INHERIT
 var party: VaultParty
+var social_session: Node
+var _inspected_companion_id := ""
 var _city_waypoint: Dictionary = {}
 var _city_portal_source: WeakRef
 var _city_portal_route: Dictionary = {}
@@ -46,12 +48,18 @@ func _ready() -> void:
 	camera_rig.set_target(player)
 	hud.bind_player(player)
 	hud.bind_expedition(ExpeditionSession)
+	social_session = preload("res://scripts/social/social_session.gd").new()
+	social_session.name = "SocialSession"
+	add_child(social_session)
+	hud.bind_social(social_session)
 	ExpeditionSession.changed.connect(_on_progression_changed)
 	hud.modal_changed.connect(_on_modal_changed)
 	hud.consumable_requested.connect(_use_consumable)
 	hud.equipment_requested.connect(_equip_item)
 	hud.city_waypoint_requested.connect(_on_city_waypoint)
 	hud.portal_entry_requested.connect(_on_portal_enter)
+	hud.emote_requested.connect(_on_emote_requested)
+	hud.actor_inspection_requested.connect(_on_actor_inspection)
 	camera_rig.mode_changed.connect(hud.set_camera_mode)
 	hud.set_camera_mode(camera_rig.mode_name)
 	InputHub.action_requested.connect(_on_action)
@@ -75,6 +83,8 @@ func _process(delta: float) -> void:
 	if _snapshot_elapsed < 0.2:
 		return
 	_snapshot_elapsed = 0.0
+	if hud.expedition_overlay.mode == &"social" and hud.expedition_overlay.social_panel.kind == &"actor":
+		hud.expedition_overlay.social_panel.update_actor_card(_companion_card(_inspected_companion_id))
 	if current_location == &"rootbound_abyss" and is_instance_valid(active_world) and active_world.has_method("snapshot"):
 		hud.set_dungeon_snapshot(active_world.snapshot())
 	elif current_location == &"sanctuary" and not transitioning:
@@ -360,6 +370,7 @@ func _on_modal_changed(open: bool) -> void:
 			_world_process_mode = active_world.process_mode
 			active_world.process_mode = Node.PROCESS_MODE_DISABLED
 	else:
+		_inspected_companion_id = ""
 		_city_portal_source = null
 		_city_portal_route.clear()
 		ExpeditionSession.close_service()
@@ -370,6 +381,40 @@ func _on_modal_changed(open: bool) -> void:
 			player.set_controls_enabled(true)
 			InputHub.controls_enabled = true
 			hud.set_input_enabled(true)
+
+
+func _on_emote_requested(id: StringName) -> void:
+	if transitioning or _modal_open or not InputHub.is_gameplay_input_available():
+		return
+	player.request_emote(id)
+
+
+func _companion_card(id: String) -> Dictionary:
+	var unavailable := {"id": id, "available": false, "reason": "This local companion is no longer in the current party."}
+	if transitioning or not is_instance_valid(party) or party.world != active_world or not party.members.has(id):
+		return unavailable
+	var actor: Node = party.members[id]
+	if not is_instance_valid(actor) or actor.is_queued_for_deletion() or actor == player:
+		return unavailable
+	for member: Dictionary in party.snapshot().get("members", []):
+		if String(member.get("id", "")) == id and String(member.get("member_type", "")) == "ai":
+			var result := member.duplicate(true)
+			result.available = true
+			result.reason = ""
+			result.weapon = actor.combat.weapon.display_name
+			return result
+	return unavailable
+
+
+func _on_actor_inspection(id: String) -> void:
+	if transitioning or _modal_open:
+		return
+	var card := _companion_card(id)
+	if not bool(card.get("available", false)):
+		hud.show_message(String(card.reason))
+		return
+	_inspected_companion_id = id
+	hud.open_actor_card(card)
 
 func _use_consumable() -> void:
 	ExpeditionSession.use_consumable(player)

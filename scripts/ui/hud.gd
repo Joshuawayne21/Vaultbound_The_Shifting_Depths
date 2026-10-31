@@ -8,6 +8,8 @@ signal consumable_requested
 signal equipment_requested(item_id: String)
 signal city_waypoint_requested(id: StringName)
 signal portal_entry_requested
+signal emote_requested(id: StringName)
+signal actor_inspection_requested(id: String)
 
 @onready var surface: Control = $TouchSurface
 @onready var expedition_overlay: Control = $ExpeditionOverlay
@@ -25,6 +27,16 @@ func _ready() -> void:
 	expedition_overlay.equipment_requested.connect(func(item_id: String) -> void: equipment_requested.emit(item_id))
 	expedition_overlay.city_waypoint_requested.connect(func(id: StringName) -> void: city_waypoint_requested.emit(id))
 	expedition_overlay.portal_entry_requested.connect(func() -> void: portal_entry_requested.emit())
+	expedition_overlay.emote_requested.connect(func(id: StringName) -> void: emote_requested.emit(id))
+	expedition_overlay.actor_inspection_requested.connect(func(id: String) -> void: actor_inspection_requested.emit(id))
+
+
+func bind_social(session: Node) -> void:
+	expedition_overlay.bind_social(session)
+
+
+func open_actor_card(data: Dictionary) -> void:
+	expedition_overlay.open_actor_card(data)
 
 
 func bind_expedition(session: Node) -> void:

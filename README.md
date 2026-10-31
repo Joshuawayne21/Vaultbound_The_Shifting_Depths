@@ -1,8 +1,10 @@
 # Vaultbound: The Shifting Depths
 
-**Living Sanctuary — Milestone 6C, version 0.6.0-6c.** A Godot 4 / GDScript-only, offline fantasy expedition prototype for Android landscape. The Sanctuary has a 90-metre circular enclosure, a central Ring Exchange, eight connected districts, broad radial paths and accessible Forge and Tavern terraces. Distant forest and ruins, small gardens, bounded butterflies and ambient residents extend its original native-mesh presentation. Recruit companions, explore, fight, extract treasure and develop the character through the preserved RPG systems.
+**Living Sanctuary — Milestone 6D, version 0.6.0-6d.** A Godot 4 / GDScript-only, offline fantasy expedition prototype for Android landscape. The Sanctuary has a 90-metre circular enclosure, a central Ring Exchange, eight connected districts, broad radial paths and accessible Forge and Tavern terraces. Distant forest and ruins, small gardens, bounded butterflies and ambient residents extend its original native-mesh presentation. Recruit companions, explore, fight, extract treasure and develop the character through the preserved RPG systems.
 
-The hub map supplies district waypoints. Existing shops, recruitment, equipment preview and dungeon destinations remain functional; Sanctuary portals show information and require an explicit **ENTER** tap. City navigation follows the ring, spokes and ramps while dungeons retain their existing navigation. See the [Living Sanctuary plan](docs/living-sanctuary-plan.md), [schematic map](docs/living-sanctuary-map.svg) and [6C validation record](docs/living-sanctuary-6c-validation.md). The Conservatory currently provides a guide; the Pavilion opens the existing equipment preview. Pets, live trading, chat and purchases are not implemented in 6C.
+The hub map supplies district waypoints. Existing shops, recruitment, equipment preview and dungeon destinations remain functional; Sanctuary portals show information and require an explicit **ENTER** tap. City navigation follows the ring, spokes and ramps while dungeons retain their existing navigation. See the [Living Sanctuary plan](docs/living-sanctuary-plan.md), [schematic map](docs/living-sanctuary-map.svg) and [6D validation record](docs/living-sanctuary-6d-validation.md). The Conservatory currently provides a guide; the Pavilion opens the existing equipment preview. Pets, live trading and purchases remain later stages.
+
+6D adds nine local procedural emotes, inspection of actual AI party members and a native text composer with LOCAL/WORLD/PARTY tabs. **Chat is DEMO / NOT LIVE:** LOCAL can preview a self-message on this device; WORLD and PARTY cannot send. Drafts and bounded history stay in memory. Only separate chat display preferences persist. See [social behavior, limits and the online authority boundary](docs/living-sanctuary-social.md). No authenticated human player, message delivery or networked emote is implied.
 
 The 6C pass adds a static sky gradient, a restrained twenty-minute local daylight cycle and distinct wall reliefs in all fourteen Rootbound room motifs. Graphics preferences add ambient density, prompt contrast and optional generated wind sound. Reduced motion now reaches decorative shaders, portal ornaments, water and ambient actors. These are original prototype assets; see [presentation provenance and limits](docs/living-sanctuary-assets.md) and the [expanded Android checklist](docs/living-sanctuary-android.md). Five other biome art-direction resources are explicitly unavailable concepts, with no additional playable dungeons.
 
@@ -23,6 +25,7 @@ The Sanctuary, practice dungeon and arena, player movement, sword/shield and sta
 9. Visit the General Merchant, Equipment Trader and Relic Appraiser in the **eastern Merchant Terraces (C)**, and the Blacksmith on the **southern Forge terrace (E)**. Review the displayed costs before confirming purchases, sales, crafts or improvements.
 10. Use the **southeastern Collection Hall passage (D)** to assign owned equipment and relics to displays and view the discovery journals. Its return arch leads safely back to Sanctuary.
 11. Tap **GRAPHICS** to select **Low, Medium or High** and a **30 or 60 FPS target**, then **APPLY & SAVE**. Start with the default **Medium / 30 FPS**. **ACCESSIBILITY** contains UI scale, reduced motion/effects and high-contrast prompts. **AMBIENCE** contains 0/50/100% ambient density and optional sound, initially off. Use Low if sustained play shows frame-time spikes; 60 FPS is a target for capable devices, not a measured guarantee.
+12. Tap **CHAT** for the offline composer, **EMOTES** for the local wheel, or an AI companion's party entry for inspection. LOCAL's **PREVIEW · DEMO** creates only a self-preview. The Android keyboard and device input checklist remain manual acceptance work.
 
 On desktop, open the same project and press F5. F6 runs only the selected scene and may omit the persistent shell. The original Sanctuary and character models are assembled at runtime; Abyss room geometry is authored in reusable native `.tscn` scenes.
 
@@ -52,6 +55,9 @@ Running inside the Android editor requires no APK export. The included ARM64 exp
 | Party commands | PARTY | B |
 | Recruit / dismiss | USE at the Sanctuary Tavern | F at the Tavern |
 | Revive nearby ally | REVIVE prompt | Party menu / interact |
+| Local chat demo | CHAT | Enter |
+| Local emotes | EMOTES | G |
+| Inspect AI companion | Tap its party entry | Click its party entry |
 
 Inventory supports name, rarity, level, value, lowest-rarity, equipment category and recent-acquisition sorting. Equipment inspection reuses the gameplay avatar and active loadout; drag only within its preview to rotate it. Hidden previews do not continuously render. In GRAPHICS, choose 100%, 110% or 120% UI size, reduced motion/effects and high-contrast prompts. Larger text and touch targets reflow inside the safe area. Ambient density controls motes and butterflies; it does not hide combat warnings. Reduced-motion shaders settle into a static pose, while CPU ornaments freeze in place. Preferences use their own v3 file, preserving older graphics choices independently of the unchanged v4 progression profile.
 
@@ -61,7 +67,7 @@ The shared character now uses rounded native meshes and smoother procedural pose
 
 Sword/shield retains its three-hit combo, charged heavy, Shield Bash and Cleave. Staff retains bolts, charged splash, Arcane Burst and Frost Nova. Both use identical damage, costs, cooldowns, range and targeting in either camera view. Charge, block and joystick touches cancel safely on focus loss, Android pause, travel and modal opening.
 
-Inventory, Equipment, GRAPHICS, merchant/workbench/Collection Hall screens, party/recruitment menus and expedition results pause the local player, companions and active world. Closing them restores input without resuming stale held buttons. Basic movement is grounded; jumping is intentionally omitted. The elevated tactical camera uses a narrow perspective lens for a continuous transition rather than a strict orthographic projection.
+Inventory, Equipment, GRAPHICS, merchant/workbench/Collection Hall screens, social/chat screens, party/recruitment menus and expedition results pause the local player, companions and active world. Closing them restores input without resuming stale held buttons. Held typing keys must be released before keyboard gameplay resumes; fresh touch input can resume immediately. Basic movement is grounded; jumping is intentionally omitted. The elevated tactical camera uses a narrow perspective lens for a continuous transition rather than a strict orthographic projection.
 
 ## Party and companions
 
@@ -193,7 +199,7 @@ Each level uses one shared environment and one directional light, with shadows c
 
 ## Validation
 
-The **6C gate passed 11,480 assertions across 65 suites and 79 separate engine invocations**, plus fresh import and startup. This includes all preserved suites and restart readers, 100 dungeon seeds, city interactions, both cameras, touch layouts, actual player/two-companion traversal and new scenery/accessibility checks. See [6C validation](docs/living-sanctuary-6c-validation.md) and [per-invocation results](docs/living-sanctuary-6c-test-results.json). The [6B results](docs/living-sanctuary-test-results.json) and historical [5.6 results](docs/milestone-5.6-test-results.json) remain separate. Checkpoint reruns and host measurements are not added to the gate total. Physical Android and rendered visual acceptance remain pending.
+The **6D gate passed 12,208 assertions across 70 suites and 86 separate engine invocations**, plus fresh import and startup. This includes all preserved suites and twelve independent restart readers, 100 dungeon seeds, city interactions, both cameras, actual player/two-companion traversal, native Unicode/touch input and social lifecycle checks. See [6D validation](docs/living-sanctuary-6d-validation.md) and [per-invocation results](docs/living-sanctuary-6d-test-results.json). The [6C results](docs/living-sanctuary-6c-test-results.json), [6B results](docs/living-sanctuary-test-results.json) and historical [5.6 results](docs/milestone-5.6-test-results.json) remain separate. Focused reruns and host measurements are not added to the gate total. Physical Android keyboard, visual and performance acceptance remain pending.
 
 Run these desktop/cloud checks from the repository root; substitute `godot` if that is your installed executable. Isolate test user data from normal play:
 
@@ -207,6 +213,11 @@ godot4 --headless --path . --script res://tests/combat_test.gd
 godot4 --headless --path . --script res://tests/ui_layout_test.gd
 godot4 --headless --path . --script res://tests/sanctuary_world_test.gd
 godot4 --headless --path . --script res://tests/sanctuary_ui_test.gd
+godot4 --headless --path . --script res://tests/emote_presentation_test.gd
+godot4 --headless --path . --script res://tests/social_session_test.gd
+godot4 --headless --path . --script res://tests/social_preferences_test.gd
+godot4 --headless --path . --script res://tests/social_ui_test.gd
+godot4 --headless --path . --script res://tests/native_chat_input_test.gd
 godot4 --headless --path . --script res://tests/city_surface_test.gd
 godot4 --headless --path . --script res://tests/city_navigation_test.gd
 godot4 --headless --path . --script res://tests/city_scenery_test.gd
@@ -291,11 +302,13 @@ godot4 --headless --path . --script res://tests/save_migration_test.gd -- --writ
 godot4 --headless --path . --script res://tests/save_migration_test.gd -- --read /tmp/vaultbound-rpg-restart/profile.json
 godot4 --headless --path . --script res://tests/loadout_migration_test.gd -- --write /tmp/vaultbound-loadout-restart/profile.json
 godot4 --headless --path . --script res://tests/loadout_migration_test.gd -- --read /tmp/vaultbound-loadout-restart/profile.json
+godot4 --headless --path . --script res://tests/social_preferences_test.gd -- --write /tmp/vaultbound-social-restart/social_settings.cfg
+godot4 --headless --path . --script res://tests/social_preferences_test.gd -- --read /tmp/vaultbound-social-restart/social_settings.cfg
 ```
 
 Import first to index global GDScript classes. Assertions exit nonzero on failure; inspect logs for runtime errors too. Restricted Linux runners may need writable `XDG_DATA_HOME`, `XDG_CONFIG_HOME` and `XDG_CACHE_HOME`. Android SDK/build-tools warnings affect APK export setup, not scene resources.
 
-See [6C validation](docs/living-sanctuary-6c-validation.md) for current results, the [Living Sanctuary Android checklist](docs/living-sanctuary-android.md), and the [5.6 Android checklist](docs/milestone-5.6-android.md) for the preserved systems. On a device, additionally walk the complete ring and all eight districts with both companions, ascend and descend the Forge and Tavern ramps, switch both cameras beside buildings, use each relocated service, and enter/return through all four Sanctuary gates. Check the map and explicit Enter card at your UI scale and screen cutouts. [Milestone 5.6](docs/milestone-5.6-validation.md), [Milestone 5.5](docs/milestone-5.5-validation.md), [Milestone 5](docs/milestone-5-validation.md), [Milestone 4](docs/milestone-4-validation.md), [Milestone 3](docs/milestone-3-validation.md) and [Milestone 2](docs/milestone-2-guide.md) preserve earlier validation. The original GitHub roadmap is [archived separately](docs/original-github-roadmap.md) and describes future ideas, not shipped functionality.
+See [6D validation](docs/living-sanctuary-6d-validation.md) for current results, the [Living Sanctuary Android checklist](docs/living-sanctuary-android.md), and the [5.6 Android checklist](docs/milestone-5.6-android.md) for the preserved systems. On a device, additionally walk the complete ring and all eight districts with both companions, ascend and descend the Forge and Tavern ramps, switch both cameras beside buildings, use each relocated service, and enter/return through all four Sanctuary gates. Check chat with the actual Android keyboard, all nine emotes, AI inspection, the map and explicit Enter card at your UI scale and screen cutouts. [Milestone 5.6](docs/milestone-5.6-validation.md), [Milestone 5.5](docs/milestone-5.5-validation.md), [Milestone 5](docs/milestone-5-validation.md), [Milestone 4](docs/milestone-4-validation.md), [Milestone 3](docs/milestone-3-validation.md) and [Milestone 2](docs/milestone-2-guide.md) preserve earlier validation. The original GitHub roadmap is [archived separately](docs/original-github-roadmap.md) and describes future ideas, not shipped functionality.
 
 ## Remaining limits
 
@@ -303,4 +316,4 @@ This is a complete expedition loop prototype, not a finished commercial game. La
 
 **No physical Android testing is claimed.** Rendered visual review, touchscreen comfort, APK export/signing, audio output, frame pacing, heat and battery use still need device verification. Headless checks establish logic and resource validity; they do not compile shaders on an Android GPU or establish final appearance, game feel or mobile frame rate.
 
-The Living Sanctuary expansion proceeds through the documented stage gates. Online multiplayer, live player trading, bank storage and purchases are not implemented in 6C. New hosting and real billing require the explicit setup and authorization described in the integration plan. Natural drop pacing, economy balance, visual polish and actual menu responsiveness still require play-testing. Host measurements are not Android menu latency or frame rate.
+The Living Sanctuary expansion proceeds through the documented stage gates. Online multiplayer, live player trading, bank storage and purchases are not implemented in 6D. The social prototype has no online delivery or authenticated recipients. New hosting and real billing require the explicit setup and authorization described in the integration plan. Natural drop pacing, economy balance, visual polish and actual menu responsiveness still require play-testing. Host measurements are not Android menu latency or frame rate.

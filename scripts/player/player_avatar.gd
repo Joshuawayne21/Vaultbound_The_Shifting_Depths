@@ -5,6 +5,9 @@ extends Node3D
 
 const ItemPresentation = preload("res://scripts/visual/item_presentation.gd")
 const Presentation = preload("res://scripts/visual/combat_presentation.gd")
+const Emotes = preload("res://scripts/player/emote_catalog.gd")
+
+signal emote_changed(snapshot: Dictionary)
 
 ## Set before add_child for an explicitly demand-rendered Equipment preview.
 var static_item_presentation := false
@@ -50,6 +53,10 @@ var _equipment_surfaces: Dictionary = {}
 var _surface_originals: Dictionary = {}
 var _surface_base_colors: Dictionary = {}
 var _surface_tints: Dictionary = {}
+var _emote_id: StringName = &""
+var _emote_elapsed := 0.0
+var _emote_duration := 0.0
+var _last_emote_cancel: StringName = &""
 
 const EQUIPMENT_TINTS := {"common": Color("c8d0c7"), "uncommon": Color("83c795"),
 	"rare": Color("84bce7"), "epic": Color("c19be6"), "legendary": Color("edbf70"),
@@ -259,6 +266,8 @@ func _create_ward(material: Material) -> void:
 
 
 func set_weapon(style: StringName) -> void:
+	if style != _weapon_style:
+		cancel_emote(&"weapon_switch")
 	_weapon_style = &"staff" if style == &"staff" else &"sword"
 	if not is_instance_valid(_sword):
 		return
@@ -271,6 +280,7 @@ func set_weapon(style: StringName) -> void:
 func begin_weapon_switch(style: StringName, duration: float = 0.32) -> void:
 	# Presentation follows an already accepted gameplay switch. The selected
 	# model changes immediately; this small hand cue never owns a cooldown or hit.
+	cancel_emote(&"weapon_switch")
 	set_weapon(style)
 	_weapon_switch_duration = clampf(duration, 0.0, 0.6)
 	_weapon_switch_remaining = _weapon_switch_duration
@@ -349,11 +359,102 @@ func _equipment_color(entry: Dictionary, base: Color) -> Color:
 
 func set_combat_pose(state: StringName, progress: float, combo_index: int,
 		charge_ratio: float, blocking: bool) -> void:
+	if state != &"idle" or blocking:
+		cancel_emote(&"combat")
 	_combat_state = state
 	_combat_progress = clampf(progress, 0.0, 1.0)
 	_combo_index = clampi(combo_index, 0, 2)
 	_charge_ratio = clampf(charge_ratio, 0.0, 1.0)
 	_blocking = blocking
+
+
+func begin_emote(id: StringName) -> bool:
+	var duration := Emotes.duration_for(id)
+	if duration <= 0.0 or id == _emote_id or not is_instance_valid(_body) or _combat_state != &"idle" or _blocking or _weapon_switch_remaining > 0.0:
+		return false
+	_emote_id = id
+	_emote_elapsed = 0.0
+	_emote_duration = duration
+	_last_emote_cancel = &""
+	emote_changed.emit(emote_snapshot())
+	return true
+
+
+func cancel_emote(reason: StringName = &"user") -> void:
+	if _emote_id == &"":
+		return
+	_emote_id = &""
+	_emote_elapsed = 0.0
+	_emote_duration = 0.0
+	_last_emote_cancel = reason
+	emote_changed.emit(emote_snapshot())
+
+
+func emote_snapshot() -> Dictionary:
+	return {"id": _emote_id, "active": _emote_id != &"", "elapsed": _emote_elapsed,
+		"duration": _emote_duration, "last_cancel_reason": _last_emote_cancel}
+
+
+func is_emoting() -> bool:
+	return _emote_id != &""
+
+
+func _emote_pose() -> void:
+	# Only the five existing model pivots change. Weapons keep their original
+	# parents and bind transforms; neither the actor nor any gameplay clock moves.
+	var phase := 0.0 if _reduced_motion else _emote_elapsed
+	var sway := sin(phase * 4.2)
+	_body.position = Vector3.ZERO
+	_body.rotation = Vector3.ZERO
+	_left_leg.rotation = Vector3.ZERO
+	_right_leg.rotation = Vector3.ZERO
+	_left_arm.rotation = Vector3(-0.06, 0, 0.035)
+	_right_arm.rotation = Vector3(-0.06, 0, -0.035)
+	_cape.rotation.x = 0.14
+	match _emote_id:
+		&"wave":
+			_right_arm.rotation = Vector3(-2.55, 0.12, -0.38 + sway * 0.22)
+			_body.rotation.z = -0.04
+		&"cheer":
+			_left_arm.rotation = Vector3(-2.65, 0, -0.32)
+			_right_arm.rotation = Vector3(-2.65, 0, 0.32)
+			_body.position.y = absf(sway) * 0.045
+		&"dance":
+			_body.rotation = Vector3(0, sway * 0.16, sin(phase * 3.1) * 0.12)
+			_left_arm.rotation = Vector3(-0.95 + sway * 0.38, 0, -0.85)
+			_right_arm.rotation = Vector3(-0.95 - sway * 0.38, 0, 0.85)
+			_left_leg.rotation = Vector3(0.12 + sway * 0.15, 0, -0.08)
+			_right_leg.rotation = Vector3(-0.12 - sway * 0.15, 0, 0.08)
+		&"sit":
+			_body.position.y = -0.46
+			_left_leg.rotation = Vector3(PI * 0.5, -0.12, 0)
+			_right_leg.rotation = Vector3(PI * 0.5, 0.12, 0)
+			_left_arm.rotation = Vector3(0.7, 0, -0.18)
+			_right_arm.rotation = Vector3(0.7, 0, 0.18)
+		&"point":
+			_right_arm.rotation = Vector3(PI * 0.5, -0.1, 0)
+			_body.rotation.y = -0.12
+		&"bow":
+			_body.rotation.x = -0.44 - sin(phase * 2.0) * 0.035
+			# Pivot the rigid torso around its hips so feet remain near the ground.
+			var hips := Vector3(0, 0.65, 0)
+			_body.position = hips - _body.basis * hips
+			_left_leg.rotation.x = -_body.rotation.x
+			_right_leg.rotation.x = -_body.rotation.x
+			_left_arm.rotation = Vector3(-0.12, 0, -0.22)
+			_right_arm.rotation = Vector3(-0.45, -0.35, 0.45)
+		&"laugh":
+			_body.rotation.x = -0.12 - absf(sway) * 0.045
+			_left_arm.rotation = Vector3(0.62, -0.6, -0.65)
+			_right_arm.rotation = Vector3(0.52, 0.6, 0.65)
+		&"celebrate":
+			_left_arm.rotation = Vector3(-2.25 + sway * 0.3, -0.25, -0.7)
+			_right_arm.rotation = Vector3(-2.55 - sway * 0.3, 0.25, 0.7)
+			_body.rotation.y = sway * 0.15
+		&"inspect":
+			_right_arm.rotation = Vector3(1.2, -0.65, 0.22)
+			_left_arm.rotation = Vector3(0.95, 0.6, -0.22)
+			_body.rotation = Vector3(-0.09, 0.18 + sway * 0.035, 0)
 
 
 func _create_slash() -> void:
@@ -401,6 +502,13 @@ func _create_dodge_wake() -> void:
 func animate(delta: float, speed: float, attack_time: float, dodge_time: float) -> void:
 	if not is_instance_valid(_body):
 		return
+	if _emote_id != &"":
+		if speed > 0.1 or attack_time > 0.0 or dodge_time > 0.0 or _combat_state != &"idle" or _blocking or _weapon_switch_remaining > 0.0:
+			cancel_emote(&"action")
+		else:
+			_emote_elapsed += maxf(0.0, delta)
+			if _emote_elapsed >= _emote_duration:
+				cancel_emote(&"finished")
 	for index in range(_pose_nodes.size()):
 		_previous_rotations[index] = _pose_nodes[index].quaternion
 	var previous_body_position := _body.position
@@ -498,6 +606,8 @@ func animate(delta: float, speed: float, attack_time: float, dodge_time: float) 
 		_right_arm.rotation.z += settle * 0.12
 		_left_arm.rotation.x += settle * 0.10
 		_body.rotation.x += settle * 0.025
+	if _emote_id != &"":
+		_emote_pose()
 	# Exponential pose damping is frame-rate independent and visual only. Strike
 	# arcs, charge cues and model visibility above still respond on the same tick.
 	var pose_rate := 18.0
