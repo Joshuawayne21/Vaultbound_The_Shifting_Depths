@@ -355,7 +355,7 @@ On Android, collect valuable drops, inspect their names and stacks, extract, sel
 
 Thirty-three material definitions bring the registry to **301 noncurrency items plus the preserved currency record**, including 45 materials. Twenty-five new materials are obtainable through existing Rootbound sources and have actual recipe uses. Eight future-encounter components remain explicitly unavailable. Eight refinement recipes extend the Blacksmith to twenty recipes and produce existing fibers, dust, supplies, ingots, enhancement stones, bloom and core components. No new material bypasses earned elite/boss sourcing or the forty-slot inventory.
 
-**The frozen-batch gate passed 5,921 assertions across eleven invocations.** Seven catalog/source/economy suites contributed 5,142; the independent category/save/resource gate contributed 779. Both gates cover the same unchanged semantic source (`19124290ce688f7fb8d234cf7b1936516c131e94e74c3c39ccda8b1b1f34ea44`). Final logs were clean on the first integration run, with no production or fixture fix needed. Committed-source publication checks remain separate.
+**The frozen-batch gate passed 5,921 assertions across eleven invocations.** Seven catalog/source/economy suites contributed 5,142; the independent category/save/resource gate contributed 779. Local commit `9910b32`, published as `3ee1b34`, additionally passed **1,654 assertions across five exact-source invocations**: stackable batch 789, category runtime/read 51 + 12, economy 170 and smoke 632. Opening/closing archive manifests and both working gates cover the same unchanged semantic source (`19124290ce688f7fb8d234cf7b1936516c131e94e74c3c39ccda8b1b1f34ea44`). Archive evidence is `/tmp/vaultbound-56-c7e-source-checks/`. Repeated archive checks are separate from the working total. Final logs were clean on the first integration run, with no production or fixture fix needed.
 
 | Suite | Passed assertions | Coverage |
 | --- | ---: | --- |
@@ -377,3 +377,24 @@ The catalog fixture now distinguishes unavailable weapon art from materials, who
 Evidence is `/tmp/vaultbound-m56-7e-focused-final/results.json` and matching source-before/after records, plus `/tmp/vaultbound-56-checkpoint7e-regression/results.json`, adjacent logs and source-opening/closing manifests. Import completed with only the known sandbox editor-socket and Android build-tools notices.
 
 On Android, obtain ordinary, elite and boss material representatives; inspect recipe requirements, lock an ingredient, attempt a craft, unlock it and confirm exact costs/output. Restart after crafting and verify ownership through a later loss. Future components must remain unavailable. Drop pacing, affordability, rendered readability and physical-device performance remain manual review items.
+
+## Checkpoint 7f — consumable catalog batch
+
+Twenty-two definitions bring the registry to **323 noncurrency items plus the preserved currency record**, including 25 consumables. Sixteen new supplies use the existing health/stamina restoration mechanics; six entries requiring unavailable resistance, antidote, return, detection or revival mechanics remain disabled. Three supported supplies enter the General Merchant. No unsupported consumable effect is represented as functional.
+
+**The frozen-batch gate passed 4,752 assertions across seven invocations.** Four focused catalog/source/economy suites contributed 4,011; three independent runtime/read/resource invocations contributed 741. Opening/closing manifests and both gates match the same semantic source (`1497b0161a40da8c8c143709d97af6d138261516f1ea5fb3d5994eefb5a7fb4a`). All final logs were clean on the first run. Preserved armor, weapon, enhancement and broad combat suites are retained for the complete final milestone gate. Committed-source checks remain separate.
+
+| Suite | Passed assertions | Coverage |
+| --- | ---: | --- |
+| `catalog_stackable_batch_test.gd` | 958 | All authored stackable categories, supported restoration bounds, actual merchant/chest sources, disabled future supplies, existing source rows and bounded additions |
+| `item_catalog_test.gd` | 2,559 | Full 324-record registry, category totals, resources, recipes and source eligibility |
+| `starter_sources_test.gd` | 324 | Original starter and earned-material contracts |
+| `inventory_economy_test.gd` | 170 | Existing capacity, protection, crafting and exact transaction rules |
+| `catalog_category_integration_test.gd`, runtime/read | 74 + 12 | Actual new-supply purchases and chest/extraction, authored actor restoration, single-unit use, replay/full-resource rejection, disabled antidote reward/grant guards and independent ownership restart |
+| `smoke_test.gd` | 655 | Expanded resource loading, startup, movement, touch, cameras and original portals |
+
+The runtime extension buys Lanternleaf Tea and Reedwater Flask through a real merchant, acquires Ambermoss Salve through an unmodified native chest and uses all three on the actual player. Their independent expected effects are respectively 20 health/10 stamina, 25 stamina and 25 health. Each saved use consumes exactly one unit without changing DM; repeated confirmation and use at full health/stamina cannot waste another supply. Bitterroot Antidote remains unavailable, with no substitute restoration effect; active Session reward and Search registration reject it without creating items, receipts or currency. The separate reader verifies the resulting supplies and crafted/valuable ownership through restart and later death.
+
+Evidence is `/tmp/vaultbound-m56-7f-focused-final/results.json` and matching source-before/after records, plus `/tmp/vaultbound-56-checkpoint7f-regression/results.json`, logs and source-opening/closing manifests. Fresh import succeeded with only known editor-socket and Android build-tools environment notices. The fixture establishes current effects and transactions, not balanced supply pricing or natural progression pacing.
+
+On Android, buy and collect these supplies, compare their descriptions with actual restoration, test full-resource rejection and restart after use. Future effect entries must remain unobtainable. Physical touch comfort, rendered feedback and device performance remain manual review items.

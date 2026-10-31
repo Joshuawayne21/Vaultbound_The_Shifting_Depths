@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/items/potion.svg" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"silvercap_extract"
+label = "Silvercap Extract"
+description = "A concentrated silver-mushroom extract. Restores 75 health."
+category = "consumable"
+rarity = "rare"
+value = 35
+quantity_min = 1
+quantity_max = 1
+healing = 75
+stamina_restore = 0
+stack_limit = 6
+required_level = 1
+identified_by_default = true
+base_stats = {}
+salvage = {}
+catalog_group = "consumable"
+weapon_family = ""
+combat_supported = true
+obtainable = true
+lore = "Silvercaps open for a single night, so temple apothecaries sealed each harvest in dark wax."
+icon_art_status = "original_family_icon"
+model_art_status = "not_applicable"
+display_animation = {"rotation_speed": 0.0, "bob_height": 0.0, "bob_speed": 0.0}
+weapon_style = &""
+slot = &""
+aura_profile = &"none"
+special_effects = Array[String](["Restores 75 health"])
+crafting_tags = Array[String]([])
+acquisition_sources = Array[String](["chest:reinforced", "monster:stronger"])
+icon = ExtResource("2")

@@ -30,6 +30,7 @@ func _run() -> void:
 		await _acquisition()
 		await _valuable_services()
 		await _material_services()
+		await _consumable_services()
 		var encoded := JSON.stringify(Store.normalize(session.profile), "\t", true, true)
 		var target := FileAccess.open(EXPECTED, FileAccess.WRITE)
 		target.store_string(encoded)
@@ -64,12 +65,13 @@ func _acquisition() -> void:
 	await game.start_expedition(23)
 	if not await arrive(&"rootbound_abyss"): return
 	_future_material_rewards()
+	_future_consumable_rewards()
 	var level: Node3D = game.active_world
 	for enemy: Node3D in level.encounters.all_actors(): enemy.set_physics_process(false)
 	player.invulnerable_remaining = 60
 	level.awareness.time_rate = 0
 	var table := Catalog.table_for(&"common")
-	for id: String in ["mossworn_obol", "square_temple_copper", "rootbark_strip"]:
+	for id: String in ["mossworn_obol", "square_temple_copper", "rootbark_strip", "ambermoss_salve"]:
 		var receipt := "category-native-" + id
 		var selected_seed := -1
 		for candidate in range(20000):
@@ -193,6 +195,41 @@ func _material_services() -> void:
 		check(session.profile.items == expected and session.profile.gold == int(before.gold) - int(recipe.gold), "The committed material recipe changes only the independently authored exact counts and DM")
 	game.hud.close_modals()
 
+func _consumable_services() -> void:
+	if not await _visit(&"merchant", "general"): return
+	for id: String in ["lanternleaf_tea", "reedwater_flask"]:
+		var selected := {}
+		for offer: Dictionary in session.merchant_stock("general"):
+			if offer.item_id == id:
+				selected = offer
+				break
+		if not check(not selected.is_empty(), "Actual merchant offers the authored restorative " + id): continue
+		var before: Dictionary = session.profile.duplicate(true)
+		var quote: Dictionary = session.quote_action(&"buy", {"vendor": "general", "stock_id": selected.stock_id, "quantity": 2})
+		if not check(bool(quote.get("ok", false)) and int(quote.preview.cost_gold) == int(selected.price) * 2, "Two restorative supplies preview their concrete merchant cost"): continue
+		check(session.commit_action(quote) and int(session.profile.items.get(id, 0)) == int(before.items.get(id, 0)) + 2 and session.profile.gold == int(before.gold) - int(selected.price) * 2, "Real merchant purchase saves exact supply ownership and DM")
+	game.hud.close_modals()
+	game.hud.expedition_overlay.open_pack()
+	await frames(3)
+	var cases: Array[Dictionary] = [
+		{"id": "lanternleaf_tea", "health": 20.0, "stamina": 10.0},
+		{"id": "reedwater_flask", "health": 0.0, "stamina": 25.0},
+		{"id": "ambermoss_salve", "health": 25.0, "stamina": 0.0},
+	]
+	for supply: Dictionary in cases:
+		player.health = 20
+		player.stamina = 15
+		var before: Dictionary = session.profile.duplicate(true)
+		var quote: Dictionary = session.quote_action(&"use", {"uid": _uid(supply.id)})
+		if not check(bool(quote.get("ok", false)) and session.commit_action(quote), "Actual inventory action consumes one supported " + String(supply.id)): continue
+		check(is_equal_approx(player.health, 20.0 + float(supply.health)) and is_equal_approx(player.stamina, 15.0 + float(supply.stamina)), "The same real actor receives only the independently authored health/stamina restoration")
+		check(int(session.profile.items.get(supply.id, 0)) == int(before.items.get(supply.id, 0)) - 1 and session.profile.gold == before.gold and not session.commit_action(quote), "Supply use saves one-unit consumption without currency mutation or replay")
+	player.health = player.max_health
+	player.stamina = player.max_stamina
+	var before: Dictionary = session.profile.duplicate(true)
+	check(not session.quote_action(&"use", {"uid": _uid("lanternleaf_tea")}).ok and session.profile == before, "Full health and stamina reject the new supply without wasting its remaining unit")
+	game.hud.close_modals()
+
 func _future_material_rewards() -> void:
 	var definition := Catalog.item_for("leviathan_scale")
 	check(definition != null and not definition.obtainable and definition.acquisition_sources.is_empty(), "The future Leviathan component has no implemented acquisition source")
@@ -205,3 +242,16 @@ func _future_material_rewards() -> void:
 	var collected: bool = session.collect_reward(reward)
 	var registered: Dictionary = session.register_loot(reward, 0, Vector3.ZERO, "boss")
 	check(not collected and not registered.ok and session.run_items == bag and session.loot_records() == records and session.unsecured_gold == 0 and not session.has_claimed(reward.chest_id), "Active Session rejects unavailable material rewards without Search records, bag counts, currency or receipts")
+
+func _future_consumable_rewards() -> void:
+	var definition := Catalog.item_for("bitterroot_antidote")
+	check(definition != null and not definition.obtainable and definition.acquisition_sources.is_empty() and definition.healing == 0 and definition.stamina_restore == 0, "Unimplemented antidote mechanics remain unavailable without a substitute restorative effect")
+	var candidate: Dictionary = session.profile.duplicate(true)
+	var before: Dictionary = candidate.duplicate(true)
+	check(not Inventory.add_items(candidate, {"bitterroot_antidote": 1}) and candidate == before, "Unavailable antidote cannot enter playable owned supplies")
+	var bag: Dictionary = session.run_items.duplicate(true)
+	var records: Array = session.loot_records()
+	var reward := {"chest_id": "future_consumable_category", "category": "common", "gold": 9, "items": [{"id": "bitterroot_antidote", "quantity": 1}]}
+	var collected: bool = session.collect_reward(reward)
+	var registered: Dictionary = session.register_loot(reward, 0, Vector3.ZERO, "regular")
+	check(not collected and not registered.ok and session.run_items == bag and session.loot_records() == records and session.unsecured_gold == 0 and not session.has_claimed(reward.chest_id), "Active Session rejects unavailable supply rewards without pending items, Search records, DM or receipts")

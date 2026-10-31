@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="VaultItemCatalogData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_catalog_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+item_ids = PackedStringArray("lanternleaf_tea", "reedwater_flask", "ambermoss_salve", "glowspore_cordial", "heartwood_broth", "silvercap_extract", "runningroot_tonic", "crystaldew_phial", "briarwatch_field_brew", "temple_keeper_draught", "nightbloom_nectar", "emerald_heart_draught", "stonewalker_infusion", "moonlit_spring_ampoule", "rootwarden_sap_vial", "aurora_reserve_elixir", "cinderveil_resistance_tonic", "frostpetal_resistance_cordial", "bitterroot_antidote", "wayfarer_return_salt", "whispersense_incense", "phoenixroot_reviving_ash")

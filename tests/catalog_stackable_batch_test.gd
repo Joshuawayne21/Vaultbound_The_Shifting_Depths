@@ -4,7 +4,9 @@ const Contracts = preload("res://tests/catalog_contracts.gd")
 const BATCHES := {"valuable": {"manifest": preload("res://resources/catalogs/valuables_expansion.tres"),
 	"count": 80, "sources": "res://tests/fixtures/catalog_valuables_sources.json"},
 	"material": {"manifest": preload("res://resources/catalogs/materials_expansion.tres"),
-	"count": 33, "sources": "res://tests/fixtures/catalog_materials_sources.json"}}
+	"count": 33, "sources": "res://tests/fixtures/catalog_materials_sources.json"},
+	"consumable": {"manifest": preload("res://resources/catalogs/consumables_expansion.tres"),
+	"count": 22, "sources": "res://tests/fixtures/catalog_consumables_sources.json"}}
 const Inventory = preload("res://scripts/progression/inventory_model.gd")
 const Store = preload("res://scripts/progression/profile_store.gd")
 
@@ -27,7 +29,9 @@ func _run() -> void:
 			var declared: Array = definition.acquisition_sources.duplicate()
 			declared.sort()
 			check(Contracts.sources_for(id) == declared and (not declared.is_empty() if definition.obtainable else declared.is_empty()), "Stackable source declarations match exact native rows: " + id)
-			if group == "material":
+			if group == "consumable":
+				_check_consumable(definition)
+			elif group == "material":
 				_check_material(definition)
 			else:
 				check(definition.obtainable and not definition.can_equip() and definition.slot == &"" and definition.weapon_style == &"" and definition.base_stats.is_empty(), "Valuables remain obtainable trade goods without equipment statistics: " + id)
@@ -36,6 +40,7 @@ func _run() -> void:
 				check(definition.icon.resource_path == "res://assets/items/relic.svg" and definition.visual_scene.resource_path == "res://scenes/items/relic.tscn" and definition.model_art_status == "shared_family_placeholder", "Valuables honestly reuse the existing relic family art: " + id)
 		_check_source_budget(batch.sources)
 	check(catalog.mossworn_obol.stack_limit == 20 and catalog.riverglass_pebble.stack_limit == 10 and catalog.emerald_mint_proof.stack_limit == 5, "Small coin, gemstone and high-rarity valuables retain distinct authored stack limits")
+	_check_merchant_preservation()
 	finish()
 
 func _check_source_budget(path: String) -> void:
@@ -90,3 +95,32 @@ func _check_material(definition: VaultItemDefinition) -> void:
 		var profile := Store.empty_profile()
 		var before := profile.duplicate(true)
 		check(not Inventory.add_items(profile, {id: 1}) and profile == before, "Future boss component cannot enter trusted ownership: " + id)
+
+
+func _check_consumable(definition: VaultItemDefinition) -> void:
+	var id := String(definition.id)
+	check(definition.category == "consumable" and not definition.can_equip() and definition.slot == &"" and definition.weapon_style == &"" and definition.base_stats.is_empty(), "Consumable remains a supply without equipment statistics: " + id)
+	check(definition.stack_limit in range(3, 11) and definition.quantity_min == 1 and definition.quantity_max == 1 and definition.salvage.is_empty(), "Consumable retains bounded stacks and one-item reward quantities: " + id)
+	check(definition.icon.resource_path == "res://assets/items/potion.svg" and definition.visual_scene == null and definition.model_art_status == "not_applicable", "Consumable honestly uses the existing potion icon without a new model: " + id)
+	if definition.obtainable:
+		check(definition.healing >= 0.0 and definition.healing <= 140.0 and definition.stamina_restore >= 0.0 and definition.stamina_restore <= 100.0 and definition.healing + definition.stamina_restore > 0.0 and not definition.special_effects.is_empty(), "Available consumable provides bounded implemented restoration: " + id)
+	else:
+		check(not definition.combat_supported and definition.healing == 0.0 and definition.stamina_restore == 0.0 and definition.special_effects.is_empty() and definition.icon_art_status == "catalog_placeholder", "Future resistance supply advertises no working restorative or combat effect: " + id)
+		var profile := Store.empty_profile()
+		var before := profile.duplicate(true)
+		check(not Inventory.add_items(profile, {id: 1}) and profile == before, "Future resistance supply cannot enter trusted ownership: " + id)
+
+func _check_merchant_preservation() -> void:
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/catalog_consumables_merchant.json"))
+	check(parsed is Dictionary and not parsed.is_empty(), "The pre-batch native merchant snapshot is recorded")
+	if not parsed is Dictionary:
+		return
+	var snapshot: Dictionary = parsed
+	var stock := load("res://resources/merchants/starter_stock.tres") as VaultMerchantStock
+	var general: Array = JSON.parse_string(JSON.stringify(stock.general))
+	var expected: Array = snapshot.previous_rows.duplicate(true)
+	expected.append_array(snapshot.added)
+	check(general == expected, "General Merchant preserves every prior offer and adds only the three reviewed supplies")
+	for field: String in ["equipment", "appraiser", "rotations"]:
+		var actual: Variant = JSON.parse_string(JSON.stringify(stock.get(field)))
+		check(actual == snapshot["unchanged_" + field], "Existing merchant offers and rotations remain unchanged: " + field)

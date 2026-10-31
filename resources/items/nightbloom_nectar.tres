@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/items/potion.svg" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"nightbloom_nectar"
+label = "Nightbloom Nectar"
+description = "Dense nectar from flowers that grow beyond lantern light. Restores 110 health."
+category = "consumable"
+rarity = "epic"
+value = 65
+quantity_min = 1
+quantity_max = 1
+healing = 110
+stamina_restore = 0
+stack_limit = 5
+required_level = 1
+identified_by_default = true
+base_stats = {}
+salvage = {}
+catalog_group = "consumable"
+weapon_family = ""
+combat_supported = true
+obtainable = true
+lore = "The flower closes when its nectar is taken, leaving one luminous petal folded around the stem."
+icon_art_status = "original_family_icon"
+model_art_status = "not_applicable"
+display_animation = {"rotation_speed": 0.0, "bob_height": 0.0, "bob_speed": 0.0}
+weapon_style = &""
+slot = &""
+aura_profile = &"none"
+special_effects = Array[String](["Restores 110 health"])
+crafting_tags = Array[String]([])
+acquisition_sources = Array[String](["chest:ancient"])
+icon = ExtResource("2")
