@@ -1,8 +1,9 @@
 extends "res://tests/test_harness.gd"
 ## Reused for authored armor/accessory batches, without changing inventory capacity.
 const Contracts = preload("res://tests/catalog_contracts.gd")
-const BATCHES := {"armor": preload("res://resources/catalogs/armor_expansion.tres")}
-const EXPECTED_BATCH_SIZES := {"armor": 75}
+const BATCHES := {"armor": preload("res://resources/catalogs/armor_expansion.tres"),
+	"accessory": preload("res://resources/catalogs/accessories_expansion.tres")}
+const EXPECTED_BATCH_SIZES := {"armor": 75, "accessory": 30}
 const Inventory = preload("res://scripts/progression/inventory_model.gd")
 const Economy = preload("res://scripts/progression/economy_rules.gd")
 const Progression = preload("res://scripts/progression/character_progression.gd")

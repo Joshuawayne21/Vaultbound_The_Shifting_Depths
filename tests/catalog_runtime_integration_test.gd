@@ -18,6 +18,9 @@ const REPRESENTATIVES := [
 	{"id": "watchpath_breeches", "slot": "leg_armor", "stats": {"max_health": 3.0, "max_stamina": 4.0}},
 	{"id": "evening_round_boots", "slot": "boots", "stats": {"max_stamina": 5.0, "stamina_regen": 0.08}},
 	{"id": "lamplighter_buckler", "slot": "off_hand", "style": "sword", "stats": {"armor": 0.013, "max_stamina": 4.0}},
+	{"id": "surveyor_copper_band", "slot": "ring", "stats": {"max_health": 2.0, "max_stamina": 1.0}},
+	{"id": "waywatch_cord", "slot": "necklace", "stats": {"max_stamina": 2.0}},
+	{"id": "pilgrims_knot", "slot": "accessory", "stats": {"max_health": 3.0}},
 ]
 const DISABLED_ID := "fallen_arch_greatsword"
 var session: Node
@@ -45,6 +48,7 @@ func _run() -> void:
 	await _future_family_guards()
 	var saved := Store.new(PROFILE).load_profile()
 	check(saved.inventory == session.profile.inventory and saved.equipment == session.profile.equipment and saved.gold == 411 and saved.inventory.size() == REPRESENTATIVES.size(), "Representative instances and both loadouts persist without duplication or currency mutation")
+	check(saved.equipment.ring == _uid("surveyor_copper_band") and saved.equipment.necklace == _uid("waywatch_cord") and saved.equipment.accessory == _uid("pilgrims_knot"), "New ring, necklace and legacy charm assignments persist independently in their existing saved slots")
 	await seconds(0.4)
 	finish()
 
@@ -83,6 +87,7 @@ func _equip_representatives() -> void:
 		check(bool(quote.get("ok", false)) and session.commit_action(quote), "Real saved Equipment action assigns " + item.id)
 		await _ready_to_switch()
 	check(player.health == 57 and player.stamina == 31, "Representative equipment changes grant no free health or stamina")
+	check(session.profile.equipment.ring == _uid("surveyor_copper_band") and session.profile.equipment.necklace == _uid("waywatch_cord") and session.profile.equipment.accessory == _uid("pilgrims_knot") and _uid("surveyor_copper_band") != _uid("pilgrims_knot"), "Three new accessory instances coexist without replacing the legacy accessory slot or each other")
 	for slot: String in ["main_weapon", "secondary_weapon"]:
 		if session.profile.active_loadout != slot:
 			var quote: Dictionary = session.quote_action(&"activate_loadout", {"slot": slot})

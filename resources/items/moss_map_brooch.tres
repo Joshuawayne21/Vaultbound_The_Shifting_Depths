@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/items/accessory.svg" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/items/accessory.tscn" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"moss_map_brooch"
+label = "Moss Map Brooch"
+description = "A flat green brooch engraved with a short section of a reliable path."
+category = "equipment"
+rarity = "uncommon"
+value = 62
+quantity_min = 1
+quantity_max = 1
+weapon_style = &""
+stack_limit = 1
+slot = &"accessory"
+required_level = 5
+base_stats = {"max_health": 3, "armor": 0.006}
+salvage = {"root_fiber": 1}
+special_effects = Array[String]([])
+crafting_tags = Array[String]([])
+icon = ExtResource("2")
+visual_scene = ExtResource("3")
+catalog_group = "accessory"
+weapon_family = ""
+combat_supported = true
+obtainable = true
+lore = "The map stops at a crossroads because its maker refused to guess the rest."
+acquisition_sources = Array[String](["chest:common", "monster:basic"])
+icon_art_status = "original_family_icon"
+model_art_status = "shared_family_placeholder"
+display_animation = {"rotation_speed": 0.22, "bob_height": 0.0, "bob_speed": 1.2}
+aura_profile = &"none"

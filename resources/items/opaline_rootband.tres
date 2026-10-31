@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/items/ring.svg" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/items/ring.tscn" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"opaline_rootband"
+label = "Opaline Rootband"
+description = "A dark band wrapped around an opalescent root-shaped setting."
+category = "equipment"
+rarity = "epic"
+value = 310
+quantity_min = 1
+quantity_max = 1
+weapon_style = &""
+stack_limit = 1
+slot = &"ring"
+required_level = 15
+base_stats = {"max_health": 7, "armor": 0.015}
+salvage = {"emerald_dust": 1}
+special_effects = Array[String]([])
+crafting_tags = Array[String]([])
+icon = ExtResource("2")
+visual_scene = ExtResource("3")
+catalog_group = "accessory"
+weapon_family = ""
+combat_supported = true
+obtainable = true
+lore = "Its setting copies a root that grew around a fallen temple bell without breaking it."
+acquisition_sources = Array[String](["chest:ancient", "chest:cursed", "monster:elite"])
+icon_art_status = "original_family_icon"
+model_art_status = "shared_family_placeholder"
+display_animation = {"rotation_speed": 0.22, "bob_height": 0.0, "bob_speed": 1.2}
+aura_profile = &"epic"

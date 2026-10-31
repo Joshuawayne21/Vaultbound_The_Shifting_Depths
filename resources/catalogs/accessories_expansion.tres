@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="VaultItemCatalogData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_catalog_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+item_ids = PackedStringArray("surveyor_copper_band", "gate_oath_ring", "braided_repose_ring", "lanternkeeper_signet", "streamglass_loop", "opaline_rootband", "golem_rivet_ring", "thornstitched_promise", "seal_of_green_quiet", "first_circle_annulus", "waywatch_cord", "fern_ink_locket", "bronzeleaf_gorget", "creek_lantern_pendant", "choirglass_necklace", "temple_survey_collar", "heartwood_reliquary_chain", "vigilkeeper_torque", "rootseal_cantor_chain", "under_vault_heart_collar", "pilgrims_knot", "lanternwick_talisman", "moss_map_brooch", "rootpath_compass_charm", "temple_mason_seal", "mooncap_memory_pouch", "gilded_escort_badge", "keeper_of_spare_light", "vowroot_seed_casket", "witness_of_the_first_descent")

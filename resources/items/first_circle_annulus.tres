@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/items/ring.svg" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/items/ring.tscn" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"first_circle_annulus"
+label = "First Circle Annulus"
+description = "An ancient gold ring around a turquoise inner circle. Adds health and a small critical chance."
+category = "equipment"
+rarity = "ancient_relic"
+value = 2100
+quantity_min = 1
+quantity_max = 1
+weapon_style = &""
+stack_limit = 1
+slot = &"ring"
+required_level = 30
+base_stats = {"crit_chance": 0.025, "max_health": 12}
+salvage = {"ancient_shard": 1, "emerald_dust": 2}
+special_effects = Array[String](["2.5% chance for a critical hit dealing 1.5× damage."])
+crafting_tags = Array[String]([])
+icon = ExtResource("2")
+visual_scene = ExtResource("3")
+catalog_group = "accessory"
+weapon_family = ""
+combat_supported = true
+obtainable = true
+lore = "The unfinished circle is believed to be an early drawing of the Sanctuary itself."
+acquisition_sources = Array[String](["chest:boss", "monster:boss"])
+icon_art_status = "original_family_icon"
+model_art_status = "shared_family_placeholder"
+display_animation = {"rotation_speed": 0.22, "bob_height": 0.0, "bob_speed": 1.2}
+aura_profile = &"ancient_relic"

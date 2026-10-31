@@ -278,7 +278,7 @@ On Android, acquire the new sword/staff representatives, inspect their real fami
 
 This batch adds 75 armor definitions, reaching **158 noncurrency items plus the preserved currency record**, including 85 armor pieces. Existing weapon definitions, enabled/disabled families, original row weights and shared gameplay rules are preserved. Supported armor uses existing slots, statistics, protections and rarity-based enhancement caps. New source additions use the same bounded per-tier weight allocation as the weapon batch. These remain shared family visuals, not 75 newly modeled armor assets.
 
-**The frozen-batch gate passed 3,861 assertions across ten invocations.** Catalog/source/economy suites contributed 3,086; five independent runtime/save/resource invocations contributed 775. All final logs were clean. Opening and closing semantic source manifests matched (`e1c0d77f8d96f9882a80754309ad51e39ab886fdd5d8e75b70f2dbb3a05e3287`), and no runtime regression remains. Publication still uses a separate committed-source archive gate.
+**The frozen-batch gate passed 3,861 assertions across ten invocations.** Catalog/source/economy suites contributed 3,086; five independent runtime/save/resource invocations contributed 775. Local commit `09028c4`, published as `0075413`, additionally passed **1,617 assertions across four exact-source invocations**: equipment batch 759, representative runtime 56, corrected starter sources 324 and smoke 478. Opening/closing archive manifests matched each other and the frozen working gate (`e1c0d77f8d96f9882a80754309ad51e39ab886fdd5d8e75b70f2dbb3a05e3287`). Evidence is `/tmp/vaultbound-56-c7b-source-checks/results.json` and its source manifests. Repeated archive checks are reported separately; all final logs were clean, with no runtime regression remaining.
 
 | Suite | Passed assertions | Coverage |
 | --- | ---: | --- |
@@ -298,3 +298,28 @@ The runtime suite equips Wickwatch Cap, Lanternbound Coat, Flintkeeper Gloves, W
 Evidence is `/tmp/vaultbound-56-checkpoint7b-regression/results.json`, adjacent logs and `source-{opening,closing}.json`, plus `/tmp/vaultbound-m56-armor-{starter_sources,item_catalog,catalog_weapon_batch,catalog_equipment_batch,inventory_economy}.log`. The final five-suite independent gate was rerun after the fixture correction under one unchanged source manifest; earlier failed runs are not counted. No full generation/combat repeat was needed for this data-only category; those remain part of the final milestone gate.
 
 On Android, obtain the representative equipment, meet its displayed level requirements, equip each slot and check health/stamina/armor statistics without gaining free current resources. Inspect the same pieces in the character preview, rotate it, and compare sword/shield and staff presentation in both cameras. Verify protected sales, enhancement previews, item labels and touch scrolling with a full inventory. Native family tints/models do not establish unique armor art, perfect clipping or physical-device performance; those checks remain manual.
+
+## Checkpoint 7c — accessory catalog batch
+
+Thirty new accessory definitions bring the registry to **188 noncurrency items plus the preserved currency record**, including 35 accessories. The batch adds ten rings, ten necklaces and ten legacy-slot charms. Existing Amber Ring, Emerald Pendant and Sealed Reliquary definitions and assignments remain intact. Source eligibility, existing loot row weights, the bounded addition policy and the forty-slot inventory are preserved.
+
+**The frozen-batch gate passed 4,466 assertions across ten invocations.** Five catalog/source/economy suites contributed 3,649; the independent runtime/save/resource gate contributed 817. All final logs were clean, with no failure or production regression. Opening and closing semantic source manifests matched (`8b9ae3b664b4276d88f3b3b902f41ef0e5f8ee136048c2d617e59202b1ff0074`). Committed-source publication checks remain separate.
+
+| Suite | Passed assertions | Coverage |
+| --- | ---: | --- |
+| `catalog_equipment_batch_test.gd` | 1,063 | All new armor/accessory definitions, source/slot/stat/protection/cap rules, exact upgrade costs and nine saved gear-slot examples |
+| `item_catalog_test.gd` | 1,816 | Full 189-record registry, original IDs, resources, rarity, recipes and acquisition paths |
+| `catalog_weapon_batch_test.gd` | 308 | Preserved supported and disabled weapon families |
+| `starter_sources_test.gd` | 324 | Original starter and earned-material sources, effects and exact legacy reserves |
+| `inventory_economy_test.gd` | 138 | Original inventory capacity and atomic transaction protections |
+| `catalog_runtime_integration_test.gd` | 67 | Actual ring/necklace/legacy-charm coexistence, independent expected statistics and saved assignments, matching per-slot preview materials, all six prior armor/shield checks, moving camera/touch switches and future-family rejection |
+| `starter_items_integration_test.gd` | 107 | Original equipment/source/crafting path with actual Search and extraction |
+| `profile_v4_test.gd` | 84 | Versioned ownership and unavailable/unsupported-content preservation |
+| `loadout_migration_test.gd` | 50 | Preserved loadouts, assignments and existing progression |
+| `smoke_test.gd` | 509 | Expanded resources, startup, movement, touch, cameras and original portals |
+
+The representative runtime test equips Surveyor Copper Band, Waywatch Cord and Pilgrim's Knot together, verifies their independent ring/necklace/accessory UIDs, and checks that all three retain their actual saved slots. It preserves the six armor representatives and both weapon loadouts, compares the real actor with independently authored bonuses and checks the same appearance in the character preview. Controlled fixture levels and ownership do not claim natural acquisition pacing or additional unique 3D art.
+
+Evidence is `/tmp/vaultbound-56-checkpoint7c-regression/results.json`, adjacent logs and `source-{opening,closing}.json`, plus `/tmp/vaultbound-m56-accessories-{starter_sources,item_catalog,catalog_weapon_batch,catalog_equipment_batch,inventory_economy}.log`. No broad combat or procedural generation replay was needed for this data-only category; the final milestone gate retains those regression checks.
+
+On Android, equip the representative ring, necklace and charm simultaneously, inspect their labels/stat changes/preview, switch both weapon families and restart to confirm independent assignments. Check locked/favorited sale protection and the existing accessory slot on an older save. Shared family visuals, natural economy balance, rendered clipping and physical-device responsiveness remain manual review items; no device testing is claimed.

@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/items/ring.svg" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/items/ring.tscn" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"golem_rivet_ring"
+label = "Golem-Rivet Ring"
+description = "A broad ring forged around an inert rivet from a defeated corrupted golem. Reduces damage that passes a successful block."
+category = "equipment"
+rarity = "legendary"
+value = 610
+quantity_min = 1
+quantity_max = 1
+weapon_style = &""
+stack_limit = 1
+slot = &"ring"
+required_level = 19
+base_stats = {"block_strength": 0.02, "max_health": 9}
+salvage = {"tempered_ingot": 1}
+special_effects = Array[String](["2% reduction to remaining blocked damage; existing facing and stamina rules apply."])
+crafting_tags = Array[String]([])
+icon = ExtResource("2")
+visual_scene = ExtResource("3")
+catalog_group = "accessory"
+weapon_family = ""
+combat_supported = true
+obtainable = true
+lore = "The smith kept the rivet scarred to show that the metal had already endured a difficult watch."
+acquisition_sources = Array[String](["chest:ancient", "chest:cursed", "monster:elite"])
+icon_art_status = "original_family_icon"
+model_art_status = "shared_family_placeholder"
+display_animation = {"rotation_speed": 0.22, "bob_height": 0.0, "bob_speed": 1.2}
+aura_profile = &"legendary"

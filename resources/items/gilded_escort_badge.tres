@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/items/accessory.svg" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/items/accessory.tscn" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"gilded_escort_badge"
+label = "Gilded Escort Badge"
+description = "A small gold-edged badge bearing three overlapping shields. Helps a successful block."
+category = "equipment"
+rarity = "epic"
+value = 420
+quantity_min = 1
+quantity_max = 1
+weapon_style = &""
+stack_limit = 1
+slot = &"accessory"
+required_level = 18
+base_stats = {"block_strength": 0.018, "max_health": 7}
+salvage = {"emerald_dust": 1}
+special_effects = Array[String](["1.8% reduction to remaining blocked damage; existing facing and stamina rules apply."])
+crafting_tags = Array[String]([])
+icon = ExtResource("2")
+visual_scene = ExtResource("3")
+catalog_group = "accessory"
+weapon_family = ""
+combat_supported = true
+obtainable = true
+lore = "The three shields represent the traveler, the escort and the stranger they might yet meet."
+acquisition_sources = Array[String](["chest:ancient", "chest:cursed", "monster:elite"])
+icon_art_status = "original_family_icon"
+model_art_status = "shared_family_placeholder"
+display_animation = {"rotation_speed": 0.22, "bob_height": 0.0, "bob_speed": 1.2}
+aura_profile = &"epic"
