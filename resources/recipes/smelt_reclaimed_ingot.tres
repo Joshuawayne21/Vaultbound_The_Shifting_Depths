@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="VaultCraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/crafting_recipe.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "smelt_reclaimed_ingot"
+label = "Smelt Reclaimed Ingot"
+description = "Recover temple metal using a fragment of the old forge lining."
+ingredients = {"temple_scrap": 2, "bronze_scale": 2, "slate_iron_nodule": 2, "cracked_forge_brick": 1}
+gold = 18
+output_id = "tempered_ingot"
+output_quantity = 3
+required_level = 3

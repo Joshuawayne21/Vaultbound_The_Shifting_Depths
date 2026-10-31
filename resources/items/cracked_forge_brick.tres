@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/items/material.svg" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"cracked_forge_brick"
+label = "Cracked Forge Brick"
+description = "A heat-resistant fragment used to draw impurities from reclaimed metal."
+category = "material"
+rarity = "common"
+value = 4
+quantity_min = 1
+quantity_max = 1
+healing = 0.0
+stamina_restore = 0.0
+stack_limit = 99
+required_level = 1
+identified_by_default = true
+base_stats = {}
+salvage = {}
+catalog_group = "material"
+weapon_family = ""
+combat_supported = true
+obtainable = true
+lore = "The scorched face remembers a forge that burned before the Sanctuary was built."
+icon_art_status = "original_family_icon"
+model_art_status = "not_applicable"
+display_animation = {"rotation_speed": 0.22, "bob_height": 0.0, "bob_speed": 1.2}
+weapon_style = &""
+slot = &""
+aura_profile = &"none"
+special_effects = Array[String]([])
+crafting_tags = Array[String]([])
+acquisition_sources = Array[String](["chest:common", "monster:basic"])
+icon = ExtResource("2")

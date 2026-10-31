@@ -1,0 +1,2043 @@
+{
+  "common": {
+    "previous_rows": [
+      {
+        "id": "gold_coin",
+        "weight": 12.0
+      },
+      {
+        "id": "root_fiber",
+        "weight": 32.0
+      },
+      {
+        "id": "mooncap_tonic",
+        "weight": 27.0
+      },
+      {
+        "id": "emerald_dust",
+        "weight": 10.0
+      },
+      {
+        "id": "sunfruit_elixir",
+        "weight": 6.0
+      },
+      {
+        "id": "temple_blade",
+        "weight": 5.0
+      },
+      {
+        "id": "runic_staff",
+        "weight": 2.0
+      },
+      {
+        "id": "warden_shield",
+        "weight": 2.0
+      },
+      {
+        "id": "ancient_seed",
+        "weight": 2.0
+      },
+      {
+        "id": "aurora_bloom",
+        "weight": 0.7
+      },
+      {
+        "id": "heartwood_blade",
+        "weight": 0.3
+      },
+      {
+        "id": "ancient_shard",
+        "weight": 0.02
+      },
+      {
+        "id": "iron_ore",
+        "weight": 15.0
+      },
+      {
+        "id": "glow_spore",
+        "weight": 15.0
+      },
+      {
+        "id": "traveler_sword",
+        "weight": 2.0
+      },
+      {
+        "id": "apprentice_staff",
+        "weight": 2.0
+      },
+      {
+        "id": "round_shield",
+        "weight": 2.0
+      },
+      {
+        "id": "iron_helm",
+        "weight": 2.0
+      },
+      {
+        "id": "traveler_coat",
+        "weight": 2.0
+      },
+      {
+        "id": "trail_boots",
+        "weight": 2.0
+      },
+      {
+        "id": "amber_ring",
+        "weight": 1.0
+      },
+      {
+        "id": "stamina_draught",
+        "weight": 8.0
+      },
+      {
+        "id": "common_enhancement_stone",
+        "weight": 10.0
+      },
+      {
+        "id": "mossrunner_sabre",
+        "weight": 1.5
+      },
+      {
+        "id": "creeklight_staff",
+        "weight": 1.5
+      },
+      {
+        "id": "fernveil_hood",
+        "weight": 0.66
+      },
+      {
+        "id": "briar_thread_grips",
+        "weight": 0.66
+      },
+      {
+        "id": "fernbank_leggings",
+        "weight": 0.66
+      },
+      {
+        "id": "mossway_treaders",
+        "weight": 0.66
+      },
+      {
+        "id": "branchwoven_guard",
+        "weight": 0.66
+      },
+      {
+        "id": "gate_oath_ring",
+        "weight": 0.9075
+      },
+      {
+        "id": "fern_ink_locket",
+        "weight": 0.9075
+      },
+      {
+        "id": "lanternwick_talisman",
+        "weight": 0.9075
+      },
+      {
+        "id": "moss_map_brooch",
+        "weight": 0.9075
+      },
+      {
+        "id": "mossworn_obol",
+        "weight": 0.5125
+      },
+      {
+        "id": "pierced_ferry_token",
+        "weight": 0.5125
+      },
+      {
+        "id": "copper_prayer_chip",
+        "weight": 0.5125
+      },
+      {
+        "id": "square_temple_copper",
+        "weight": 0.166375
+      },
+      {
+        "id": "rootsealed_tithe_disc",
+        "weight": 0.166375
+      },
+      {
+        "id": "glass_inlaid_trade_weight",
+        "weight": 0.166375
+      },
+      {
+        "id": "bent_coronet_leaf",
+        "weight": 0.5125
+      },
+      {
+        "id": "tarnished_laurel_tip",
+        "weight": 0.5125
+      },
+      {
+        "id": "brass_circlet_rivet",
+        "weight": 0.5125
+      },
+      {
+        "id": "bronze_brow_arc",
+        "weight": 0.166375
+      },
+      {
+        "id": "gilded_petal_setting",
+        "weight": 0.166375
+      },
+      {
+        "id": "mourning_diadem_link",
+        "weight": 0.166375
+      },
+      {
+        "id": "riverglass_pebble",
+        "weight": 0.5125
+      },
+      {
+        "id": "smoky_quartz_shard",
+        "weight": 0.5125
+      },
+      {
+        "id": "clouded_green_agate",
+        "weight": 0.5125
+      },
+      {
+        "id": "banded_moss_jasper",
+        "weight": 0.166375
+      },
+      {
+        "id": "lantern_amber_cabochon",
+        "weight": 0.166375
+      },
+      {
+        "id": "bluecap_opal_chip",
+        "weight": 0.166375
+      },
+      {
+        "id": "clay_pilgrim_figurine",
+        "weight": 0.5125
+      },
+      {
+        "id": "chipped_roothare_figure",
+        "weight": 0.5125
+      },
+      {
+        "id": "bronze_seedling_effigy",
+        "weight": 0.5125
+      },
+      {
+        "id": "lanternkeeper_miniature",
+        "weight": 0.166375
+      },
+      {
+        "id": "copper_bridge_keeper",
+        "weight": 0.166375
+      },
+      {
+        "id": "jade_mushroom_carving",
+        "weight": 0.166375
+      },
+      {
+        "id": "fern_imprint_stone",
+        "weight": 0.5125
+      },
+      {
+        "id": "spiral_shell_cast",
+        "weight": 0.5125
+      },
+      {
+        "id": "petrified_leaf_fan",
+        "weight": 0.5125
+      },
+      {
+        "id": "amber_trapped_pollen",
+        "weight": 0.166375
+      },
+      {
+        "id": "stonewood_growth_slice",
+        "weight": 0.166375
+      },
+      {
+        "id": "root_lattice_nodule",
+        "weight": 0.166375
+      },
+      {
+        "id": "cracked_offering_cup",
+        "weight": 0.5125
+      },
+      {
+        "id": "engraved_candle_snuffer",
+        "weight": 0.5125
+      },
+      {
+        "id": "bronze_scriptorium_clasp",
+        "weight": 0.5125
+      },
+      {
+        "id": "gilded_supper_spoon",
+        "weight": 0.166375
+      },
+      {
+        "id": "stone_choir_tuning_fork",
+        "weight": 0.166375
+      },
+      {
+        "id": "ritual_linen_spindle",
+        "weight": 0.166375
+      },
+      {
+        "id": "faded_route_seal",
+        "weight": 0.5125
+      },
+      {
+        "id": "broken_survey_chain",
+        "weight": 0.5125
+      },
+      {
+        "id": "copper_camp_badge",
+        "weight": 0.5125
+      },
+      {
+        "id": "waxed_map_case",
+        "weight": 0.166375
+      },
+      {
+        "id": "lost_trail_compass",
+        "weight": 0.166375
+      },
+      {
+        "id": "silvered_signal_whistle",
+        "weight": 0.166375
+      },
+      {
+        "id": "carved_bone_counter",
+        "weight": 0.5125
+      },
+      {
+        "id": "goblin_barter_bead",
+        "weight": 0.5125
+      },
+      {
+        "id": "rustbound_shield_emblem",
+        "weight": 0.5125
+      },
+      {
+        "id": "ossuary_bronze_binding",
+        "weight": 0.166375
+      },
+      {
+        "id": "archers_trophy_brooch",
+        "weight": 0.166375
+      },
+      {
+        "id": "golem_inlay_tile",
+        "weight": 0.166375
+      }
+    ],
+    "previous_rarity_totals": {
+      "common": 135.29999999999987,
+      "uncommon": 43.92300000000003,
+      "rare": 6.0,
+      "epic": 1.0,
+      "legendary": 0.02
+    },
+    "added": [
+      "mooncap_gill",
+      "fern_resin",
+      "rootbark_strip",
+      "dew_lichen",
+      "lantern_moss",
+      "creek_reed",
+      "bronze_scale",
+      "slate_iron_nodule",
+      "temple_scrap",
+      "cracked_forge_brick",
+      "faint_emerald_chip",
+      "mistglass_sand"
+    ],
+    "weights": [
+      1.1275,
+      1.1275,
+      1.1275,
+      1.1275,
+      1.1275,
+      1.1275,
+      1.1275,
+      1.1275,
+      1.1275,
+      1.1275,
+      1.1275,
+      1.1275
+    ]
+  },
+  "reinforced": {
+    "previous_rows": [
+      {
+        "id": "gold_coin",
+        "weight": 9.0
+      },
+      {
+        "id": "root_fiber",
+        "weight": 14.0
+      },
+      {
+        "id": "mooncap_tonic",
+        "weight": 18.0
+      },
+      {
+        "id": "emerald_dust",
+        "weight": 20.0
+      },
+      {
+        "id": "sunfruit_elixir",
+        "weight": 12.0
+      },
+      {
+        "id": "temple_blade",
+        "weight": 10.0
+      },
+      {
+        "id": "runic_staff",
+        "weight": 6.0
+      },
+      {
+        "id": "warden_shield",
+        "weight": 6.0
+      },
+      {
+        "id": "ancient_seed",
+        "weight": 4.0
+      },
+      {
+        "id": "aurora_bloom",
+        "weight": 1.5
+      },
+      {
+        "id": "heartwood_blade",
+        "weight": 0.7
+      },
+      {
+        "id": "iron_ore",
+        "weight": 8.0
+      },
+      {
+        "id": "tempered_ingot",
+        "weight": 5.0
+      },
+      {
+        "id": "glow_spore",
+        "weight": 6.0
+      },
+      {
+        "id": "mossguard_helm",
+        "weight": 3.0
+      },
+      {
+        "id": "warden_cuirass",
+        "weight": 3.0
+      },
+      {
+        "id": "rootstep_boots",
+        "weight": 3.0
+      },
+      {
+        "id": "amber_ring",
+        "weight": 4.0
+      },
+      {
+        "id": "stamina_draught",
+        "weight": 8.0
+      },
+      {
+        "id": "ancient_shard",
+        "weight": 0.4
+      },
+      {
+        "id": "sealed_reliquary",
+        "weight": 0.1
+      },
+      {
+        "id": "common_enhancement_stone",
+        "weight": 10.0
+      },
+      {
+        "id": "briar_sentinel",
+        "weight": 1.25
+      },
+      {
+        "id": "bloomkeeper_staff",
+        "weight": 1.25
+      },
+      {
+        "id": "silkroute_cowl",
+        "weight": 0.1375
+      },
+      {
+        "id": "sealrunner_wraps",
+        "weight": 0.1375
+      },
+      {
+        "id": "courier_switchbacks",
+        "weight": 0.1375
+      },
+      {
+        "id": "canopy_messenger_boots",
+        "weight": 0.1375
+      },
+      {
+        "id": "dispatch_wicker_shield",
+        "weight": 0.1375
+      },
+      {
+        "id": "rootbraid_coif",
+        "weight": 0.1375
+      },
+      {
+        "id": "thicket_ranger_bracers",
+        "weight": 0.1375
+      },
+      {
+        "id": "rootbraid_chausses",
+        "weight": 0.1375
+      },
+      {
+        "id": "underbough_ranger_boots",
+        "weight": 0.1375
+      },
+      {
+        "id": "ranger_trailguard",
+        "weight": 0.1375
+      },
+      {
+        "id": "bronzeleaf_visor",
+        "weight": 0.1375
+      },
+      {
+        "id": "bronzeleaf_handplates",
+        "weight": 0.1375
+      },
+      {
+        "id": "leafscale_cuisses",
+        "weight": 0.1375
+      },
+      {
+        "id": "bronzeleaf_sabatons",
+        "weight": 0.1375
+      },
+      {
+        "id": "bronzeleaf_pavise",
+        "weight": 0.1375
+      },
+      {
+        "id": "mooncap_choir_hood",
+        "weight": 0.1375
+      },
+      {
+        "id": "mooncap_reader_wraps",
+        "weight": 0.1375
+      },
+      {
+        "id": "mooncap_chorus_trousers",
+        "weight": 0.1375
+      },
+      {
+        "id": "mooncap_procession_shoes",
+        "weight": 0.1375
+      },
+      {
+        "id": "mooncap_procession_shield",
+        "weight": 0.1375
+      },
+      {
+        "id": "braided_repose_ring",
+        "weight": 0.504167
+      },
+      {
+        "id": "lanternkeeper_signet",
+        "weight": 0.504167
+      },
+      {
+        "id": "bronzeleaf_gorget",
+        "weight": 0.504167
+      },
+      {
+        "id": "creek_lantern_pendant",
+        "weight": 0.504167
+      },
+      {
+        "id": "rootpath_compass_charm",
+        "weight": 0.504167
+      },
+      {
+        "id": "temple_mason_seal",
+        "weight": 0.504167
+      },
+      {
+        "id": "square_temple_copper",
+        "weight": 0.245833
+      },
+      {
+        "id": "rootsealed_tithe_disc",
+        "weight": 0.245833
+      },
+      {
+        "id": "glass_inlaid_trade_weight",
+        "weight": 0.245833
+      },
+      {
+        "id": "silver_oath_halfmark",
+        "weight": 0.166375
+      },
+      {
+        "id": "twinned_vault_drachm",
+        "weight": 0.166375
+      },
+      {
+        "id": "bronze_brow_arc",
+        "weight": 0.245833
+      },
+      {
+        "id": "gilded_petal_setting",
+        "weight": 0.245833
+      },
+      {
+        "id": "mourning_diadem_link",
+        "weight": 0.245833
+      },
+      {
+        "id": "silver_regent_browpiece",
+        "weight": 0.166375
+      },
+      {
+        "id": "ceremonial_root_comb",
+        "weight": 0.166375
+      },
+      {
+        "id": "banded_moss_jasper",
+        "weight": 0.245833
+      },
+      {
+        "id": "lantern_amber_cabochon",
+        "weight": 0.245833
+      },
+      {
+        "id": "bluecap_opal_chip",
+        "weight": 0.245833
+      },
+      {
+        "id": "starred_cavern_sapphire",
+        "weight": 0.166375
+      },
+      {
+        "id": "dewheart_tourmaline",
+        "weight": 0.166375
+      },
+      {
+        "id": "lanternkeeper_miniature",
+        "weight": 0.245833
+      },
+      {
+        "id": "copper_bridge_keeper",
+        "weight": 0.245833
+      },
+      {
+        "id": "jade_mushroom_carving",
+        "weight": 0.245833
+      },
+      {
+        "id": "silver_bathing_crane",
+        "weight": 0.166375
+      },
+      {
+        "id": "goldleaf_temple_dancer",
+        "weight": 0.166375
+      },
+      {
+        "id": "amber_trapped_pollen",
+        "weight": 0.245833
+      },
+      {
+        "id": "stonewood_growth_slice",
+        "weight": 0.245833
+      },
+      {
+        "id": "root_lattice_nodule",
+        "weight": 0.245833
+      },
+      {
+        "id": "crystallized_seed_cone",
+        "weight": 0.166375
+      },
+      {
+        "id": "ancient_dragonfly_imprint",
+        "weight": 0.166375
+      },
+      {
+        "id": "opalized_stream_reed",
+        "weight": 0.166375
+      },
+      {
+        "id": "gilded_supper_spoon",
+        "weight": 0.245833
+      },
+      {
+        "id": "stone_choir_tuning_fork",
+        "weight": 0.245833
+      },
+      {
+        "id": "ritual_linen_spindle",
+        "weight": 0.245833
+      },
+      {
+        "id": "inlaid_ceremonial_shears",
+        "weight": 0.166375
+      },
+      {
+        "id": "silver_root_bell",
+        "weight": 0.166375
+      },
+      {
+        "id": "bronze_procession_mirror",
+        "weight": 0.166375
+      },
+      {
+        "id": "waxed_map_case",
+        "weight": 0.245833
+      },
+      {
+        "id": "lost_trail_compass",
+        "weight": 0.245833
+      },
+      {
+        "id": "silvered_signal_whistle",
+        "weight": 0.245833
+      },
+      {
+        "id": "engraved_delvers_flask",
+        "weight": 0.166375
+      },
+      {
+        "id": "temple_measuring_lens",
+        "weight": 0.166375
+      },
+      {
+        "id": "folded_bronze_star_chart",
+        "weight": 0.166375
+      },
+      {
+        "id": "ossuary_bronze_binding",
+        "weight": 0.245833
+      },
+      {
+        "id": "archers_trophy_brooch",
+        "weight": 0.245833
+      },
+      {
+        "id": "golem_inlay_tile",
+        "weight": 0.245833
+      },
+      {
+        "id": "etched_patrol_mask_piece",
+        "weight": 0.166375
+      },
+      {
+        "id": "vinebound_grave_medallion",
+        "weight": 0.166375
+      },
+      {
+        "id": "polished_guardian_heel_stone",
+        "weight": 0.166375
+      }
+    ],
+    "previous_rarity_totals": {
+      "common": 65.0,
+      "uncommon": 64.89999199999997,
+      "rare": 36.60250200000003,
+      "epic": 2.2,
+      "legendary": 0.4,
+      "mythic": 0.1
+    },
+    "added": [
+      "starflower_pollen",
+      "thornspine_bundle",
+      "mossbound_ore",
+      "ancient_rivet",
+      "obsidian_flake",
+      "luminous_spore_sac",
+      "turquoise_crystal_grain"
+    ],
+    "weights": [
+      0.927143,
+      0.927143,
+      0.927143,
+      0.927143,
+      0.927143,
+      0.927143,
+      0.927143
+    ]
+  },
+  "ancient": {
+    "previous_rows": [
+      {
+        "id": "gold_coin",
+        "weight": 4.0
+      },
+      {
+        "id": "root_fiber",
+        "weight": 5.0
+      },
+      {
+        "id": "mooncap_tonic",
+        "weight": 8.0
+      },
+      {
+        "id": "emerald_dust",
+        "weight": 12.0
+      },
+      {
+        "id": "sunfruit_elixir",
+        "weight": 10.0
+      },
+      {
+        "id": "temple_blade",
+        "weight": 12.0
+      },
+      {
+        "id": "runic_staff",
+        "weight": 14.0
+      },
+      {
+        "id": "warden_shield",
+        "weight": 12.0
+      },
+      {
+        "id": "ancient_seed",
+        "weight": 12.0
+      },
+      {
+        "id": "aurora_bloom",
+        "weight": 6.0
+      },
+      {
+        "id": "heartwood_blade",
+        "weight": 4.0
+      },
+      {
+        "id": "tempered_ingot",
+        "weight": 6.0
+      },
+      {
+        "id": "ancient_shard",
+        "weight": 3.0
+      },
+      {
+        "id": "mossguard_helm",
+        "weight": 6.0
+      },
+      {
+        "id": "warden_cuirass",
+        "weight": 6.0
+      },
+      {
+        "id": "rootstep_boots",
+        "weight": 6.0
+      },
+      {
+        "id": "emerald_pendant",
+        "weight": 2.0
+      },
+      {
+        "id": "stamina_draught",
+        "weight": 5.0
+      },
+      {
+        "id": "sealed_reliquary",
+        "weight": 0.8
+      },
+      {
+        "id": "abyss_crown",
+        "weight": 0.2
+      },
+      {
+        "id": "common_enhancement_stone",
+        "weight": 10.0
+      },
+      {
+        "id": "duskglass_edge",
+        "weight": 0.4
+      },
+      {
+        "id": "rootseal_longsword",
+        "weight": 0.4
+      },
+      {
+        "id": "mistveil_crook",
+        "weight": 0.4
+      },
+      {
+        "id": "streamstone_sallet",
+        "weight": 0.066
+      },
+      {
+        "id": "currentkeeper_gauntlets",
+        "weight": 0.066
+      },
+      {
+        "id": "streamstone_legguards",
+        "weight": 0.066
+      },
+      {
+        "id": "creekarch_boots",
+        "weight": 0.066
+      },
+      {
+        "id": "sluicegate_shield",
+        "weight": 0.066
+      },
+      {
+        "id": "hammerwatch_greathelm",
+        "weight": 0.066
+      },
+      {
+        "id": "hammerwatch_fists",
+        "weight": 0.066
+      },
+      {
+        "id": "forgepath_tassets",
+        "weight": 0.066
+      },
+      {
+        "id": "hammerwatch_greaves",
+        "weight": 0.066
+      },
+      {
+        "id": "anvilmark_tower_shield",
+        "weight": 0.066
+      },
+      {
+        "id": "temple_sentinel_helm",
+        "weight": 0.066
+      },
+      {
+        "id": "lintelguard_gauntlets",
+        "weight": 0.066
+      },
+      {
+        "id": "archplate_legguards",
+        "weight": 0.066
+      },
+      {
+        "id": "threshold_sentinel_boots",
+        "weight": 0.066
+      },
+      {
+        "id": "temple_lintel_shield",
+        "weight": 0.066
+      },
+      {
+        "id": "giltroot_crownhelm",
+        "weight": 0.05
+      },
+      {
+        "id": "giltroot_bastion_plate",
+        "weight": 0.05
+      },
+      {
+        "id": "giltroot_oath_gauntlets",
+        "weight": 0.05
+      },
+      {
+        "id": "giltroot_rampart_legs",
+        "weight": 0.05
+      },
+      {
+        "id": "giltroot_vigil_greaves",
+        "weight": 0.05
+      },
+      {
+        "id": "giltroot_bulwark_shield",
+        "weight": 0.05
+      },
+      {
+        "id": "crystal_cantor_headdress",
+        "weight": 0.066
+      },
+      {
+        "id": "cantor_focus_gloves",
+        "weight": 0.066
+      },
+      {
+        "id": "harmonic_weave_leggings",
+        "weight": 0.066
+      },
+      {
+        "id": "crystal_cadence_boots",
+        "weight": 0.066
+      },
+      {
+        "id": "cantor_escort_shield",
+        "weight": 0.066
+      },
+      {
+        "id": "streamglass_loop",
+        "weight": 0.242
+      },
+      {
+        "id": "opaline_rootband",
+        "weight": 0.242
+      },
+      {
+        "id": "golem_rivet_ring",
+        "weight": 0.066
+      },
+      {
+        "id": "thornstitched_promise",
+        "weight": 0.066
+      },
+      {
+        "id": "choirglass_necklace",
+        "weight": 0.242
+      },
+      {
+        "id": "temple_survey_collar",
+        "weight": 0.242
+      },
+      {
+        "id": "heartwood_reliquary_chain",
+        "weight": 0.066
+      },
+      {
+        "id": "vigilkeeper_torque",
+        "weight": 0.066
+      },
+      {
+        "id": "mooncap_memory_pouch",
+        "weight": 0.242
+      },
+      {
+        "id": "gilded_escort_badge",
+        "weight": 0.242
+      },
+      {
+        "id": "keeper_of_spare_light",
+        "weight": 0.066
+      },
+      {
+        "id": "silver_oath_halfmark",
+        "weight": 0.28
+      },
+      {
+        "id": "twinned_vault_drachm",
+        "weight": 0.28
+      },
+      {
+        "id": "emerald_mint_proof",
+        "weight": 0.19965
+      },
+      {
+        "id": "silver_regent_browpiece",
+        "weight": 0.28
+      },
+      {
+        "id": "ceremonial_root_comb",
+        "weight": 0.28
+      },
+      {
+        "id": "amethyst_coronet_front",
+        "weight": 0.19965
+      },
+      {
+        "id": "starred_cavern_sapphire",
+        "weight": 0.28
+      },
+      {
+        "id": "dewheart_tourmaline",
+        "weight": 0.28
+      },
+      {
+        "id": "prismatic_stream_pearl",
+        "weight": 0.19965
+      },
+      {
+        "id": "silver_bathing_crane",
+        "weight": 0.28
+      },
+      {
+        "id": "goldleaf_temple_dancer",
+        "weight": 0.28
+      },
+      {
+        "id": "paired_grove_sentinels",
+        "weight": 0.19965
+      },
+      {
+        "id": "crystallized_seed_cone",
+        "weight": 0.28
+      },
+      {
+        "id": "ancient_dragonfly_imprint",
+        "weight": 0.28
+      },
+      {
+        "id": "opalized_stream_reed",
+        "weight": 0.28
+      },
+      {
+        "id": "moonlit_grove_fossil",
+        "weight": 0.19965
+      },
+      {
+        "id": "inlaid_ceremonial_shears",
+        "weight": 0.28
+      },
+      {
+        "id": "silver_root_bell",
+        "weight": 0.28
+      },
+      {
+        "id": "bronze_procession_mirror",
+        "weight": 0.28
+      },
+      {
+        "id": "emerald_water_clock_face",
+        "weight": 0.19965
+      },
+      {
+        "id": "engraved_delvers_flask",
+        "weight": 0.28
+      },
+      {
+        "id": "temple_measuring_lens",
+        "weight": 0.28
+      },
+      {
+        "id": "folded_bronze_star_chart",
+        "weight": 0.28
+      },
+      {
+        "id": "expedition_captains_signet",
+        "weight": 0.19965
+      },
+      {
+        "id": "etched_patrol_mask_piece",
+        "weight": 0.28
+      },
+      {
+        "id": "vinebound_grave_medallion",
+        "weight": 0.28
+      },
+      {
+        "id": "polished_guardian_heel_stone",
+        "weight": 0.28
+      },
+      {
+        "id": "emerald_watchers_eye_setting",
+        "weight": 0.19965
+      }
+    ],
+    "previous_rarity_totals": {
+      "common": 27.0,
+      "uncommon": 45.0,
+      "rare": 61.60000000000002,
+      "epic": 17.569200000000006,
+      "legendary": 3.629999999999998,
+      "mythic": 0.8,
+      "ancient_relic": 0.2
+    },
+    "added": [
+      "heartwood_splinter",
+      "silvervein_filament",
+      "resonant_root_sap",
+      "bloomheart_nectar"
+    ],
+    "weights": [
+      1.54,
+      1.54,
+      1.54,
+      1.54
+    ]
+  },
+  "cursed": {
+    "previous_rows": [
+      {
+        "id": "gold_coin",
+        "weight": 2.0
+      },
+      {
+        "id": "root_fiber",
+        "weight": 4.0
+      },
+      {
+        "id": "mooncap_tonic",
+        "weight": 7.0
+      },
+      {
+        "id": "emerald_dust",
+        "weight": 10.0
+      },
+      {
+        "id": "sunfruit_elixir",
+        "weight": 9.0
+      },
+      {
+        "id": "temple_blade",
+        "weight": 10.0
+      },
+      {
+        "id": "runic_staff",
+        "weight": 14.0
+      },
+      {
+        "id": "warden_shield",
+        "weight": 12.0
+      },
+      {
+        "id": "ancient_seed",
+        "weight": 12.0
+      },
+      {
+        "id": "aurora_bloom",
+        "weight": 8.0
+      },
+      {
+        "id": "heartwood_blade",
+        "weight": 6.0
+      },
+      {
+        "id": "tempered_ingot",
+        "weight": 7.0
+      },
+      {
+        "id": "ancient_shard",
+        "weight": 4.0
+      },
+      {
+        "id": "mossguard_helm",
+        "weight": 5.0
+      },
+      {
+        "id": "warden_cuirass",
+        "weight": 5.0
+      },
+      {
+        "id": "rootstep_boots",
+        "weight": 5.0
+      },
+      {
+        "id": "emerald_pendant",
+        "weight": 3.0
+      },
+      {
+        "id": "stamina_draught",
+        "weight": 5.0
+      },
+      {
+        "id": "sealed_reliquary",
+        "weight": 1.5
+      },
+      {
+        "id": "abyss_crown",
+        "weight": 0.4
+      },
+      {
+        "id": "common_enhancement_stone",
+        "weight": 10.0
+      },
+      {
+        "id": "duskglass_edge",
+        "weight": 0.566667
+      },
+      {
+        "id": "rootseal_longsword",
+        "weight": 0.566667
+      },
+      {
+        "id": "mistveil_crook",
+        "weight": 0.566667
+      },
+      {
+        "id": "streamstone_sallet",
+        "weight": 0.0935
+      },
+      {
+        "id": "currentkeeper_gauntlets",
+        "weight": 0.0935
+      },
+      {
+        "id": "streamstone_legguards",
+        "weight": 0.0935
+      },
+      {
+        "id": "creekarch_boots",
+        "weight": 0.0935
+      },
+      {
+        "id": "sluicegate_shield",
+        "weight": 0.0935
+      },
+      {
+        "id": "hammerwatch_greathelm",
+        "weight": 0.0935
+      },
+      {
+        "id": "hammerwatch_fists",
+        "weight": 0.0935
+      },
+      {
+        "id": "forgepath_tassets",
+        "weight": 0.0935
+      },
+      {
+        "id": "hammerwatch_greaves",
+        "weight": 0.0935
+      },
+      {
+        "id": "anvilmark_tower_shield",
+        "weight": 0.0935
+      },
+      {
+        "id": "temple_sentinel_helm",
+        "weight": 0.0935
+      },
+      {
+        "id": "lintelguard_gauntlets",
+        "weight": 0.0935
+      },
+      {
+        "id": "archplate_legguards",
+        "weight": 0.0935
+      },
+      {
+        "id": "threshold_sentinel_boots",
+        "weight": 0.0935
+      },
+      {
+        "id": "temple_lintel_shield",
+        "weight": 0.0935
+      },
+      {
+        "id": "giltroot_crownhelm",
+        "weight": 0.066667
+      },
+      {
+        "id": "giltroot_bastion_plate",
+        "weight": 0.066667
+      },
+      {
+        "id": "giltroot_oath_gauntlets",
+        "weight": 0.066667
+      },
+      {
+        "id": "giltroot_rampart_legs",
+        "weight": 0.066667
+      },
+      {
+        "id": "giltroot_vigil_greaves",
+        "weight": 0.066667
+      },
+      {
+        "id": "giltroot_bulwark_shield",
+        "weight": 0.066667
+      },
+      {
+        "id": "crystal_cantor_headdress",
+        "weight": 0.0935
+      },
+      {
+        "id": "cantor_focus_gloves",
+        "weight": 0.0935
+      },
+      {
+        "id": "harmonic_weave_leggings",
+        "weight": 0.0935
+      },
+      {
+        "id": "crystal_cadence_boots",
+        "weight": 0.0935
+      },
+      {
+        "id": "cantor_escort_shield",
+        "weight": 0.0935
+      },
+      {
+        "id": "streamglass_loop",
+        "weight": 0.342833
+      },
+      {
+        "id": "opaline_rootband",
+        "weight": 0.342833
+      },
+      {
+        "id": "golem_rivet_ring",
+        "weight": 0.088
+      },
+      {
+        "id": "thornstitched_promise",
+        "weight": 0.088
+      },
+      {
+        "id": "choirglass_necklace",
+        "weight": 0.342833
+      },
+      {
+        "id": "temple_survey_collar",
+        "weight": 0.342833
+      },
+      {
+        "id": "heartwood_reliquary_chain",
+        "weight": 0.088
+      },
+      {
+        "id": "vigilkeeper_torque",
+        "weight": 0.088
+      },
+      {
+        "id": "mooncap_memory_pouch",
+        "weight": 0.342833
+      },
+      {
+        "id": "gilded_escort_badge",
+        "weight": 0.342833
+      },
+      {
+        "id": "keeper_of_spare_light",
+        "weight": 0.088
+      },
+      {
+        "id": "emerald_mint_proof",
+        "weight": 0.282837
+      },
+      {
+        "id": "amethyst_coronet_front",
+        "weight": 0.282837
+      },
+      {
+        "id": "prismatic_stream_pearl",
+        "weight": 0.282837
+      },
+      {
+        "id": "paired_grove_sentinels",
+        "weight": 0.282837
+      },
+      {
+        "id": "moonlit_grove_fossil",
+        "weight": 0.282837
+      },
+      {
+        "id": "emerald_water_clock_face",
+        "weight": 0.282837
+      },
+      {
+        "id": "expedition_captains_signet",
+        "weight": 0.282837
+      },
+      {
+        "id": "emerald_watchers_eye_setting",
+        "weight": 0.282837
+      }
+    ],
+    "previous_rarity_totals": {
+      "common": 23.0,
+      "uncommon": 41.0,
+      "rare": 53.0,
+      "epic": 24.88969499999997,
+      "legendary": 4.840001999999999,
+      "mythic": 1.5,
+      "ancient_relic": 0.4
+    },
+    "added": [
+      "heartwood_splinter",
+      "silvervein_filament",
+      "resonant_root_sap",
+      "bloomheart_nectar"
+    ],
+    "weights": [
+      1.325,
+      1.325,
+      1.325,
+      1.325
+    ]
+  },
+  "boss": {
+    "previous_rows": [
+      {
+        "id": "gold_coin",
+        "weight": 1.0
+      },
+      {
+        "id": "root_fiber",
+        "weight": 2.0
+      },
+      {
+        "id": "mooncap_tonic",
+        "weight": 5.0
+      },
+      {
+        "id": "emerald_dust",
+        "weight": 10.0
+      },
+      {
+        "id": "sunfruit_elixir",
+        "weight": 10.0
+      },
+      {
+        "id": "temple_blade",
+        "weight": 12.0
+      },
+      {
+        "id": "runic_staff",
+        "weight": 15.0
+      },
+      {
+        "id": "warden_shield",
+        "weight": 12.0
+      },
+      {
+        "id": "ancient_seed",
+        "weight": 12.0
+      },
+      {
+        "id": "aurora_bloom",
+        "weight": 8.0
+      },
+      {
+        "id": "heartwood_blade",
+        "weight": 7.0
+      },
+      {
+        "id": "rootwarden_heart",
+        "weight": 1.0
+      },
+      {
+        "id": "tempered_ingot",
+        "weight": 8.0
+      },
+      {
+        "id": "ancient_shard",
+        "weight": 5.0
+      },
+      {
+        "id": "mossguard_helm",
+        "weight": 6.0
+      },
+      {
+        "id": "warden_cuirass",
+        "weight": 6.0
+      },
+      {
+        "id": "rootstep_boots",
+        "weight": 6.0
+      },
+      {
+        "id": "emerald_pendant",
+        "weight": 4.0
+      },
+      {
+        "id": "stamina_draught",
+        "weight": 4.0
+      },
+      {
+        "id": "sealed_reliquary",
+        "weight": 2.0
+      },
+      {
+        "id": "abyss_crown",
+        "weight": 0.8
+      },
+      {
+        "id": "common_enhancement_stone",
+        "weight": 4.0
+      },
+      {
+        "id": "verdant_oathblade",
+        "weight": 0.45
+      },
+      {
+        "id": "vaultheart_staff",
+        "weight": 0.15
+      },
+      {
+        "id": "pilgrims_verdict",
+        "weight": 0.3
+      },
+      {
+        "id": "emerald_covenant",
+        "weight": 0.1225
+      },
+      {
+        "id": "temple_pulse_staff",
+        "weight": 0.3
+      },
+      {
+        "id": "elderroot_conductor",
+        "weight": 0.1225
+      },
+      {
+        "id": "vowkeeper_barkhelm",
+        "weight": 0.044917
+      },
+      {
+        "id": "heartroot_vow_cuirass",
+        "weight": 0.044917
+      },
+      {
+        "id": "vowkeeper_root_gauntlets",
+        "weight": 0.044917
+      },
+      {
+        "id": "heartroot_oath_legguards",
+        "weight": 0.044917
+      },
+      {
+        "id": "vowkeeper_return_boots",
+        "weight": 0.044917
+      },
+      {
+        "id": "heartroot_promise_shield",
+        "weight": 0.044917
+      },
+      {
+        "id": "first_vault_diadem",
+        "weight": 0.031667
+      },
+      {
+        "id": "mantle_of_the_living_oath",
+        "weight": 0.031667
+      },
+      {
+        "id": "pilgrim_of_the_first_root_greaves",
+        "weight": 0.031667
+      },
+      {
+        "id": "seal_of_green_quiet",
+        "weight": 0.098817
+      },
+      {
+        "id": "first_circle_annulus",
+        "weight": 0.034833
+      },
+      {
+        "id": "rootseal_cantor_chain",
+        "weight": 0.098817
+      },
+      {
+        "id": "under_vault_heart_collar",
+        "weight": 0.034833
+      },
+      {
+        "id": "vowroot_seed_casket",
+        "weight": 0.098817
+      },
+      {
+        "id": "witness_of_the_first_descent",
+        "weight": 0.034833
+      },
+      {
+        "id": "first_plaza_mint_plate",
+        "weight": 0.165
+      },
+      {
+        "id": "processional_sun_crown",
+        "weight": 0.165
+      },
+      {
+        "id": "unbroken_emerald_geode",
+        "weight": 0.165
+      },
+      {
+        "id": "emerald_canopy_tableau",
+        "weight": 0.165
+      }
+    ],
+    "previous_rarity_totals": {
+      "common": 12.0,
+      "uncommon": 44.0,
+      "rare": 57.0,
+      "epic": 19.0,
+      "legendary": 7.26,
+      "mythic": 3.2609529999999993,
+      "ancient_relic": 1.1494999999999997
+    },
+    "added": [
+      "guardian_bark_flake"
+    ],
+    "weights": [
+      1.9
+    ]
+  },
+  "monster_elite": {
+    "previous_rows": [
+      {
+        "id": "root_fiber",
+        "weight": 5.0
+      },
+      {
+        "id": "mooncap_tonic",
+        "weight": 8.0
+      },
+      {
+        "id": "emerald_dust",
+        "weight": 12.0
+      },
+      {
+        "id": "sunfruit_elixir",
+        "weight": 10.0
+      },
+      {
+        "id": "temple_blade",
+        "weight": 12.0
+      },
+      {
+        "id": "runic_staff",
+        "weight": 14.0
+      },
+      {
+        "id": "warden_shield",
+        "weight": 12.0
+      },
+      {
+        "id": "ancient_seed",
+        "weight": 12.0
+      },
+      {
+        "id": "aurora_bloom",
+        "weight": 6.0
+      },
+      {
+        "id": "heartwood_blade",
+        "weight": 4.0
+      },
+      {
+        "id": "tempered_ingot",
+        "weight": 6.0
+      },
+      {
+        "id": "ancient_shard",
+        "weight": 3.0
+      },
+      {
+        "id": "mossguard_helm",
+        "weight": 6.0
+      },
+      {
+        "id": "warden_cuirass",
+        "weight": 6.0
+      },
+      {
+        "id": "rootstep_boots",
+        "weight": 6.0
+      },
+      {
+        "id": "emerald_pendant",
+        "weight": 2.0
+      },
+      {
+        "id": "stamina_draught",
+        "weight": 5.0
+      },
+      {
+        "id": "sealed_reliquary",
+        "weight": 0.8
+      },
+      {
+        "id": "abyss_crown",
+        "weight": 0.2
+      },
+      {
+        "id": "common_enhancement_stone",
+        "weight": 10.0
+      },
+      {
+        "id": "duskglass_edge",
+        "weight": 0.4
+      },
+      {
+        "id": "rootseal_longsword",
+        "weight": 0.4
+      },
+      {
+        "id": "mistveil_crook",
+        "weight": 0.4
+      },
+      {
+        "id": "streamstone_sallet",
+        "weight": 0.066
+      },
+      {
+        "id": "currentkeeper_gauntlets",
+        "weight": 0.066
+      },
+      {
+        "id": "streamstone_legguards",
+        "weight": 0.066
+      },
+      {
+        "id": "creekarch_boots",
+        "weight": 0.066
+      },
+      {
+        "id": "sluicegate_shield",
+        "weight": 0.066
+      },
+      {
+        "id": "hammerwatch_greathelm",
+        "weight": 0.066
+      },
+      {
+        "id": "hammerwatch_fists",
+        "weight": 0.066
+      },
+      {
+        "id": "forgepath_tassets",
+        "weight": 0.066
+      },
+      {
+        "id": "hammerwatch_greaves",
+        "weight": 0.066
+      },
+      {
+        "id": "anvilmark_tower_shield",
+        "weight": 0.066
+      },
+      {
+        "id": "temple_sentinel_helm",
+        "weight": 0.066
+      },
+      {
+        "id": "lintelguard_gauntlets",
+        "weight": 0.066
+      },
+      {
+        "id": "archplate_legguards",
+        "weight": 0.066
+      },
+      {
+        "id": "threshold_sentinel_boots",
+        "weight": 0.066
+      },
+      {
+        "id": "temple_lintel_shield",
+        "weight": 0.066
+      },
+      {
+        "id": "giltroot_crownhelm",
+        "weight": 0.05
+      },
+      {
+        "id": "giltroot_bastion_plate",
+        "weight": 0.05
+      },
+      {
+        "id": "giltroot_oath_gauntlets",
+        "weight": 0.05
+      },
+      {
+        "id": "giltroot_rampart_legs",
+        "weight": 0.05
+      },
+      {
+        "id": "giltroot_vigil_greaves",
+        "weight": 0.05
+      },
+      {
+        "id": "giltroot_bulwark_shield",
+        "weight": 0.05
+      },
+      {
+        "id": "crystal_cantor_headdress",
+        "weight": 0.066
+      },
+      {
+        "id": "cantor_focus_gloves",
+        "weight": 0.066
+      },
+      {
+        "id": "harmonic_weave_leggings",
+        "weight": 0.066
+      },
+      {
+        "id": "crystal_cadence_boots",
+        "weight": 0.066
+      },
+      {
+        "id": "cantor_escort_shield",
+        "weight": 0.066
+      },
+      {
+        "id": "streamglass_loop",
+        "weight": 0.242
+      },
+      {
+        "id": "opaline_rootband",
+        "weight": 0.242
+      },
+      {
+        "id": "golem_rivet_ring",
+        "weight": 0.066
+      },
+      {
+        "id": "thornstitched_promise",
+        "weight": 0.066
+      },
+      {
+        "id": "choirglass_necklace",
+        "weight": 0.242
+      },
+      {
+        "id": "temple_survey_collar",
+        "weight": 0.242
+      },
+      {
+        "id": "heartwood_reliquary_chain",
+        "weight": 0.066
+      },
+      {
+        "id": "vigilkeeper_torque",
+        "weight": 0.066
+      },
+      {
+        "id": "mooncap_memory_pouch",
+        "weight": 0.242
+      },
+      {
+        "id": "gilded_escort_badge",
+        "weight": 0.242
+      },
+      {
+        "id": "keeper_of_spare_light",
+        "weight": 0.066
+      },
+      {
+        "id": "silver_oath_halfmark",
+        "weight": 0.28
+      },
+      {
+        "id": "twinned_vault_drachm",
+        "weight": 0.28
+      },
+      {
+        "id": "emerald_mint_proof",
+        "weight": 0.19965
+      },
+      {
+        "id": "silver_regent_browpiece",
+        "weight": 0.28
+      },
+      {
+        "id": "ceremonial_root_comb",
+        "weight": 0.28
+      },
+      {
+        "id": "amethyst_coronet_front",
+        "weight": 0.19965
+      },
+      {
+        "id": "starred_cavern_sapphire",
+        "weight": 0.28
+      },
+      {
+        "id": "dewheart_tourmaline",
+        "weight": 0.28
+      },
+      {
+        "id": "prismatic_stream_pearl",
+        "weight": 0.19965
+      },
+      {
+        "id": "silver_bathing_crane",
+        "weight": 0.28
+      },
+      {
+        "id": "goldleaf_temple_dancer",
+        "weight": 0.28
+      },
+      {
+        "id": "paired_grove_sentinels",
+        "weight": 0.19965
+      },
+      {
+        "id": "crystallized_seed_cone",
+        "weight": 0.28
+      },
+      {
+        "id": "ancient_dragonfly_imprint",
+        "weight": 0.28
+      },
+      {
+        "id": "opalized_stream_reed",
+        "weight": 0.28
+      },
+      {
+        "id": "moonlit_grove_fossil",
+        "weight": 0.19965
+      },
+      {
+        "id": "inlaid_ceremonial_shears",
+        "weight": 0.28
+      },
+      {
+        "id": "silver_root_bell",
+        "weight": 0.28
+      },
+      {
+        "id": "bronze_procession_mirror",
+        "weight": 0.28
+      },
+      {
+        "id": "emerald_water_clock_face",
+        "weight": 0.19965
+      },
+      {
+        "id": "engraved_delvers_flask",
+        "weight": 0.28
+      },
+      {
+        "id": "temple_measuring_lens",
+        "weight": 0.28
+      },
+      {
+        "id": "folded_bronze_star_chart",
+        "weight": 0.28
+      },
+      {
+        "id": "expedition_captains_signet",
+        "weight": 0.19965
+      },
+      {
+        "id": "etched_patrol_mask_piece",
+        "weight": 0.28
+      },
+      {
+        "id": "vinebound_grave_medallion",
+        "weight": 0.28
+      },
+      {
+        "id": "polished_guardian_heel_stone",
+        "weight": 0.28
+      },
+      {
+        "id": "emerald_watchers_eye_setting",
+        "weight": 0.19965
+      }
+    ],
+    "previous_rarity_totals": {
+      "common": 23.0,
+      "uncommon": 45.0,
+      "rare": 61.60000000000002,
+      "epic": 17.569200000000006,
+      "legendary": 3.629999999999998,
+      "mythic": 0.8,
+      "ancient_relic": 0.2
+    },
+    "added": [
+      "heartwood_splinter",
+      "silvervein_filament",
+      "resonant_root_sap",
+      "bloomheart_nectar",
+      "dense_corruption_knot"
+    ],
+    "weights": [
+      1.232,
+      1.232,
+      1.232,
+      1.232,
+      1.232
+    ]
+  }
+}

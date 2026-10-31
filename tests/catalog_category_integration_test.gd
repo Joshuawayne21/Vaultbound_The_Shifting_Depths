@@ -2,6 +2,7 @@ extends "res://tests/test_harness.gd"
 ## Native category representatives through actual chest, extraction and services.
 ## Controlled ownership, source seeds and lethal hits isolate transaction behavior.
 const Store = preload("res://scripts/progression/profile_store.gd")
+const Progression = preload("res://scripts/progression/character_progression.gd")
 const Inventory = preload("res://scripts/progression/inventory_model.gd")
 const Catalog = preload("res://scripts/progression/loot_table.gd")
 const Rules = preload("res://scripts/combat/combat_rules.gd")
@@ -28,6 +29,7 @@ func _run() -> void:
 	else:
 		await _acquisition()
 		await _valuable_services()
+		await _material_services()
 		var encoded := JSON.stringify(Store.normalize(session.profile), "\t", true, true)
 		var target := FileAccess.open(EXPECTED, FileAccess.WRITE)
 		target.store_string(encoded)
@@ -42,7 +44,9 @@ func _prepare() -> void:
 		if FileAccess.file_exists(path): DirAccess.remove_absolute(path)
 	var profile := Store.empty_profile()
 	profile.gold = 411
+	profile.character = Progression.award_xp(profile.character, 46400)
 	check(Inventory.add_items(profile, {"mossworn_obol": 4}, 5607), "Controlled existing trade-good stack supports a later partial sale")
+	check(Inventory.add_items(profile, {"rootbark_strip": 2, "creek_reed": 2, "thornspine_bundle": 1, "guardian_bark_flake": 2, "dense_corruption_knot": 2, "tempered_ingot": 4, "rootwarden_essence": 1}, 5608), "Controlled obtainable material inputs preserve existing elite/boss component identity")
 	check(Store.new(PROFILE).save_profile(profile), "Controlled category ownership passes strict saving")
 
 func _uid(id: String) -> String:
@@ -59,12 +63,13 @@ func _acquisition() -> void:
 	var before: Dictionary = session.profile.duplicate(true)
 	await game.start_expedition(23)
 	if not await arrive(&"rootbound_abyss"): return
+	_future_material_rewards()
 	var level: Node3D = game.active_world
 	for enemy: Node3D in level.encounters.all_actors(): enemy.set_physics_process(false)
 	player.invulnerable_remaining = 60
 	level.awareness.time_rate = 0
 	var table := Catalog.table_for(&"common")
-	for id: String in ["mossworn_obol", "square_temple_copper"]:
+	for id: String in ["mossworn_obol", "square_temple_copper", "rootbark_strip"]:
 		var receipt := "category-native-" + id
 		var selected_seed := -1
 		for candidate in range(20000):
@@ -163,3 +168,40 @@ func _read() -> void:
 	check(session.profile.inventory == expected.inventory and session.profile.displays == expected.displays and session.profile.discoveries == expected.discoveries and session.profile.gold == expected.gold, "Later actual defeat preserves every secured category item, valuable display, discovery and DM")
 	var saved := Store.new(PROFILE).load_profile()
 	check(saved.inventory == expected.inventory and saved.displays == expected.displays and saved.gold == expected.gold, "Post-defeat file retains independently restarted valuable ownership")
+
+func _material_services() -> void:
+	if not await _visit(&"blacksmith"): return
+	var uid := _uid("rootbark_strip")
+	_commit(&"lock", {"uid": uid, "value": true}, "Lock the new root-bark ingredient stack")
+	var before: Dictionary = session.profile.duplicate(true)
+	check(not session.quote_action(&"craft", {"recipe_id": "spin_reclaimed_fiber"}).ok and session.profile == before, "New recipes cannot consume protected ingredients or spend partial costs")
+	_commit(&"lock", {"uid": uid, "value": false}, "Unlock the actual root-bark ingredient stack")
+	var recipes: Array[Dictionary] = [
+		{"id": "spin_reclaimed_fiber", "gold": 8, "ingredients": {"rootbark_strip": 2, "creek_reed": 2, "thornspine_bundle": 1}, "outputs": {"root_fiber": 6}},
+		{"id": "forge_living_core", "gold": 150, "ingredients": {"guardian_bark_flake": 2, "dense_corruption_knot": 2, "tempered_ingot": 4, "rootwarden_essence": 1}, "outputs": {"ancient_forged_core": 1}},
+	]
+	for recipe: Dictionary in recipes:
+		before = session.profile.duplicate(true)
+		var quote: Dictionary = session.quote_action(&"craft", {"recipe_id": recipe.id})
+		if not check(bool(quote.get("ok", false)) and quote.preview.materials == recipe.ingredients and quote.preview.outputs == recipe.outputs and int(quote.preview.cost_gold) == int(recipe.gold), "Real Blacksmith previews the exact authored inputs/output/DM for " + String(recipe.id)): continue
+		check(session.commit_action(quote) and not session.commit_action(quote), "New material recipe saves once and rejects replay: " + String(recipe.id))
+		var expected: Dictionary = before.items.duplicate(true)
+		for id: String in recipe.ingredients:
+			expected[id] = int(expected[id]) - int(recipe.ingredients[id])
+			if expected[id] == 0: expected.erase(id)
+		for id: String in recipe.outputs: expected[id] = int(expected.get(id, 0)) + int(recipe.outputs[id])
+		check(session.profile.items == expected and session.profile.gold == int(before.gold) - int(recipe.gold), "The committed material recipe changes only the independently authored exact counts and DM")
+	game.hud.close_modals()
+
+func _future_material_rewards() -> void:
+	var definition := Catalog.item_for("leviathan_scale")
+	check(definition != null and not definition.obtainable and definition.acquisition_sources.is_empty(), "The future Leviathan component has no implemented acquisition source")
+	var candidate: Dictionary = session.profile.duplicate(true)
+	var before: Dictionary = candidate.duplicate(true)
+	check(not Inventory.add_items(candidate, {"leviathan_scale": 1}) and candidate == before, "Unavailable crafting material cannot create playable ownership")
+	var bag: Dictionary = session.run_items.duplicate(true)
+	var records: Array = session.loot_records()
+	var reward := {"chest_id": "future_material_category", "category": "boss", "gold": 43, "items": [{"id": "leviathan_scale", "quantity": 1}]}
+	var collected: bool = session.collect_reward(reward)
+	var registered: Dictionary = session.register_loot(reward, 0, Vector3.ZERO, "boss")
+	check(not collected and not registered.ok and session.run_items == bag and session.loot_records() == records and session.unsecured_gold == 0 and not session.has_claimed(reward.chest_id), "Active Session rejects unavailable material rewards without Search records, bag counts, currency or receipts")

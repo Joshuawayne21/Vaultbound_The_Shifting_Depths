@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="VaultCraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/crafting_recipe.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "distill_trail_draught"
+label = "Distill Trail Draught"
+description = "Stabilize luminous plant reagents into the existing stamina draught."
+ingredients = {"fern_resin": 2, "lantern_moss": 2, "luminous_spore_sac": 1}
+gold = 15
+output_id = "stamina_draught"
+output_quantity = 2
+required_level = 2

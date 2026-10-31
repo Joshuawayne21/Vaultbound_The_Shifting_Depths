@@ -1,9 +1,9 @@
 extends RefCounted
 ## Reviewed batch totals live in one explicit test contract, independent of data.
-const TOTAL_COUNT := 269
-const UNAVAILABLE_COUNT := 26
-const RECIPE_COUNT := 12
-const GROUP_COUNTS := {"weapon": 50, "armor": 85, "accessory": 35, "valuable": 80, "material": 12,
+const TOTAL_COUNT := 302
+const UNAVAILABLE_COUNT := 34
+const RECIPE_COUNT := 20
+const GROUP_COUNTS := {"weapon": 50, "armor": 85, "accessory": 35, "valuable": 80, "material": 45,
 	"consumable": 3, "trophy": 3, "currency": 1}
 
 static func sources_for(id: String) -> Array:

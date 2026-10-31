@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="VaultCraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/crafting_recipe.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "focus_living_bloom"
+label = "Focus Living Bloom"
+description = "Bind root sap and nectar to focus an existing aurora bloom component."
+ingredients = {"heartwood_splinter": 2, "resonant_root_sap": 1, "bloomheart_nectar": 1, "emerald_dust": 2}
+gold = 35
+output_id = "aurora_bloom"
+output_quantity = 1
+required_level = 7

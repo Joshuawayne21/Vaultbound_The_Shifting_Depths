@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="VaultCraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/crafting_recipe.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "refine_veinstone"
+label = "Refine Veinstone"
+description = "Refine mineral-bearing fittings into common enhancement stones."
+ingredients = {"mossbound_ore": 2, "silvervein_filament": 1, "ancient_rivet": 2, "obsidian_flake": 1}
+gold = 25
+output_id = "common_enhancement_stone"
+output_quantity = 5
+required_level = 4

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="VaultCraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/crafting_recipe.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "brew_garden_tonic"
+label = "Brew Garden Tonic"
+description = "Combine Rootbound garden reagents into the existing restorative Mooncap Tonic."
+ingredients = {"mooncap_gill": 2, "dew_lichen": 2, "starflower_pollen": 1, "glow_spore": 1}
+gold = 10
+output_id = "mooncap_tonic"
+output_quantity = 3
+required_level = 1

@@ -26,7 +26,8 @@ func _run() -> void:
 		groups[definition.catalog_group] = int(groups.get(definition.catalog_group, 0)) + 1
 		if not definition.obtainable:
 			disabled += 1
-			check(not definition.can_equip() and definition.acquisition_sources.is_empty() and definition.visual_scene == null and definition.model_art_status == "missing", "%s is explicitly unavailable without an invented usable model or acquisition" % id)
+			var expected_art := "missing" if definition.catalog_group == "weapon" else "not_applicable"
+			check(not definition.can_equip() and definition.acquisition_sources.is_empty() and definition.visual_scene == null and definition.model_art_status == expected_art, "%s is explicitly unavailable with truthful category art metadata and no acquisition" % id)
 		if definition.category == "equipment":
 			check(String(definition.slot) in VaultItemDefinition.EQUIPMENT_SLOTS and definition.stack_limit == 1 and definition.required_level in range(1, 31), "%s has an equipment slot, one-per-instance stack and level requirement" % id)
 			check(definition.weapon_style in [&"", &"sword", &"staff"], "%s uses only an existing weapon family" % id)
@@ -38,7 +39,7 @@ func _run() -> void:
 		described.base_stats["test_mutation"] = 999
 		described.salvage["test_mutation"] = 999
 		check(not definition.base_stats.has("test_mutation") and not definition.salvage.has("test_mutation") and described.quantity == 3, "%s snapshots cannot mutate shared definition data" % id)
-	check(groups == Contracts.GROUP_COUNTS and disabled == Contracts.UNAVAILABLE_COUNT, "Full batch category counts and 26 unavailable weapon families match the reviewed scope")
+	check(groups == Contracts.GROUP_COUNTS and disabled == Contracts.UNAVAILABLE_COUNT, "Full category totals and unavailable definitions match the reviewed batch scope")
 	check(rarities.size() == 7, "All seven requested rarity tiers are represented")
 	check(not catalog.sealed_reliquary.identified_by_default and catalog.sealed_reliquary.category == "equipment", "The mysterious artifact supports hidden rolled equipment properties")
 	check(catalog.stamina_draught.stamina_restore == 40.0 and catalog.mooncap_tonic.healing == 35.0 and catalog.sunfruit_elixir.healing == 60.0, "Consumable definitions retain existing healing and add stamina supplies")
@@ -55,7 +56,7 @@ func _run() -> void:
 		check(not first and bounds.position.y >= -0.01 and bounds.end.y <= 1.7 and bounds.size.x <= 1.6 and bounds.size.z <= 1.6, "%s is grounded and bounded for a display stand" % path.get_file())
 		actor.free()
 	var recipes: Array[Dictionary] = Recipes.recipes()
-	check(recipes.size() == Contracts.RECIPE_COUNT, "Twelve useful recipes are authored")
+	check(recipes.size() == Contracts.RECIPE_COUNT, "Every reviewed native recipe is registered")
 	var recipe_ids := {}
 	for recipe: Dictionary in recipes:
 		check(not recipe_ids.has(recipe.id) and catalog.has(recipe.output_id) and int(recipe.output_quantity) > 0 and int(recipe.gold) >= 0, "%s has a unique valid output and cost" % recipe.id)
@@ -96,6 +97,10 @@ func _run() -> void:
 	var encounters := load("res://resources/loot/monster_rewards.tres") as VaultMonsterRewards
 	for source: String in VaultMonsterRewards.SOURCES:
 		var table := encounters._table(source)
+		for index in range(table.entries.size()):
+			var definition: VaultItemDefinition = table.entries[index]
+			if table.weights[index] > 0.0 and encounters._allows(String(definition.id), source):
+				obtainable[String(definition.id)] = true
 		if table.guaranteed_item != null:
 			obtainable[String(table.guaranteed_item.id)] = true
 		for definition: VaultItemDefinition in table.guaranteed_items:

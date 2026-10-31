@@ -2,7 +2,11 @@ extends "res://tests/test_harness.gd"
 ## Authored category metadata and immutable pre-batch native reward contracts.
 const Contracts = preload("res://tests/catalog_contracts.gd")
 const BATCHES := {"valuable": {"manifest": preload("res://resources/catalogs/valuables_expansion.tres"),
-	"count": 80, "sources": "res://tests/fixtures/catalog_valuables_sources.json"}}
+	"count": 80, "sources": "res://tests/fixtures/catalog_valuables_sources.json"},
+	"material": {"manifest": preload("res://resources/catalogs/materials_expansion.tres"),
+	"count": 33, "sources": "res://tests/fixtures/catalog_materials_sources.json"}}
+const Inventory = preload("res://scripts/progression/inventory_model.gd")
+const Store = preload("res://scripts/progression/profile_store.gd")
 
 func _initialize() -> void:
 	suite_name = "VAULTBOUND STACKABLE CATALOG BATCHES"
@@ -22,11 +26,14 @@ func _run() -> void:
 			names[definition.label] = true
 			var declared: Array = definition.acquisition_sources.duplicate()
 			declared.sort()
-			check(Contracts.sources_for(id) == declared and not declared.is_empty(), "Stackable source declarations match exact native rows: " + id)
-			check(definition.obtainable and not definition.can_equip() and definition.slot == &"" and definition.weapon_style == &"" and definition.base_stats.is_empty(), "Valuables remain obtainable trade goods without equipment statistics: " + id)
-			check(definition.category == "collectible" and definition.stack_limit in [5, 10, 20] and definition.quantity_min == 1 and definition.quantity_max == 1, "Valuables keep bounded collectible stacks and one-item reward quantities: " + id)
-			check(definition.healing == 0.0 and definition.stamina_restore == 0.0 and definition.special_effects.is_empty() and definition.salvage.is_empty(), "Valuables introduce no fictional restorative, combat or salvage mechanic: " + id)
-			check(definition.icon.resource_path == "res://assets/items/relic.svg" and definition.visual_scene.resource_path == "res://scenes/items/relic.tscn" and definition.model_art_status == "shared_family_placeholder", "Valuables honestly reuse the existing relic family art: " + id)
+			check(Contracts.sources_for(id) == declared and (not declared.is_empty() if definition.obtainable else declared.is_empty()), "Stackable source declarations match exact native rows: " + id)
+			if group == "material":
+				_check_material(definition)
+			else:
+				check(definition.obtainable and not definition.can_equip() and definition.slot == &"" and definition.weapon_style == &"" and definition.base_stats.is_empty(), "Valuables remain obtainable trade goods without equipment statistics: " + id)
+				check(definition.category == "collectible" and definition.stack_limit in [5, 10, 20] and definition.quantity_min == 1 and definition.quantity_max == 1, "Valuables keep bounded collectible stacks and one-item reward quantities: " + id)
+				check(definition.healing == 0.0 and definition.stamina_restore == 0.0 and definition.special_effects.is_empty() and definition.salvage.is_empty(), "Valuables introduce no fictional restorative, combat or salvage mechanic: " + id)
+				check(definition.icon.resource_path == "res://assets/items/relic.svg" and definition.visual_scene.resource_path == "res://scenes/items/relic.tscn" and definition.model_art_status == "shared_family_placeholder", "Valuables honestly reuse the existing relic family art: " + id)
 		_check_source_budget(batch.sources)
 	check(catalog.mossworn_obol.stack_limit == 20 and catalog.riverglass_pebble.stack_limit == 10 and catalog.emerald_mint_proof.stack_limit == 5, "Small coin, gemstone and high-rarity valuables retain distinct authored stack limits")
 	finish()
@@ -67,3 +74,19 @@ func _check_source_budget(path: String) -> void:
 			var expected := float(snapshot.previous_rarity_totals[rarity]) * 0.10
 			var rounding_tolerance := maxf(0.00001, float(added_counts[rarity]) * 0.000001)
 			check(absf(float(added_totals[rarity]) - expected) <= rounding_tolerance, "New rows share exactly ten percent of the pre-batch rarity budget: " + category + "/" + rarity)
+
+
+func _check_material(definition: VaultItemDefinition) -> void:
+	var id := String(definition.id)
+	check(definition.category == "material" and not definition.can_equip() and definition.slot == &"" and definition.weapon_style == &"" and definition.base_stats.is_empty(), "Material remains an ingredient without equipment statistics: " + id)
+	check(definition.stack_limit == 99 and definition.quantity_min == 1 and definition.quantity_max == 1, "New material keeps its authored stack and bounded reward quantities: " + id)
+	check(definition.healing == 0.0 and definition.stamina_restore == 0.0 and definition.special_effects.is_empty() and definition.salvage.is_empty(), "Material introduces no restorative, combat or salvage mechanic: " + id)
+	check(definition.icon.resource_path == "res://assets/items/material.svg" and definition.visual_scene == null and definition.model_art_status == "not_applicable", "Material uses the existing ingredient icon without an invented model: " + id)
+	var used := false
+	for recipe: Dictionary in VaultRecipeCatalog.recipes():
+		used = used or recipe.ingredients.has(id)
+	check(used == definition.obtainable, "Current material has a real recipe use and future material has none: " + id)
+	if not definition.obtainable:
+		var profile := Store.empty_profile()
+		var before := profile.duplicate(true)
+		check(not Inventory.add_items(profile, {id: 1}) and profile == before, "Future boss component cannot enter trusted ownership: " + id)

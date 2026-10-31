@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="VaultItemCatalogData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_catalog_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+item_ids = PackedStringArray("mooncap_gill", "fern_resin", "rootbark_strip", "starflower_pollen", "dew_lichen", "lantern_moss", "creek_reed", "heartwood_splinter", "thornspine_bundle", "bronze_scale", "slate_iron_nodule", "temple_scrap", "mossbound_ore", "silvervein_filament", "cracked_forge_brick", "ancient_rivet", "obsidian_flake", "faint_emerald_chip", "luminous_spore_sac", "mistglass_sand", "turquoise_crystal_grain", "resonant_root_sap", "bloomheart_nectar", "guardian_bark_flake", "dense_corruption_knot", "leviathan_scale", "hollow_king_signet_fragment", "devourer_prism_shard", "frozen_crown_splinter", "titan_heart_ore", "emberglass_boss_ash", "voidglass_lens_shard", "serpent_royal_fang")

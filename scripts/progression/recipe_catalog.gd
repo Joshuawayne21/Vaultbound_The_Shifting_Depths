@@ -14,6 +14,14 @@ const RECIPES := [
 	preload("res://resources/recipes/condense_ancient_heartstone.tres"),
 	preload("res://resources/recipes/forge_verdant_oathblade.tres"),
 	preload("res://resources/recipes/carve_vaultheart_staff.tres"),
+	preload("res://resources/recipes/spin_reclaimed_fiber.tres"),
+	preload("res://resources/recipes/mill_luminous_dust.tres"),
+	preload("res://resources/recipes/brew_garden_tonic.tres"),
+	preload("res://resources/recipes/distill_trail_draught.tres"),
+	preload("res://resources/recipes/smelt_reclaimed_ingot.tres"),
+	preload("res://resources/recipes/refine_veinstone.tres"),
+	preload("res://resources/recipes/focus_living_bloom.tres"),
+	preload("res://resources/recipes/forge_living_core.tres"),
 ]
 
 static func recipes() -> Array[Dictionary]:

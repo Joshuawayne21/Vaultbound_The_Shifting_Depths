@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="VaultCraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/crafting_recipe.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "mill_luminous_dust"
+label = "Mill Luminous Dust"
+description = "Mill crystal grains with water-smoothed mistglass into emerald dust."
+ingredients = {"faint_emerald_chip": 2, "turquoise_crystal_grain": 2, "mistglass_sand": 1}
+gold = 12
+output_id = "emerald_dust"
+output_quantity = 4
+required_level = 1

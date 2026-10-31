@@ -1,6 +1,6 @@
 # Milestone 5.6 catalog batches
 
-The original forty functional items and stable Depthmarks currency definition remain the independently tested starter set. Catalog growth is committed in separate, gated data batches. The target is **350 noncurrency definitions**, plus the preserved `gold_coin` record; this page reports only integrated content. The current total after batches 7a–7d is **269 definitions: 242 available noncurrency items, 26 unavailable future weapons and one currency record**.
+The original forty functional items and stable Depthmarks currency definition remain the independently tested starter set. Catalog growth is committed in separate, gated data batches. The target is **350 noncurrency definitions**, plus the preserved `gold_coin` record; this page reports only integrated content. The current total after batches 7a–7e is **302 definitions: 267 available noncurrency items, 26 unavailable future weapons, eight unavailable future materials and one currency record**.
 
 ## Batch 7a: weapon definitions
 
@@ -12,7 +12,7 @@ Batch 7a brought the project to **84 total definitions**: 83 noncurrency items a
 | Armor | 85 | 85 |
 | Accessories | 35 | 35 |
 | Valuables | 80 | 80 |
-| Materials | 12 | 45 |
+| Materials | 45 | 45 |
 | Consumables | 3 | 25 |
 | Trophy artifacts | 3 | 30 |
 
@@ -40,8 +40,16 @@ Eighty collectible trade goods add ten authored finds in each of eight families:
 
 Twenty-four Common, twenty-four Uncommon, twenty Rare, eight Epic and four Legendary valuables use existing Rootbound chest and encounter sources. Each definition lists its exact acquisition paths; the native chest tables and filtered encounter tables retain those distinctions. All previous rows and weights remain intact, with new rows sharing 10% of each table's pre-batch rarity weight. Valuables reuse the existing relic family icon and display mesh, with no equipment statistics or new restorative effects.
 
+## Batch 7e: material definitions and refinement recipes
+
+Thirty-three material definitions bring the material catalog to **45**. Twenty-five new Rootbound ingredients have real chest or encounter sources and appear in eight executable refinement recipes. Twelve use common/basic rewards, seven reinforced/stronger rewards, four ancient/cursed/elite rewards, Guardian Bark Flake uses completed Rootwarden rewards, and Dense Corruption Knot comes only from defeated elites. All previous source rows and weights remain unchanged; new rows share the same 10% per-rarity budget.
+
+The recipes produce existing Root Fiber, Emerald Dust, Mooncap Tonic, Stamina Draught, Tempered Ingot, Common Enhancement Stone, Aurora Bloom and Ancient Forged Core through the existing Blacksmith transaction flow. Their output definitions gain one additional craft-source tag each; every other pre-existing item field is preserved. The recipe catalog now has twenty recipes. Every new available ingredient has a current crafting use, and all ingredients use the existing material icon without claiming a display model.
+
+Eight records for future boss components remain unavailable with empty acquisition sources and no executable crafting use. Their absent models are marked not applicable for the ingredient category. They cannot enter owned inventory or current loot, stock or recipes.
+
 ## Batch validation
 
-`catalog_contracts.gd` holds explicit reviewed totals independently of resource data. `starter_sources_test.gd` retains the immutable 41-record starter audit. `item_catalog_test.gd` checks every integrated definition, group totals, active sources and inactive definitions. `catalog_weapon_batch_test.gd` preserves all 43 weapon checks. The reusable `catalog_equipment_batch_test.gd` verifies each armor and accessory definition's actual source, slot, stat bounds, protected ownership, enhancement cost and unchanged rolled instance properties; enhanced examples from each slot survive byte-exact encoded save/reload. `catalog_stackable_batch_test.gd` verifies authored valuable metadata, exact live acquisition tags, preserved prior source rows and the bounded rarity-weight additions. Oversized catalog rewards still fail atomically at forty inventory slots. The real player/camera/HUD regression remains separate in `catalog_runtime_integration_test.gd`.
+`catalog_contracts.gd` holds explicit reviewed totals independently of resource data. `starter_sources_test.gd` retains the immutable 41-record starter audit. `item_catalog_test.gd` checks every integrated definition, group totals, active sources and inactive definitions. `catalog_weapon_batch_test.gd` preserves all 43 weapon checks. The reusable `catalog_equipment_batch_test.gd` verifies each armor and accessory definition's actual source, slot, stat bounds, protected ownership, enhancement cost and unchanged rolled instance properties; enhanced examples from each slot survive byte-exact encoded save/reload. `catalog_stackable_batch_test.gd` verifies authored valuable and material metadata, exact live acquisition tags, current material recipe uses, rejected future components, preserved prior source rows and the bounded rarity-weight additions. Oversized catalog rewards still fail atomically at forty inventory slots. The real player/camera/HUD regression remains separate in `catalog_runtime_integration_test.gd`.
 
 On Android, buy Lanternwatch Blade and Sporewood Focus from the Equipment Trader, assign both loadouts, inspect their shared family previews, and switch while moving in both cameras. Try the new dungeon weapon drops, secure them through extraction, upgrade them and restart. Confirm the normal inventory still has forty slots. Physical-device performance and touch behavior require manual testing; catalog test results are not device measurements.

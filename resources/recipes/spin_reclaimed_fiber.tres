@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="VaultCraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/crafting_recipe.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "spin_reclaimed_fiber"
+label = "Spin Reclaimed Fiber"
+description = "Spin gathered root bark, creek reeds and thorn threads into useful root fiber."
+ingredients = {"rootbark_strip": 2, "creek_reed": 2, "thornspine_bundle": 1}
+gold = 8
+output_id = "root_fiber"
+output_quantity = 6
+required_level = 1

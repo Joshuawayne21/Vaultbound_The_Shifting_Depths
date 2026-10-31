@@ -328,7 +328,7 @@ On Android, equip the representative ring, necklace and charm simultaneously, in
 
 Eighty collectible trade goods bring the registry to **268 noncurrency items plus the preserved currency record**. Eight families each receive ten distinct authored finds, using the existing bounded stacks, merchant sale rules and owned Collection Hall references. None adds equipment bonuses or a second currency balance. Existing source rows and weights remain unchanged; additions share the established 10% pre-batch rarity-weight allocation. The relic family icon and model remain shared placeholders.
 
-**The frozen-batch gate passed 5,339 assertions across eleven invocations.** Seven catalog/source/economy suites contributed 4,621; the independent category/save/resource gate contributed 718. Opening and closing semantic source manifests matched (`c51ff3c3485e65b21463f3eb5eac2f397c6ff93a1ba2a11b35f9ce781703dd0d`), and the focused gate's source records match that same semantic source. All final game-test logs were clean. Committed-source publication checks remain separate.
+**The frozen-batch gate passed 5,339 assertions across eleven invocations.** Seven catalog/source/economy suites contributed 4,621; the independent category/save/resource gate contributed 718. Local commit `b437c21`, published as `98d42a8`, additionally passed **1,476 assertions across five exact-source invocations**: stackable batch 518, category runtime/read 32 + 12, starter sources 324 and smoke 590. Opening and closing semantic source manifests matched each other and the frozen gate (`c51ff3c3485e65b21463f3eb5eac2f397c6ff93a1ba2a11b35f9ce781703dd0d`); the focused gate's source records match that same semantic source. Archive evidence is `/tmp/vaultbound-56-c7d-source-checks/`. Repeated publication checks are reported separately, and all final game-test logs were clean.
 
 | Suite | Passed assertions | Coverage |
 | --- | ---: | --- |
@@ -350,3 +350,30 @@ The first development reader correctly failed to trigger death while the new arr
 Evidence is `/tmp/vaultbound-m56-7d-focused-final/results.json` and source-before/after records, plus `/tmp/vaultbound-56-checkpoint7d-regression/results.json`, adjacent logs and source-opening/closing manifests. Fresh import succeeded with the known sandbox editor-socket and missing Android build-tools notices. A controlled source-selection and transaction fixture does not establish natural drop pacing, economy balance or a human boss playthrough.
 
 On Android, collect valuable drops, inspect their names and stacks, extract, sell part of a stack, favorite the remainder and display a different owned valuable. Confirm protected sales, restart persistence and later expedition loss. Shared relic geometry, rendered readability, physical touch comfort and sustained performance remain manual review items; no device/GPU or APK result is claimed.
+
+## Checkpoint 7e — material and refinement batch
+
+Thirty-three material definitions bring the registry to **301 noncurrency items plus the preserved currency record**, including 45 materials. Twenty-five new materials are obtainable through existing Rootbound sources and have actual recipe uses. Eight future-encounter components remain explicitly unavailable. Eight refinement recipes extend the Blacksmith to twenty recipes and produce existing fibers, dust, supplies, ingots, enhancement stones, bloom and core components. No new material bypasses earned elite/boss sourcing or the forty-slot inventory.
+
+**The frozen-batch gate passed 5,921 assertions across eleven invocations.** Seven catalog/source/economy suites contributed 5,142; the independent category/save/resource gate contributed 779. Both gates cover the same unchanged semantic source (`19124290ce688f7fb8d234cf7b1936516c131e94e74c3c39ccda8b1b1f34ea44`). Final logs were clean on the first integration run, with no production or fixture fix needed. Committed-source publication checks remain separate.
+
+| Suite | Passed assertions | Coverage |
+| --- | ---: | --- |
+| `catalog_stackable_batch_test.gd` | 789 | Valuable/material definitions, exact source eligibility and weight preservation, real recipe uses, disabled future components and bounded stacks |
+| `item_catalog_test.gd` | 2,434 | All 302 records and twenty recipes, category-appropriate disabled-art metadata and filtered native encounter-source reachability |
+| `catalog_equipment_batch_test.gd` | 1,063 | Preserved armor/accessory equipment, protection, enhancement and saving |
+| `catalog_weapon_batch_test.gd` | 308 | Preserved supported and disabled weapon definitions |
+| `starter_sources_test.gd` | 324 | Original starters, earned-source restrictions and exact legacy reserves |
+| `inventory_economy_test.gd` | 170 | Existing inventory/transaction contracts and all eight new recipe transactions |
+| `enhancement_policy_test.gd` | 54 | Preserved guaranteed costs, caps and bounded modifiers |
+| `catalog_category_integration_test.gd`, runtime/read | 51 + 12 | Actual new-material chest/extraction, real Blacksmith refinement, locked-input/replay guards, future-material grant/reward/Search rejection, preserved valuable trade/display and independent restart/later death |
+| `profile_v4_test.gd` | 84 | Versioned saved ownership and unavailable-content preservation |
+| `smoke_test.gd` | 632 | Expanded resource loading, startup, movement, touch, cameras and original portals |
+
+The runtime extension obtains Rootbark Strip through an unmodified native chest, then uses a real nearby Blacksmith to spin six Root Fiber for eight DM and forge one Ancient Forged Core for 150 DM. Independently authored expected ingredient/output counts match the committed inventory exactly. Locked root bark prevents spending; repeated confirmations cannot apply another craft. Controlled level-thirty ownership supplies the small elite/boss ingredient fixture and does not claim natural farming or economy pacing. Active Session reward and Search registration reject the unavailable Leviathan Scale without reserving receipts or changing pending items/DM.
+
+The catalog fixture now distinguishes unavailable weapon art from materials, whose display models are not applicable, and includes actual filtered encounter entries when auditing acquisition reachability. These changes preserve disabled-content rejection while covering the new category correctly. Existing resource definitions only gain their truthful additional crafting-source tags; previous loot rows, gameplay and stack rules remain intact.
+
+Evidence is `/tmp/vaultbound-m56-7e-focused-final/results.json` and matching source-before/after records, plus `/tmp/vaultbound-56-checkpoint7e-regression/results.json`, adjacent logs and source-opening/closing manifests. Import completed with only the known sandbox editor-socket and Android build-tools notices.
+
+On Android, obtain ordinary, elite and boss material representatives; inspect recipe requirements, lock an ingredient, attempt a craft, unlock it and confirm exact costs/output. Restart after crafting and verify ownership through a later loss. Future components must remain unavailable. Drop pacing, affordability, rendered readability and physical-device performance remain manual review items.
