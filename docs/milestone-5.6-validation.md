@@ -65,7 +65,7 @@ Use the import and controls instructions in [README](../README.md). With a backe
 
 The existing UI now shares a navy, bronze/gold and turquoise presentation theme with distinct Inventory and Equipment HUD entries. Inventory sorting adds base value, lowest rarity, category and recently acquired instance order. The same-avatar equipment preview rotates on drag and requests a frame only when needed; switching tabs or closing the menu disables it. UI scale choices of 100%, 110% and 120% enlarge text and targets while inventory columns and equipment pages adapt. Reduced motion/effects choices use the separate versioned graphics preferences file and preserve gameplay saves.
 
-**The checkpoint gate passed 802 assertions across nine engine invocations.** All final game-test logs were clean. This total counts the six retained UI suites once, the settings main/independent reader once each and the new integration suite once; it does not add repeated debugging runs.
+**The final checkpoint gate passed 1,124 assertions across ten engine invocations from an exact Git source archive of commit `75ea869`.** All final game-test logs were clean. The nine UI/settings invocations contributed 802 assertions and the archive smoke run contributed 322. This archive gate supersedes the earlier 802-assertion working-tree gate; repeated runs are not added together.
 
 | Suite | Passed assertions | Checkpoint coverage |
 | --- | ---: | --- |
@@ -77,9 +77,31 @@ The existing UI now shares a navy, bronze/gold and turquoise presentation theme 
 | `expedition_ui_test.gd` | 19 | Minimap, results/notices and inventory modal isolation |
 | `visual_settings_test.gd` | 54 | Existing quality/frame targets and saved preference integration |
 | `rpg_ui_test.gd` | 62 | Existing commerce/crafting/equipment touch flow and correct modal pause clocks |
+| `smoke_test.gd` | 322 | Exact-source resource loading, startup, movement, cameras, touch and original portals |
 
-The focused real-game suite verifies that the secured progression file remains byte-for-byte unchanged after UI scaling, sorting, inspection and accessibility changes. It tests the existing avatar contract without depending on the later character overhaul, allowing this checkpoint to be committed and validated independently. Logs include `/tmp/vaultbound-m56-mobile-ui-integration.log`, the settings suite's isolated `/tmp/vaultbound-m56-accessibility/` fixtures and the retained UI suite logs named above.
+The focused real-game suite verifies that the secured progression file remains byte-for-byte unchanged after UI scaling, sorting, inspection and accessibility changes. It tests the existing avatar contract without depending on the later character overhaul, allowing this checkpoint to be committed and validated independently. Final archive evidence is `/tmp/vaultbound-56-c2-source-checks/results.json` and its adjacent suite logs. Earlier focused logs include `/tmp/vaultbound-m56-mobile-ui-integration.log`, the settings suite's isolated `/tmp/vaultbound-m56-accessibility/` fixtures and the retained UI suite logs named above. The exact archive imported without missing resources or script errors.
 
 Preference review found that an empty or truncated legacy configuration could otherwise be interpreted as default settings. The final loader requires the existing quality and FPS fields before applying a legacy record, and tests verify that empty/partial records preserve the current choices. No unresolved critical checkpoint regression is recorded.
 
 Android review must still check readable labels, long item descriptions and thumb comfort at all three scales, especially 120% on the smallest supported landscape display. Check notch/cutout safe areas, two-finger movement plus menu opening, preview dragging, tab changes, app background/resume and persistent reduced motion/effects. Headless geometry and input checks do not establish rendered glyph clipping, GPU preview quality or physical touchscreen behavior. The new theme uses original code-driven frames and existing family icons; no new production icon library is claimed.
+
+## Checkpoint 3 — compatible character presentation
+
+The existing procedural avatar gains rounded body surfaces, improved proportions and damped transitions for ordinary locomotion/combat poses. It retains the original controller, collision capsule, shoulder/hip pivots and sword/staff/shield grips. Dodge follows the existing complete waist-centered rotation, and essential attack cues remain immediate. Player, Guardian, Mystic and Equipment preview all instantiate the same visual script. Reduced motion/effects preferences affect optional presentation without changing attacks or movement rules.
+
+The native avatar contains **53 mesh instances, 5,216 primitive triangles plus 38 existing cue triangles**, with 25 rounded surfaces sharing one sphere mesh. These are scene geometry counts, not a GPU timing result. Equipment tint materials remain independent per actor and preview; repeated appearance refresh does not compound coloration.
+
+**The focused integration gate passed 274 assertions across six engine invocations**, with clean final game-test logs. Repeated or overlapping checkpoint runs are not added to this total.
+
+| Suite | Passed assertions | Checkpoint coverage |
+| --- | ---: | --- |
+| `character_presentation_test.gd` | 21 | Shared rounded mesh budget, original grip anchors, independent/idempotent tints, finite poses, frame-rate convergence, complete dodge turn, immediate cues and reduced presentation |
+| `party_character_integration_test.gd` | 35 | Actual player/Guardian/Mystic startup, unchanged capsules and collision layers, finite poses and stable grips, both camera modes, matching owned Equipment preview geometry/family/appearance and independent materials |
+| `combat_presentation_test.gd` | 33 | Existing bounded combat feedback and accurate warning presentation |
+| `character_progression_test.gd` | 69 | Existing actual-player equipment/stat contracts and prevention of free healing |
+| `companion_behavior_test.gd` | 38 | Existing Guardian blocking, Mystic support, combat decisions and boss warnings |
+| `loadout_integration_test.gd` | 78 | Owned weapon switching, model/ability updates, preserved attack/cooldown rules, touch/cameras and save rollback |
+
+The independent real-party evidence is `/tmp/vaultbound-m56-party-character-integration.log`. The avatar design, budgets and remaining art requirements are documented in [character presentation](character-presentation.md). This checkpoint's source-archive verification follows its isolated commit; the focused results above do not substitute for that publication gate.
+
+This is an original native-mesh/procedural-animation improvement, **not an imported production skeletal rig or an authored animation pack**. Tests establish finite transforms, preserved anchors/colliders and consistent representation; they cannot prove every rendered pose is free of clipping or that animation quality meets a final art bar. Physical Android/GPU review still needs to inspect hands, feet, armor, weapon silhouettes, animation transitions and both camera distances during movement, combat, dodge, block, damage and death. No physical-device test or frame-rate result is claimed.

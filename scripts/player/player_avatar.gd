@@ -1,5 +1,6 @@
 extends Node3D
-## Lightweight authored primitive figure. Replace with a rigged model later;
+## Original low-poly, rounded primitive figure with blended rigid-pivot poses.
+## A production rig and authored animation clips are still future art assets;
 ## the gameplay controller and camera do not depend on the animation source.
 
 const Presentation = preload("res://scripts/visual/combat_presentation.gd")
@@ -34,9 +35,14 @@ var _charge_ratio := 0.0
 var _blocking := false
 var _weapon_switch_remaining := 0.0
 var _weapon_switch_duration := 0.32
+var _reduced_motion := false
+var _reduced_effects := false
+var _pose_nodes: Array[Node3D] = []
+var _previous_rotations: Array[Quaternion] = []
 var _equipment_appearance: Dictionary = {}
 var _equipment_surfaces: Dictionary = {}
 var _surface_originals: Dictionary = {}
+var _surface_base_colors: Dictionary = {}
 var _surface_tints: Dictionary = {}
 
 const EQUIPMENT_TINTS := {"common": Color("c8d0c7"), "uncommon": Color("83c795"),
@@ -54,6 +60,8 @@ func _ready() -> void:
 
 func apply_visual_settings(snapshot: Dictionary) -> void:
 	_detail_quality = int(snapshot.get("quality", snapshot.get("current_quality", 1)))
+	_reduced_motion = bool(snapshot.get("reduced_motion", false))
+	_reduced_effects = bool(snapshot.get("reduced_effects", false))
 
 
 func _material(color: Color, unshaded: bool = false) -> StandardMaterial3D:
@@ -70,6 +78,25 @@ func _box(parent: Node3D, size: Vector3, at: Vector3, material: Material) -> Mes
 	var mesh := BoxMesh.new()
 	mesh.size = size
 	result.mesh = mesh
+	result.material_override = material
+	result.position = at
+	parent.add_child(result)
+	return result
+
+
+func _rounded(parent: Node3D, size: Vector3, at: Vector3, material: Material) -> MeshInstance3D:
+	# A bounded 12-sided surface, shared by all rounded parts in this avatar.
+	# Local scaling changes the silhouette without moving any weapon/hip anchors.
+	var result := MeshInstance3D.new()
+	if not has_meta("rounded_mesh"):
+		var surface := SphereMesh.new()
+		surface.radius = 0.5
+		surface.height = 1.0
+		surface.radial_segments = 12
+		surface.rings = 6
+		set_meta("rounded_mesh", surface)
+	result.mesh = get_meta("rounded_mesh") as SphereMesh
+	result.scale = size
 	result.material_override = material
 	result.position = at
 	parent.add_child(result)
@@ -119,36 +146,42 @@ func _build() -> void:
 	_left_leg = _pivot(Vector3(-0.17, 0.65, 0), _body)
 	_right_leg = _pivot(Vector3(0.17, 0.65, 0), _body)
 	for leg: Node3D in [_left_leg, _right_leg]:
-		_box(leg, Vector3(0.23, 0.38, 0.26), Vector3(0, -0.15, 0), navy)
-		_equipment_surface("boots", _box(leg, Vector3(0.24, 0.27, 0.30), Vector3(0, -0.45, -0.02), leather))
-		_box(leg, Vector3(0.19, 0.15, 0.035), Vector3(0, -0.29, -0.15), gold)
-		_equipment_surface("boots", _box(leg, Vector3(0.26, 0.12, 0.39), Vector3(0, -0.58, -0.06), leather))
+		_equipment_surface("leg_armor", _rounded(leg, Vector3(0.245, 0.43, 0.285), Vector3(0, -0.15, 0), navy))
+		_equipment_surface("boots", _rounded(leg, Vector3(0.225, 0.32, 0.26), Vector3(0, -0.43, -0.01), leather))
+		_equipment_surface("leg_armor", _rounded(leg, Vector3(0.20, 0.17, 0.11), Vector3(0, -0.29, -0.115), gold))
+		_equipment_surface("boots", _rounded(leg, Vector3(0.25, 0.15, 0.39), Vector3(0, -0.565, -0.06), leather))
 
-	_cylinder(_body, 0.37, 0.29, 0.55, Vector3(0, 1.02, 0), _armor)
-	_cylinder(_body, 0.30, 0.33, 0.14, Vector3(0, 0.76, 0), gold)
-	_box(_body, Vector3(0.13, 0.15, 0.07), Vector3(0, 0.77, -0.30), steel)
-	_box(_body, Vector3(0.06, 0.42, 0.035), Vector3(0, 1.04, -0.322), gold)
+	_rounded(_body, Vector3(0.67, 0.62, 0.55), Vector3(0, 1.04, 0), _armor)
+	_cylinder(_body, 0.27, 0.29, 0.12, Vector3(0, 0.77, 0), gold, 12)
+	_box(_body, Vector3(0.12, 0.12, 0.06), Vector3(0, 0.77, -0.28), steel)
+	_rounded(_body, Vector3(0.055, 0.30, 0.035), Vector3(0, 1.03, -0.27), gold)
 	# A bright diamond provides a small, readable emblem on the breastplate.
-	var emblem := _box(_body, Vector3(0.12, 0.12, 0.045), Vector3(0, 1.14, -0.35), glow)
+	var emblem := _box(_body, Vector3(0.10, 0.10, 0.045), Vector3(0, 1.13, -0.27), glow)
 	_equipment_surface("accessory", emblem)
 	emblem.rotation.z = PI * 0.25
-	_cylinder(_body, 0.18, 0.19, 0.14, Vector3(0, 1.35, 0), leather)
-	_cylinder(_body, 0.23, 0.27, 0.40, Vector3(0, 1.57, 0), navy)
-	_equipment_surface("helmet", _cylinder(_body, 0.05, 0.235, 0.13, Vector3(0, 1.825, 0), _armor))
-	_box(_body, Vector3(0.36, 0.05, 0.032), Vector3(0, 1.60, -0.24), gold)
-	_box(_body, Vector3(0.22, 0.028, 0.038), Vector3(0, 1.55, -0.25), glow)
-	_equipment_surface("helmet", _box(_body, Vector3(0.06, 0.22, 0.04), Vector3(0, 1.48, -0.253), _armor))
+	_cylinder(_body, 0.15, 0.17, 0.16, Vector3(0, 1.35, 0), leather, 12)
+	_rounded(_body, Vector3(0.46, 0.44, 0.48), Vector3(0, 1.57, 0), navy)
+	_equipment_surface("helmet", _rounded(_body, Vector3(0.49, 0.23, 0.50), Vector3(0, 1.755, 0), _armor))
+	_box(_body, Vector3(0.34, 0.042, 0.032), Vector3(0, 1.60, -0.236), gold)
+	_box(_body, Vector3(0.21, 0.028, 0.038), Vector3(0, 1.55, -0.24), glow)
+	_equipment_surface("helmet", _rounded(_body, Vector3(0.065, 0.19, 0.055), Vector3(0, 1.49, -0.23), _armor))
+	# Additional slots have their own tint surfaces; legacy accessory stays intact.
+	_equipment_surface("necklace", _rounded(_body, Vector3(0.07, 0.10, 0.04), Vector3(0, 1.27, -0.195), gold))
 
 	_left_arm = _pivot(Vector3(-0.39, 1.25, 0), _body)
 	_right_arm = _pivot(Vector3(0.39, 1.25, 0), _body)
 	for arm: Node3D in [_left_arm, _right_arm]:
-		_box(arm, Vector3(0.24, 0.34, 0.25), Vector3(0, -0.15, 0), navy)
-		_box(arm, Vector3(0.22, 0.28, 0.24), Vector3(0, -0.41, -0.01), _armor)
-		_box(arm, Vector3(0.23, 0.07, 0.25), Vector3(0, -0.45, -0.01), gold)
-		_box(arm, Vector3(0.18, 0.18, 0.20), Vector3(0, -0.60, -0.025), leather)
-		var shoulder := _box(arm, Vector3(0.38, 0.16, 0.39), Vector3(0, 0.01, 0), _armor)
+		_rounded(arm, Vector3(0.23, 0.38, 0.25), Vector3(0, -0.15, 0), navy)
+		_equipment_surface("gloves", _rounded(arm, Vector3(0.205, 0.31, 0.225), Vector3(0, -0.41, -0.01), _armor))
+		_cylinder(arm, 0.10, 0.10, 0.055, Vector3(0, -0.49, -0.01), gold, 12)
+		_equipment_surface("gloves", _rounded(arm, Vector3(0.16, 0.185, 0.19), Vector3(0, -0.60, -0.025), leather))
+		var shoulder := _rounded(arm, Vector3(0.33, 0.22, 0.34), Vector3(0, 0.015, 0), _armor)
 		shoulder.rotation.z = -0.18 if arm == _left_arm else 0.18
-		_box(arm, Vector3(0.38, 0.035, 0.40), Vector3(0, -0.075, 0), gold)
+		_rounded(arm, Vector3(0.29, 0.06, 0.31), Vector3(0, -0.07, 0), gold)
+	_equipment_surface("ring", _rounded(_right_arm, Vector3(0.045, 0.05, 0.035), Vector3(0.035, -0.60, -0.112), gold))
+	_pose_nodes.assign([_left_leg, _right_leg, _left_arm, _right_arm, _body])
+	for part: Node3D in _pose_nodes:
+		_previous_rotations.append(part.quaternion)
 
 	# Sword is attached to the right-hand pivot; the strike swings the entire arm.
 	_sword = _pivot(Vector3.ZERO, _right_arm)
@@ -240,10 +273,11 @@ func _equipment_surface(slot: String, mesh: MeshInstance3D) -> void:
 		_equipment_surfaces[slot] = []
 	_equipment_surfaces[slot].append(mesh)
 	_surface_originals[mesh.get_instance_id()] = mesh.material_override
+	_surface_base_colors[mesh.get_instance_id()] = (mesh.material_override as StandardMaterial3D).albedo_color
 
 
 func set_equipment_appearance(appearance: Dictionary) -> void:
-	# Existing hand/armor anchors and primitive silhouettes remain unchanged.
+	# Hand/armor anchors stay compatible with both gameplay and inspection views.
 	# Rarity tints use per-instance material copies; no shared companion/player
 	# materials, model scale or collision bodies are modified by equipment.
 	_equipment_appearance = appearance.duplicate(true)
@@ -263,7 +297,8 @@ func set_equipment_appearance(appearance: Dictionary) -> void:
 			if not _surface_tints.has(mesh.get_instance_id()):
 				_surface_tints[mesh.get_instance_id()] = original.duplicate() as StandardMaterial3D
 			var material: StandardMaterial3D = _surface_tints[mesh.get_instance_id()]
-			material.albedo_color = _equipment_color(entry, original.albedo_color)
+			# Captured bind colors keep repeated refreshes independent of chest tints.
+			material.albedo_color = _equipment_color(entry, _surface_base_colors[mesh.get_instance_id()])
 			mesh.material_override = material
 	_armor.albedo_color = _armor_color
 
@@ -328,29 +363,36 @@ func _create_dodge_wake() -> void:
 func animate(delta: float, speed: float, attack_time: float, dodge_time: float) -> void:
 	if not is_instance_valid(_body):
 		return
+	for index in range(_pose_nodes.size()):
+		_previous_rotations[index] = _pose_nodes[index].quaternion
+	var previous_body_position := _body.position
+	var previous_cape_tilt := _cape.rotation.x
 	_weapon_switch_remaining = maxf(0.0, _weapon_switch_remaining - delta)
 	_phase += delta * (3.5 + speed * 1.9)
-	var stride := minf(speed / 4.8, 1.0)
+	var stride := clampf(speed / 4.8, 0.0, 1.0)
 	var step := sin(_phase) * stride
-	_left_leg.rotation.x = step * 0.6
-	_right_leg.rotation.x = -step * 0.6
-	_left_arm.rotation.x = -step * 0.35
+	var breathing := 0.0 if _reduced_motion else sin(_phase * 0.55) * (1.0 - stride)
+	_left_leg.rotation = Vector3(step * 0.6, 0, 0)
+	_right_leg.rotation = Vector3(-step * 0.6, 0, 0)
+	_left_arm.rotation.x = -0.06 - step * 0.35 + breathing * 0.015
 	_left_arm.rotation.y = 0.0
-	_left_arm.rotation.z = 0.0
-	_right_arm.rotation.x = step * 0.35
+	_left_arm.rotation.z = 0.035
+	_right_arm.rotation.x = -0.06 + step * 0.35 + breathing * 0.015
 	_right_arm.rotation.y = 0.0
-	_right_arm.rotation.z = 0.0
-	_body.position = Vector3(0, absf(sin(_phase)) * stride * 0.055, 0)
-	_body.rotation = Vector3.ZERO
-	_cape.rotation.x = 0.14 + stride * 0.22 + sin(_phase * 0.6) * 0.04
+	_right_arm.rotation.z = -0.035
+	_body.position = Vector3(0, absf(sin(_phase)) * stride * 0.035 + breathing * 0.006, 0)
+	_body.rotation = Vector3(0, step * 0.045, -step * 0.025)
+	_cape.rotation.x = 0.14 + stride * 0.18 + (0.0 if _reduced_motion else sin(_phase * 0.6) * 0.025)
 	_slash.visible = false
 	_dodge_wake.visible = false
 	_cast_ring.visible = _detail_quality > 0 and _weapon_style == &"staff" and _combat_state in [&"charge", &"charging"]
-	_cast_ring.rotation.y += delta * 1.6
+	if not _reduced_motion:
+		_cast_ring.rotation.y += delta * 1.6
 	_cast_ring.scale = Vector3.ONE * (0.65 + _charge_ratio * 0.65)
 	_ward.visible = _weapon_style == &"staff" and _blocking
-	_staff_crystal.rotation.y += delta * (0.7 + _charge_ratio * 4.0)
-	_staff_crystal.scale = Vector3.ONE * (1.0 + _charge_ratio * 0.45)
+	if not _reduced_motion:
+		_staff_crystal.rotation.y += delta * (0.7 + _charge_ratio * 4.0)
+	_staff_crystal.scale = Vector3.ONE * (1.0 + _charge_ratio * (0.15 if _reduced_effects else 0.45))
 	if _blocking:
 		_left_arm.rotation.x = -1.1
 		_left_arm.rotation.z = -0.65
@@ -389,7 +431,7 @@ func animate(delta: float, speed: float, attack_time: float, dodge_time: float) 
 			_slash.rotation.y = lerpf(-0.45, 0.45, swing) * (-1.0 if _combo_index == 1 else 1.0)
 	if dodge_time > 0.0:
 		var progress := _combat_progress if _combat_state == &"dodge" else clampf(1.0 - dodge_time / 0.28, 0.0, 1.0)
-		_dodge_wake.visible = _detail_quality > 0 and progress < 0.85
+		_dodge_wake.visible = _detail_quality > 0 and not _reduced_effects and progress < 0.85
 		_dodge_material.albedo_color = Color(Color("94bfc0"), (1.0 - progress) * 0.6)
 		_body.rotation.x = -TAU * progress
 		# Rotate about the waist rather than the feet to keep the roll above ground.
@@ -405,15 +447,34 @@ func animate(delta: float, speed: float, attack_time: float, dodge_time: float) 
 		_body.rotation.x = -0.20 * sin(_combat_progress * PI)
 	elif _combat_state == &"dead":
 		_body.rotation.z = lerpf(0.0, 1.35, _combat_progress)
+		_left_arm.rotation = Vector3(-0.25, 0, 0.1)
+		_right_arm.rotation = Vector3(-0.25, 0, -0.1)
+		_left_leg.rotation = Vector3(0.15, 0, 0)
+		_right_leg.rotation = Vector3(-0.15, 0, 0)
 		_slash.visible = false
 		_ward.visible = false
 	if _weapon_switch_remaining > 0.0 and _combat_state == &"idle" and not _blocking and attack_time <= 0.0 and dodge_time <= 0.0:
 		var progress := 1.0 - _weapon_switch_remaining / maxf(0.001, _weapon_switch_duration)
-		var settle := sin(progress * PI)
+		var settle := sin(progress * PI) * (0.25 if _reduced_motion else 1.0)
 		_right_arm.rotation.x += settle * 0.22
 		_right_arm.rotation.z += settle * 0.12
 		_left_arm.rotation.x += settle * 0.10
 		_body.rotation.x += settle * 0.025
+	# Exponential pose damping is frame-rate independent and visual only. Strike
+	# arcs, charge cues and model visibility above still respond on the same tick.
+	var pose_rate := 18.0
+	if _blocking or _combat_state not in [&"idle", &"dead"] or attack_time > 0.0:
+		pose_rate = 32.0
+	var blend := 1.0 - exp(-pose_rate * maxf(delta, 0.0))
+	for index in range(_pose_nodes.size()):
+		var part := _pose_nodes[index]
+		# Quaternion interpolation would shortcut a full-turn dodge; its body pose
+		# and waist-centered translation must retain the original full revolution.
+		if part != _body or dodge_time <= 0.0:
+			part.quaternion = _previous_rotations[index].slerp(part.quaternion, blend)
+	if dodge_time <= 0.0:
+		_body.position = previous_body_position.lerp(_body.position, blend)
+	_cape.rotation.x = lerpf(previous_cape_tilt, _cape.rotation.x, blend)
 	_damage_flash = maxf(0.0, _damage_flash - delta)
 	_armor.albedo_color = Color("e7d5ab") if _damage_flash > 0.0 else _armor_color
 

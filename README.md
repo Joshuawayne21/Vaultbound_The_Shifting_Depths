@@ -52,6 +52,8 @@ Inventory supports name, rarity, level, value, lowest-rarity, equipment category
 
 Assign owned swords or staffs to PRIMARY / SECONDARY in the inventory equipment actions. Empty loadout buttons are disabled and show no weapon icon. The unassigned practice controller still supports R until a weapon is assigned. Switching requires recovery from the current action, takes 0.32 seconds and preserves ability cooldowns, targeting and current resources. The shield and legacy accessory remain separate equipment slots.
 
+The shared character now uses rounded native meshes and smoother procedural pose transitions, with unchanged weapon anchors and gameplay timing. Player, companions and inspection share this avatar. These remain original prototype visuals; production skinned models, fitted item-specific armor and authored clips are still missing. See [character presentation and asset requirements](docs/character-presentation.md).
+
 Sword/shield retains its three-hit combo, charged heavy, Shield Bash and Cleave. Staff retains bolts, charged splash, Arcane Burst and Frost Nova. Both use identical damage, costs, cooldowns, range and targeting in either camera view. Charge, block and joystick touches cancel safely on focus loss, Android pause, travel and modal opening.
 
 Inventory, Equipment, GRAPHICS, merchant/workbench/Collection Hall screens, party/recruitment menus and expedition results pause the local player, companions and active world. Closing them restores input without resuming stale held buttons. Basic movement is grounded; jumping is intentionally omitted. The elevated tactical camera uses a narrow perspective lens for a continuous transition rather than a strict orthographic projection.
