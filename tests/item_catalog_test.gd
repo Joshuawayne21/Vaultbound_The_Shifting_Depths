@@ -1,5 +1,6 @@
 extends "res://tests/test_harness.gd"
 ## Catalog contracts and reachability, independent of saved inventory state.
+const Contracts = preload("res://tests/catalog_contracts.gd")
 const Loot = preload("res://scripts/progression/loot_table.gd")
 const Recipes = preload("res://scripts/progression/recipe_catalog.gd")
 const Merchants = preload("res://scripts/progression/merchant_catalog.gd")
@@ -10,7 +11,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var catalog: Dictionary = Loot.catalog()
-	check(catalog.size() == 84, "The weapon expansion contains exactly 83 noncurrency definitions plus preserved currency")
+	check(catalog.size() == Contracts.TOTAL_COUNT, "Full catalog count matches the explicitly reviewed batch contract")
 	var rarities := {}
 	var groups := {}
 	var disabled := 0
@@ -37,7 +38,7 @@ func _run() -> void:
 		described.base_stats["test_mutation"] = 999
 		described.salvage["test_mutation"] = 999
 		check(not definition.base_stats.has("test_mutation") and not definition.salvage.has("test_mutation") and described.quantity == 3, "%s snapshots cannot mutate shared definition data" % id)
-	check(groups == {"weapon": 50, "armor": 10, "accessory": 5, "material": 12, "consumable": 3, "trophy": 3, "currency": 1} and disabled == 26, "Full batch category counts and 26 unavailable weapon families match the reviewed scope")
+	check(groups == Contracts.GROUP_COUNTS and disabled == Contracts.UNAVAILABLE_COUNT, "Full batch category counts and 26 unavailable weapon families match the reviewed scope")
 	check(rarities.size() == 7, "All seven requested rarity tiers are represented")
 	check(not catalog.sealed_reliquary.identified_by_default and catalog.sealed_reliquary.category == "equipment", "The mysterious artifact supports hidden rolled equipment properties")
 	check(catalog.stamina_draught.stamina_restore == 40.0 and catalog.mooncap_tonic.healing == 35.0 and catalog.sunfruit_elixir.healing == 60.0, "Consumable definitions retain existing healing and add stamina supplies")
@@ -54,7 +55,7 @@ func _run() -> void:
 		check(not first and bounds.position.y >= -0.01 and bounds.end.y <= 1.7 and bounds.size.x <= 1.6 and bounds.size.z <= 1.6, "%s is grounded and bounded for a display stand" % path.get_file())
 		actor.free()
 	var recipes: Array[Dictionary] = Recipes.recipes()
-	check(recipes.size() == 12, "Twelve useful recipes are authored")
+	check(recipes.size() == Contracts.RECIPE_COUNT, "Twelve useful recipes are authored")
 	var recipe_ids := {}
 	for recipe: Dictionary in recipes:
 		check(not recipe_ids.has(recipe.id) and catalog.has(recipe.output_id) and int(recipe.output_quantity) > 0 and int(recipe.gold) >= 0, "%s has a unique valid output and cost" % recipe.id)

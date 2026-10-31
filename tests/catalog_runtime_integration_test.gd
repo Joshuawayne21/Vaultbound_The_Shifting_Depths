@@ -12,6 +12,12 @@ const PROFILE := "/tmp/vaultbound-m56-catalog-runtime/profile.json"
 const REPRESENTATIVES := [
 	{"id": "lanternwatch_blade", "slot": "main_weapon", "style": "sword", "stats": {"damage_bonus": 0.02, "max_stamina": 2.0}},
 	{"id": "sporewood_focus", "slot": "secondary_weapon", "style": "staff", "stats": {"damage_bonus": 0.02, "max_stamina": 2.0}},
+	{"id": "wickwatch_cap", "slot": "helmet", "stats": {"max_stamina": 4.0, "armor": 0.007}},
+	{"id": "lanternbound_coat", "slot": "chest_armor", "stats": {"max_health": 4.0, "max_stamina": 5.0, "armor": 0.01}},
+	{"id": "flintkeeper_gloves", "slot": "gloves", "stats": {"max_stamina": 4.0, "damage_bonus": 0.003}},
+	{"id": "watchpath_breeches", "slot": "leg_armor", "stats": {"max_health": 3.0, "max_stamina": 4.0}},
+	{"id": "evening_round_boots", "slot": "boots", "stats": {"max_stamina": 5.0, "stamina_regen": 0.08}},
+	{"id": "lamplighter_buckler", "slot": "off_hand", "style": "sword", "stats": {"armor": 0.013, "max_stamina": 4.0}},
 ]
 const DISABLED_ID := "fallen_arch_greatsword"
 var session: Node
@@ -87,6 +93,8 @@ func _equip_representatives() -> void:
 		var preview: Node3D = overlay.rpg_panel._preview_avatar
 		check(preview._equipment_appearance == player.visual._equipment_appearance and preview._weapon_style == StringName(expected.style) and preview._equipment_appearance.main_weapon.item_id == expected.id, "Preview and gameplay share the exact new catalog item and implemented weapon family")
 		check(preview._staff.visible == player.visual._staff.visible and preview._sword.visible == player.visual._sword.visible, "New catalog definition selects matching existing family models in inspection and gameplay")
+		check(preview._shield.visible == (slot == "main_weapon") and player.visual._shield.visible == preview._shield.visible, "New buckler keeps the existing sword-only shield presentation")
+		_check_armor_preview(preview)
 		await _ready_to_switch()
 	game.hud.close_modals()
 	await frames(3)
@@ -103,12 +111,33 @@ func _check_stats(active: String) -> void:
 	var expected := {"max_health": 187.0, "max_stamina": 143.5, "damage_multiplier": 1.0, "armor": 0.0, "stamina_regen": 23.0}
 	for item: Dictionary in REPRESENTATIVES:
 		if item.slot in ["main_weapon", "secondary_weapon"] and item.slot != active: continue
+		if item.slot == "off_hand" and String(item.get("style", "")) == "sword" and active != "main_weapon": continue
 		for key: String in item.stats:
 			expected["damage_multiplier" if key == "damage_bonus" else key] += float(item.stats[key])
 	var actual: Dictionary = player.progression_stats()
 	var matches := true
 	for key: String in expected: matches = matches and is_equal_approx(float(actual[key]), float(expected[key]))
 	check(matches, "Actual " + active + " stats match authored representative bonuses without inactive weapon stacking")
+
+func _check_armor_preview(preview: Node3D) -> void:
+	for item: Dictionary in REPRESENTATIVES:
+		if item.slot in ["main_weapon", "secondary_weapon"]: continue
+		var actual_record: Dictionary = player.visual._equipment_appearance.get(item.slot, {})
+		var inspected_record: Dictionary = preview._equipment_appearance.get(item.slot, {})
+		var matches: bool = actual_record.get("item_id", "") == item.id and inspected_record == actual_record
+		if item.slot == "chest_armor":
+			# The established torso material predates the per-slot surface map.
+			matches = matches and player.visual._armor != preview._armor and player.visual._armor.albedo_color.is_equal_approx(preview._armor.albedo_color)
+			check(matches, "Representative chest armor matches its actual owned tint through an independent preview material")
+			continue
+		var actual_surfaces: Array = player.visual._equipment_surfaces.get(item.slot, [])
+		var preview_surfaces: Array = preview._equipment_surfaces.get(item.slot, [])
+		matches = matches and not actual_surfaces.is_empty() and actual_surfaces.size() == preview_surfaces.size()
+		for index in range(mini(actual_surfaces.size(), preview_surfaces.size())):
+			var actual: StandardMaterial3D = actual_surfaces[index].material_override
+			var inspected: StandardMaterial3D = preview_surfaces[index].material_override
+			matches = matches and actual != inspected and actual.albedo_color.is_equal_approx(inspected.albedo_color)
+		check(matches, "Representative " + String(item.slot) + " matches its actual owned appearance through independent preview materials")
 
 func _tap_loadout(index: int) -> void:
 	var point: Vector2 = surface._loadout_center(index)

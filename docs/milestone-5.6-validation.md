@@ -249,7 +249,7 @@ The first catalog batch adds 43 weapon definitions, bringing the registry to **8
 
 Existing loot row weights remain unchanged. Supported additions together receive 10% of the previous weight within their authored source/rarity tier; this is a weight allocation, not a guaranteed ten-percent drop chance. Normal, stronger, elite and completed-boss sources retain their eligibility restrictions. Six supported weapons enter merchant stock. See [catalog batches](catalog-batches.md) for the exact enabled/disabled split and placeholder art policy. The full 350-item target remains pending subsequent batches.
 
-**The frozen-batch gate passed 2,581 assertions across fourteen invocations.** Four focused catalog/source/economy invocations contributed 1,625, the independent preservation gate contributed 920 across nine invocations and the new representative runtime suite contributed 36. No full old combat replay was needed for this data-only batch. Final logs were clean, with no unresolved runtime regression. The committed-source publication gate remains separate.
+**The frozen-batch gate passed 2,581 assertions across fourteen invocations.** Four focused catalog/source/economy invocations contributed 1,625, the independent preservation gate contributed 920 across nine invocations and the new representative runtime suite contributed 36. No full old combat replay was needed for this data-only batch. Local commit `210dab9`, published as `1e38569`, additionally passed **1,070 assertions across four exact-source invocations**: corrected starter sources 324, weapon batch 308, representative runtime 36 and smoke 402. Opening/closing semantic source manifests matched each other and the frozen working gate (`c74956026635fe87da5498ad3784b371526b25fbed89a2af590974529b850fb8`). Evidence is `/tmp/vaultbound-56-c7a-source-checks/results.json` and its source manifests. Repeated archive checks are reported separately. Final logs were clean, with no unresolved runtime regression.
 
 | Suite | Passed assertions | Coverage |
 | --- | ---: | --- |
@@ -273,3 +273,28 @@ The new runtime fixture owns a small representative set at a controlled level, c
 Evidence is `/tmp/vaultbound-56-checkpoint7a-regression/results.json` and adjacent logs, `/tmp/vaultbound-m56-catalog-runtime.log` and `/tmp/vaultbound-m56-weapons-{starter_sources,item_catalog,catalog_weapon_batch,inventory_economy}.log`. A post-gate semantic-source manifest is recorded at `/tmp/vaultbound-56-checkpoint7a-regression/source-manifest.json`; generated UID/import sidecars are excluded. Future gates record both opening and closing source manifests, and publication verifies the committed archive separately.
 
 On Android, acquire the new sword/staff representatives, inspect their real family icons and item names, switch with a second finger while moving in both cameras, and confirm attacks still prevent invalid switches. Check menu readability, material/stat tooltips, Search rewards and later extraction/restart. Unsupported future families must remain unobtainable and unequippable. Shared sword/staff geometry and the generic future-catalog icon remain explicit placeholders; this batch does not add new weapon animations or physical-device performance evidence.
+
+## Checkpoint 7b — armor catalog batch
+
+This batch adds 75 armor definitions, reaching **158 noncurrency items plus the preserved currency record**, including 85 armor pieces. Existing weapon definitions, enabled/disabled families, original row weights and shared gameplay rules are preserved. Supported armor uses existing slots, statistics, protections and rarity-based enhancement caps. New source additions use the same bounded per-tier weight allocation as the weapon batch. These remain shared family visuals, not 75 newly modeled armor assets.
+
+**The frozen-batch gate passed 3,861 assertions across ten invocations.** Catalog/source/economy suites contributed 3,086; five independent runtime/save/resource invocations contributed 775. All final logs were clean. Opening and closing semantic source manifests matched (`e1c0d77f8d96f9882a80754309ad51e39ab886fdd5d8e75b70f2dbb3a05e3287`), and no runtime regression remains. Publication still uses a separate committed-source archive gate.
+
+| Suite | Passed assertions | Coverage |
+| --- | ---: | --- |
+| `catalog_equipment_batch_test.gd` | 759 | Seventy-five new pieces, real acquisition paths, supported slots, stat bounds, protection/cap rules, exact first-upgrade costs and saved six-slot ownership |
+| `item_catalog_test.gd` | 1,557 | Full 159-record registry, original IDs, resources, rarity, recipes and acquisition contracts |
+| `catalog_weapon_batch_test.gd` | 308 | Preserved supported/future weapon split and original weapon source/equipment rules |
+| `starter_sources_test.gd` | 324 | Original starter/material sources, effect metadata and exact unavailable legacy reserves |
+| `inventory_economy_test.gd` | 138 | Existing forty-slot inventory and atomic commerce/crafting/enhancement behavior |
+| `catalog_runtime_integration_test.gd` | 56 | Actual six-slot armor/shield equip, independently authored stat totals, no free healing/stamina, matching owned preview records and independent materials, sword-only shield visibility/bonuses, moving touch switches in both cameras and future-family rejection |
+| `starter_items_integration_test.gd` | 107 | Preserved starter gear, real elite/boss sources, Search/extraction and recipe chain |
+| `profile_v4_test.gd` | 84 | Current/legacy save validation and unavailable-content preservation |
+| `loadout_migration_test.gd` | 50 | Preserved saved loadouts, unique assignments and existing progression |
+| `smoke_test.gd` | 478 | Expanded resources, startup, movement, touch, cameras and original portals |
+
+The runtime suite equips Wickwatch Cap, Lanternbound Coat, Flintkeeper Gloves, Watchpath Breeches, Evening Round Boots and Lamplighter Buckler alongside the prior sword/staff representatives. It checks the actual actor against independent authored bonuses and verifies that switching to the staff excludes the buckler's shield bonuses. Both inspected and gameplay equipment records match; chest color is checked through the existing torso material and other slots through their existing surface materials. The first draft incorrectly assumed that chest armor also used the per-slot surface map; correcting that fixture did not alter production visuals or weaken the owned appearance comparison.
+
+Evidence is `/tmp/vaultbound-56-checkpoint7b-regression/results.json`, adjacent logs and `source-{opening,closing}.json`, plus `/tmp/vaultbound-m56-armor-{starter_sources,item_catalog,catalog_weapon_batch,catalog_equipment_batch,inventory_economy}.log`. The final five-suite independent gate was rerun after the fixture correction under one unchanged source manifest; earlier failed runs are not counted. No full generation/combat repeat was needed for this data-only category; those remain part of the final milestone gate.
+
+On Android, obtain the representative equipment, meet its displayed level requirements, equip each slot and check health/stamina/armor statistics without gaining free current resources. Inspect the same pieces in the character preview, rotate it, and compare sword/shield and staff presentation in both cameras. Verify protected sales, enhancement previews, item labels and touch scrolling with a full inventory. Native family tints/models do not establish unique armor art, perfect clipping or physical-device performance; those checks remain manual.

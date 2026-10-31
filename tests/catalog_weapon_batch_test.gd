@@ -1,5 +1,6 @@
 extends "res://tests/test_harness.gd"
 ## Authored weapon data, live source bindings and trusted ownership transactions.
+const Contracts = preload("res://tests/catalog_contracts.gd")
 const BATCH = preload("res://resources/catalogs/weapon_expansion.tres")
 const Inventory = preload("res://scripts/progression/inventory_model.gd")
 const Economy = preload("res://scripts/progression/economy_rules.gd")
@@ -15,7 +16,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var catalog := VaultLootTable.catalog()
-	check(catalog.size() == 84 and BATCH.item_ids.size() == 43, "Only the reviewed forty-three weapon additions extend the catalog to eighty-four records")
+	check(catalog.size() == Contracts.TOTAL_COUNT and BATCH.item_ids.size() == 43, "The immutable forty-three weapon batch survives the explicitly reviewed full catalog count")
 	var profile := Store.empty_profile()
 	profile.gold = 100000
 	profile.character = Progression.award_xp(profile.character, 46400)
@@ -27,7 +28,7 @@ func _run() -> void:
 		var definition: VaultItemDefinition = catalog[id]
 		check(not names.has(definition.label) and not definition.description.is_empty() and not definition.lore.is_empty(), "Weapon has a distinct authored identity and lore: " + id)
 		names[definition.label] = true
-		var actual := _sources_for(id)
+		var actual := Contracts.sources_for(id)
 		var declared: Array = definition.acquisition_sources.duplicate()
 		declared.sort()
 		check(actual == declared, "Weapon acquisition declarations match exact native sources: " + id)
@@ -75,32 +76,6 @@ func _run() -> void:
 	var restored := Store.new(PROFILE).load_profile()
 	check(not expected.is_empty() and FileAccess.get_file_as_bytes(PROFILE) == encoded.to_utf8_buffer() and restored == expected, "Reload retains the exact encoded weapon identities, upgrades, active assignment and old profile fields")
 	finish()
-
-func _sources_for(id: String) -> Array:
-	var result: Array = []
-	for category: String in VaultLootTable.CATEGORIES:
-		if _contains(VaultLootTable.table_for(category), id):
-			result.append("chest:" + category)
-	var encounters := load("res://resources/loot/monster_rewards.tres") as VaultMonsterRewards
-	for source: String in VaultMonsterRewards.SOURCES:
-		if _contains(encounters._table(source), id) and encounters._allows(id, source):
-			result.append("monster:" + source)
-	for vendor: String in VaultMerchantCatalog.VENDORS:
-		for completed in range(3):
-			for offer: Dictionary in VaultMerchantCatalog.stock(vendor, completed):
-				if offer.item_id == id and not result.has("merchant:" + vendor):
-					result.append("merchant:" + vendor)
-	for recipe: Dictionary in VaultRecipeCatalog.recipes():
-		if recipe.output_id == id:
-			result.append("craft:" + recipe.id)
-	result.sort()
-	return result
-
-func _contains(table: VaultLootTable, id: String) -> bool:
-	for definition: VaultItemDefinition in table.entries + table.guaranteed_items:
-		if String(definition.id) == id:
-			return true
-	return table.guaranteed_item != null and String(table.guaranteed_item.id) == id
 
 func _uid(profile: Dictionary, id: String) -> String:
 	for entry: Dictionary in profile.inventory:

@@ -13,7 +13,7 @@ const LEGACY_IDS := ["gold_coin", "root_fiber", "mooncap_tonic", "emerald_dust",
 const STARTER_ADDITIONS := ["trailgrip_gloves", "expedition_trousers", "wayfarer_necklace", "sentinel_ring",
 	"verdant_oathblade", "vaultheart_staff", "common_enhancement_stone", "elite_monster_fragment",
 	"rootwarden_essence", "ancient_forged_core", "ancient_heartstone"]
-const EXPECTED_FULL_COUNT := 84
+const EXPECTED_FULL_COUNT = preload("res://tests/catalog_contracts.gd").TOTAL_COUNT
 var sources := {}
 var roots := {}
 

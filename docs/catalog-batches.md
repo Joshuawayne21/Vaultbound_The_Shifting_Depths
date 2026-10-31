@@ -1,15 +1,15 @@
 # Milestone 5.6 catalog batches
 
-The original forty functional items and stable Depthmarks currency definition remain the independently tested starter set. Catalog growth is committed in separate, gated data batches. The target is **350 noncurrency definitions**, plus the preserved `gold_coin` record; this page reports only integrated content.
+The original forty functional items and stable Depthmarks currency definition remain the independently tested starter set. Catalog growth is committed in separate, gated data batches. The target is **350 noncurrency definitions**, plus the preserved `gold_coin` record; this page reports only integrated content. The current total after batches 7a–7b is **159 definitions: 132 available noncurrency items, 26 unavailable future weapons and one currency record**.
 
 ## Batch 7a: weapon definitions
 
-The project currently has **84 total definitions**: 83 noncurrency items and one currency record. Weapons now total **50**, comprising 24 usable swords/staffs and 26 explicitly unavailable future weapon definitions. No additional combat family was implemented.
+Batch 7a brought the project to **84 total definitions**: 83 noncurrency items and one currency record. Weapons now total **50**, comprising 24 usable swords/staffs and 26 explicitly unavailable future weapon definitions. No additional combat family was implemented.
 
 | Catalog group | Integrated | Final target |
 | --- | ---: | ---: |
 | Weapons | 50 | 50 |
-| Armor | 10 | 85 |
+| Armor | 85 | 85 |
 | Accessories | 5 | 35 |
 | Valuables | 0 | 80 |
 | Materials | 12 | 45 |
@@ -24,8 +24,14 @@ The twenty-six unavailable definitions cover greatswords, dual blades, spears, b
 
 Supported items reuse the original sword/staff family icons and primitive display scenes. These are shared placeholders, not fifty unique completed models. Authored critical chance, lifesteal and ability cooldown effects use the already tested bounded equipment system; enhancement does not multiply those effects.
 
+## Batch 7b: armor definitions
+
+Seventy-five supported armor definitions bring the armor catalog to **85**. Twelve named visual themes cover helmet, chest armor, gloves, leg armor, boots and off-hand shield, with three additional Ancient Relic pieces. Themes are descriptive families; no set bonus is implied or implemented. All pieces have their own authored identity, lore, modest bonuses, level requirement and salvage outputs using existing materials.
+
+Fifteen pieces use existing Equipment Trader stock/rotations. Five enter common/basic rewards, twenty reinforced/stronger rewards, twenty-six ancient/cursed/elite rewards and nine completed Rootwarden rewards. The same 10% pre-batch rarity-weight budget applies; every previous row and weight stays intact. Shields use the sword family and retain its equipment rules. New armor reuses the existing family icons, display primitives and avatar appearance system; item-specific fitted meshes remain unavailable.
+
 ## Batch validation
 
-`starter_sources_test.gd` retains the immutable 41-record starter audit while checking the current full manifest count. `item_catalog_test.gd` checks every integrated definition, explicit group totals, all active sources and all inactive definitions. `catalog_weapon_batch_test.gd` checks all 43 additions, exact source membership, unsupported-family rejection, each supported weapon's equip/stat/enhancement transaction, and byte-exact encoded save/reload intent. The real player/camera/HUD regression remains separate in `catalog_runtime_integration_test.gd`.
+`catalog_contracts.gd` holds explicit reviewed totals independently of resource data. `starter_sources_test.gd` retains the immutable 41-record starter audit. `item_catalog_test.gd` checks every integrated definition, group totals, active sources and inactive definitions. `catalog_weapon_batch_test.gd` preserves all 43 weapon checks. The reusable `catalog_equipment_batch_test.gd` verifies each armor definition's actual source, slot, stat bounds, protected ownership, enhancement cost and unchanged rolled instance properties; enhanced examples from each slot survive byte-exact encoded save/reload. Oversized catalog rewards still fail atomically at forty inventory slots. The real player/camera/HUD regression remains separate in `catalog_runtime_integration_test.gd`.
 
 On Android, buy Lanternwatch Blade and Sporewood Focus from the Equipment Trader, assign both loadouts, inspect their shared family previews, and switch while moving in both cameras. Try the new dungeon weapon drops, secure them through extraction, upgrade them and restart. Confirm the normal inventory still has forty slots. Physical-device performance and touch behavior require manual testing; catalog test results are not device measurements.

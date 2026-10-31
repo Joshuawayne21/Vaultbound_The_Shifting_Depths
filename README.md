@@ -94,7 +94,7 @@ Existing skeletons, archers and golems form deterministic groups with modest dep
 
 ## Treasure, inventory and saving
 
-Common, Reinforced, Ancient and Cursed chests share one chest implementation. Item definitions and weighted `.tres` loot tables provide Depthmarks (DM), crafting materials, equipment, healing consumables and collectibles across **Common, Uncommon, Rare, Epic, Legendary, Mythic and Ancient Relic** rarities. The original **40 functional noncurrency starter items** remain intact. The integrated catalog now contains **83 noncurrency definitions: 57 available and 26 unavailable future weapons**, plus the preserved currency record (**84 total**). Shared definition resources remain separate from unique owned equipment instances. The boss chest has its own table and a guaranteed **Heart of the Rootwarden** collectible. Chests can be claimed only once per expedition. Rarity labels and I–VII markers supplement color, and source gates prevent unfinished content from being granted. See the [catalog batch status](docs/catalog-batches.md) and [starter catalog](docs/starter-item-catalog.md) for integrated counts, acquisition chains and honest family-art limitations.
+Common, Reinforced, Ancient and Cursed chests share one chest implementation. Item definitions and weighted `.tres` loot tables provide Depthmarks (DM), crafting materials, equipment, healing consumables and collectibles across **Common, Uncommon, Rare, Epic, Legendary, Mythic and Ancient Relic** rarities. The original **40 functional noncurrency starter items** remain intact. The integrated catalog now contains **158 noncurrency definitions: 132 available and 26 unavailable future weapons**, plus the preserved currency record (**159 total**). Shared definition resources remain separate from unique owned equipment instances. The boss chest has its own table and a guaranteed **Heart of the Rootwarden** collectible. Chests can be claimed only once per expedition. Rarity labels and I–VII markers supplement color, and source gates prevent unfinished content from being granted. See the [catalog batch status](docs/catalog-batches.md) and [starter catalog](docs/starter-item-catalog.md) for integrated counts, acquisition chains and honest family-art limitations.
 
 - **Unsecured pack:** loot collected this run. It is not saved until extraction. Tonics in the pack can be consumed immediately.
 - **Secured inventory:** forty slots for owned stacks and individual equipment. Worn gear stays in those slots; each equipment instance keeps its unique ID, rolled modifiers, enhancement, condition and protection flags. Item-specific stack limits apply to materials and consumables. Both original sword/shield and staff combat families remain available.
@@ -255,6 +255,7 @@ godot4 --headless --path . --script res://tests/enhancement_integration_test.gd
 godot4 --headless --path . --script res://tests/enhancement_integration_test.gd -- --read
 godot4 --headless --path . --script res://tests/equipment_effects_integration_test.gd
 godot4 --headless --path . --script res://tests/catalog_weapon_batch_test.gd
+godot4 --headless --path . --script res://tests/catalog_equipment_batch_test.gd
 godot4 --headless --path . --script res://tests/catalog_runtime_integration_test.gd
 ```
 

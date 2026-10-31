@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/items/gloves.svg" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/items/gloves.tscn" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"currentkeeper_gauntlets"
+label = "Currentkeeper Gauntlets"
+description = "Compact gauntlets with wave-cut bronze knuckle plates."
+category = "equipment"
+rarity = "epic"
+value = 277
+quantity_min = 1
+quantity_max = 1
+weapon_style = &""
+stack_limit = 1
+slot = &"gloves"
+required_level = 13
+base_stats = {"max_stamina": 6, "armor": 0.014, "stamina_regen": 0.15, "crit_chance": 0.016}
+salvage = {"tempered_ingot": 3, "emerald_dust": 1}
+special_effects = Array[String](["1.6% chance for a critical hit dealing 1.5× damage."])
+crafting_tags = Array[String]([])
+icon = ExtResource("2")
+visual_scene = ExtResource("3")
+catalog_group = "armor"
+weapon_family = ""
+combat_supported = true
+obtainable = true
+lore = "The pattern records the rise and fall of a stream beneath the ruined temple."
+acquisition_sources = Array[String](["chest:ancient", "chest:cursed", "monster:elite"])
+icon_art_status = "original_family_icon"
+model_art_status = "shared_family_placeholder"
+display_animation = {"rotation_speed": 0.22, "bob_height": 0.0, "bob_speed": 1.2}
+aura_profile = &"epic"

@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/items/gloves.svg" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/items/gloves.tscn" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"thicket_ranger_bracers"
+label = "Thicket Ranger Bracers"
+description = "Short plated gloves with wide woven wrist bindings."
+category = "equipment"
+rarity = "rare"
+value = 133
+quantity_min = 1
+quantity_max = 1
+weapon_style = &""
+stack_limit = 1
+slot = &"gloves"
+required_level = 9
+base_stats = {"max_stamina": 6, "damage_bonus": 0.01, "max_health": 1}
+salvage = {"root_fiber": 2, "tempered_ingot": 1}
+special_effects = Array[String]([])
+crafting_tags = Array[String]([])
+icon = ExtResource("2")
+visual_scene = ExtResource("3")
+catalog_group = "armor"
+weapon_family = ""
+combat_supported = true
+obtainable = true
+lore = "The bindings carry a small tally of parties escorted beyond the first temple."
+acquisition_sources = Array[String](["chest:reinforced", "monster:stronger"])
+icon_art_status = "original_family_icon"
+model_art_status = "shared_family_placeholder"
+display_animation = {"rotation_speed": 0.22, "bob_height": 0.0, "bob_speed": 1.2}
+aura_profile = &"rare"
