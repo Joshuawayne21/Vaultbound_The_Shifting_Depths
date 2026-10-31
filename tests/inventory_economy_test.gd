@@ -22,7 +22,7 @@ func _run() -> void:
 	finish()
 
 func _profile() -> Dictionary:
-	var value := {"version": 2, "revision": 0, "gold": 10000, "items": {}, "equipped_item": "",
+	var value := {"version": 3, "revision": 0, "gold": 10000, "items": {}, "equipped_item": "",
 		"character": {"level": 30, "experience": 46400, "talents": {"offense": 0, "defense": 0, "utility": 0}},
 		"companions": {"guardian": {"recruited": true, "experience": 160}},
 		"discoveries": [], "statistics": {"completed": 0, "deaths": 0}}
@@ -110,7 +110,7 @@ func _equipment_and_protection() -> void:
 		var result := _plan(profile, &"equip", {"uid": entry.uid})
 		check(result.ok, "Equipment instance fits its authored slot: " + entry.item_id)
 		profile = result.profile
-	check(profile.equipment.values().all(func(uid: String) -> bool: return not uid.is_empty()), "All six initial equipment slots can be occupied independently")
+	check(Inventory.LEGACY_SLOTS.all(func(slot: String) -> bool: return not String(profile.equipment[slot]).is_empty()), "All six original equipment slots can still be occupied independently")
 	var sword := _uid(profile, "temple_blade")
 	check(not _plan(profile, &"sell", {"uid": sword}).ok and not _plan(profile, &"salvage", {"uid": sword}).ok, "Equipped instances cannot be sold or salvaged accidentally")
 	profile = _plan(profile, &"unequip", {"slot": "main_weapon"}).profile

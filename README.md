@@ -1,6 +1,8 @@
 # Vaultbound: The Shifting Depths
 
-**Milestone 5.5 — Enchanted Dark Fantasy Visual Pass.** A Godot 4 / GDScript-only, offline fantasy expedition prototype for Android landscape. The existing Sanctuary, Collection Hall and Rootbound Abyss now share slate-and-bronze architecture, turquoise magic, mossy ruins, living foliage and flowing water. Recruit companions, explore, fight, extract treasure and develop the character through the preserved RPG systems.
+**Milestone 5.6 — Loot and equipment overhaul, staged implementation.** A Godot 4 / GDScript-only, offline fantasy expedition prototype for Android landscape. The existing Sanctuary, Collection Hall and Rootbound Abyss now share slate-and-bronze architecture, turquoise magic, mossy ruins, living foliage and flowing water. Recruit companions, explore, fight, extract treasure and develop the character through the preserved RPG systems.
+
+The first verified checkpoint adds owned primary/secondary weapon loadouts and version-three save migration. Follow the [implementation plan](docs/milestone-5.6-plan.md) and [checkpoint validation](docs/milestone-5.6-validation.md) for completed versus pending work.
 
 The Sanctuary, practice dungeon and arena, player movement, sword/shield and staff combat, touch controls, both smoothly switchable cameras, procedural dungeons, treasure, boss encounters and secured progression from Milestones 1–5 remain available. `project.godot` stays at the repository root. The active party supports one human leader and up to two local AI companions. No online multiplayer, player-to-player trading, guilds or additional biomes are implemented.
 
@@ -35,7 +37,7 @@ Running inside the Android editor requires no APK export. The included ARM64 exp
 | Shield / staff ward | Hold BLOCK / WARD | Hold L |
 | Abilities | Two weapon-specific buttons | Q / E |
 | Target lock | LOCK | T |
-| Switch base weapon | Weapon panel | R |
+| Select owned loadout | Two circular weapon buttons | 1 / 2; R cycles assigned weapons |
 | Interact / chest / extraction | USE nearby | F |
 | Inventory | PACK | I |
 | Healing consumable | TONIC | H |
@@ -44,6 +46,8 @@ Running inside the Android editor requires no APK export. The included ARM64 exp
 | Party commands | PARTY | B |
 | Recruit / dismiss | USE at the Sanctuary Tavern | F at the Tavern |
 | Revive nearby ally | REVIVE prompt | Party menu / interact |
+
+Assign owned swords or staffs to PRIMARY / SECONDARY in the inventory equipment actions. Empty loadout buttons are disabled and show no weapon icon. The unassigned practice controller still supports R until a weapon is assigned. Switching requires recovery from the current action, takes 0.32 seconds and preserves ability cooldowns, targeting and current resources. The shield and legacy accessory remain separate equipment slots.
 
 Sword/shield retains its three-hit combo, charged heavy, Shield Bash and Cleave. Staff retains bolts, charged splash, Arcane Burst and Frost Nova. Both use identical damage, costs, cooldowns, range and targeting in either camera view. Charge, block and joystick touches cancel safely on focus loss, Android pause, travel and modal opening.
 
@@ -92,7 +96,7 @@ Common, Reinforced, Ancient and Cursed chests share one chest implementation. It
 - **Death or retreat:** returns to the Sanctuary and discards only the current unsecured bag. Previously secured equipment, items and gold remain. A results screen explains the outcome.
 - **Closing the app during a run:** abandons its in-memory unsecured loot. Mid-expedition resume is not implemented. Previously secured progress loads on restart.
 
-The **version-two** offline profile lives at `user://vaultbound/profile.json` with a previous valid `.bak`. Version-one saves migrate in memory without rewriting the original on load. Existing gold, counts, equipped selection, companions, discoveries and expedition statistics are preserved; equipment receives stable instance IDs. If an old inventory exceeds forty slots, its remaining quantities stay in a **legacy reserve**. Select the inventory reserve filter to claim supported items as space becomes available; unknown legacy IDs remain preserved rather than discarded. Writes use a temporary file, validation/read-back and atomic rename. A failed extraction write leaves the run and its loot available for retry. Corrupt or newer unsupported saves are preserved; a valid backup is recovered where possible, otherwise progression becomes read-only with an on-screen warning. Never delete the profile to fix an import problem. Android stores `user://` in app-specific storage; its exact path depends on whether you run from the editor or an exported app.
+The **version-three** offline profile lives at `user://vaultbound/profile.json` with a previous valid `.bak`. Version-one and version-two saves migrate in memory without rewriting the original on load. Before the first migrated write, the exact original bytes are retained in `.pre-v3.bak`; a separately restored legacy record receives its own content-addressed snapshot. Version three adds secondary weapon, gloves, leg armor, necklace, ring and active loadout fields while preserving original shield/accessory assignments. Existing gold, counts, equipped selection, companions, discoveries and expedition statistics are preserved; equipment receives stable instance IDs. If an old inventory exceeds forty slots, its remaining quantities stay in a **legacy reserve**. Select the inventory reserve filter to claim supported items as space becomes available; unknown legacy IDs remain preserved rather than discarded. Writes use a temporary file, validation/read-back and atomic rename. A failed extraction write leaves the run and its loot available for retry. Corrupt or newer unsupported saves are preserved; a valid backup is recovered where possible, otherwise progression becomes read-only with an on-screen warning. Never delete the profile to fix an import problem. Android stores `user://` in app-specific storage; its exact path depends on whether you run from the editor or an exported app.
 
 The profile service, transaction rules and local combat command boundary are separated from presentation for later server-authoritative work. These local saves are temporary development/offline persistence and are editable on the device; online play will require secure server-side storage and validation. This does **not** implement authentication, networking, replication, anti-cheat or cloud saves.
 
@@ -135,7 +139,7 @@ Shared native materials use two original 128×128 procedural grain textures, res
 | Ambient motes per batch | 8 | 16 | 24 |
 | Simultaneous impact bursts | 8 | 14 | 20 |
 
-Abyss mote batches additionally cap at twelve per room and follow existing room visibility. Essential geometry, interactables and combat warnings do not disappear on Low. The frame target changes rendering pacing; physics remains 60 Hz. Preferences live separately at `user://vaultbound/visual_settings.cfg`, leaving the version-two progression profile unchanged. Invalid graphics files retain current settings; an explicit successful change writes verified replacement preferences.
+Abyss mote batches additionally cap at twelve per room and follow existing room visibility. Essential geometry, interactables and combat warnings do not disappear on Low. The frame target changes rendering pacing; physics remains 60 Hz. Preferences live separately at `user://vaultbound/visual_settings.cfg`, without changing the progression profile. Invalid graphics files retain current settings; an explicit successful change writes verified replacement preferences.
 
 The 30 FPS midrange Android goal and optional 60 FPS target require physical-device verification. Native primitives do not include authored mesh LOD chains; the tier's general LOD threshold prepares for compatible future assets, while current savings come from batching, shadow policy, visibility and bounded decoration/effects. See the [visual style guide](docs/visual-style-guide.md), [initial baseline](docs/milestone-5.5-baseline.md) and [performance report](docs/milestone-5.5-performance.md) for the measured scope and limitations.
 
@@ -213,4 +217,4 @@ This is a complete expedition loop prototype, not a finished commercial game. La
 
 **No physical Android testing is claimed.** Rendered visual review, touchscreen comfort, APK export/signing, audio output, frame pacing, heat and battery use still need device verification. Headless checks establish logic and resource validity; they do not compile shaders on an Android GPU or establish final appearance, game feel or mobile frame rate.
 
-Work stops after Milestone 5.5 for visual and device review. Online multiplayer, player-to-player trading, guilds, additional companion classes and later milestones are not implemented.
+Work is limited to the staged Milestone 5.6 plan and stops after its final review build. Online multiplayer, player-to-player trading, guilds, additional companion classes and later milestones are not implemented.

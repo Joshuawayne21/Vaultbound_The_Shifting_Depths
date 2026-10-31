@@ -388,10 +388,19 @@ func apply_equipped(player: Node) -> bool:
 	var item := VaultLootTable.item_for(item_id)
 	if not is_instance_valid(player):
 		return false
-	player.apply_progression(profile)
 	if item == null or player.get("combat") == null:
+		player.apply_progression(profile)
 		return false
+	player.apply_progression(profile, false)
 	return player.combat.equip_style(item.weapon_style)
+
+func switch_loadout(slot: String, player: Node = null) -> bool:
+	if player != null and player != _player:
+		return false
+	if not _actor_ready() or not _player.controls_enabled or not InputHub.controls_enabled:
+		return false
+	var quote := quote_action(&"activate_loadout", {"slot": slot})
+	return commit_action(quote) if bool(quote.get("ok", false)) else false
 
 func _wear_equipped(candidate: Dictionary, amount: int) -> void:
 	for uid: String in candidate.equipment.values():
@@ -465,6 +474,13 @@ func _action_error(action: StringName, arguments: Dictionary) -> String:
 		return "The save is read-only. Existing progress is preserved."
 	if not _actor_ready():
 		return "Finish your combat action before changing equipment or supplies"
+	var changing_weapon := action == &"activate_loadout" or (action == &"unequip" and String(arguments.get("slot", "")) in VaultInventory.LOADOUT_SLOTS)
+	if action == &"equip":
+		var entry := VaultInventory.find(profile, String(arguments.get("uid", "")))
+		var item := VaultLootTable.item_for(String(entry.get("item_id", "")))
+		changing_weapon = item != null and item.slot == &"main_weapon"
+	if changing_weapon and not _player.combat.can_switch_weapon():
+		return "Your weapon is recovering. Switch after the current action finishes."
 	if action in [&"buy", &"sell", &"identify"]:
 		if _location != &"sanctuary" or _service_kind != &"merchant" or not _service_available():
 			return "Visit a Sanctuary merchant to trade"
@@ -484,7 +500,7 @@ func _action_error(action: StringName, arguments: Dictionary) -> String:
 			return "Interact with a display stand to assign an owned item"
 		if stand != String(_service_context.stand_id):
 			return "Use the stand you are currently inspecting"
-	elif action not in [&"equip", &"unequip", &"lock", &"favorite", &"talent", &"claim_reserve", &"use"]:
+	elif action not in [&"equip", &"unequip", &"lock", &"favorite", &"talent", &"claim_reserve", &"use", &"activate_loadout"]:
 		return "That action is unavailable"
 	if action == &"use":
 		var entry := VaultInventory.find(profile, String(arguments.get("uid", "")))
@@ -533,6 +549,7 @@ func commit_action(confirmation: Dictionary) -> bool:
 	if action == &"use":
 		consumed = VaultLootTable.item_for(String(VaultInventory.find(profile, String(arguments.uid)).item_id))
 	var next: Dictionary = plan.profile
+	var previous_weapon := String(VaultInventory.active_weapon_entry(profile).get("uid", ""))
 	if not store.save_profile(next):
 		storage_error = store.last_error
 		notice.emit("Could not save this action. Gold, items and progression were preserved. " + storage_error)
@@ -541,11 +558,14 @@ func commit_action(confirmation: Dictionary) -> bool:
 	profile = next
 	storage_error = ""
 	_quotes.clear()
-	if action == &"equip":
-		var entry := VaultInventory.find(profile, String(arguments.uid))
-		var item := VaultLootTable.item_for(String(entry.item_id))
-		if item.slot == &"main_weapon":
-			_player.combat.equip_style(item.weapon_style)
+	var current_weapon := VaultInventory.active_weapon_entry(profile)
+	if String(current_weapon.get("uid", "")) != previous_weapon:
+		var item := VaultLootTable.item_for(String(current_weapon.get("item_id", "")))
+		var style: StringName = item.weapon_style if item != null else _player.combat.weapon.style
+		# Install new stat inputs before the style callback resolves them, avoiding
+		# a transient old-loadout stat clamp. Saving is complete before presentation.
+		_player.apply_progression(profile, false)
+		_player.combat.commit_weapon_switch(style)
 	if consumed != null:
 		_player.heal(consumed.healing)
 		_player.restore_stamina(consumed.stamina_restore)

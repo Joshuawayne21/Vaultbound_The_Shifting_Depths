@@ -7,7 +7,12 @@ const Catalog = preload("res://scripts/progression/loot_table.gd")
 const CAPACITY := 40
 const MAX_COUNT := 2147483647
 const MAX_RECEIPTS := 64
-const SLOTS := ["main_weapon", "off_hand", "helmet", "chest_armor", "boots", "accessory"]
+const LEGACY_SLOTS := ["main_weapon", "off_hand", "helmet", "chest_armor", "boots", "accessory"]
+# The shield and legacy accessory remain independent assignments. New slots do
+# not rename or discard the equipment a version-two player already owns.
+const SLOTS := ["main_weapon", "off_hand", "helmet", "chest_armor", "boots", "accessory",
+	"secondary_weapon", "gloves", "leg_armor", "necklace", "ring"]
+const LOADOUT_SLOTS := ["main_weapon", "secondary_weapon"]
 const MODIFIER_LIMITS := {"max_health": 12.0, "max_stamina": 10.0, "damage_bonus": 0.05,
 	"armor": 0.04, "stamina_regen": 1.5}
 
@@ -20,7 +25,7 @@ static func empty_fields() -> Dictionary:
 		displays["equipment_%d" % index] = ""
 	for index in range(4):
 		displays["relic_%d" % index] = ""
-	return {"inventory": [], "equipment": equipment, "next_item_id": 1,
+	return {"inventory": [], "equipment": equipment, "active_loadout": "main_weapon", "next_item_id": 1,
 		"legacy_reserve": {}, "displays": displays, "transaction_receipts": [],
 		"merchant_purchases": {}}
 
@@ -55,7 +60,9 @@ static func migrate_legacy(items: Dictionary, equipped_item: String = "") -> Dic
 			result.legacy_reserve[id] = remaining
 	return result
 
-static func normalize_fields(value: Dictionary) -> Dictionary:
+static func normalize_fields(value: Dictionary, source_version: int = 3) -> Dictionary:
+	if source_version not in [2, 3]:
+		return {}
 	if not value.get("inventory") is Array or value.inventory.size() > CAPACITY:
 		return {}
 	if not _integer(value.get("next_item_id"), 1, MAX_COUNT):
@@ -63,14 +70,17 @@ static func normalize_fields(value: Dictionary) -> Dictionary:
 	for key: String in ["equipment", "legacy_reserve", "displays", "merchant_purchases"]:
 		if not value.get(key) is Dictionary:
 			return {}
-	# Version-two records must retain every assignment field. Missing keys are a
+	# Versioned records must retain every assignment field. Missing keys are a
 	# damaged record, not permission to silently replace equipment/displays with
 	# empty selections; only the explicit legacy migration supplies defaults.
-	if value.equipment.size() != SLOTS.size() or value.displays.size() != 12:
+	var expected_slots: Array = LEGACY_SLOTS if source_version == 2 else SLOTS
+	if value.equipment.size() != expected_slots.size() or value.displays.size() != 12:
 		return {}
-	for slot: String in SLOTS:
+	for slot: String in expected_slots:
 		if not value.equipment.has(slot):
 			return {}
+	if source_version == 3 and (not value.get("active_loadout") is String or value.active_loadout not in LOADOUT_SLOTS):
+		return {}
 	for index in range(8):
 		if not value.displays.has("equipment_%d" % index):
 			return {}
@@ -80,6 +90,8 @@ static func normalize_fields(value: Dictionary) -> Dictionary:
 	if not value.get("transaction_receipts") is Array or value.transaction_receipts.size() > MAX_RECEIPTS:
 		return {}
 	var result := empty_fields()
+	if source_version == 3:
+		result.active_loadout = String(value.active_loadout)
 	result.next_item_id = int(value.next_item_id)
 	var used := {}
 	for raw: Variant in value.inventory:
@@ -116,17 +128,24 @@ static func normalize_fields(value: Dictionary) -> Dictionary:
 			"identified": bool(raw.identified), "locked": bool(raw.locked), "favorite": bool(raw.favorite)}
 		result.inventory.append(entry)
 		used[uid] = entry
+	var assigned := {}
 	for slot: Variant in value.equipment:
-		if not slot is String or not SLOTS.has(slot) or not value.equipment[slot] is String:
+		if not slot is String or not expected_slots.has(slot) or not value.equipment[slot] is String:
 			return {}
 		var uid: String = value.equipment[slot]
 		if not uid.is_empty():
-			if not used.has(uid):
+			if not used.has(uid) or assigned.has(uid):
 				return {}
 			var definition := Catalog.item_for(used[uid].item_id)
-			if String(definition.slot) != slot or not used[uid].identified or definition.category != "equipment":
+			if not slot_accepts(definition, slot) or not used[uid].identified:
 				return {}
+			assigned[uid] = true
 		result.equipment[slot] = uid
+	# Practice combat exists only when neither slot owns a weapon. Otherwise the
+	# active assignment must name a real owned instance, including after unequip.
+	if result.equipment[result.active_loadout].is_empty():
+		if result.active_loadout != "main_weapon" or not result.equipment.main_weapon.is_empty() or not result.equipment.secondary_weapon.is_empty():
+			return {}
 	for id: Variant in value.legacy_reserve:
 		if not id is String or not _text(id, 96) or not _integer(value.legacy_reserve[id], 1, MAX_COUNT):
 			return {}
@@ -165,8 +184,22 @@ static func totals(profile: Dictionary) -> Dictionary:
 
 static func sync_mirrors(profile: Dictionary) -> void:
 	profile.items = totals(profile)
-	var main := find(profile, String(profile.get("equipment", {}).get("main_weapon", "")))
-	profile.equipped_item = String(main.item_id) if not main.is_empty() else ""
+	var active := active_weapon_entry(profile)
+	profile.equipped_item = String(active.item_id) if not active.is_empty() else ""
+
+static func active_weapon_slot(profile: Dictionary) -> String:
+	var selected := String(profile.get("active_loadout", "main_weapon"))
+	return selected if selected in LOADOUT_SLOTS else "main_weapon"
+
+static func active_weapon_entry(profile: Dictionary) -> Dictionary:
+	return find(profile, String(profile.get("equipment", {}).get(active_weapon_slot(profile), "")))
+
+static func slot_accepts(definition: VaultItemDefinition, slot: String) -> bool:
+	if definition == null or definition.category != "equipment" or slot not in SLOTS:
+		return false
+	if slot in LOADOUT_SLOTS:
+		return definition.slot == &"main_weapon" and definition.weapon_style in [&"sword", &"staff"]
+	return String(definition.slot) == slot
 
 static func find(profile: Dictionary, uid: String) -> Dictionary:
 	for entry: Dictionary in profile.get("inventory", []):

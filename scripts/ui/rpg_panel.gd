@@ -14,8 +14,9 @@ const RARITIES := ["common", "uncommon", "rare", "epic", "legendary", "mythic", 
 const RARITY_COLORS := [Color("c8d0c7"), Color("83c795"), Color("84bce7"), Color("c19be6"), Color("edbf70"), Color("ef8eb7"), Color("74eadb")]
 const FILTERS := ["all", "equipment", "consumable", "material", "collectible", "favorites", "locked", "reserve"]
 const SORTS := ["name", "rarity", "level"]
-const SLOTS := ["main_weapon", "off_hand", "helmet", "chest_armor", "boots", "accessory"]
-const SLOT_LABELS := ["MAIN WEAPON", "OFF-HAND", "HELMET", "CHEST ARMOR", "BOOTS", "ACCESSORY"]
+const SLOTS := ["main_weapon", "secondary_weapon", "off_hand", "helmet", "chest_armor", "gloves", "leg_armor", "boots", "necklace", "ring", "accessory"]
+const SLOT_LABELS := ["MAIN WEAPON", "SECONDARY WEAPON", "SHIELD", "HELMET", "CHEST ARMOR", "GLOVES", "LEG ARMOR", "BOOTS", "NECKLACE", "RING", "CHARM"]
+const EQUIPMENT_PAGE_SIZE := 6
 const STAT_LABELS := {"max_health": "Health", "max_stamina": "Stamina", "damage_bonus": "Damage", "damage_multiplier": "Damage", "armor": "Protection", "stamina_regen": "Stamina recovery"}
 
 var session: Node
@@ -28,6 +29,7 @@ var selected_key := ""
 var filter_index := 0
 var sort_index := 0
 var journal_filter := 0
+var equipment_page := 0
 var scroll_offset := 0.0
 var quantity := 1
 var status := ""
@@ -76,6 +78,7 @@ func open_context(value: StringName, details: Dictionary = {}) -> void:
 	filter_index = 0
 	sort_index = 0
 	journal_filter = 0
+	equipment_page = 0
 	if value == &"collection" and String(details.get("tab", "")) in ["items", "monsters"]:
 		section = &"journal"
 		journal_filter = 1 if String(details.tab) == "items" else 2
@@ -252,7 +255,17 @@ func quantity_rect(increase: bool) -> Rect2:
 func slot_rect(index: int) -> Rect2:
 	var rect := panel_rect()
 	var width := (rect.size.x - 406) / 2.0
-	return Rect2(rect.position + Vector2(358 + (index % 2) * (width + 12), 154 + floori(float(index) / 2.0) * 117), Vector2(width, 105))
+	var row := index % EQUIPMENT_PAGE_SIZE
+	return Rect2(rect.position + Vector2(358 + (row % 2) * (width + 12), 154 + floori(float(row) / 2.0) * 117), Vector2(width, 105))
+
+func equipment_page_rect(next: bool) -> Rect2:
+	return Rect2(panel_rect().end - Vector2(100 if next else 184, 98), Vector2(72, 48))
+
+func visible_slot_indices() -> Array[int]:
+	var result: Array[int] = []
+	for index in range(equipment_page * EQUIPMENT_PAGE_SIZE, mini(SLOTS.size(), (equipment_page + 1) * EQUIPMENT_PAGE_SIZE)):
+		result.append(index)
+	return result
 
 func unequip_rect(index: int) -> Rect2:
 	var rect := slot_rect(index)
@@ -359,7 +372,9 @@ func _hit_action(point: Vector2) -> Dictionary:
 	for index in range(tabs().size()):
 		if tab_rect(index).has_point(point): return {"type": "tab", "value": tabs()[index][0]}
 	if section == &"equipment":
-		for index in range(SLOTS.size()):
+		if equipment_page_rect(false).has_point(point): return {"type": "equipment_page", "value": -1}
+		if equipment_page_rect(true).has_point(point): return {"type": "equipment_page", "value": 1}
+		for index in visible_slot_indices():
 			if unequip_rect(index).has_point(point): return {"type": "transaction", "action": &"unequip", "args": {"slot": SLOTS[index]}, "confirm": false}
 			if slot_rect(index).has_point(point): return {"type": "slot", "slot": SLOTS[index]}
 		return {}
@@ -418,6 +433,11 @@ func _selected_actions(entry: Dictionary) -> Array[Dictionary]:
 			if FILTERS[filter_index] == "reserve":
 				action = &"claim_reserve"; label = "CLAIM ×%d" % quantity; args = {"item_id": String(entry.get("item_id", "")), "quantity": quantity}
 			elif entry.get("category", "") == "equipment":
+				if String(entry.get("slot", "")) == "main_weapon":
+					return [
+						{"type": "transaction", "action": &"equip", "args": {"uid": args.uid, "slot": "main_weapon"}, "confirm": false, "label": "EQUIP PRIMARY"},
+						{"type": "transaction", "action": &"equip", "args": {"uid": args.uid, "slot": "secondary_weapon"}, "confirm": false, "label": "EQUIP SECONDARY"},
+					]
 				action = &"equip"; label = "EQUIP"; confirm = false
 			elif entry.get("category", "") == "consumable":
 				action = &"use"; label = "USE ONE"; confirm = false
@@ -449,6 +469,9 @@ func _activate(action: Dictionary) -> void:
 			_epoch += 1
 			if is_instance_valid(_preview_texture): _preview_texture.visible = section == &"equipment"
 			if section == &"equipment": _update_preview()
+		"equipment_page":
+			equipment_page = clampi(equipment_page + int(action.value), 0, ceili(float(SLOTS.size()) / EQUIPMENT_PAGE_SIZE) - 1)
+			_epoch += 1
 		"filter": filter_index = (filter_index + 1) % FILTERS.size(); scroll_offset = 0; selected_uid = ""; selected_key = ""; _epoch += 1
 		"journal_filter": journal_filter = (journal_filter + 1) % 3; scroll_offset = 0; selected_uid = ""; selected_key = ""; _epoch += 1
 		"sort": sort_index = (sort_index + 1) % SORTS.size(); scroll_offset = 0; _epoch += 1
@@ -704,7 +727,7 @@ func _draw_comparison(item: Dictionary, at: Vector2, width: float) -> void:
 func _draw_equipment() -> void:
 	_panel(preview_rect(), Color("0b2028"))
 	_text("YOUR ADVENTURER", preview_rect().position + Vector2(148, -10), 12, GOLD, true)
-	for index in range(SLOTS.size()):
+	for index in visible_slot_indices():
 		var rect := slot_rect(index)
 		_panel(rect, Color("153339"))
 		_text(SLOT_LABELS[index], rect.position + Vector2(12, 21), 11, GOLD)
@@ -716,6 +739,9 @@ func _draw_equipment() -> void:
 		_text("+%d · %d%%" % [int(entry.get("enhancement", 0)), int(entry.get("durability", 100))] if not entry.is_empty() else "No item assigned", rect.position + Vector2(12, 82), 11, MUTED)
 		_button(unequip_rect(index), "UNEQUIP", not uid.is_empty())
 	var stats: Dictionary = data.get("stats", {})
+	_button(equipment_page_rect(false), "‹", equipment_page > 0)
+	_button(equipment_page_rect(true), "›", (equipment_page + 1) * EQUIPMENT_PAGE_SIZE < SLOTS.size())
+	_text("SLOTS %d / %d" % [equipment_page + 1, ceili(float(SLOTS.size()) / EQUIPMENT_PAGE_SIZE)], panel_rect().end - Vector2(290, 68), 11, MUTED)
 	var at := panel_rect().position + Vector2(32, 555)
 	_text("HEALTH %d   ·   STAMINA %d   ·   DAMAGE ×%.2f   ·   PROTECTION %d%%" % [int(stats.get("max_health", 100)), int(stats.get("max_stamina", 100)), float(stats.get("damage_multiplier", 1.0)), int(round(float(stats.get("armor", 0)) * 100))], at, 14, IVORY)
 

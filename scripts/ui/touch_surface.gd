@@ -12,6 +12,8 @@ const TEAL := Color("63c9b6")
 const HEALTH := Color("d99579")
 const JOYSTICK_RADIUS := 62.0
 const DEADZONE := 0.14
+const LOADOUT_ACTIONS := [&"weapon_primary", &"weapon_secondary"]
+const LOADOUT_SLOTS := ["main_weapon", "secondary_weapon"]
 
 var location_name := "Sanctuary"
 var objective := "Approach the gate and interact to enter the depths."
@@ -43,6 +45,11 @@ var _mouse_action: StringName = &""
 var _redraw_elapsed := 0.0
 var _font: Font
 var _safe_inset := Vector2.ZERO
+var _switch_presses: Dictionary = {}
+var _mouse_switch_start := Vector2.ZERO
+var _mouse_switch_dragged := false
+var _weapon_texture_cache: Dictionary = {}
+var _switch_feedback := 0.0
 
 
 func _ready() -> void:
@@ -55,6 +62,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	message_remaining = maxf(0.0, message_remaining - delta)
 	damage_flash = maxf(0.0, damage_flash - delta)
+	_switch_feedback = maxf(0.0, _switch_feedback - delta)
 	displayed_health = lerpf(displayed_health, health, 1.0 - exp(-12.0 * delta))
 	displayed_stamina = lerpf(displayed_stamina, stamina, 1.0 - exp(-12.0 * delta))
 	_redraw_elapsed += delta
@@ -75,6 +83,8 @@ func update_stats(current_health: float, health_limit: float, current_stamina: f
 
 
 func update_combat(snapshot: Dictionary) -> void:
+	if not combat_snapshot.is_empty() and snapshot.get("active_loadout", "") != combat_snapshot.get("active_loadout", ""):
+		_switch_feedback = 0.22
 	combat_snapshot = snapshot.duplicate()
 	queue_redraw()
 
@@ -101,7 +111,9 @@ func reset_touches() -> void:
 	_joystick_finger = -1
 	_swipe_finger = -1
 	_touch_roles.clear()
+	_switch_presses.clear()
 	_mouse_action = &""
+	_mouse_switch_dragged = false
 	_stick = Vector2.ZERO
 	InputHub.set_touch_move(Vector2.ZERO)
 	if held_heavy:
@@ -136,15 +148,27 @@ func _input(event: InputEvent) -> void:
 			var point := _local_point(event.position)
 			_mouse_action = _action_at(point)
 			if _mouse_action != &"":
-				_activate(_mouse_action)
+				if _mouse_action in LOADOUT_ACTIONS:
+					_mouse_switch_start = point
+					_mouse_switch_dragged = false
+				else:
+					_activate(_mouse_action)
+				get_viewport().set_input_as_handled()
+			elif _weapon_rect().has_point(point):
+				_mouse_action = &"loadout_empty"
 				get_viewport().set_input_as_handled()
 		else:
 			var released_action := _mouse_action
 			if _mouse_action != &"":
 				get_viewport().set_input_as_handled()
 			_mouse_action = &""
+			if released_action in LOADOUT_ACTIONS and not _mouse_switch_dragged and _local_point(event.position).distance_to(_mouse_switch_start) <= 12.0 and _action_at(_local_point(event.position)) == released_action:
+				_activate(released_action)
 			_release_action(released_action)
 		queue_redraw()
+	elif event is InputEventMouseMotion and _mouse_action in LOADOUT_ACTIONS:
+		_mouse_switch_dragged = _mouse_switch_dragged or _local_point(event.position).distance_to(_mouse_switch_start) > 12.0
+		get_viewport().set_input_as_handled()
 
 
 func _handle_touch(event: InputEventScreenTouch) -> void:
@@ -159,6 +183,11 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 			if event.index == _swipe_finger:
 				_swipe_finger = -1
 			_touch_roles.erase(event.index)
+			if released_action in LOADOUT_ACTIONS:
+				var press: Dictionary = _switch_presses.get(event.index, {})
+				_switch_presses.erase(event.index)
+				if not event.canceled and not press.is_empty() and not bool(press.dragged) and point.distance_to(press.start) <= 12.0 and _action_at(point) == released_action:
+					_activate(released_action)
 			_release_action(released_action, event.canceled)
 			get_viewport().set_input_as_handled()
 		queue_redraw()
@@ -167,7 +196,9 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 	if action != &"":
 		var already_held := _pressed(action)
 		_touch_roles[event.index] = action
-		if not already_held or (action != &"heavy_attack" and action != &"defense"):
+		if action in LOADOUT_ACTIONS:
+			_switch_presses[event.index] = {"start": point, "dragged": false}
+		elif not already_held or (action != &"heavy_attack" and action != &"defense"):
 			_activate(action)
 	elif point.distance_to(_joystick_center()) <= 100.0 and _joystick_finger < 0:
 		_joystick_finger = event.index
@@ -176,6 +207,9 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 	elif _swipe_finger < 0 and _is_swipe_area(point):
 		_swipe_finger = event.index
 		_touch_roles[event.index] = &"swipe"
+	elif _weapon_rect().has_point(point):
+		# Empty/disabled loadout space still owns its touch; it cannot become a swipe.
+		_touch_roles[event.index] = &"loadout_empty"
 	else:
 		return
 	get_viewport().set_input_as_handled()
@@ -190,6 +224,9 @@ func _handle_drag(event: InputEventScreenDrag) -> void:
 	elif event.index == _swipe_finger and camera_mode == "THIRD PERSON":
 		var inverse := get_global_transform_with_canvas().affine_inverse()
 		InputHub.queue_look(inverse.basis_xform(event.relative))
+	elif _switch_presses.has(event.index):
+		var press: Dictionary = _switch_presses[event.index]
+		press.dragged = bool(press.dragged) or _local_point(event.position).distance_to(press.start) > 12.0
 	get_viewport().set_input_as_handled()
 	queue_redraw()
 
@@ -209,6 +246,8 @@ func _update_stick(point: Vector2) -> void:
 
 func _activate(action: StringName) -> void:
 	if action == &"interact" and interaction.is_empty():
+		return
+	if action in LOADOUT_ACTIONS and not _loadout_switch_available(LOADOUT_ACTIONS.find(action)):
 		return
 	match action:
 		&"heavy_attack": InputHub.request_action(&"heavy_start")
@@ -261,14 +300,31 @@ func _camera_rect() -> Rect2:
 
 
 func _weapon_rect() -> Rect2:
-	return Rect2(Vector2(31.0, 174.0) + _safe_inset, Vector2(284.0, 62.0))
+	return Rect2(Vector2(31.0, 174.0) + _safe_inset, Vector2(284.0, 68.0))
+
+
+func _loadout_center(index: int) -> Vector2:
+	return Vector2(67.0 + index * 76.0, 208.0) + _safe_inset
+
+
+func _loadout_data(index: int) -> Dictionary:
+	for entry: Dictionary in combat_snapshot.get("loadouts", []):
+		if String(entry.get("slot", "")) == LOADOUT_SLOTS[index]:
+			return entry
+	return {}
+
+
+func _loadout_switch_available(index: int) -> bool:
+	var entry := _loadout_data(index)
+	return not String(entry.get("uid", "")).is_empty() and bool(entry.get("available", false)) and bool(combat_snapshot.get("switch_allowed", false)) and float(combat_snapshot.get("weapon_switch_remaining", 0.0)) <= 0.0 and String(combat_snapshot.get("active_loadout", "")) != LOADOUT_SLOTS[index]
 
 
 func _action_at(point: Vector2) -> StringName:
 	if _camera_rect().has_point(point):
 		return &"camera_toggle"
-	if _weapon_rect().has_point(point):
-		return &"weapon_swap"
+	for index in range(2):
+		if point.distance_to(_loadout_center(index)) <= 34.0 and not String(_loadout_data(index).get("uid", "")).is_empty():
+			return LOADOUT_ACTIONS[index]
 	var centers := _button_centers()
 	for action: StringName in centers:
 		if point.distance_to(centers[action]) < _button_radius(action) + 4.0:
@@ -439,10 +495,44 @@ func _is_staff() -> bool:
 
 func _draw_weapon() -> void:
 	var rect := _weapon_rect()
-	_panel(rect, Color(0.08, 0.21, 0.23, 0.95) if _pressed(&"weapon_swap") else PANEL)
-	_text("EQUIPPED  ·  TAP TO SWITCH" if OS.has_feature("mobile") else "EQUIPPED  ·  R TO SWITCH", rect.position + Vector2(16, 18), 9, MUTED)
-	_text(String(combat_snapshot.get("weapon_name", "Sword & Shield")).to_upper(), rect.position + Vector2(16, 43), 17, IVORY)
-	_text("⇄", rect.end - Vector2(25, 20), 22, GOLD, true)
+	var active := String(combat_snapshot.get("active_loadout", ""))
+	var remaining := float(combat_snapshot.get("weapon_switch_remaining", 0.0))
+	for index in range(2):
+		var center := _loadout_center(index)
+		var item := _loadout_data(index)
+		var equipped := not String(item.get("uid", "")).is_empty()
+		var selected: bool = equipped and active == LOADOUT_SLOTS[index]
+		var tint := TEAL if selected else GOLD if equipped else MUTED
+		if selected:
+			draw_circle(center, 34.0 + _switch_feedback * 12.0, Color(TEAL, 0.12 + _switch_feedback * 0.2), true, -1, true)
+		draw_circle(center, 30.0, Color("173a42") if selected else PANEL, true, -1, true)
+		draw_arc(center, 30.0, 0, TAU, 40, tint, 2.0 if selected else 1.2, true)
+		draw_arc(center, 26.5, 0, TAU, 40, Color(tint, 0.28), 1.0, true)
+		for angle: float in [0.0, PI * 0.5, PI, PI * 1.5]:
+			_diamond(center + Vector2(cos(angle), sin(angle)) * 30.0, 2.5, tint)
+		var texture := _loadout_texture(item) if equipped else null
+		if texture != null:
+			draw_texture_rect(texture, Rect2(center - Vector2(17, 23), Vector2(34, 34)), false, IVORY if selected else Color(IVORY, 0.75))
+		else:
+			_text("ICON?" if equipped else "EMPTY", center + Vector2(0, 2), 9, MUTED, true)
+		_text(str(index + 1), center + Vector2(0, 22), 10, tint, true)
+		if remaining > 0 and equipped:
+			var progress := clampf(remaining / maxf(0.01, float(combat_snapshot.get("weapon_switch_duration", 0.32))), 0, 1)
+			draw_arc(center, 34.0, -PI * 0.5, -PI * 0.5 + TAU * progress, 40, Color(GOLD, 0.85), 2.5, true)
+	_text("WEAPON LOADOUTS", rect.position + Vector2(153, 17), 9, GOLD)
+	_text("1 PRIMARY · 2 SECONDARY", rect.position + Vector2(153, 35), 8, MUTED)
+	_text("SWITCHING" if remaining > 0 else "TAP AN EQUIPPED SLOT", rect.position + Vector2(153, 54), 8, TEAL if remaining > 0 else MUTED)
+
+
+func _loadout_texture(item: Dictionary) -> Texture2D:
+	var icon: Variant = item.get("icon", "")
+	if icon is Texture2D:
+		return icon
+	if icon is String and not icon.is_empty() and ResourceLoader.exists(icon):
+		if not _weapon_texture_cache.has(icon):
+			_weapon_texture_cache[icon] = load(icon) as Texture2D
+		return _weapon_texture_cache[icon]
+	return null
 
 
 func _draw_combat_status() -> void:

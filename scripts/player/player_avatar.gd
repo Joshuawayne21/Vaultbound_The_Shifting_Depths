@@ -32,6 +32,8 @@ var _combat_progress := 0.0
 var _combo_index := 0
 var _charge_ratio := 0.0
 var _blocking := false
+var _weapon_switch_remaining := 0.0
+var _weapon_switch_duration := 0.32
 var _equipment_appearance: Dictionary = {}
 var _equipment_surfaces: Dictionary = {}
 var _surface_originals: Dictionary = {}
@@ -225,6 +227,14 @@ func set_weapon(style: StringName) -> void:
 	set_equipment_appearance(_equipment_appearance)
 
 
+func begin_weapon_switch(style: StringName, duration: float = 0.32) -> void:
+	# Presentation follows an already accepted gameplay switch. The selected
+	# model changes immediately; this small hand cue never owns a cooldown or hit.
+	set_weapon(style)
+	_weapon_switch_duration = clampf(duration, 0.0, 0.6)
+	_weapon_switch_remaining = _weapon_switch_duration
+
+
 func _equipment_surface(slot: String, mesh: MeshInstance3D) -> void:
 	if not _equipment_surfaces.has(slot):
 		_equipment_surfaces[slot] = []
@@ -318,6 +328,7 @@ func _create_dodge_wake() -> void:
 func animate(delta: float, speed: float, attack_time: float, dodge_time: float) -> void:
 	if not is_instance_valid(_body):
 		return
+	_weapon_switch_remaining = maxf(0.0, _weapon_switch_remaining - delta)
 	_phase += delta * (3.5 + speed * 1.9)
 	var stride := minf(speed / 4.8, 1.0)
 	var step := sin(_phase) * stride
@@ -396,6 +407,13 @@ func animate(delta: float, speed: float, attack_time: float, dodge_time: float) 
 		_body.rotation.z = lerpf(0.0, 1.35, _combat_progress)
 		_slash.visible = false
 		_ward.visible = false
+	if _weapon_switch_remaining > 0.0 and _combat_state == &"idle" and not _blocking and attack_time <= 0.0 and dodge_time <= 0.0:
+		var progress := 1.0 - _weapon_switch_remaining / maxf(0.001, _weapon_switch_duration)
+		var settle := sin(progress * PI)
+		_right_arm.rotation.x += settle * 0.22
+		_right_arm.rotation.z += settle * 0.12
+		_left_arm.rotation.x += settle * 0.10
+		_body.rotation.x += settle * 0.025
 	_damage_flash = maxf(0.0, _damage_flash - delta)
 	_armor.albedo_color = Color("e7d5ab") if _damage_flash > 0.0 else _armor_color
 

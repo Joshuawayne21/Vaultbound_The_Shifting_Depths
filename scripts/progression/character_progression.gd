@@ -7,7 +7,7 @@ const DATA = preload("res://resources/progression/character_progression.tres")
 const LEVEL_CAP := 30
 const EXPERIENCE_CAP := 46400
 const TALENT_IDS := ["offense", "defense", "utility"]
-const SLOT_IDS := ["main_weapon", "off_hand", "helmet", "chest_armor", "boots", "accessory"]
+const SLOT_IDS := VaultInventory.SLOTS
 const STAT_LIMITS := {"max_health": 80.0, "max_stamina": 60.0, "damage_bonus": 0.35, "armor": 0.20, "stamina_regen": 8.0}
 
 static func empty_character() -> Dictionary:
@@ -126,6 +126,8 @@ static func resolve_stats(profile: Dictionary, weapon_style: StringName = &"swor
 	if equipped is Dictionary and inventory is Array:
 		var seen: Array[String] = []
 		for slot: String in SLOT_IDS:
+			if slot in VaultInventory.LOADOUT_SLOTS and slot != VaultInventory.active_weapon_slot(profile):
+				continue
 			var uid := String(equipped.get(slot, ""))
 			if uid.is_empty() or seen.has(uid):
 				continue
@@ -133,16 +135,17 @@ static func resolve_stats(profile: Dictionary, weapon_style: StringName = &"swor
 			if entry.is_empty() or not bool(entry.get("identified", true)):
 				continue
 			var definition := VaultLootTable.item_for(String(entry.get("item_id", "")))
-			if definition == null or definition.category != "equipment" or String(definition.get("slot")) != slot:
+			if not VaultInventory.slot_accepts(definition, slot):
 				continue
 			if level < int(definition.get("required_level")):
 				continue
 			seen.append(uid)
-			result.appearance[slot] = {"item_id": String(definition.id), "label": definition.label,
+			var appearance_slot := "main_weapon" if slot in VaultInventory.LOADOUT_SLOTS else slot
+			result.appearance[appearance_slot] = {"item_id": String(definition.id), "label": definition.label,
 				"rarity": definition.rarity, "enhancement": int(entry.get("enhancement", 0)), "weapon_style": String(definition.weapon_style)}
 			# Swapping to the other original family does not borrow a weapon or
 			# shield bonus that belongs to the equipped family's authored mechanics.
-			if slot in ["main_weapon", "off_hand"] and definition.weapon_style != &"" and definition.weapon_style != weapon_style:
+			if slot in ["main_weapon", "secondary_weapon", "off_hand"] and definition.weapon_style != &"" and definition.weapon_style != weapon_style:
 				continue
 			var additions := item_stats(entry)
 			for key: String in bonus:
@@ -154,20 +157,25 @@ static func resolve_stats(profile: Dictionary, weapon_style: StringName = &"swor
 	result.stamina_regen = clampf(result.stamina_regen + bonus.stamina_regen, 23.0, 45.0)
 	return result
 
-static func compare_item(profile: Dictionary, uid: String, weapon_style: StringName = &"sword") -> Dictionary:
+static func compare_item(profile: Dictionary, uid: String, weapon_style: StringName = &"sword", target_slot: String = "") -> Dictionary:
 	var current := resolve_stats(profile, weapon_style)
 	var entry := _find(profile.get("inventory", []), uid)
 	var definition := VaultLootTable.item_for(String(entry.get("item_id", "")))
 	if definition == null or definition.category != "equipment":
 		return {"current": current, "candidate": current.duplicate(true), "difference": {}}
 	var candidate := profile.duplicate(true)
-	var slot := String(definition.get("slot"))
-	if not SLOT_IDS.has(slot):
+	var slot := target_slot if not target_slot.is_empty() else VaultInventory.active_weapon_slot(profile) if definition.slot == &"main_weapon" else String(definition.slot)
+	if not VaultInventory.slot_accepts(definition, slot):
 		return {"current": current, "candidate": current.duplicate(true), "difference": {}}
 	if not candidate.get("equipment") is Dictionary:
 		candidate.equipment = {}
+	for previous: String in candidate.equipment:
+		if candidate.equipment[previous] == uid:
+			candidate.equipment[previous] = ""
 	candidate.equipment[slot] = uid
-	var family: StringName = definition.weapon_style if slot == "main_weapon" else weapon_style
+	if slot in VaultInventory.LOADOUT_SLOTS:
+		candidate.active_loadout = slot
+	var family: StringName = definition.weapon_style if slot in VaultInventory.LOADOUT_SLOTS else weapon_style
 	var after := resolve_stats(candidate, family)
 	var difference := {}
 	for key: String in ["max_health", "max_stamina", "damage_multiplier", "armor", "stamina_regen"]:

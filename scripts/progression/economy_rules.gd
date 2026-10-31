@@ -6,7 +6,7 @@ extends RefCounted
 const Inventory = preload("res://scripts/progression/inventory_model.gd")
 const Catalog = preload("res://scripts/progression/loot_table.gd")
 const ACTIONS := [&"buy", &"sell", &"equip", &"unequip", &"lock", &"favorite", &"craft",
-	&"upgrade", &"repair", &"salvage", &"identify", &"display", &"claim_reserve", &"talent", &"use"]
+	&"upgrade", &"repair", &"salvage", &"identify", &"display", &"claim_reserve", &"talent", &"use", &"activate_loadout"]
 
 static func preview(profile: Dictionary, action: StringName, arguments: Dictionary) -> Dictionary:
 	var result := _evaluate(profile, action, arguments)
@@ -113,7 +113,16 @@ static func _evaluate(profile: Dictionary, action: StringName, arguments: Dictio
 				return _failure("That equipment slot is already empty.")
 			result.before = Inventory.find(next, next.equipment[slot]).duplicate(true)
 			next.equipment[slot] = ""
+			_resolve_active_loadout(next)
 			result.message = "Unequipped " + slot.replace("_", " ")
+		&"activate_loadout":
+			var slot := String(arguments.get("slot", ""))
+			if slot not in Inventory.LOADOUT_SLOTS or String(next.equipment.get(slot, "")).is_empty():
+				return _failure("Equip an owned weapon in that loadout first.")
+			if Inventory.active_weapon_slot(next) == slot:
+				return _failure("That weapon loadout is already active.")
+			next.active_loadout = slot
+			result.message = "Active loadout · " + Catalog.item_for(Inventory.active_weapon_entry(next).item_id).label
 		&"display":
 			var stand := String(arguments.get("stand_id", ""))
 			if not next.displays.has(stand):
@@ -161,15 +170,22 @@ static func _evaluate(profile: Dictionary, action: StringName, arguments: Dictio
 					entry[flag] = bool(arguments.value)
 					result.message = "%s · %s" % [definition.label, "Locked" if entry.locked else "Favorite" if entry.favorite else "Protection updated"]
 				&"equip":
-					if definition.category != "equipment" or not Inventory.SLOTS.has(String(definition.slot)):
+					var slot := String(arguments.get("slot", String(definition.slot)))
+					if not Inventory.slot_accepts(definition, slot):
 						return _failure("This item cannot be equipped.")
 					if not entry.identified:
 						return _failure("Identify the hidden properties before equipping this item.")
 					if int(profile.get("character", {}).get("level", 1)) < definition.required_level:
 						return _failure("This equipment requires level %d." % definition.required_level)
-					if next.equipment[String(definition.slot)] == uid:
+					if next.equipment[slot] == uid:
 						return _failure("This instance is already equipped.")
-					next.equipment[String(definition.slot)] = uid
+					# Move an existing assignment atomically; one owned instance cannot
+					# contribute through both loadouts or two armor slots.
+					for previous: String in next.equipment:
+						if next.equipment[previous] == uid:
+							next.equipment[previous] = ""
+					next.equipment[slot] = uid
+					_resolve_active_loadout(next)
 					result.message = "Equipped " + definition.label
 				&"sell":
 					if Inventory.is_protected(next, entry):
@@ -243,6 +259,16 @@ static func upgrade_cost(entry: Dictionary) -> Dictionary:
 	if rank >= 4:
 		materials["tempered_ingot"] = rank - 3
 	return {"gold": rank * rank * 25, "materials": materials}
+
+static func _resolve_active_loadout(profile: Dictionary) -> void:
+	var active_slot := Inventory.active_weapon_slot(profile)
+	if not String(profile.equipment.get(active_slot, "")).is_empty():
+		return
+	for slot: String in Inventory.LOADOUT_SLOTS:
+		if not String(profile.equipment.get(slot, "")).is_empty():
+			profile.active_loadout = slot
+			return
+	profile.active_loadout = "main_weapon"
 
 static func repair_cost(entry: Dictionary) -> int:
 	var definition := Catalog.item_for(String(entry.get("item_id", "")))

@@ -32,6 +32,8 @@ const ACTION_KEYS := {
 	&"defense": [KEY_L],
 	&"target_lock": [KEY_T],
 	&"weapon_swap": [KEY_R],
+	&"weapon_primary": [KEY_1],
+	&"weapon_secondary": [KEY_2],
 	&"use_consumable": [KEY_H],
 	&"inventory": [KEY_I],
 	&"perf_toggle": [KEY_P],

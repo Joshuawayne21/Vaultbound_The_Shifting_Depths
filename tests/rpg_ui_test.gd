@@ -25,6 +25,8 @@ func _run() -> void:
 	overlay = game.hud.expedition_overlay
 	panel = overlay.rpg_panel
 	input_hub.action_requested.connect(func(action: StringName) -> void: actions.append(action))
+	game.player.request_action(&"skill_one")
+	check(await eventually(func() -> bool: return game.player.combat.state == &"idle") and game.player.combat.ability_remaining(1) > 0.0, "A real ability finishes with its cooldown active before opening the equipment modal")
 	game.hud.toggle_inventory()
 	check(panel.visible and overlay.mode == &"pack" and game.party.paused, "PACK opens the RPG interface through the existing paused modal shell")
 	await _geometry()
@@ -134,10 +136,10 @@ func _inventory_gestures() -> void:
 	touch(overlay, 81, first.get_center(), false, true)
 	check(panel.selected_uid.is_empty(), "Canceled touches do not select an item")
 	check(_select("temple_blade"), "Filtered equipment can be selected again")
-	_tap(panel.action_rect(0, 1).get_center())
+	_tap(panel.action_rect(0, 2).get_center())
 	check(session.profile.equipment.main_weapon == panel.selected_uid, "Equip touch applies the selected instance through the shared saved authority")
 	var changed: int = session.profile.revision
-	_tap(panel.action_rect(0, 1).get_center())
+	_tap(panel.action_rect(0, 2).get_center())
 	check(session.profile.revision == changed, "Repeating an already-equipped touch does not create a duplicate inventory mutation")
 	if not panel.pending_quote.is_empty():
 		_tap(panel.confirm_rect(false).get_center())
@@ -147,6 +149,11 @@ func _equipment_character() -> void:
 	await frames(2)
 	check(panel._preview_avatar != null and panel._preview_viewport != null and panel._preview_viewport.own_world_3d, "Equipment screen instantiates the existing avatar in an isolated preview world")
 	var weapon: String = session.profile.equipment.main_weapon
+	# Equipping the active weapon now shares the same short combat switch lock.
+	var cooldown: float = game.player.combat.ability_remaining(1)
+	var stamina: float = game.player.stamina
+	await seconds(0.36)
+	check(game.player.combat.weapon_switch_remaining <= 0.0 and is_equal_approx(game.player.combat.ability_remaining(1), cooldown) and is_equal_approx(game.player.stamina, stamina), "The modal expires only weapon presentation while ability cooldown and stamina remain paused")
 	_tap(panel.unequip_rect(0).get_center())
 	check(session.profile.equipment.main_weapon.is_empty() and not Inventory.find(session.profile, weapon).is_empty(), "Unequip touch clears the slot without removing its owned item")
 	check(_tab(&"character"), "Character tab opens by touch")

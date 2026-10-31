@@ -109,7 +109,7 @@ func _equipment_and_talents() -> void:
 	check(player.health <= 47.0, "Repeated equip and unequip cannot heal a wounded player")
 	for id: String in ["round_shield", "traveler_coat", "trail_boots", "amber_ring"]:
 		_commit(&"equip", {"uid": _entries(id)[0].uid}, "Equip " + id)
-	check(session.profile.equipment.values().all(func(uid: String) -> bool: return not uid.is_empty()), "All six initial equipment slots can hold valid owned instances")
+	check(Inventory.LEGACY_SLOTS.all(func(slot: String) -> bool: return not String(session.profile.equipment[slot]).is_empty()), "All six original equipment slots still hold valid owned instances")
 	var before: Dictionary = session.profile.duplicate(true)
 	var stale := _quote(&"lock", {"uid": spare_uid, "value": true})
 	_commit(&"favorite", {"uid": spare_uid, "value": true}, "Favorite protection")

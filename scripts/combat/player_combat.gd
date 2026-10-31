@@ -5,6 +5,7 @@ extends RefCounted
 
 const SWORD: WeaponData = preload("res://resources/weapons/sword.tres")
 const STAFF: WeaponData = preload("res://resources/weapons/staff.tres")
+const WEAPON_SWITCH_DURATION := 0.32
 
 var actor: CharacterBody3D
 var weapon: WeaponData = SWORD
@@ -13,6 +14,7 @@ var current_attack: AttackData
 var combo_index := 0
 var attack_id := 0
 var attack_cooldown := 0.0
+var weapon_switch_remaining := 0.0
 var dodge_remaining := 0.0
 var dodge_cooldown := 0.0
 var invulnerable_remaining := 0.0
@@ -36,6 +38,7 @@ func _init(owner_actor: CharacterBody3D) -> void:
 	actor = owner_actor
 
 func tick(delta: float) -> void:
+	advance_weapon_presentation(delta)
 	attack_cooldown = maxf(0.0, attack_cooldown - delta)
 	dodge_cooldown = maxf(0.0, dodge_cooldown - delta)
 	invulnerable_remaining = maxf(0.0, invulnerable_remaining - delta)
@@ -78,6 +81,8 @@ func tick(delta: float) -> void:
 					_finish_attack()
 
 func request(action: StringName) -> void:
+	if weapon_switch_remaining > 0.0 and action not in [&"defense_release", &"heavy_cancel", &"target_lock"]:
+		return
 	match action:
 		&"primary_attack":
 			light_attack()
@@ -99,11 +104,16 @@ func request(action: StringName) -> void:
 		&"skill_two":
 			use_ability(2)
 		&"weapon_swap":
-			equip_style(&"staff" if weapon.style == &"sword" else &"sword")
+			if actor.has_method("request_weapon_swap"):
+				actor.request_weapon_swap()
+			elif can_switch_weapon():
+				commit_weapon_switch(&"staff" if weapon.style == &"sword" else &"sword")
 		&"target_lock":
 			toggle_lock()
 
 func light_attack() -> void:
+	if weapon_switch_remaining > 0.0:
+		return
 	if state in [&"windup", &"active", &"recovery"]:
 		# One buffered command, never a queue accumulated by repeated taps.
 		if _is_light:
@@ -116,7 +126,7 @@ func light_attack() -> void:
 	_begin_attack(weapon.light_attacks[combo_index], true)
 
 func start_charge() -> void:
-	if state != &"idle" or attack_cooldown > 0.0:
+	if state != &"idle" or attack_cooldown > 0.0 or weapon_switch_remaining > 0.0:
 		return
 	if float(_action_cooldowns.get(weapon.heavy.get_instance_id(), 0.0)) > 0.0:
 		actor.feedback.emit("Charged attack is recovering")
@@ -139,7 +149,7 @@ func release_charge() -> void:
 	_begin_attack(weapon.heavy, false, true)
 
 func use_ability(slot: int) -> void:
-	if state != &"idle" or attack_cooldown > 0.0:
+	if state != &"idle" or attack_cooldown > 0.0 or weapon_switch_remaining > 0.0:
 		return
 	if ability_remaining(slot) > 0.0:
 		actor.feedback.emit("Ability is recovering")
@@ -298,7 +308,7 @@ func toggle_lock() -> void:
 	actor.feedback.emit("Target locked")
 
 func start_dodge() -> void:
-	if state in [&"active", &"dodge", &"stagger", &"dead"] or dodge_cooldown > 0.0:
+	if state in [&"active", &"dodge", &"stagger", &"dead"] or dodge_cooldown > 0.0 or weapon_switch_remaining > 0.0:
 		return
 	if not actor.stamina_component.spend(dodge_cost, 0.85):
 		actor.feedback.emit("Dodge needs %d stamina" % int(dodge_cost))
@@ -385,6 +395,23 @@ func equip_style(style: StringName) -> bool:
 	actor.feedback.emit(weapon.display_name + " equipped")
 	return true
 
+func can_switch_weapon() -> bool:
+	return state == &"idle" and actor.health > 0.0 and attack_cooldown <= 0.0 and weapon_switch_remaining <= 0.0
+
+func advance_weapon_presentation(delta: float) -> void:
+	# Menus pause gameplay clocks, but owned equipment can still be changed there.
+	# Advance only this presentation lock; never recharge abilities while paused.
+	weapon_switch_remaining = maxf(0.0, weapon_switch_remaining - maxf(0.0, delta))
+
+func commit_weapon_switch(style: StringName) -> bool:
+	# Switching never calls cancel_action or clears damage/action cooldown receipts.
+	if not can_switch_weapon() or not equip_style(style):
+		return false
+	weapon_switch_remaining = WEAPON_SWITCH_DURATION
+	if actor.visual.has_method("begin_weapon_switch"):
+		actor.visual.begin_weapon_switch(style, WEAPON_SWITCH_DURATION)
+	return true
+
 func movement_scale() -> float:
 	if state in [&"dead", &"stagger"]:
 		return 0.0
@@ -416,9 +443,15 @@ func snapshot() -> Dictionary:
 	var target_name := ""
 	if _valid_target(actor.target):
 		target_name = String(actor.target.get("display_name")) if actor.target.get("display_name") != null else "Practice Sentinel"
-	return {"weapon_name": weapon.display_name, "weapon_style": weapon.style, "state": String(state),
+	var result := {"weapon_name": weapon.display_name, "weapon_style": weapon.style, "state": String(state),
 		"combo_index": combo_index + 1 if _is_light and state in [&"windup", &"active", &"recovery"] else 0, "charge_ratio": charge_ratio, "blocking": state == &"blocking",
 		"ability_one_label": weapon.ability_one.label, "ability_two_label": weapon.ability_two.label,
 		"ability_one_cooldown": ability_remaining(1), "ability_two_cooldown": ability_remaining(2),
 		"heavy_available": actor.stamina >= weapon.heavy.stamina_cost, "target_name": target_name,
 		"target_locked": actor.target_locked, "defense_label": "BLOCK" if weapon.style == &"sword" else "WARD"}
+	result.weapon_switch_remaining = weapon_switch_remaining
+	result.weapon_switch_duration = WEAPON_SWITCH_DURATION
+	result.switch_allowed = can_switch_weapon()
+	if actor.has_method("loadout_snapshot"):
+		result.merge(actor.loadout_snapshot())
+	return result

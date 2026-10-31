@@ -64,6 +64,8 @@ func _boot() -> void:
 	ExpeditionSession.apply_equipped(player)
 
 func _process(delta: float) -> void:
+	if _modal_open:
+		player.combat.advance_weapon_presentation(delta)
 	_snapshot_elapsed += delta
 	if _snapshot_elapsed < 0.2:
 		return

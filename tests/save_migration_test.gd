@@ -56,7 +56,7 @@ func _migration() -> void:
 	_write(PROFILE, bytes)
 	var store := Store.new(PROFILE)
 	var migrated: Dictionary = store.load_profile()
-	check(not store.read_only and migrated.version == 2, "A valid Milestone-4 profile migrates to version two in memory")
+	check(not store.read_only and migrated.version == Store.VERSION, "A valid Milestone-4 profile migrates to the current version in memory")
 	check(migrated.gold == legacy.gold and migrated.revision == legacy.revision, "Migration preserves gold and revision")
 	check(migrated.items == legacy.items and Inventory.totals(migrated) == legacy.items, "Every old item count survives across inventory and legacy reserve")
 	check(migrated.companions == legacy.companions, "Migration preserves recruited identities, levels and experience")
@@ -76,8 +76,8 @@ func _migration() -> void:
 	check(unique.size() == migrated.inventory.size() and quantities_valid, "Migration creates unique equipment IDs and valid bounded stacks")
 	check(migrated.character == Progression.empty_character(), "Older profiles receive a valid level-one character without resetting other progress")
 	check(FileAccess.get_file_as_string(PROFILE) == bytes, "Reading a legacy profile leaves original bytes unchanged")
-	check(store.save_profile(migrated), "The first version-two save passes atomic read-back validation")
-	check(FileAccess.file_exists(PROFILE + ".bak") and Store.new(PROFILE).load_profile() == migrated, "Version-two round trip retains all migrated fields and a valid backup")
+	check(store.save_profile(migrated), "The first current-version save passes atomic read-back validation")
+	check(FileAccess.file_exists(PROFILE + ".bak") and Store.new(PROFILE).load_profile() == migrated, "Current-version round trip retains all migrated fields and a valid backup")
 	var enormous := _legacy()
 	enormous.items = {"root_fiber": Store.MAX_COUNT}
 	enormous.equipped_item = ""

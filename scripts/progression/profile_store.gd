@@ -4,7 +4,7 @@ extends RefCounted
 ## a temporary file, and renamed only after a successful read-back. A previous
 ## valid profile is kept as .bak. This is offline persistence, not remote authority.
 
-const VERSION := 2
+const VERSION := 3
 const MAX_COUNT := 2147483647
 const MAX_COMPANION_LEVEL := 20
 const MAX_COMPANION_EXPERIENCE := 19000
@@ -72,6 +72,20 @@ func save_profile(candidate: Dictionary) -> bool:
 		if last_error.is_empty():
 			last_error = "The profile is read-only."
 		return false
+	# Recheck disk state even after loading. A newer/corrupt external replacement
+	# must not be overwritten by a stale in-memory transaction or a fresh store.
+	var disk: Variant = _read_json(path)
+	if FileAccess.file_exists(path):
+		var disk_version: Variant = disk.get("version", 0) if disk is Dictionary else 0
+		if (disk_version is int or disk_version is float) and is_finite(float(disk_version)) and float(disk_version) > VERSION:
+			last_error = "A newer profile appeared on disk. Existing files were preserved."
+			return false
+		if normalize(disk).is_empty() and (not recovered_backup or _read_valid(path + ".bak").is_empty()):
+			last_error = "The current save needs recovery before it can be replaced."
+			return false
+	elif FileAccess.file_exists(path + ".bak") and not recovered_backup:
+		last_error = "Load the remaining secured backup before saving new progress."
+		return false
 	var validated := normalize(candidate)
 	if validated.is_empty():
 		last_error = "The proposed profile failed validation. Existing progress was preserved."
@@ -85,10 +99,18 @@ func save_profile(candidate: Dictionary) -> bool:
 	if not _write_verified(temporary, validated):
 		last_error = "Cannot write and verify the temporary save."
 		return false
+	# Preserve exact original bytes before any persistent schema upgrade. Loading
+	# remains read-only; this is done before the verified new primary can replace
+	# the old one, including when the legacy source was a recovered backup.
+	var primary_raw: Variant = _read_json(path)
+	var previous := normalize(primary_raw)
+	var migration_source := path if not previous.is_empty() else path + ".bak"
+	if not _preserve_migration_backup(migration_source):
+		last_error = "Cannot preserve the exact pre-migration save. Existing progress was preserved."
+		return false
 	# Do not copy a corrupt primary over a backup recovered during loading.
-	var previous := _read_valid(path)
 	if not previous.is_empty():
-		if not _write_verified(path + ".bak.tmp", previous):
+		if not _copy_verified(path, path + ".bak.tmp"):
 			last_error = "Cannot preserve the previous save backup."
 			return false
 		if DirAccess.rename_absolute(ProjectSettings.globalize_path(path + ".bak.tmp"), ProjectSettings.globalize_path(path + ".bak")) != OK:
@@ -104,8 +126,8 @@ func save_profile(candidate: Dictionary) -> bool:
 static func normalize(value: Variant) -> Dictionary:
 	if not value is Dictionary or not _integer(value.get("version"), 1, VERSION):
 		return {}
-	if int(value.version) == VERSION:
-		# Version 2 is complete, not an optional patch. Missing sections indicate
+	if int(value.version) >= 2:
+		# Versions 2 and 3 are complete, not optional patches. Missing sections indicate
 		# an invalid save and must trigger backup recovery rather than empty defaults.
 		for key: String in ["revision", "gold", "items", "discoveries", "equipped_item", "companions", "statistics", "character", "monster_discoveries"]:
 			if not value.has(key):
@@ -193,7 +215,7 @@ static func normalize(value: Variant) -> Dictionary:
 		if int(result.statistics.completed) > 0 or result.discoveries.has("rootwarden_heart"):
 			result.monster_discoveries.append("rootwarden")
 	else:
-		var inventory := VaultInventory.normalize_fields(value)
+		var inventory := VaultInventory.normalize_fields(value, int(value.version))
 		var character := CharacterProgression.normalize_character(value.get("character"))
 		if inventory.is_empty() or character.is_empty():
 			return {}
@@ -266,3 +288,40 @@ func _write_verified(file_path: String, value: Dictionary) -> bool:
 	var error := file.get_error()
 	file.close()
 	return error == OK and _read_valid(file_path) == normalize(value)
+
+func _copy_verified(source: String, target: String) -> bool:
+	var previous := _read_valid(source)
+	if previous.is_empty():
+		return false
+	var bytes := FileAccess.get_file_as_bytes(source)
+	var file := FileAccess.open(target, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_buffer(bytes)
+	file.flush()
+	var error := file.get_error()
+	file.close()
+	return error == OK and FileAccess.get_file_as_bytes(target) == bytes and _read_valid(target) == previous
+
+func _preserve_migration_backup(source: String) -> bool:
+	var raw: Variant = _read_json(source)
+	if not raw is Dictionary or not _integer(raw.get("version"), 1, VERSION - 1):
+		return true
+	if normalize(raw).is_empty():
+		return true # Invalid sources are never copied over a usable backup.
+	var bytes := FileAccess.get_file_as_bytes(source)
+	var target := path + ".pre-v3.bak"
+	if FileAccess.file_exists(target):
+		if FileAccess.get_file_as_bytes(target) == bytes:
+			return not _read_valid(target).is_empty()
+		# Preserve the first snapshot permanently. A separately restored legacy
+		# profile receives its own content-addressed backup instead of replacing it.
+		var hashing := HashingContext.new()
+		hashing.start(HashingContext.HASH_SHA256)
+		hashing.update(bytes)
+		target = path + ".pre-v3." + hashing.finish().hex_encode().substr(0, 16) + ".bak"
+		if FileAccess.file_exists(target):
+			return FileAccess.get_file_as_bytes(target) == bytes and not _read_valid(target).is_empty()
+	if not _copy_verified(source, target + ".tmp"):
+		return false
+	return DirAccess.rename_absolute(ProjectSettings.globalize_path(target + ".tmp"), ProjectSettings.globalize_path(target)) == OK

@@ -39,6 +39,7 @@ func _run() -> void:
 	quit(0 if _failures.is_empty() else 1)
 
 func _check_layout(dimensions: Vector2) -> void:
+	_surface.update_combat({"loadouts": [{"slot": "main_weapon", "uid": "owned-a", "available": true, "icon": "res://assets/items/sword.svg"}, {"slot": "secondary_weapon", "uid": "owned-b", "available": true, "icon": "res://assets/items/staff.svg"}], "active_loadout": "main_weapon", "switch_allowed": true})
 	var centers: Dictionary = _surface._button_centers()
 	var keys: Array = centers.keys()
 	var bounds := Rect2(Vector2.ZERO, dimensions)
@@ -57,7 +58,7 @@ func _check_layout(dimensions: Vector2) -> void:
 	_check(bounds.encloses(weapon) and weapon.size.y >= 60, "Weapon control fits with a 60px touch height at %s" % dimensions)
 	_check(not camera.intersects(weapon), "Weapon and camera controls remain separate at %s" % dimensions)
 	_check(_surface._action_at(camera.get_center()) == &"camera_toggle", "Camera panel routes camera toggle")
-	_check(_surface._action_at(weapon.get_center()) == &"weapon_swap", "Weapon panel routes weapon swap")
+	_check(_surface._action_at(_surface._loadout_center(0)) == &"weapon_primary" and _surface._action_at(_surface._loadout_center(1)) == &"weapon_secondary", "Two round controls route their explicit equipped slots")
 	for action: StringName in centers:
 		var radius: float = _surface._button_radius(action) + 4.0
 		var button_box := Rect2(centers[action] - Vector2.ONE * radius, Vector2.ONE * radius * 2.0)

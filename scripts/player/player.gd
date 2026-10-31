@@ -142,7 +142,9 @@ func request_action(action: StringName) -> void:
 		return
 	if is_instance_valid(party) and party.is_reviving(self) and action not in [&"camera_toggle", &"party_menu", &"perf_toggle", &"interact", &"revive_teammate"]:
 		party.cancel_revive(self, "Revive canceled by action")
-	if action == &"interact":
+	if action in [&"weapon_primary", &"weapon_secondary"]:
+		request_loadout_switch("main_weapon" if action == &"weapon_primary" else "secondary_weapon")
+	elif action == &"interact":
 		if combat.state != &"idle":
 			return
 		_update_interaction()
@@ -221,12 +223,41 @@ func restore_stamina(amount: float) -> float:
 	_emit_stats()
 	return restored
 
-func apply_progression(profile: Dictionary) -> void:
+func apply_progression(profile: Dictionary, refresh: bool = true) -> void:
 	# Cache only inputs to the stat policy; inventory menu state and every-second
 	# expedition snapshots must not reset a combat action or refill resources.
 	_progression_profile = {"character": profile.get("character", CharacterProgression.empty_character()).duplicate(true),
-		"inventory": profile.get("inventory", []).duplicate(true), "equipment": profile.get("equipment", {}).duplicate(true)}
-	_refresh_progression_stats()
+		"inventory": profile.get("inventory", []).duplicate(true), "equipment": profile.get("equipment", {}).duplicate(true),
+		"active_loadout": String(profile.get("active_loadout", "main_weapon"))}
+	if refresh:
+		_refresh_progression_stats()
+
+func loadout_snapshot() -> Dictionary:
+	var loadouts: Array[Dictionary] = []
+	for slot: String in VaultInventory.LOADOUT_SLOTS:
+		var uid := String(_progression_profile.get("equipment", {}).get(slot, ""))
+		var entry := VaultInventory.find(_progression_profile, uid)
+		var item := VaultLootTable.item_for(String(entry.get("item_id", "")))
+		var available := item != null and VaultInventory.slot_accepts(item, slot)
+		loadouts.append({"slot": slot, "uid": uid, "item_id": String(entry.get("item_id", "")),
+			"label": item.label if available else "Empty loadout", "weapon_style": String(item.weapon_style) if available else "",
+			"icon": item.icon.resource_path if available and item.icon != null else "", "available": available})
+	return {"loadouts": loadouts, "active_loadout": VaultInventory.active_weapon_slot(_progression_profile)}
+
+func request_loadout_switch(slot: String) -> bool:
+	var session := get_node_or_null("/root/ExpeditionSession")
+	return session != null and session.switch_loadout(slot, self)
+
+func request_weapon_swap() -> void:
+	var data := loadout_snapshot()
+	for loadout: Dictionary in data.loadouts:
+		if loadout.available and loadout.slot != data.active_loadout:
+			request_loadout_switch(loadout.slot)
+			return
+	# Preserve the original unassigned practice controller; empty HUD slots never
+	# pretend that these base combat styles are owned inventory instances.
+	if VaultInventory.active_weapon_entry(_progression_profile).is_empty():
+		combat.commit_weapon_switch(&"staff" if combat.weapon.style == &"sword" else &"sword")
 
 func _refresh_progression_stats() -> void:
 	var family: StringName = combat.weapon.style if combat != null else &"sword"
