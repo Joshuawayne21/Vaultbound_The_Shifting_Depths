@@ -6,6 +6,8 @@ signal modal_changed(open: bool)
 signal results_closed
 signal consumable_requested
 signal equipment_requested(item_id: String)
+signal city_waypoint_requested(id: StringName)
+signal portal_entry_requested
 
 const GOLD := VaultUITheme.GOLD
 const IVORY := VaultUITheme.IVORY
@@ -34,6 +36,7 @@ const PARTY_COMMANDS := [
 var source_surface: Control
 var session_snapshot: Dictionary = {}
 var dungeon_snapshot: Dictionary = {}
+var sanctuary_snapshot: Dictionary = {}
 var results_snapshot: Dictionary = {}
 var party_snapshot: Dictionary = {}
 var party: Node
@@ -58,6 +61,7 @@ var progression_session: Node
 var rpg_panel: Control
 var graphics_panel: Control
 var loot_panel: Control
+var sanctuary_panel: Control
 var ui_scale := 1.0
 var reduced_motion := false
 var reduced_effects := false
@@ -81,6 +85,34 @@ func _ready() -> void:
 	loot_panel.name = "LootPanel"
 	add_child(loot_panel)
 	loot_panel.close_requested.connect(close_modal)
+	sanctuary_panel = preload("res://scripts/ui/sanctuary_panel.gd").new()
+	sanctuary_panel.name = "SanctuaryPanel"
+	add_child(sanctuary_panel)
+	sanctuary_panel.close_requested.connect(close_modal)
+	sanctuary_panel.waypoint_requested.connect(func(id: StringName) -> void: city_waypoint_requested.emit(id))
+	sanctuary_panel.enter_requested.connect(func() -> void: portal_entry_requested.emit())
+	sanctuary_panel.map_requested.connect(open_city_map)
+
+
+func set_sanctuary_snapshot(data: Dictionary) -> void:
+	sanctuary_snapshot = data.duplicate(true)
+	if is_instance_valid(sanctuary_panel):
+		sanctuary_panel.update_snapshot(data)
+	queue_redraw()
+
+
+func open_city_map() -> void:
+	if sanctuary_snapshot.is_empty() or mode not in [&"none", &"sanctuary"]:
+		return
+	sanctuary_panel.open_panel(&"map", sanctuary_snapshot)
+	_open_modal(&"sanctuary")
+
+
+func open_city_information(kind: StringName, context: Dictionary) -> void:
+	if sanctuary_snapshot.is_empty() or mode != &"none":
+		return
+	sanctuary_panel.open_panel(kind, sanctuary_snapshot, context)
+	_open_modal(&"sanctuary")
 
 
 func bind_progression_session(session: Node) -> void:
@@ -353,6 +385,8 @@ func open_graphics() -> void:
 
 
 func _open_modal(value: StringName) -> void:
+	if value != &"sanctuary" and is_instance_valid(sanctuary_panel):
+		sanctuary_panel.hide_panel()
 	if value != &"graphics" and is_instance_valid(graphics_panel):
 		graphics_panel.hide_panel()
 	if value != &"pack" and is_instance_valid(rpg_panel) and rpg_panel.visible:
@@ -375,6 +409,8 @@ func close_modal() -> void:
 		return
 	var was_results := mode == &"results"
 	mode = &"none"
+	if is_instance_valid(sanctuary_panel):
+		sanctuary_panel.hide_panel()
 	if is_instance_valid(graphics_panel):
 		graphics_panel.hide_panel()
 	if is_instance_valid(rpg_panel) and rpg_panel.visible:
@@ -409,6 +445,9 @@ func _input(event: InputEvent) -> void:
 		# Consume the complete event stream while open, including releases/drags;
 		# a finger that opened/closed a panel must never become a world attack.
 		get_viewport().set_input_as_handled()
+		if is_instance_valid(sanctuary_panel) and sanctuary_panel.visible:
+			sanctuary_panel.handle_event(event)
+			return
 		if is_instance_valid(loot_panel) and loot_panel.visible:
 			loot_panel.handle_event(event)
 			return
@@ -451,7 +490,10 @@ func _input(event: InputEvent) -> void:
 	if is_instance_valid(source_surface) and not source_surface.input_enabled:
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
-		if event.physical_keycode == KEY_I:
+		if event.physical_keycode == KEY_M and not sanctuary_snapshot.is_empty():
+			get_viewport().set_input_as_handled()
+			open_city_map()
+		elif event.physical_keycode == KEY_I:
 			get_viewport().set_input_as_handled()
 			open_pack()
 		elif event.physical_keycode == KEY_O:
@@ -464,7 +506,10 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			performance_visible = not performance_visible
 		return
-	if _graphics_rect().has_point(point):
+	if not sanctuary_snapshot.is_empty() and _city_map_rect().has_point(point):
+		_claim_press(event)
+		open_city_map()
+	elif _graphics_rect().has_point(point):
 		_claim_press(event)
 		open_graphics()
 	elif _pack_rect().has_point(point):
@@ -564,6 +609,10 @@ func _local_point(value: Vector2) -> Vector2:
 
 func _safe() -> Vector2:
 	return source_surface._safe_inset if is_instance_valid(source_surface) else Vector2.ZERO
+
+
+func _city_map_rect() -> Rect2:
+	return Rect2(size.x - 190.0 - _safe().x, 29.0 + _safe().y, 157.0, 157.0)
 
 
 func _pack_rect() -> Rect2:

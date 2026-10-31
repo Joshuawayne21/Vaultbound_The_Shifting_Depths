@@ -146,6 +146,7 @@ func request_action(action: StringName) -> void:
 		request_loadout_switch("main_weapon" if action == &"weapon_primary" else "secondary_weapon")
 	elif action == &"interact":
 		if combat.state != &"idle":
+			feedback.emit("Finish your current action before interacting")
 			return
 		_update_interaction()
 		if is_instance_valid(interaction_target):
@@ -352,6 +353,8 @@ func _update_interaction() -> void:
 	var closest := INF
 	for candidate: Node in get_tree().get_nodes_in_group("interactables"):
 		if not candidate is Node3D or not candidate.has_method("interact"):
+			continue
+		if candidate.has_method("can_interact") and not candidate.can_interact(self):
 			continue
 		var distance: float = global_position.distance_to(candidate.global_position)
 		var radius: float = candidate.get("interaction_radius")

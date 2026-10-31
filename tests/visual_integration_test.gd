@@ -16,9 +16,9 @@ func _run() -> void:
 		finish()
 		return
 	var profile: Dictionary = session.profile.duplicate(true)
-	var points: Array[Vector3] = [Vector3(0, 0.15, 8), Vector3(0, 0.15, 0), Vector3(-4.5, 0.15, -6.5)]
+	var points: Array[Vector3] = [Vector3(0, 0.15, 8), Vector3(0, 0.15, 0), game.active_world.get_poi_approach_position(&"collection_hall") + Vector3.UP * 0.15]
 	for service: Node3D in get_nodes_in_group("commerce_services"):
-		points.append(service.to_global(Vector3(0, 0.15, 1.8)))
+		points.append(sanctuary_service_approach(service))
 	for quality in range(3):
 		check(settings.set_options(quality, 60), "Graphics tier %d applies to the running decorated world" % quality)
 		for point in points:

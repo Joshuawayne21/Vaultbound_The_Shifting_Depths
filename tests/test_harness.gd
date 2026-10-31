@@ -54,6 +54,10 @@ func portal_to(destination: StringName) -> Node3D:
 			return portal as Node3D
 	return null
 
+func sanctuary_service_approach(service: Node) -> Vector3:
+	var service_id := StringName(service.get("vendor")) if service.get("service_kind") == &"merchant" else StringName(service.get("service_kind"))
+	return game.active_world.get_service_approach_position(service_id) + Vector3.UP * 0.15
+
 func touch(surface: Control, index: int, point: Vector2, pressed: bool, canceled: bool = false) -> void:
 	var event := InputEventScreenTouch.new()
 	event.index = index

@@ -167,13 +167,16 @@ func _portal_round_trip(player: CharacterBody3D, player_id: int) -> void:
 	var portal: Node3D = portal_to(&"dungeon")
 	if not check(portal != null, "Sanctuary has a dungeon portal"):
 		return
-	player.reset_for_spawn(Transform3D(Basis.IDENTITY, portal.global_position + Vector3(0, 0.15, 2.0)))
+	player.reset_for_spawn(Transform3D(Basis.IDENTITY, game.active_world.get_poi_approach_position(&"dungeon") + Vector3.UP * 0.15))
 	player.health = 72.0
 	player.stamina = 51.0
 	await frames(3)
 	check(player.interaction_target == portal, "Nearby portal is detected")
 	input_hub.request_action(&"interact")
 	input_hub.request_action(&"interact")
+	check(game.hud.expedition_overlay.mode == &"sanctuary" and game.current_location == &"sanctuary", "Repeated portal interaction opens one information card before explicit entry")
+	game.hud.expedition_overlay.sanctuary_panel._activate("enter")
+	game.hud.expedition_overlay.sanctuary_panel._activate("enter")
 	if not await arrive(&"dungeon"):
 		return
 	check(game.player.get_instance_id() == player_id, "Travel retains the player instance")

@@ -33,6 +33,7 @@ var displayed_stamina := 100.0
 var combat_snapshot: Dictionary = {}
 var damage_flash := 0.0
 var dungeon_active := false
+var sanctuary_snapshot: Dictionary = {}
 var modal_blocked := false
 var party_visible := false
 var party_revive_prompt_active := false
@@ -408,11 +409,21 @@ func _draw_location() -> void:
 	draw_line(center + Vector2(10.0, 47.0), center + Vector2(55.0, 47.0), Color(GOLD, 0.55), 1.0, true)
 	_diamond(center + Vector2(0.0, 47.0), 3.5, GOLD)
 	_text(objective, center + Vector2(0.0, 69.0), 13, IVORY, true)
+	var waypoint: Dictionary = sanctuary_snapshot.get("waypoint", {})
+	if not waypoint.is_empty():
+		var delta: Vector3 = Vector3(waypoint.position) - Vector3(sanctuary_snapshot.get("player_position", Vector3.ZERO))
+		var direction := "N" if delta.z < 0 else "S"
+		if absf(delta.x) > absf(delta.z) * 0.5:
+			direction = (direction if absf(delta.z) > absf(delta.x) * 0.5 else "") + ("E" if delta.x > 0 else "W")
+		_text("%s · %.0f m · %s" % [String(waypoint.label), Vector2(delta.x, delta.z).length(), direction], center + Vector2(0, 95), 12, TEAL, true)
 
 
 func _draw_minimap() -> void:
 	var rect := Rect2(size.x - 190.0 - _safe_inset.x, 29.0 + _safe_inset.y, 157.0, 157.0)
 	_panel(rect, PANEL)
+	if not sanctuary_snapshot.is_empty():
+		_draw_city_minimap(rect)
+		return
 	var center := rect.get_center() + Vector2(0.0, -6.0)
 	_text("N", center + Vector2(0.0, -51.0), 10, GOLD, true)
 	draw_rect(Rect2(center - Vector2(46.0, 38.0), Vector2(92.0, 76.0)), Color(TEAL, 0.1))
@@ -424,6 +435,27 @@ func _draw_minimap() -> void:
 	_diamond(center + Vector2(0.0, -35.0), 5.0, GOLD)
 	_diamond(center + Vector2(0.0, 13.0), 5.0, TEAL)
 	_text("SCHEMATIC", Vector2(rect.get_center().x, rect.end.y - 13.0), 10, MUTED, true)
+
+
+func _draw_city_minimap(rect: Rect2) -> void:
+	var area := Rect2(rect.position + Vector2(5, 6), rect.size - Vector2(10, 26))
+	var radius := float(sanctuary_snapshot.get("radius", 45.0))
+	var center := area.get_center()
+	draw_arc(center, 53, 0, TAU, 32, Color(GOLD, 0.5), 1, true)
+	draw_arc(center, 53 * float(sanctuary_snapshot.get("ring_radius", 19.0)) / radius, 0, TAU, 24, Color(GOLD, 0.4), 5, true)
+	for district: Dictionary in sanctuary_snapshot.get("districts", []):
+		var at := _city_map_position(district.center, area, radius)
+		draw_line(center, at, Color(GOLD, 0.3), 2, true)
+		_text(String(district.id), at + Vector2(0, 4), 9, GOLD, true)
+	var waypoint: Dictionary = sanctuary_snapshot.get("waypoint", {})
+	if not waypoint.is_empty():
+		_diamond(_city_map_position(waypoint.position, area, radius), 5, TEAL)
+	_diamond(_city_map_position(sanctuary_snapshot.get("player_position", Vector3.ZERO), area, radius), 4, IVORY)
+	_text("CITY MAP · M" if not OS.has_feature("mobile") else "TAP · CITY MAP", Vector2(rect.get_center().x, rect.end.y - 10), 10, TEAL, true)
+
+
+func _city_map_position(at: Vector3, rect: Rect2, radius: float) -> Vector2:
+	return rect.get_center() + Vector2(at.x, at.z) / radius * 53.0
 
 
 func _draw_camera_button() -> void:
@@ -509,7 +541,7 @@ func _action_caption(action: StringName) -> String:
 		&"skill_one": return String(combat_snapshot.get("ability_one_label", "ABILITY I")).to_upper()
 		&"skill_two": return String(combat_snapshot.get("ability_two_label", "ABILITY II")).to_upper()
 		&"target_lock": return "UNLOCK" if bool(combat_snapshot.get("target_locked", false)) else "LOCK"
-		&"interact": return "USE"
+		&"interact": return "ENTER" if interaction.begins_with("Enter ") else "USE"
 	return ""
 
 

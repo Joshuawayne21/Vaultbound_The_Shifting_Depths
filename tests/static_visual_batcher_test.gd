@@ -104,13 +104,14 @@ func _world(path: String) -> void:
 	var space := world.get_world_3d().direct_space_state
 	var points: Array[Vector3] = [Vector3(0, 0.06, 8), Vector3(0, 0.06, 0)]
 	if path.contains("sanctuary"):
-		points.append_array([Vector3(-6.8, 0.06, 1.2), Vector3(4, 0.06, -5.5), Vector3(-4.5, 0.06, -6.5)])
+		for id: StringName in [&"tavern", &"rootbound_abyss", &"collection_hall"]:
+			points.append(world.get_poi_approach_position(id))
 	else:
 		points.append(Vector3(0, 0.06, 9.5))
 	for point: Vector3 in points:
 		var ray := PhysicsRayQueryParameters3D.create(point + Vector3.UP, point - Vector3.UP * 0.3, 1)
 		var hit := space.intersect_ray(ray)
-		check(not hit.is_empty() and absf(Vector3(hit.position).y) < 0.1, "Original floor remains reachable after batching at %s" % point)
+		check(not hit.is_empty() and absf(Vector3(hit.position).y - point.y) < 0.1, "Authored floor remains reachable at its expected elevation after batching at %s" % point)
 	world.queue_free()
 	await frames(3)
 

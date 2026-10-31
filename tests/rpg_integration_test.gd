@@ -84,7 +84,7 @@ func _visit(kind: StringName, vendor: String = "") -> bool:
 	for service: Node in get_nodes_in_group("commerce_services"):
 		if service.get("service_kind") != kind or (kind == &"merchant" and String(service.get("vendor")) != vendor):
 			continue
-		_place(service.global_position + Vector3(0, 0.15, 1.4))
+		_place(sanctuary_service_approach(service))
 		await frames(3)
 		service.interact(player)
 		return check(session.progression_snapshot().service_kind == String(kind), "Nearby %s service opens through its actual Sanctuary interaction" % (vendor if not vendor.is_empty() else String(kind)))
@@ -216,8 +216,10 @@ func _collection_hall() -> void:
 	var portal := portal_to(&"collection_hall")
 	if not check(portal != null, "Sanctuary has a Collection Hall passage alongside its existing dungeon portals"):
 		return
-	_place(portal.global_position + Vector3(2, 0.15, 0))
+	_place(game.active_world.get_poi_approach_position(&"collection_hall") + Vector3.UP * 0.15)
 	portal.interact(player)
+	check(game.hud.expedition_overlay.mode == &"sanctuary" and game.current_location == &"sanctuary", "Hall passage opens its information card before explicit entry")
+	game.hud.expedition_overlay.sanctuary_panel._activate("enter")
 	if not await arrive(&"collection_hall"):
 		return
 	var hall: Node3D = game.active_world

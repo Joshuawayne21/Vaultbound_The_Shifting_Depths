@@ -15,17 +15,21 @@ func _run() -> void:
 	var kinds := {}
 	for service: Node3D in services:
 		kinds[String(service.service_kind) + ":" + String(service.vendor)] = true
-		var approach: Vector3 = service.to_global(Vector3(0, 0.06, 1.4))
+		var service_id := StringName(service.vendor) if service.service_kind == &"merchant" else StringName(service.service_kind)
+		var approach: Vector3 = sanctuary.get_service_approach_position(service_id)
 		check(_clear_floor(sanctuary, approach), "%s has a clear reachable counter approach" % service.display_name)
 	check(kinds.has("merchant:general") and kinds.has("merchant:equipment") and kinds.has("merchant:appraiser") and kinds.has("blacksmith:"), "Services preserve distinct merchant and forge identities")
-	for point: Vector3 in [Vector3(0, 0.06, 8), Vector3(0, 0.06, -7.5), Vector3(4, 0.06, -5.5), Vector3(-4.5, 0.06, -6.5), Vector3(-6.8, 0.06, 1.2)]:
+	var approaches: Array[Vector3] = [sanctuary.get_spawn_transform(&"default").origin - Vector3.UP * 0.15]
+	for id: StringName in [&"dungeon", &"rootbound_abyss", &"collection_hall", &"tavern"]:
+		approaches.append(sanctuary.get_poi_approach_position(id))
+	for point: Vector3 in approaches:
 		check(_clear_floor(sanctuary, point), "Existing spawn, dungeon, expedition, Tavern and Hall approaches remain clear at %s" % point)
 	var destinations: Array[StringName] = []
 	for entry: Node in get_nodes_in_group("interactables"):
 		if entry.get("destination") != null:
 			destinations.append(entry.destination)
 	check(destinations.has(&"dungeon") and destinations.has(&"rootbound_abyss") and destinations.has(&"collection_hall"), "Sanctuary retains old portals and adds the Collection Hall")
-	check(_clear_floor(sanctuary, sanctuary.get_spawn_transform(&"from_hall").origin), "Returning from the Hall has an unobstructed Sanctuary arrival")
+	check(_clear_floor(sanctuary, sanctuary.get_spawn_transform(&"from_hall").origin - Vector3.UP * 0.15), "Returning from the Hall has an unobstructed Sanctuary arrival")
 	sanctuary.queue_free()
 	await frames(3)
 	var hall := load("res://scenes/world/collection_hall.tscn").instantiate() as Node3D
@@ -38,10 +42,10 @@ func _run() -> void:
 	for stand: Node3D in hall.stands.values():
 		gear_count += 1 if stand.display_kind == "equipment" else 0
 		relic_count += 1 if stand.display_kind == "relic" else 0
-		check(_clear_floor(hall, stand.global_position + Vector3(0, 0.06, 1.7)), "Display %s has a grounded interaction approach" % stand.stand_id)
+		check(_clear_floor(hall, stand.global_position + Vector3(0, 0, 1.7)), "Display %s has a grounded interaction approach" % stand.stand_id)
 	check(gear_count == 8 and relic_count == 4, "Display categories have the required independent capacities")
 	check(hall.journals.size() == 2 and get_nodes_in_group("collection_journals").size() == 2, "Separate monster and item journals are present")
-	check(_clear_floor(hall, hall.get_spawn_transform(&"default").origin), "Hall arrival floor and central aisle are clear")
+	check(_clear_floor(hall, hall.get_spawn_transform(&"default").origin - Vector3.UP * 0.15), "Hall arrival floor and central aisle are clear")
 	var portal := hall.get_node("SanctuaryReturn")
 	check(portal.destination == &"sanctuary" and portal.entry_id == &"from_hall", "Hall return portal targets the correct Sanctuary arrival")
 	var session := root.get_node("ExpeditionSession")
@@ -75,15 +79,15 @@ func _run() -> void:
 
 func _clear_floor(world: Node3D, point: Vector3) -> bool:
 	var space := world.get_world_3d().direct_space_state
+	var ray := PhysicsRayQueryParameters3D.create(point + Vector3.UP * 0.5, point - Vector3.UP * 0.3, 1)
+	var hit := space.intersect_ray(ray)
+	if hit.is_empty() or absf(Vector3(hit.position).y - point.y) >= 0.1 or Vector3(hit.normal).y <= 0.8:
+		return false
 	var capsule := CapsuleShape3D.new()
 	capsule.radius = 0.36
 	capsule.height = 1.7
 	var query := PhysicsShapeQueryParameters3D.new()
 	query.shape = capsule
 	query.collision_mask = 1
-	query.transform.origin = Vector3(point.x, 0.91, point.z)
-	if not space.intersect_shape(query, 1).is_empty():
-		return false
-	var ray := PhysicsRayQueryParameters3D.create(Vector3(point.x, 0.5, point.z), Vector3(point.x, -0.3, point.z), 1)
-	var hit := space.intersect_ray(ray)
-	return not hit.is_empty() and absf(Vector3(hit.position).y) < 0.1 and Vector3(hit.normal).y > 0.8
+	query.transform.origin = Vector3(point.x, Vector3(hit.position).y + 0.91, point.z)
+	return space.intersect_shape(query, 1).is_empty()

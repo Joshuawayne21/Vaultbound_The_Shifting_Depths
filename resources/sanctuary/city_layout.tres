@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SanctuaryLayout" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/sanctuary/sanctuary_layout.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+radius = 45.0
+exchange_radius = 16.0
+ring_radius = 19.0
+ring_width = 6.0
+district_radius = 33.0
+path_width = 8.0
+terrace_height = 0.8
+ramp_length = 8.0

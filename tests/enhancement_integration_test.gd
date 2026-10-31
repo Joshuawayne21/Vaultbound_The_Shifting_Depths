@@ -88,7 +88,7 @@ func _visit_blacksmith() -> bool:
 	game.hud.close_modals()
 	for service: Node in get_nodes_in_group("commerce_services"):
 		if service.get("service_kind") != &"blacksmith": continue
-		player.reset_for_spawn(Transform3D(Basis.IDENTITY, service.global_position + Vector3(0, 0.15, 1.4)))
+		player.reset_for_spawn(Transform3D(Basis.IDENTITY, sanctuary_service_approach(service)))
 		await frames(3)
 		service.interact(player)
 		return check(session.progression_snapshot().service_kind == "blacksmith", "Nearby Sanctuary Blacksmith authorizes the actual upgrade service")

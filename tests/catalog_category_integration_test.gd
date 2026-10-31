@@ -122,7 +122,7 @@ func _visit(kind: StringName, vendor: String = "") -> bool:
 	game.hud.close_modals()
 	for service: Node3D in get_nodes_in_group("commerce_services"):
 		if service.get("service_kind") != kind or (kind == &"merchant" and String(service.get("vendor")) != vendor): continue
-		player.reset_for_spawn(Transform3D(Basis.IDENTITY, service.global_position + Vector3(0, 0.15, 1.4)))
+		player.reset_for_spawn(Transform3D(Basis.IDENTITY, sanctuary_service_approach(service)))
 		await frames(3)
 		service.interact(player)
 		return check(session.progression_snapshot().service_kind == String(kind), "Actual nearby service authorizes " + String(kind))

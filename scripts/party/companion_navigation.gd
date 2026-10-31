@@ -1,14 +1,19 @@
 class_name CompanionNavigation
 extends RefCounted
-## Small, bounded navigation for the prototype's flat modular rooms. Room graph
-## routing chooses real doorways; capsule sweeps and cached floor samples handle
-## authored props. Both companions share geometry samples on the current world.
+## Bounded navigation for flat modular rooms and the opt-in terraced Sanctuary.
+## Room/city graphs choose short legs; capsule sweeps and cached floor samples
+## handle authored props. Companions share geometry samples on the current world.
 ## No navmesh baking, path search every frame, or automatic combat teleporting.
 
 const GRID_STEP := 1.2
 const REPLAN_INTERVAL := 0.65
 const MAX_SEARCH_NODES := 720
 const CACHE_KEY := &"vaultbound_companion_navigation"
+const CITY_SAMPLE_STEP := 0.4
+const CITY_MAX_SLOPE := 0.2
+const CITY_MAX_GRAPH_POINTS := 48
+const CITY_LOCAL_DISTANCE := 18.0
+const CITY_SURFACE_GROUP := &"city_navigation_surfaces"
 const NEIGHBORS: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0),
 	Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 1), Vector2i(-1, 1),
 	Vector2i(1, -1), Vector2i(-1, -1)]
@@ -30,6 +35,12 @@ var _zones: Array[Dictionary] = []
 var _zone_remaining := 0.0
 var _progress_elapsed := 0.0
 var _progress_position := Vector3.ZERO
+var _city_surface := false
+var _city_height_range := Vector2.ZERO
+var _city_graph: Dictionary = {}
+var _city_route := PackedVector3Array()
+var _city_route_index := 0
+var _city_route_destination := Vector3.INF
 
 func _init() -> void:
 	_capsule.radius = 0.38
@@ -50,6 +61,7 @@ func clear() -> void:
 	stuck_seconds = 0.0
 	_progress_elapsed = 0.0
 	_zone_remaining = 0.0
+	_clear_city_route()
 
 func direction_to(destination: Vector3, delta: float) -> Vector3:
 	if not _valid_context() or not destination.is_finite():
@@ -107,8 +119,10 @@ func plan_path(destination: Vector3) -> PackedVector3Array:
 func is_position_safe(position: Vector3) -> bool:
 	if not _valid_context() or not position.is_finite():
 		return false
+	if _world_id != int(party.get("world").get_instance_id()):
+		_refresh_context()
 	var floor_position := _sample_floor(position)
-	return floor_position.is_finite() and absf(position.y - floor_position.y) < 0.5 and _body_clear(position)
+	return floor_position.is_finite() and absf(position.y - floor_position.y) < 0.5 and _body_clear(floor_position if _city_surface else position)
 
 func invalidate_geometry() -> void:
 	if not _valid_context():
@@ -116,11 +130,14 @@ func invalidate_geometry() -> void:
 	_refresh_context()
 	_cache.points.clear()
 	_cache.edges.clear()
+	_cache.get("surfaces", {}).clear()
+	_clear_city_route()
 	_replan_remaining = 0.0
 
 func safe_recovery_position() -> Vector3:
 	if not _valid_context() or not is_instance_valid(party.get("leader")):
 		return Vector3.INF
+	_refresh_context()
 	if party.has_method("is_in_combat") and party.is_in_combat():
 		return Vector3.INF
 	var leader := party.get("leader") as Node3D
@@ -137,6 +154,8 @@ func safe_recovery_position() -> Vector3:
 	for candidate: Vector3 in candidates:
 		var grounded := _sample_floor(candidate)
 		if not grounded.is_finite() or not is_position_safe(grounded) or _danger_cost(grounded) > 0.0:
+			continue
+		if _city_surface and _city_surface_points(leader.global_position, grounded).is_empty():
 			continue
 		# The player can stand closer to a wall than the navigator's extra
 		# clearance margin. Check actual sight/floor continuity here, then the
@@ -168,16 +187,29 @@ func _refresh_context() -> void:
 	if _world_id != world.get_instance_id():
 		_world_id = world.get_instance_id()
 		clear()
+		_city_surface = false
+		_city_graph = {}
+		if world.has_method("get_companion_navigation_profile"):
+			var profile: Dictionary = world.get_companion_navigation_profile()
+			if profile.get("mode") == &"terraced_city":
+				_city_height_range = Vector2(float(profile.get("floor_min", 0.0)), float(profile.get("floor_max", 0.8)))
+				_city_surface = _city_height_range.is_finite() and _city_height_range.x <= _city_height_range.y
+				if _city_surface and world.has_method("get_companion_navigation_graph"):
+					_city_graph = world.get_companion_navigation_graph()
 	if not world.has_meta(CACHE_KEY):
-		world.set_meta(CACHE_KEY, {"points": {}, "edges": {}, "signature": signature})
+		world.set_meta(CACHE_KEY, {"points": {}, "edges": {}, "surfaces": {}, "signature": signature})
 	_cache = world.get_meta(CACHE_KEY)
 	if String(_cache.get("signature", "")) != signature:
 		_cache.points.clear()
 		_cache.edges.clear()
+		_cache.get("surfaces", {}).clear()
+		_clear_city_route()
 		_cache.signature = signature
 		_replan_remaining = 0.0
 
 func _route_goal(start: Vector3, destination: Vector3) -> Vector3:
+	if _city_surface:
+		return _city_route_goal(start, destination)
 	var world := party.get("world") as Node3D
 	var layout: Variant = world.get("layout")
 	if not layout is Dictionary or not layout.get("rooms", []) is Array:
@@ -221,6 +253,151 @@ func _room_at(position: Vector3, rooms: Array) -> int:
 		if room.cell == cell:
 			return int(room.id)
 	return -1
+
+func _clear_city_route() -> void:
+	_city_route.clear()
+	_city_route_index = 0
+	_city_route_destination = Vector3.INF
+
+## The authored city graph only breaks long journeys into bounded local legs.
+## Every connection still pays the same physical floor/capsule checks as a path.
+func _city_route_goal(start: Vector3, destination: Vector3) -> Vector3:
+	var grounded := _sample_floor(destination)
+	if not grounded.is_finite() or not _body_clear(grounded):
+		grounded = _nearest_safe(destination, 3)
+	var origin := _sample_floor(start)
+	if not grounded.is_finite() or not origin.is_finite() or absf(start.y - origin.y) > 0.5:
+		return Vector3.INF
+	if _flat_distance(start, grounded) <= CITY_LOCAL_DISTANCE and _segment_clear(start, grounded) and not _crosses_danger(start, grounded):
+		_clear_city_route()
+		return grounded
+	if _city_route.is_empty() or _city_route_destination.distance_squared_to(grounded) > 2.25:
+		_city_route = _build_city_route(origin, grounded)
+		_city_route_index = 0
+		_city_route_destination = grounded
+	if _city_route.is_empty():
+		# Local obstacle search remains useful in an authored district without
+		# turning an unavailable long route into a whole-city grid search.
+		return grounded if _flat_distance(start, grounded) <= CITY_LOCAL_DISTANCE else Vector3.INF
+	_city_route[-1] = grounded
+	while _city_route_index < _city_route.size() - 1 and _flat_distance(start, _city_route[_city_route_index]) < 0.9 and absf(start.y - _city_route[_city_route_index].y) < 0.25:
+		_city_route_index += 1
+	# Skip already reachable nearby corners, without smoothing across cliffs.
+	for index in range(_city_route_index + 1, _city_route.size()):
+		var next := _city_route[index]
+		if _flat_distance(start, next) > CITY_LOCAL_DISTANCE:
+			break
+		if _segment_clear(start, next) and not _crosses_danger(start, next):
+			_city_route_index = index
+	return _city_route[_city_route_index]
+
+func _build_city_route(start: Vector3, goal: Vector3) -> PackedVector3Array:
+	var authored: PackedVector3Array = _city_graph.get("points", PackedVector3Array())
+	if authored.is_empty() or authored.size() > CITY_MAX_GRAPH_POINTS:
+		return PackedVector3Array()
+	var points := PackedVector3Array()
+	var neighbors: Array[Array] = []
+	for point: Vector3 in authored:
+		points.append(_sample_floor(point) if point.is_finite() else Vector3.INF)
+		neighbors.append([])
+	for edge: Vector2i in _city_graph.get("edges", []):
+		if edge.x < 0 or edge.y < 0 or edge.x >= points.size() or edge.y >= points.size():
+			continue
+		if not points[edge.x].is_finite() or not points[edge.y].is_finite():
+			continue
+		var key := "city:%d:%d" % [mini(edge.x, edge.y), maxi(edge.x, edge.y)]
+		if not _cache.edges.has(key):
+			_cache.edges[key] = _segment_clear(points[edge.x], points[edge.y])
+		if not bool(_cache.edges[key]):
+			continue
+		neighbors[edge.x].append(edge.y)
+		neighbors[edge.y].append(edge.x)
+	var first := points.size()
+	var last := first + 1
+	points.append(start)
+	points.append(goal)
+	neighbors.append([])
+	neighbors.append([])
+	for endpoint: int in [first, last]:
+		var candidates: Array[int] = []
+		for index in range(first):
+			if points[index].is_finite() and _flat_distance(points[endpoint], points[index]) <= CITY_LOCAL_DISTANCE:
+				candidates.append(index)
+		candidates.sort_custom(func(a: int, b: int) -> bool: return points[a].distance_squared_to(points[endpoint]) < points[b].distance_squared_to(points[endpoint]))
+		var connected := 0
+		for index in candidates.slice(0, 8):
+			if _segment_clear(points[endpoint], points[index]) and not _crosses_danger(points[endpoint], points[index]):
+				neighbors[endpoint].append(index)
+				neighbors[index].append(endpoint)
+				connected += 1
+				if connected >= 3:
+					break
+	if neighbors[first].is_empty() or neighbors[last].is_empty():
+		return PackedVector3Array()
+	var costs := {first: 0.0}
+	var previous := {}
+	var open: Array[int] = [first]
+	var visited := {}
+	while not open.is_empty():
+		var best := 0
+		for index in range(1, open.size()):
+			if float(costs[open[index]]) < float(costs[open[best]]):
+				best = index
+		var current: int = open.pop_at(best)
+		if current == last:
+			var result := PackedVector3Array([goal])
+			while previous.has(current) and int(previous[current]) != first:
+				current = int(previous[current])
+				result.insert(0, points[current])
+			return result
+		visited[current] = true
+		for next: int in neighbors[current]:
+			if visited.has(next):
+				continue
+			var cost: float = float(costs[current]) + points[current].distance_to(points[next]) + _danger_cost(points[next])
+			if not costs.has(next) or cost < float(costs[next]):
+				costs[next] = cost
+				previous[next] = current
+				if not open.has(next):
+					open.append(next)
+	return PackedVector3Array()
+
+## A height field is sufficient for these two open terraces: there are no
+## stacked walkable floors. Sampling is separate from sweeps for near-wall
+## recovery, whose landing capsule and line of sight are checked independently.
+func _city_surface_points(from: Vector3, to: Vector3) -> PackedVector3Array:
+	var result := PackedVector3Array()
+	var steps := maxi(1, ceili(_flat_distance(from, to) / CITY_SAMPLE_STEP))
+	for index in range(steps + 1):
+		var point := _sample_floor(from.lerp(to, float(index) / steps))
+		if not point.is_finite():
+			return PackedVector3Array()
+		if not result.is_empty():
+			var previous := result[-1]
+			if absf(point.y - previous.y) > _flat_distance(point, previous) * CITY_MAX_SLOPE + 0.025:
+				return PackedVector3Array()
+		result.append(point)
+	return result
+
+func _city_segment_clear(from: Vector3, to: Vector3) -> bool:
+	var points := _city_surface_points(from, to)
+	if points.is_empty():
+		return false
+	var space := actor.get_world_3d().direct_space_state
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = _capsule
+	query.collision_mask = 1
+	query.margin = 0.005
+	for index in range(points.size() - 1):
+		geometry_probe_count += 1
+		query.transform = Transform3D(Basis.IDENTITY, points[index] + Vector3.UP * 0.85)
+		query.motion = points[index + 1] - points[index]
+		if not space.intersect_shape(query, 1).is_empty():
+			return false
+		var fractions := space.cast_motion(query)
+		if fractions.size() < 2 or fractions[0] < 0.995:
+			return false
+	return _body_clear(points[-1])
 
 func _search(start: Vector3, goal: Vector3) -> PackedVector3Array:
 	var first_position := _nearest_grid_position(start, 2)
@@ -326,6 +503,10 @@ func _cell(position: Vector3) -> Vector2i:
 	return Vector2i(roundi(position.x / GRID_STEP), roundi(position.z / GRID_STEP))
 
 func _point(cell: Vector2i) -> Vector3:
+	if _city_surface:
+		if not _cache.surfaces.has(cell):
+			_cache.surfaces[cell] = _sample_floor(Vector3(cell.x * GRID_STEP, 0, cell.y * GRID_STEP))
+		return _cache.surfaces[cell]
 	return Vector3(cell.x * GRID_STEP, 0.06, cell.y * GRID_STEP)
 
 func _walkable(cell: Vector2i) -> bool:
@@ -345,11 +526,20 @@ func _body_clear(position: Vector3) -> bool:
 	query.shape = _capsule
 	query.collision_mask = 1
 	query.margin = 0.005
-	query.transform = Transform3D(Basis.IDENTITY, Vector3(position.x, 0.91, position.z))
+	query.transform = Transform3D(Basis.IDENTITY, Vector3(position.x, position.y + 0.85 if _city_surface else 0.91, position.z))
 	return actor.get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty()
 
 func _sample_floor(position: Vector3) -> Vector3:
 	geometry_probe_count += 1
+	if _city_surface:
+		var ray := PhysicsRayQueryParameters3D.create(Vector3(position.x, _city_height_range.y + 0.55, position.z), Vector3(position.x, _city_height_range.x - 0.3, position.z), 1)
+		var hit := actor.get_world_3d().direct_space_state.intersect_ray(ray)
+		if hit.is_empty() or not (hit.collider as Node).is_in_group(CITY_SURFACE_GROUP):
+			return Vector3.INF
+		var floor_point: Vector3 = hit.position
+		if floor_point.y < _city_height_range.x - 0.025 or floor_point.y > _city_height_range.y + 0.025 or Vector3(hit.normal).y < 1.0 / sqrt(1.0 + CITY_MAX_SLOPE * CITY_MAX_SLOPE):
+			return Vector3.INF
+		return floor_point + Vector3.UP * 0.06
 	var ray := PhysicsRayQueryParameters3D.create(Vector3(position.x, 0.55, position.z), Vector3(position.x, -0.3, position.z), 1)
 	var hit := actor.get_world_3d().direct_space_state.intersect_ray(ray)
 	if hit.is_empty() or Vector3(hit.normal).y < 0.8 or absf(Vector3(hit.position).y) > 0.12:
@@ -357,6 +547,8 @@ func _sample_floor(position: Vector3) -> Vector3:
 	return Vector3(position.x, Vector3(hit.position).y + 0.06, position.z)
 
 func _segment_clear(from: Vector3, to: Vector3, check_floor: bool = true) -> bool:
+	if _city_surface:
+		return _city_segment_clear(from, to)
 	geometry_probe_count += 1
 	var query := PhysicsShapeQueryParameters3D.new()
 	query.shape = _capsule

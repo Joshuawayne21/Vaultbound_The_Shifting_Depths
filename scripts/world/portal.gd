@@ -2,16 +2,22 @@ extends Node3D
 ## Reusable, manually activated portal. The session owns the actual level swap.
 
 signal travel_requested(destination: StringName, entry_id: StringName)
+signal portal_info_requested(source: Node3D)
 
 @export var destination: StringName = &"dungeon"
 @export var entry_id: StringName = &"from_sanctuary"
 @export var title: String = "THE SHIFTING DEPTHS"
 @export var interaction_radius: float = 3.0
+@export var require_entry_card := false
 
 var _runes: Node3D
 var _surface: MeshInstance3D
 var _surface_material: ShaderMaterial
 var _time: float = 0.0
+var _range_label: Label3D
+var _range_material: StandardMaterial3D
+var _range_elapsed := 0.0
+var _near_player: Node3D
 
 
 func _ready() -> void:
@@ -88,14 +94,45 @@ func _ready() -> void:
 	title_label.position = Vector3(0, 4.96, 0)
 	title_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	add_child(title_label)
+	if require_entry_card:
+		_range_material = StandardMaterial3D.new()
+		_range_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_range_material.albedo_color = Color("6a9791")
+		var reach_ring := TorusMesh.new()
+		reach_ring.inner_radius = maxf(0.1, interaction_radius - 0.045)
+		reach_ring.outer_radius = interaction_radius
+		reach_ring.rings = 48
+		reach_ring.ring_segments = 4
+		_mesh(reach_ring, Vector3(0, 0.06, 0), _range_material)
+		_range_label = Label3D.new()
+		_range_label.text = "ENTER · F / USE"
+		_range_label.font_size = 42
+		_range_label.pixel_size = 0.004
+		_range_label.outline_size = 12
+		_range_label.modulate = Color("f1f1e8")
+		_range_label.position = Vector3(0, 1.15, 0.3)
+		_range_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_range_label.no_depth_test = false
+		_range_label.visible = false
+		add_child(_range_label)
+		_near_player = get_tree().get_first_node_in_group("player") as Node3D
 
 
 func _process(delta: float) -> void:
 	_time += delta
 	_runes.rotation.z = _time * 0.08
+	if require_entry_card and is_instance_valid(_range_label):
+		_range_elapsed += delta
+		if _range_elapsed >= 0.15:
+			_range_elapsed = 0.0
+			var in_reach := can_interact(_near_player)
+			_range_label.visible = in_reach
+			_range_material.albedo_color = Color("a5fff0") if in_reach else Color("6a9791")
 
 
 func get_prompt() -> String:
+	if require_entry_card:
+		return "Enter " + title.to_lower().capitalize() + " · details"
 	match destination:
 		&"sanctuary": return "Return to Sanctuary"
 		&"combat_arena": return "Enter the Proving Grounds"
@@ -105,8 +142,18 @@ func get_prompt() -> String:
 	return "Use the passage"
 
 
-func interact(_player: Node3D) -> void:
-	travel_requested.emit(destination, entry_id)
+func can_interact(actor: Node3D) -> bool:
+	if not require_entry_card: return true
+	return is_instance_valid(actor) and actor.is_inside_tree() and is_inside_tree() \
+		and actor.global_position.distance_to(global_position) <= interaction_radius \
+		and CombatRules.visible_from(actor, actor.global_position + Vector3.UP * 1.3, global_position + Vector3.UP * 1.6)
+
+
+func interact(actor: Node3D) -> void:
+	if require_entry_card:
+		if can_interact(actor): portal_info_requested.emit(self)
+	else:
+		travel_requested.emit(destination, entry_id)
 
 
 func _mesh(shape: Mesh, at: Vector3, material: Material) -> MeshInstance3D:

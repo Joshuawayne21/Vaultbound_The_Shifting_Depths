@@ -6,6 +6,8 @@ signal modal_changed(open: bool)
 signal results_closed
 signal consumable_requested
 signal equipment_requested(item_id: String)
+signal city_waypoint_requested(id: StringName)
+signal portal_entry_requested
 
 @onready var surface: Control = $TouchSurface
 @onready var expedition_overlay: Control = $ExpeditionOverlay
@@ -21,6 +23,8 @@ func _ready() -> void:
 	expedition_overlay.results_closed.connect(func() -> void: results_closed.emit())
 	expedition_overlay.consumable_requested.connect(func() -> void: consumable_requested.emit())
 	expedition_overlay.equipment_requested.connect(func(item_id: String) -> void: equipment_requested.emit(item_id))
+	expedition_overlay.city_waypoint_requested.connect(func(id: StringName) -> void: city_waypoint_requested.emit(id))
+	expedition_overlay.portal_entry_requested.connect(func() -> void: portal_entry_requested.emit())
 
 
 func bind_expedition(session: Node) -> void:
@@ -79,6 +83,12 @@ func open_recruitment() -> void:
 func set_dungeon_snapshot(data: Dictionary) -> void:
 	surface.dungeon_active = not data.is_empty()
 	expedition_overlay.set_dungeon_snapshot(data)
+	surface.queue_redraw()
+
+
+func set_sanctuary_snapshot(data: Dictionary) -> void:
+	surface.sanctuary_snapshot = data.duplicate(true)
+	expedition_overlay.set_sanctuary_snapshot(data)
 	surface.queue_redraw()
 
 

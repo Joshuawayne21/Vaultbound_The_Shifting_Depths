@@ -41,7 +41,7 @@ func _recruitment() -> void:
 	var tavern := get_first_node_in_group("recruitment_taverns") as Node3D
 	if not check(tavern != null, "Sanctuary contains the interactable Tavern"):
 		return
-	game.player.reset_for_spawn(Transform3D(Basis.IDENTITY, tavern.global_position + Vector3(0, 0.15, 2.2)))
+	game.player.reset_for_spawn(Transform3D(Basis.IDENTITY, game.active_world.get_poi_approach_position(&"tavern") + Vector3.UP * 0.15))
 	await frames(3)
 	tavern.interact(game.player)
 	check(overlay.mode == &"recruit" and party.paused, "Tavern interaction opens recruitment and pauses party simulation")

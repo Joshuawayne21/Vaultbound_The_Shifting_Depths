@@ -1,5 +1,7 @@
 # Living Sanctuary validation
 
+**Completed 6B gate: 10,904 assertions passed across all 62 suites in 75 separate engine invocations.** Fresh import/startup, ten independent readers, all 100 dungeon seeds and actual city traversal passed. [Durable results](living-sanctuary-test-results.json) record every command, count and source signature. Android/GPU/APK validation remains outstanding.
+
 ## 6A — preservation baseline
 
 The initial gate passed on 2026-10-31: fresh editor import, a separate 120-frame main-scene startup, and **686 smoke assertions**. This is a baseline for the Living Sanctuary work, not evidence that its later stages are complete.
@@ -48,6 +50,47 @@ This was a read-only audit; no test fixture changed in 6A.
 | Explicit arrival assertions | Dungeon return near `(0,0,-5.4)`; death recovery near `(0,0,8)` | Keep these existing contracts and the remaining authored spawn transforms |
 
 Sanctuary tests discover services and portals primarily through groups and destination IDs, not private world child names. Dungeon coordinates and independent combat-arena fixtures do not need changes for the Sanctuary expansion.
+
+## 6B — connected city gate
+
+**All 10,904 assertions passed across all 62 suites in 75 separate engine invocations.** Every final invocation passed on its first attempt against the frozen source; no development failure, focused repeat or earlier checkpoint is added to this total. Fresh editor import and a separate 120-frame startup also passed. All test and startup logs contain no errors, warnings, failed assertions or leaked-object messages. Import records only the known host socket-creation and missing Android build-tools notices separately.
+
+| Complete gate coverage | Suites / invocations | Passed assertions |
+| --- | ---: | ---: |
+| Preserved Milestone 5.6 suite identities and process modes | 58 / 71 | 10,531 |
+| `city_navigation_test.gd` | 1 / 1 | 68 |
+| `city_surface_test.gd` | 1 / 1 | 21 |
+| `sanctuary_ui_test.gd` | 1 / 1 | 59 |
+| `sanctuary_world_test.gd` | 1 / 1 | 225 |
+| **Complete 6B total** | **62 / 75** | **10,904** |
+
+The gate ran on **Godot 4.6.3.stable.official.7d41c59c4**, Linux headless, Compatibility, using `/tmp/vaultbound-living-6b-frozen-source`, copied from the frozen working tree based on commit `6939d7e6955719740db682c0b825bb9fba500b69`. Opening and closing manifests match all **683 semantic source files** at SHA-256 `d134c4aedba5cf4603c10cab6cd233fc16080c157e0868015a163e83be8678ea`. A complete recomputed workspace manifest matches that same source after the gate, including file additions/deletions; no runtime or test drift occurred. The source scope is `project.godot` plus scripts, resources, scenes, assets and tests, excluding generated `.uid`/`.import` sidecars.
+
+Project and Android version names are **`0.6.0-6b`**, with Android version code **8**. The separate export-preset SHA-256 is `3fdb1839e169360694381a5fa806070b8e484c7b93a8b42a7bcecb6c1e29e48b`; frozen and workspace presets match exactly. This is metadata verification, not an APK export result.
+
+Every process had isolated disposable XDG data/config/cache storage, including import and startup. Every old reader followed its writer in another engine process; ten reader invocations ran. Explicit fixture profiles remain under `/tmp`. Normal play data was not used. Evidence is `/tmp/vaultbound-living-6b-final-regression/`, and [the durable results](living-sanctuary-test-results.json) include all 75 commands/counts, setup notices, opening/closing source identity and navigation metrics. `dungeon_layout_test.gd` passed structural validation and exact reproduction for every seed **0–99**, along with its native module collision checks.
+
+The actual-city test drove the original player controller through touch input while both original companions followed. It covered all eight district approaches, the full ring, the opposite-city crossing, both 0.8-metre terrace ascents, raised Hold positions and Retreat descents. Across **7,067 observed physics frames**, the player traveled **496.33 m**, Guardian **488.24 m** and Mystic **496.27 m**. Both companions recorded **zero recovery teleports**; the largest observed actor step was **0.089334 m**. Replans were 165/270/233 and geometry probes 18,796/14,095/11,141 for player/Guardian/Mystic. These are traversal and bounded-work counters, not rendered FPS or Android performance measurements.
+
+### Focused development check — separate evidence
+
+Before the complete gate, the focused world gate passed **1,051 assertions across five invocations**, plus fresh import and a separate 120-frame startup. These repeated checks are excluded from the complete total above.
+
+| Focused suite | Passed assertions |
+| --- | ---: |
+| `sanctuary_world_test.gd` | 225 |
+| `smoke_test.gd` | 695 |
+| `collection_world_test.gd` | 36 |
+| `static_visual_batcher_test.gd` | 32 |
+| `visual_integration_test.gd` | 63 |
+
+This gate ran against `/tmp/vaultbound-6b-world-dev2-source` with isolated XDG storage. Opening and closing semantic source manifests match at `b01966d36691c9ea2c903deaf6c213127199083ca456c0581476c75fcb656fb6`. Evidence is `/tmp/vaultbound-6b-world-dev2/`; all five game logs and startup were clean. Import reported only the same host socket/Android-tools notices as 6A. This is focused development evidence, not a final full-regression total. An earlier development attempt exposed two errors in the newly written test itself (StringName ordering/equality and a typed conditional array); those were corrected, and that failed attempt is excluded.
+
+The existing commerce fixtures now use a shared test helper that resolves the live world's service approach. Tavern and outward portal fixtures use the authored point-of-interest approaches. Collection clearance casts relative to the expected elevation and places its original capsule above the measured floor; batching checks compare the hit against each authored floor height. The original service identities, clearance/normal checks, collider comparisons, transaction checks and save assertions remain intact. Central combat coordinates, heart-crystal obstruction limits and all four arrival transforms remain unchanged.
+
+Only two old fixtures interacted with an outward Sanctuary portal: smoke's dungeon passage and RPG integration's Collection Hall visit. They now assert that information opens before travel and then activate the real Enter control. Smoke retains repeated interaction and repeated Enter attempts before its one-world/one-player assertions. Existing dungeon, arena, Hall and expedition return interactions remain immediate and retain their previous assertions.
+
+The new `sanctuary_world_test.gd` checks actual city and ring floors, all eight district and point-of-interest approaches, the four original spawn transforms, both terrace elevations, real nearby service/Tavern authorization, camera clearance on district/ramp samples and all four playable outward routes. It checks both compositions; third person samples four orbit headings while isometric uses its authored fixed heading. Its controlled setup placements establish geometry and interaction, not walking. The separate `city_navigation_test.gd` owns actual player/two-companion movement, and `city_surface_test.gd` owns slope/ledge/navigation safety. `sanctuary_ui_test.gd` owns map/card gestures, source expiry, mobile canvas geometry and presentation-only save preservation.
 
 ## Gates for subsequent stages
 

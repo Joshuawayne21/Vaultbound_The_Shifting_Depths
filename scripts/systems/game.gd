@@ -28,6 +28,9 @@ var _snapshot_elapsed := 0.0
 var _world_process_mode := Node.PROCESS_MODE_INHERIT
 var _player_process_mode := Node.PROCESS_MODE_INHERIT
 var party: VaultParty
+var _city_waypoint: Dictionary = {}
+var _city_portal_source: WeakRef
+var _city_portal_route: Dictionary = {}
 
 func _ready() -> void:
 	InputHub.controls_enabled = false
@@ -47,6 +50,8 @@ func _ready() -> void:
 	hud.modal_changed.connect(_on_modal_changed)
 	hud.consumable_requested.connect(_use_consumable)
 	hud.equipment_requested.connect(_equip_item)
+	hud.city_waypoint_requested.connect(_on_city_waypoint)
+	hud.portal_entry_requested.connect(_on_portal_enter)
 	camera_rig.mode_changed.connect(hud.set_camera_mode)
 	hud.set_camera_mode(camera_rig.mode_name)
 	InputHub.action_requested.connect(_on_action)
@@ -72,6 +77,12 @@ func _process(delta: float) -> void:
 	_snapshot_elapsed = 0.0
 	if current_location == &"rootbound_abyss" and is_instance_valid(active_world) and active_world.has_method("snapshot"):
 		hud.set_dungeon_snapshot(active_world.snapshot())
+	elif current_location == &"sanctuary" and not transitioning:
+		_publish_city_snapshot()
+		if _city_portal_source != null and hud.expedition_overlay.mode == &"sanctuary":
+			var source := _city_portal_source.get_ref() as Node3D
+			var valid := _city_source_valid(source) and _city_portal_route_matches(source)
+			hud.expedition_overlay.sanctuary_panel.set_entry_available(valid, "" if valid else "Move back within sight and reach of this portal.")
 
 func _on_action(action: StringName) -> void:
 	if action == &"camera_toggle" and not transitioning:
@@ -131,6 +142,10 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 		# discards only its unsecured bag; the secured profile is untouched.
 		ExpeditionSession.fail_run("abandoned")
 	transitioning = true
+	_city_waypoint.clear()
+	_city_portal_source = null
+	_city_portal_route.clear()
+	hud.set_sanctuary_snapshot({})
 	ExpeditionSession.close_service()
 	party.set_paused(true)
 	if _modal_open:
@@ -156,6 +171,10 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	for portal: Node in get_tree().get_nodes_in_group("interactables"):
 		if portal.has_signal("travel_requested") and not portal.travel_requested.is_connected(_on_travel):
 			portal.travel_requested.connect(_on_travel)
+		if portal.has_signal("portal_info_requested") and not portal.portal_info_requested.is_connected(_on_portal_information):
+			portal.portal_info_requested.connect(_on_portal_information)
+		if portal.has_signal("sanctuary_ui_requested") and not portal.sanctuary_ui_requested.is_connected(_on_city_terminal):
+			portal.sanctuary_ui_requested.connect(_on_city_terminal)
 	if active_world.has_signal("travel_requested"):
 		active_world.connect("travel_requested", _on_travel)
 	if active_world.has_signal("notice"):
@@ -178,7 +197,119 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	hud.set_input_enabled(true)
 	scene_changed.emit(destination)
 	if destination == &"sanctuary":
+		_publish_city_snapshot()
 		hud.present_pending_results()
+
+
+func _publish_city_snapshot() -> void:
+	if current_location != &"sanctuary" or not is_instance_valid(active_world) or not active_world.has_method("get_city_layout"):
+		return
+	var data: Dictionary = active_world.get_city_layout().duplicate(true)
+	data.player_position = player.global_position
+	data.waypoint = _city_waypoint.duplicate(true)
+	hud.set_sanctuary_snapshot(data)
+
+
+func _on_city_waypoint(id: StringName) -> void:
+	if transitioning or current_location != &"sanctuary" or not is_instance_valid(active_world) or not active_world.has_method("get_city_layout"):
+		return
+	if id == &"":
+		_city_waypoint.clear()
+		_publish_city_snapshot()
+		return
+	var layout: Dictionary = active_world.get_city_layout()
+	var label := ""
+	for entry: Dictionary in layout.get("pois", []):
+		if StringName(entry.id) == id: label = String(entry.label)
+	for entry: Dictionary in layout.get("districts", []):
+		if StringName(entry.id) == id: label = String(entry.name)
+	if label.is_empty(): return
+	_city_waypoint = {"id": id, "label": label, "position": active_world.get_poi_approach_position(id)}
+	_publish_city_snapshot()
+	hud.show_message("Waypoint set · " + label)
+
+
+func _city_source_valid(source: Node3D) -> bool:
+	if transitioning or current_location != &"sanctuary" or not is_instance_valid(active_world) \
+			or not is_instance_valid(source) or not source.is_inside_tree() or not active_world.is_ancestor_of(source):
+		return false
+	if player.health <= 0.0 or player.downed or player.combat.state != &"idle": return false
+	var radius: Variant = source.get("interaction_radius")
+	if radius == null or player.global_position.distance_to(source.global_position) > float(radius): return false
+	return CombatRules.visible_from(player, player.global_position + Vector3.UP * 1.3, source.global_position + Vector3.UP * 1.6)
+
+
+func _on_city_terminal(source: Node3D, kind: StringName, context: Dictionary) -> void:
+	if not _city_source_valid(source) or hud.expedition_overlay.mode != &"none": return
+	_publish_city_snapshot()
+	if kind == &"equipment":
+		hud.expedition_overlay.open_equipment()
+	elif kind == &"map":
+		hud.expedition_overlay.open_city_map()
+	else:
+		var details := context.duplicate(true)
+		details.lines = ["Spiritweaving Conservatory · collection guide", "Earned cosmetic pets are planned for Milestone 6E; they are not available yet.",
+			"Inspect your existing discoveries and owned exhibits in the Collection Hall.", "Your inventory, Depthmarks and party slots are unchanged.", "Use the city map to find the Trophy Hall or return to the Ring Exchange."]
+		hud.expedition_overlay.open_city_information(&"guide", details)
+
+
+func _on_portal_information(source: Node3D) -> void:
+	if not _city_source_valid(source) or hud.expedition_overlay.mode != &"none" or not bool(source.get("require_entry_card")):
+		return
+	var destination := StringName(source.get("destination"))
+	if not LEVELS.has(destination): return
+	_city_portal_source = weakref(source)
+	_city_portal_route = {"destination": destination, "entry_id": StringName(source.get("entry_id"))}
+	_publish_city_snapshot()
+	var details := {"title": String(source.get("title")), "entry_enabled": true, "lines": _portal_information_lines(destination)}
+	hud.expedition_overlay.open_city_information(&"portal", details)
+
+
+func _city_portal_route_matches(source: Node3D) -> bool:
+	return is_instance_valid(source) and not _city_portal_route.is_empty() and LEVELS.has(_city_portal_route.destination) \
+		and source.get("destination") == _city_portal_route.destination and source.get("entry_id") == _city_portal_route.entry_id
+
+
+func _on_portal_enter() -> void:
+	var source := _city_portal_source.get_ref() as Node3D if _city_portal_source != null else null
+	if hud.expedition_overlay.mode != &"sanctuary" or hud.expedition_overlay.sanctuary_panel.kind != &"portal": return
+	if not _city_source_valid(source) or not _city_portal_route_matches(source):
+		hud.expedition_overlay.sanctuary_panel.set_entry_available(false, "This portal is no longer in reach. Close the card and approach it again.")
+		return
+	var destination := StringName(_city_portal_route.destination)
+	var entry_id := StringName(_city_portal_route.entry_id)
+	_city_portal_source = null
+	_city_portal_route.clear()
+	hud.close_modals()
+	_travel_from_city_portal.call_deferred(weakref(source), destination, entry_id)
+
+
+func _travel_from_city_portal(reference: WeakRef, destination: StringName, entry_id: StringName) -> void:
+	# Recheck after the input/physics callback, immediately before existing travel guards.
+	var source := reference.get_ref() as Node3D
+	if not _city_source_valid(source) or source.get("destination") != destination or source.get("entry_id") != entry_id:
+		hud.show_message("Portal entry expired. Approach the gate and review it again.")
+		return
+	change_location(destination, entry_id)
+
+
+func _portal_information_lines(destination: StringName) -> Array[String]:
+	var ai_count := maxi(0, party.snapshot().get("members", []).size() - 1)
+	var lines: Array[String] = []
+	if destination == &"rootbound_abyss":
+		lines = ["ROOTBOUND ABYSS · Floor 1 · Fixed local challenge; no difficulty selection", "8–12 connected rooms · hidden branches may appear · Rootwarden guards extraction.",
+			"Hazards: root eruptions, rising awareness, melee enemies and ranged attacks.", "Finds: Depthmarks, equipment, materials and relics from existing loot tables.",
+			"Extract to secure finds; defeat or abandonment loses unsecured loot.", "Seed: chosen on entry · layout and modifiers are not known before generation."]
+		if debug_expedition_seed >= 0: lines[5] = "Developer seed: %d · layout and modifiers are generated on entry." % debug_expedition_seed
+	elif destination == &"combat_arena":
+		lines = ["PROVING GROUNDS · Existing combat practice area", "Practice Sword/Shield and Staff combat with the current enemies and targets.", "This is a local training destination, not a player-versus-player match."]
+	elif destination == &"collection_hall":
+		lines = ["COLLECTION HALL · Owned exhibits and discovery journal", "Inspect your real owned equipment, relics and discovered item definitions.", "Display assignments use existing inventory instances; visiting creates no items."]
+	else:
+		lines = ["SUNKEN VAULT · Existing authored practice dungeon", "Explore the original chambers and practise combat and manual portal travel.", "The generated Rootbound expedition and extraction loop has its own gate."]
+	lines.append("Party: 1 local human + %d AI companion%s · No remote players." % [ai_count, "" if ai_count == 1 else "s"])
+	lines.append("Matchmaking unavailable · Enter starts this local destination.")
+	return lines
 
 func _keep_world_collision(node: Node) -> void:
 	# Modals pause scripts/animation while retaining floor and obstacle queries.
@@ -229,6 +360,8 @@ func _on_modal_changed(open: bool) -> void:
 			_world_process_mode = active_world.process_mode
 			active_world.process_mode = Node.PROCESS_MODE_DISABLED
 	else:
+		_city_portal_source = null
+		_city_portal_route.clear()
 		ExpeditionSession.close_service()
 		player.process_mode = _player_process_mode
 		if is_instance_valid(active_world):

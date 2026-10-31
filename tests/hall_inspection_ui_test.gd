@@ -222,7 +222,7 @@ func _same_uid_refresh() -> void:
 	if not await arrive(&"sanctuary"): return
 	for service: Node in get_nodes_in_group("commerce_services"):
 		if service.get("service_kind") != &"blacksmith": continue
-		game.player.global_position = service.global_position + Vector3(0, 0.15, 1.4)
+		game.player.global_position = sanctuary_service_approach(service)
 		game.player.velocity = Vector3.ZERO
 		await frames(3)
 		service.interact(game.player)
