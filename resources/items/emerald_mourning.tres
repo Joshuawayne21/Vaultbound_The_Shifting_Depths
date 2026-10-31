@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/items/catalog.svg" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"emerald_mourning"
+label = "Emerald Mourning"
+description = "A ceremonial green crystal crescent with a quiet inner glow. Scythe combat is not implemented."
+category = "equipment"
+rarity = "legendary"
+value = 1250
+quantity_min = 1
+quantity_max = 1
+weapon_style = &""
+stack_limit = 1
+slot = &"main_weapon"
+required_level = 27
+base_stats = {}
+salvage = {}
+special_effects = Array[String]([])
+icon = ExtResource("2")
+catalog_group = "weapon"
+weapon_family = "scythe"
+combat_supported = false
+obtainable = false
+lore = "The temple carried this crescent only when a guardian failed to return."
+acquisition_sources = Array[String]([])
+icon_art_status = "catalog_placeholder"
+model_art_status = "missing"
+display_animation = {"rotation_speed": 0.22, "bob_height": 0.0, "bob_speed": 1.2}
+aura_profile = &"none"

@@ -10,6 +10,10 @@ const LEGACY_IDS := ["gold_coin", "root_fiber", "mooncap_tonic", "emerald_dust",
 	"ancient_shard", "traveler_sword", "apprentice_staff", "round_shield", "iron_helm",
 	"mossguard_helm", "traveler_coat", "warden_cuirass", "trail_boots", "rootstep_boots",
 	"amber_ring", "emerald_pendant", "stamina_draught", "sealed_reliquary", "abyss_crown"]
+const STARTER_ADDITIONS := ["trailgrip_gloves", "expedition_trousers", "wayfarer_necklace", "sentinel_ring",
+	"verdant_oathblade", "vaultheart_staff", "common_enhancement_stone", "elite_monster_fragment",
+	"rootwarden_essence", "ancient_forged_core", "ancient_heartstone"]
+const EXPECTED_FULL_COUNT := 84
 var sources := {}
 var roots := {}
 
@@ -37,11 +41,15 @@ func _record_table(table: VaultLootTable, source: String, encounters: VaultMonst
 		_record(definition, source)
 
 func _run() -> void:
-	var catalog := VaultLootTable.catalog()
-	check(catalog.size() == 41 and VaultLootTable.item_ids().size() == 41, "The gated starter set contains forty noncurrency items and its legacy currency ID")
+	var full_catalog := VaultLootTable.catalog()
+	var catalog := {}
+	for id: String in LEGACY_IDS + STARTER_ADDITIONS:
+		if full_catalog.has(id):
+			catalog[id] = full_catalog[id]
+	check(catalog.size() == 41 and full_catalog.size() == EXPECTED_FULL_COUNT, "The immutable forty-item starter set and currency survive the explicit full catalog batch count")
 	var copied_ids := VaultLootTable.ITEM_IDS
 	copied_ids.clear()
-	check(VaultLootTable.item_ids().size() == 41, "Compatibility item IDs cannot mutate the native manifest")
+	check(VaultLootTable.item_ids().size() == EXPECTED_FULL_COUNT, "Compatibility item IDs cannot mutate the native manifest")
 	for id: String in LEGACY_IDS:
 		check(catalog.has(id) and String(catalog[id].id) == id, "Existing item identity survives: " + id)
 	check(catalog.gold_coin.label == "Depthmarks" and catalog.gold_coin.category == "gold" and catalog.gold_coin.icon.resource_path.ends_with("depthmark.svg"), "Depthmarks preserves the original currency ID, category and coin artwork")
@@ -63,7 +71,7 @@ func _run() -> void:
 				break
 			var observed := {}
 			for item: Dictionary in reward.items:
-				var definition: VaultItemDefinition = catalog[item.id]
+				var definition: VaultItemDefinition = full_catalog[item.id]
 				observed[item.id] = true
 				valid = valid and definition.allows_source("monster:" + source) and int(item.quantity) > 0
 				if item.id in ["rootwarden_heart", "rootwarden_essence", "verdant_oathblade", "vaultheart_staff"]:
@@ -80,9 +88,9 @@ func _run() -> void:
 	for vendor: String in Merchants.VENDORS:
 		for completed in range(3):
 			for entry: Dictionary in Merchants.stock(vendor, completed):
-				_record(catalog[entry.item_id], "merchant:" + vendor)
+				_record(full_catalog[entry.item_id], "merchant:" + vendor)
 	for recipe: Dictionary in Recipes.recipes():
-		_record(catalog[recipe.output_id], "craft:" + recipe.id, false)
+		_record(full_catalog[recipe.output_id], "craft:" + recipe.id, false)
 	# A recipe is reachable only when every ingredient traces to a real source.
 	# Fixed-point closure rejects self recipes and mutually circular recipes.
 	for _pass in range(Recipes.recipes().size()):
@@ -176,7 +184,7 @@ func _source_rejections(catalog: Dictionary) -> void:
 	var migrated := Inventory.migrate_legacy({"traveler_sword": 1, "retired_unknown_item": 7})
 	live_definition.obtainable = original_availability
 	check(not accepted and preserved == before, "Trusted acquisition rejects unavailable definitions atomically, including direct debug grants")
-	check(migrated.inventory.size() == 1 and migrated.inventory[0].item_id == "traveler_sword" and migrated.legacy_reserve.get("retired_unknown_item", 0) == 7, "Availability gates do not discard historical ownership or unknown legacy reserves")
+	check(migrated.inventory.is_empty() and Inventory.totals(migrated) == {"traveler_sword": 1, "retired_unknown_item": 7}, "Unavailable historical ownership remains secured in reserve alongside unknown legacy items")
 	var corrupt := VaultLootTable.table_for(&"common").duplicate(true) as VaultLootTable
 	corrupt.entries.append(catalog.rootwarden_heart)
 	corrupt.weights.append(1.0)

@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="VaultLootTable" load_steps=28 format=3]
+[gd_resource type="Resource" script_class="VaultLootTable" load_steps=32 format=3]
 
 [ext_resource type="Script" path="res://scripts/progression/loot_table.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="2"]
@@ -29,6 +29,11 @@
 [ext_resource type="Resource" path="res://resources/items/vaultheart_staff.tres" id="26"]
 [ext_resource type="Resource" path="res://resources/items/rootwarden_essence.tres" id="27"]
 
+[ext_resource type="Resource" path="res://resources/items/pilgrims_verdict.tres" id="28"]
+[ext_resource type="Resource" path="res://resources/items/emerald_covenant.tres" id="29"]
+[ext_resource type="Resource" path="res://resources/items/temple_pulse_staff.tres" id="30"]
+[ext_resource type="Resource" path="res://resources/items/elderroot_conductor.tres" id="31"]
+
 [resource]
 script = ExtResource("1")
 category = &"boss"
@@ -37,7 +42,7 @@ gold_min = 100
 gold_max = 150
 minimum_rolls = 3
 maximum_rolls = 4
-entries = Array[ExtResource("2")]( [ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20"), ExtResource("21"), ExtResource("22"), ExtResource("23"), ExtResource("24"), ExtResource("25"), ExtResource("26")] )
-weights = PackedFloat32Array(1, 2, 5, 10, 10, 12, 15, 12, 12, 8, 7, 1, 8, 5, 6, 6, 6, 4, 4, 2, 0.8, 4, 0.45, 0.15)
+entries = Array[ExtResource("2")]( [ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20"), ExtResource("21"), ExtResource("22"), ExtResource("23"), ExtResource("24"), ExtResource("25"), ExtResource("26"), ExtResource("28"), ExtResource("29"), ExtResource("30"), ExtResource("31")] )
+weights = PackedFloat32Array(1, 2, 5, 10, 10, 12, 15, 12, 12, 8, 7, 1, 8, 5, 6, 6, 6, 4, 4, 2, 0.8, 4, 0.45, 0.15, 0.3, 0.1225, 0.3, 0.1225)
 guaranteed_item = ExtResource("14")
 guaranteed_items = Array[ExtResource("2")]([ExtResource("27")])

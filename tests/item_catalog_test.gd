@@ -10,8 +10,10 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var catalog: Dictionary = Loot.catalog()
-	check(catalog.size() == 41, "The starter catalog contains forty functional items plus the preserved currency definition")
+	check(catalog.size() == 84, "The weapon expansion contains exactly 83 noncurrency definitions plus preserved currency")
 	var rarities := {}
+	var groups := {}
+	var disabled := 0
 	var obtainable := {"gold_coin": true}
 	var models := {}
 	for id: String in catalog:
@@ -20,6 +22,10 @@ func _run() -> void:
 		check(definition.icon != null and ResourceLoader.exists(definition.icon.resource_path), "%s has an importable authored icon" % id)
 		check(definition.rarity in VaultItemDefinition.RARITIES and definition.stack_limit >= 1 and definition.stack_limit <= 999, "%s has a valid rarity and bounded stack limit" % id)
 		rarities[definition.rarity] = true
+		groups[definition.catalog_group] = int(groups.get(definition.catalog_group, 0)) + 1
+		if not definition.obtainable:
+			disabled += 1
+			check(not definition.can_equip() and definition.acquisition_sources.is_empty() and definition.visual_scene == null and definition.model_art_status == "missing", "%s is explicitly unavailable without an invented usable model or acquisition" % id)
 		if definition.category == "equipment":
 			check(String(definition.slot) in VaultItemDefinition.EQUIPMENT_SLOTS and definition.stack_limit == 1 and definition.required_level in range(1, 31), "%s has an equipment slot, one-per-instance stack and level requirement" % id)
 			check(definition.weapon_style in [&"", &"sword", &"staff"], "%s uses only an existing weapon family" % id)
@@ -31,6 +37,7 @@ func _run() -> void:
 		described.base_stats["test_mutation"] = 999
 		described.salvage["test_mutation"] = 999
 		check(not definition.base_stats.has("test_mutation") and not definition.salvage.has("test_mutation") and described.quantity == 3, "%s snapshots cannot mutate shared definition data" % id)
+	check(groups == {"weapon": 50, "armor": 10, "accessory": 5, "material": 12, "consumable": 3, "trophy": 3, "currency": 1} and disabled == 26, "Full batch category counts and 26 unavailable weapon families match the reviewed scope")
 	check(rarities.size() == 7, "All seven requested rarity tiers are represented")
 	check(not catalog.sealed_reliquary.identified_by_default and catalog.sealed_reliquary.category == "equipment", "The mysterious artifact supports hidden rolled equipment properties")
 	check(catalog.stamina_draught.stamina_restore == 40.0 and catalog.mooncap_tonic.healing == 35.0 and catalog.sunfruit_elixir.healing == 60.0, "Consumable definitions retain existing healing and add stamina supplies")
@@ -93,6 +100,6 @@ func _run() -> void:
 		for definition: VaultItemDefinition in table.guaranteed_items:
 			obtainable[String(definition.id)] = true
 	for id: String in catalog:
-		check(obtainable.has(id), "%s has a loot, recipe or merchant acquisition path" % id)
+		check(obtainable.has(id) if catalog[id].obtainable else not obtainable.has(id), "%s acquisition availability matches actual loot, recipe and merchant sources" % id)
 	check(Loot.table_for(&"boss").guaranteed_item.id == &"rootwarden_heart", "Rootwarden trophy reward remains guaranteed")
 	finish()

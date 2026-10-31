@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/items/sword.svg" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/items/sword.tscn" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"fernsteel_falchion"
+label = "Fernsteel Falchion"
+description = "A broad temple blade forged around a fern-shaped channel. Adds modest health."
+category = "equipment"
+rarity = "uncommon"
+value = 65
+quantity_min = 1
+quantity_max = 1
+weapon_style = &"sword"
+stack_limit = 1
+slot = &"main_weapon"
+required_level = 5
+base_stats = {"damage_bonus": 0.045, "max_health": 3}
+salvage = {"iron_ore": 2, "root_fiber": 1}
+special_effects = Array[String]([])
+icon = ExtResource("2")
+visual_scene = ExtResource("3")
+catalog_group = "weapon"
+weapon_family = "sword"
+combat_supported = true
+obtainable = true
+lore = "Its makers believed the fern pattern would guide a lost spirit back along the blade."
+acquisition_sources = Array[String](["merchant:equipment"])
+icon_art_status = "original_family_icon"
+model_art_status = "shared_family_placeholder"
+display_animation = {"rotation_speed": 0.22, "bob_height": 0.0, "bob_speed": 1.2}
+aura_profile = &"none"

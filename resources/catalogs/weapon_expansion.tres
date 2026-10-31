@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="VaultItemCatalogData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_catalog_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+item_ids = PackedStringArray("lanternwatch_blade", "mossrunner_sabre", "fernsteel_falchion", "briar_sentinel", "temple_echo_sword", "duskglass_edge", "rootseal_longsword", "pilgrims_verdict", "emerald_covenant", "sporewood_focus", "creeklight_staff", "lanternroot_crook", "bloomkeeper_staff", "whispering_arch_staff", "mistveil_crook", "temple_pulse_staff", "elderroot_conductor", "fallen_arch_greatsword", "warden_gatebreaker", "thornbound_claymore", "deepstone_cleaver", "verdant_judgement", "twin_mooncaps", "rootshadow_fangs", "bronze_mantis_blades", "lantern_thief_knives", "creekwarden_spear", "pilgrim_rootlance", "temple_reed_spear", "emerald_sentinel_pike", "starflower_partisan", "mossstring_bow", "sporehunter_recurve", "sanctuary_longbow", "glowfern_bow", "rootwhisper_arcbow", "mooncap_harvester", "thornreaper", "broken_ritual_scythe", "emerald_mourning", "ancient_seal_gauntlets", "crystal_knuckle_focus", "rootpulse_gauntlets")
