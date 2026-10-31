@@ -6,7 +6,7 @@ const Portal = preload("res://scenes/world/portal.tscn")
 const TrainingTarget = preload("res://scenes/world/training_target.tscn")
 
 var display_name := "THE SUNKEN VAULT"
-var objective := "Test your blade • Return through the gold archway"
+var objective := "North: combat trials • South: Sanctuary"
 
 func _ready() -> void:
 	var kit := Architecture.new(self)
@@ -47,10 +47,16 @@ func _ready() -> void:
 	portal.entry_id = &"from_dungeon"
 	portal.title = "RETURN TO SANCTUARY"
 	add_child(portal)
-	kit.label("THE FIRST CHAMBER", Vector3(0, 3.6, -11.7), 36, Color("b9c7c0"))
-	kit.label("A QUIET ECHO OF WHAT LIES BELOW", Vector3(0, 2.9, -11.6), 18, Color("91aeae"))
+	var arena_portal := Portal.instantiate()
+	arena_portal.position = Vector3(0, 0, -9.5)
+	arena_portal.destination = &"combat_arena"
+	arena_portal.entry_id = &"from_dungeon"
+	arena_portal.title = "ENTER THE PROVING GROUNDS"
+	add_child(arena_portal)
 	for z in [1.0, 3.0, 5.0, 7.0]:
 		kit.box(Vector3(0, 0.045, z), Vector3(2.8, 0.03, 1.8), "stone")
 
-func get_spawn_transform(_entry_id: StringName) -> Transform3D:
+func get_spawn_transform(entry_id: StringName) -> Transform3D:
+	if entry_id == &"from_arena":
+		return Transform3D(Basis(Vector3.UP, PI), Vector3(0, 0.15, -6.4))
 	return Transform3D(Basis.IDENTITY, Vector3(0, 0.15, 5.7))

@@ -22,10 +22,14 @@ var stamina := 100.0
 var max_stamina := 100.0
 var interaction := ""
 var has_target := false
-var message := "Welcome, Wayfarer. The gate awaits."
+var message := "Tap to strike · Hold HEAVY to charge · Equip either weapon"
 var message_remaining := 5.0
 var transition_alpha := 1.0
 var input_enabled := true
+var displayed_health := 100.0
+var displayed_stamina := 100.0
+var combat_snapshot: Dictionary = {}
+var damage_flash := 0.0
 
 var _joystick_finger := -1
 var _swipe_finger := -1
@@ -45,12 +49,30 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	if message_remaining > 0.0:
-		message_remaining = maxf(0.0, message_remaining - delta)
-		_redraw_elapsed += delta
-		if _redraw_elapsed >= 0.05:
-			_redraw_elapsed = 0.0
-			queue_redraw()
+	message_remaining = maxf(0.0, message_remaining - delta)
+	damage_flash = maxf(0.0, damage_flash - delta)
+	displayed_health = lerpf(displayed_health, health, 1.0 - exp(-12.0 * delta))
+	displayed_stamina = lerpf(displayed_stamina, stamina, 1.0 - exp(-12.0 * delta))
+	_redraw_elapsed += delta
+	# Smooth feedback at a modest update rate; no UI animation needs a 60Hz redraw.
+	if _redraw_elapsed >= 1.0 / 30.0:
+		_redraw_elapsed = 0.0
+		queue_redraw()
+
+
+func update_stats(current_health: float, health_limit: float, current_stamina: float, stamina_limit: float) -> void:
+	if current_health < health:
+		damage_flash = 0.34
+	health = current_health
+	max_health = health_limit
+	stamina = current_stamina
+	max_stamina = stamina_limit
+	queue_redraw()
+
+
+func update_combat(snapshot: Dictionary) -> void:
+	combat_snapshot = snapshot.duplicate()
+	queue_redraw()
 
 
 func _on_resized() -> void:
@@ -70,12 +92,18 @@ func _on_resized() -> void:
 
 
 func reset_touches() -> void:
+	var held_heavy := _pressed(&"heavy_attack")
+	var held_defense := _pressed(&"defense")
 	_joystick_finger = -1
 	_swipe_finger = -1
 	_touch_roles.clear()
 	_mouse_action = &""
 	_stick = Vector2.ZERO
 	InputHub.set_touch_move(Vector2.ZERO)
+	if held_heavy:
+		_release_action(&"heavy_attack", true)
+	if held_defense:
+		_release_action(&"defense")
 	queue_redraw()
 
 
@@ -85,7 +113,10 @@ func _notification(what: int) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if not input_enabled or not InputHub.controls_enabled:
+	# Releases are processed even if the game became disabled between press/release.
+	var releasing_touch: bool = event is InputEventScreenTouch and (not event.pressed or event.canceled)
+	var releasing_mouse: bool = event is InputEventMouseButton and not event.pressed
+	if (not input_enabled or not InputHub.controls_enabled) and not releasing_touch and not releasing_mouse:
 		return
 	if event is InputEventScreenTouch:
 		_handle_touch(event)
@@ -101,9 +132,11 @@ func _input(event: InputEvent) -> void:
 				_activate(_mouse_action)
 				get_viewport().set_input_as_handled()
 		else:
+			var released_action := _mouse_action
 			if _mouse_action != &"":
 				get_viewport().set_input_as_handled()
 			_mouse_action = &""
+			_release_action(released_action)
 		queue_redraw()
 
 
@@ -111,6 +144,7 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 	var point := _local_point(event.position)
 	if not event.pressed or event.canceled:
 		if _touch_roles.has(event.index):
+			var released_action: StringName = _touch_roles[event.index]
 			if event.index == _joystick_finger:
 				_joystick_finger = -1
 				_stick = Vector2.ZERO
@@ -118,13 +152,16 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 			if event.index == _swipe_finger:
 				_swipe_finger = -1
 			_touch_roles.erase(event.index)
+			_release_action(released_action, event.canceled)
 			get_viewport().set_input_as_handled()
 		queue_redraw()
 		return
 	var action := _action_at(point)
 	if action != &"":
+		var already_held := _pressed(action)
 		_touch_roles[event.index] = action
-		_activate(action)
+		if not already_held or (action != &"heavy_attack" and action != &"defense"):
+			_activate(action)
 	elif point.distance_to(_joystick_center()) <= 100.0 and _joystick_finger < 0:
 		_joystick_finger = event.index
 		_touch_roles[event.index] = &"joystick"
@@ -166,7 +203,19 @@ func _update_stick(point: Vector2) -> void:
 func _activate(action: StringName) -> void:
 	if action == &"interact" and interaction.is_empty():
 		return
-	InputHub.request_action(action)
+	match action:
+		&"heavy_attack": InputHub.request_action(&"heavy_start")
+		&"defense": InputHub.request_action(&"defense_start")
+		_: InputHub.request_action(action)
+
+
+func _release_action(action: StringName, canceled: bool = false) -> void:
+	# Two fingers on one held control must not release each other's action.
+	if _pressed(action):
+		return
+	match action:
+		&"heavy_attack": InputHub.request_action(&"heavy_cancel" if canceled else &"heavy_release")
+		&"defense": InputHub.request_action(&"defense_release")
 
 
 func _is_swipe_area(point: Vector2) -> bool:
@@ -181,32 +230,41 @@ func _button_centers() -> Dictionary:
 	var right := size.x - _safe_inset.x
 	var bottom := size.y - _safe_inset.y
 	return {
-		&"primary_attack": Vector2(right - 99.0, bottom - 170.0),
-		&"dodge": Vector2(right - 198.0, bottom - 105.0),
-		&"skill_one": Vector2(right - 202.0, bottom - 235.0),
-		&"skill_two": Vector2(right - 118.0, bottom - 294.0),
-		&"interact": Vector2(right - 277.0, bottom - 168.0),
+		&"primary_attack": Vector2(right - 90.0, bottom - 150.0),
+		&"heavy_attack": Vector2(right - 105.0, bottom - 265.0),
+		&"dodge": Vector2(right - 198.0, bottom - 92.0),
+		&"defense": Vector2(right - 206.0, bottom - 190.0),
+		&"skill_one": Vector2(right - 290.0, bottom - 265.0),
+		&"skill_two": Vector2(right - 210.0, bottom - 348.0),
+		&"target_lock": Vector2(right - 330.0, bottom - 185.0),
+		&"interact": Vector2(right - 292.0, bottom - 104.0),
 	}
 
 
 func _button_radius(action: StringName) -> float:
 	if action == &"primary_attack":
-		return 49.0
-	if action == &"dodge":
-		return 36.0
-	return 30.0
+		return 44.0
+	if action in [&"dodge", &"defense", &"heavy_attack"]:
+		return 35.0
+	return 32.0
 
 
 func _camera_rect() -> Rect2:
-	return Rect2(size.x - 207.0 - _safe_inset.x, 200.0 + _safe_inset.y, 174.0, 51.0)
+	return Rect2(size.x - 207.0 - _safe_inset.x, 200.0 + _safe_inset.y, 174.0, 62.0)
+
+
+func _weapon_rect() -> Rect2:
+	return Rect2(Vector2(31.0, 174.0) + _safe_inset, Vector2(284.0, 62.0))
 
 
 func _action_at(point: Vector2) -> StringName:
 	if _camera_rect().has_point(point):
 		return &"camera_toggle"
+	if _weapon_rect().has_point(point):
+		return &"weapon_swap"
 	var centers := _button_centers()
 	for action: StringName in centers:
-		if point.distance_to(centers[action]) < _button_radius(action) + 6.0:
+		if point.distance_to(centers[action]) < _button_radius(action) + 4.0:
 			return action
 	return &""
 
@@ -224,7 +282,12 @@ func _draw() -> void:
 	_draw_camera_button()
 	_draw_joystick()
 	_draw_action_buttons()
+	_draw_weapon()
+	_draw_combat_status()
 	_draw_prompts()
+	if damage_flash > 0.0:
+		var alpha := damage_flash / 0.34 * 0.28
+		draw_rect(Rect2(Vector2.ZERO, size), Color(0.72, 0.08, 0.035, alpha), false, 14.0)
 	if transition_alpha > 0.001:
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0.018, 0.035, 0.045, transition_alpha))
 		if transition_alpha > 0.5:
@@ -237,10 +300,10 @@ func _draw_identity() -> void:
 	_diamond(origin + Vector2(22.0, 25.0), 7.0, GOLD)
 	_text("VAULTBOUND", origin + Vector2(40.0, 31.0), 20, IVORY)
 	_text("WAYFARER  /  01", origin + Vector2(17.0, 53.0), 11, MUTED)
-	_bar(origin + Vector2(17.0, 72.0), 250.0, health / maxf(1.0, max_health), HEALTH)
+	_bar(origin + Vector2(17.0, 72.0), 250.0, displayed_health / maxf(1.0, max_health), HEALTH)
 	_text("HEALTH", origin + Vector2(17.0, 68.0), 10, IVORY)
 	_text("%d / %d" % [health, max_health], origin + Vector2(267.0, 68.0), 10, IVORY, false, true)
-	_bar(origin + Vector2(17.0, 108.0), 250.0, stamina / maxf(1.0, max_stamina), TEAL)
+	_bar(origin + Vector2(17.0, 108.0), 250.0, displayed_stamina / maxf(1.0, max_stamina), HEALTH if stamina < 24.0 else TEAL)
 	_text("STAMINA", origin + Vector2(17.0, 102.0), 10, IVORY)
 	_text("%d / %d" % [stamina, max_stamina], origin + Vector2(267.0, 102.0), 10, IVORY, false, true)
 
@@ -278,8 +341,8 @@ func _draw_camera_button() -> void:
 	draw_rect(Rect2(icon - Vector2(9.0, 6.0), Vector2(18.0, 12.0)), GOLD, false, 1.5)
 	draw_circle(icon, 3.0, GOLD, false, 1.5, true)
 	draw_line(icon + Vector2(-5.0, -9.0), icon + Vector2(4.0, -9.0), GOLD, 2.0, true)
-	_text("CHANGE VIEW  ·  C", rect.position + Vector2(41.0, 18.0), 9, MUTED)
-	_text(camera_mode, rect.position + Vector2(41.0, 36.0), 12, IVORY)
+	_text("CHANGE VIEW" if OS.has_feature("mobile") else "CHANGE VIEW  ·  C", rect.position + Vector2(41.0, 22.0), 9, MUTED)
+	_text(camera_mode, rect.position + Vector2(41.0, 42.0), 12, IVORY)
 
 
 func _draw_joystick() -> void:
@@ -302,28 +365,87 @@ func _draw_action_buttons() -> void:
 		var center: Vector2 = centers[action]
 		var radius := _button_radius(action)
 		var primary := action == &"primary_attack"
+		var cooldown := _ability_cooldown(action)
 		var available := action != &"interact" or not interaction.is_empty()
-		var tint := GOLD if primary else IVORY
+		available = available and cooldown <= 0.0 and input_enabled
+		var tint := GOLD if primary or action == &"heavy_attack" else IVORY
+		if action == &"target_lock" and bool(combat_snapshot.get("target_locked", false)):
+			tint = TEAL
+		if action == &"defense" and bool(combat_snapshot.get("blocking", false)):
+			tint = TEAL
 		if not available:
-			tint = Color(MUTED, 0.4)
+			tint = Color(MUTED, 0.5)
 		var fill := Color(0.11, 0.26, 0.27, 0.95) if _pressed(action) else PANEL
 		draw_circle(center, radius, fill, true, -1.0, true)
-		draw_arc(center, radius, 0.0, TAU, 48, Color(tint, 0.85 if primary else 0.45), 1.5, true)
+		draw_arc(center, radius, 0.0, TAU, 48, Color(tint, 0.85 if primary else 0.55), 1.5, true)
 		if primary:
 			draw_arc(center, radius - 5.0, 0.0, TAU, 48, Color(GOLD, 0.25), 1.0, true)
-		_draw_icon(action, center - Vector2(0.0, 5.0), tint)
-		var caption := ""
-		match action:
-			&"primary_attack": caption = "ATTACK"
-			&"dodge": caption = "DODGE"
-			&"skill_one": caption = "SKILL I"
-			&"skill_two": caption = "SKILL II"
-			&"interact": caption = "USE"
-		_text(caption, center + Vector2(0.0, radius + 17.0), 10, tint, true)
-		if action == &"skill_one" or action == &"skill_two":
-			_text("SOON", center + Vector2(0.0, 17.0), 8, MUTED, true)
+		if cooldown > 0.0:
+			_text("%.1f" % cooldown, center + Vector2(0, 6), 18, IVORY, true)
+		else:
+			_draw_icon(action, center - Vector2(0.0, 4.0), tint)
+		var caption := _action_caption(action)
+		_text(caption, center + Vector2(0.0, radius + 16.0), 10, tint, true)
+		if action in [&"heavy_attack", &"defense"]:
+			_text("HOLD", center + Vector2(0.0, 22.0), 8, MUTED, true)
 		elif primary:
-			_text("STRIKE", center + Vector2(0.0, 27.0), 9, GOLD, true)
+			_text("STRIKE", center + Vector2(0.0, 26.0), 9, GOLD, true)
+		if action == &"heavy_attack":
+			var charge: float = float(combat_snapshot.get("charge_ratio", 0.0))
+			if charge > 0.0:
+				draw_arc(center, radius + 3.0, -PI * 0.5, -PI * 0.5 + TAU * charge, 40, TEAL, 3.0, true)
+
+
+func _ability_cooldown(action: StringName) -> float:
+	if action == &"skill_one":
+		return float(combat_snapshot.get("ability_one_cooldown", 0.0))
+	if action == &"skill_two":
+		return float(combat_snapshot.get("ability_two_cooldown", 0.0))
+	return 0.0
+
+
+func _action_caption(action: StringName) -> String:
+	match action:
+		&"primary_attack": return "ATTACK"
+		&"heavy_attack": return "HEAVY"
+		&"dodge": return "DODGE"
+		&"defense": return "WARD" if _is_staff() else "BLOCK"
+		&"skill_one": return String(combat_snapshot.get("ability_one_label", "ABILITY I")).to_upper()
+		&"skill_two": return String(combat_snapshot.get("ability_two_label", "ABILITY II")).to_upper()
+		&"target_lock": return "UNLOCK" if bool(combat_snapshot.get("target_locked", false)) else "LOCK"
+		&"interact": return "USE"
+	return ""
+
+
+func _is_staff() -> bool:
+	return String(combat_snapshot.get("weapon_name", "")).to_lower().contains("staff")
+
+
+func _draw_weapon() -> void:
+	var rect := _weapon_rect()
+	_panel(rect, Color(0.08, 0.21, 0.23, 0.95) if _pressed(&"weapon_swap") else PANEL)
+	_text("EQUIPPED  ·  TAP TO SWITCH" if OS.has_feature("mobile") else "EQUIPPED  ·  R TO SWITCH", rect.position + Vector2(16, 18), 9, MUTED)
+	_text(String(combat_snapshot.get("weapon_name", "Sword & Shield")).to_upper(), rect.position + Vector2(16, 43), 17, IVORY)
+	_text("⇄", rect.end - Vector2(25, 20), 22, GOLD, true)
+
+
+func _draw_combat_status() -> void:
+	var origin := Vector2(32.0, 258.0) + _safe_inset
+	var state := String(combat_snapshot.get("state", "idle"))
+	var charge: float = float(combat_snapshot.get("charge_ratio", 0.0))
+	if charge > 0.0:
+		_text("RELEASE HEAVY TO STRIKE", origin, 11, GOLD)
+		_bar(origin + Vector2(0, 8), 210.0, charge, TEAL)
+	elif bool(combat_snapshot.get("blocking", false)):
+		_text("WARD RAISED" if _is_staff() else "SHIELD RAISED", origin, 11, TEAL)
+	elif state != "idle":
+		_text(state.to_upper().replace("_", " "), origin, 11, MUTED)
+	var combo := int(combat_snapshot.get("combo_index", 0))
+	if combo > 0 and not _is_staff():
+		for i in range(3):
+			_diamond(origin + Vector2(8.0 + i * 24.0, 36.0), 5.0, GOLD if i < combo else Color(MUTED, 0.3))
+	if stamina < 24.0:
+		_text("LOW STAMINA", origin + Vector2(0, 61), 11, HEALTH)
 
 
 func _draw_icon(action: StringName, center: Vector2, color: Color) -> void:
@@ -333,6 +455,19 @@ func _draw_icon(action: StringName, center: Vector2, color: Color) -> void:
 			draw_colored_polygon(blade, color)
 			draw_line(center + Vector2(-13, 5), center + Vector2(2, 16), color, 3.0, true)
 			draw_line(center + Vector2(-6, 12), center + Vector2(-12, 22), color, 4.0, true)
+		&"heavy_attack":
+			_diamond(center + Vector2(0, -2), 13.0, color, false)
+			draw_line(center + Vector2(0, -19), center + Vector2(0, 14), color, 3.0, true)
+			draw_line(center + Vector2(-8, 9), center + Vector2(8, 9), color, 2.0, true)
+		&"defense":
+			var shield := PackedVector2Array([center + Vector2(-12, -14), center + Vector2(12, -14), center + Vector2(11, 3), center + Vector2(0, 13), center + Vector2(-11, 3), center + Vector2(-12, -14)])
+			draw_polyline(shield, color, 2.0, true)
+			if _is_staff():
+				_diamond(center + Vector2(0, -3), 5.0, color)
+		&"target_lock":
+			draw_arc(center, 11.0, 0.0, TAU, 24, color, 1.5, true)
+			for direction: Vector2 in [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]:
+				draw_line(center + direction * 8.0, center + direction * 17.0, color, 2.0, true)
 		&"dodge":
 			for offset: float in [-8.0, 4.0]:
 				draw_polyline(PackedVector2Array([center + Vector2(offset - 5, -8), center + Vector2(offset + 5, 0), center + Vector2(offset - 5, 8)]), color, 2.5, true)
@@ -365,10 +500,11 @@ func _draw_prompts() -> void:
 		draw_rect(rect, Color(0.02, 0.06, 0.07, 0.8 * alpha))
 		_text(message, Vector2(center_x, bottom - 86.0), 14, Color(IVORY, alpha), true)
 	if has_target:
-		_text("PRACTICE TARGET", Vector2(center_x, 153.0 + _safe_inset.y), 11, GOLD, true)
-	var tip := "WASD  Move    RMB  Look    J  Attack    Space  Dodge    F  Use    C  View"
+		var target_name := String(combat_snapshot.get("target_name", "TARGET LOCKED"))
+		_text(target_name.to_upper(), Vector2(center_x, 153.0 + _safe_inset.y), 11, GOLD, true)
+	var tip := "WASD Move  ·  J Attack  ·  K Hold heavy  ·  L Guard  ·  Q/E Abilities  ·  T Lock  ·  R Weapon  ·  C View"
 	if OS.has_feature("mobile"):
-		tip = "Drag left to move  ·  Swipe the world to look  ·  Tap USE at the gate"
+		tip = "Move + swipe + strike together  ·  Hold HEAVY to charge  ·  LOCK to focus a target"
 	_text(tip, Vector2(center_x, bottom - 21.0), 11, Color(IVORY, 0.7), true)
 
 

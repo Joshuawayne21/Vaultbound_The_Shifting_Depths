@@ -12,7 +12,17 @@ func bind_player(player: Node) -> void:
 	player.feedback.connect(show_message)
 	player.interaction_changed.connect(_on_interaction_changed)
 	player.target_changed.connect(_on_target_changed)
+	if player.has_signal("combat_changed"):
+		player.combat_changed.connect(_on_combat_changed)
 	_on_stats_changed(player.health, player.max_health, player.stamina, player.max_stamina)
+	surface.displayed_health = player.health
+	surface.displayed_stamina = player.stamina
+	if player.has_method("get_combat_snapshot"):
+		_on_combat_changed(player.get_combat_snapshot())
+	elif player.get("combat") != null and player.combat.has_method("snapshot"):
+		_on_combat_changed(player.combat.snapshot())
+	elif player.get("combat") != null and player.combat.has_method("get_snapshot"):
+		_on_combat_changed(player.combat.get_snapshot())
 
 
 func set_location(display_name: String, objective: String) -> void:
@@ -45,11 +55,7 @@ func set_input_enabled(enabled: bool) -> void:
 
 
 func _on_stats_changed(health: float, maximum_health: float, stamina: float, maximum_stamina: float) -> void:
-	surface.health = health
-	surface.max_health = maximum_health
-	surface.stamina = stamina
-	surface.max_stamina = maximum_stamina
-	surface.queue_redraw()
+	surface.update_stats(health, maximum_health, stamina, maximum_stamina)
 
 
 func _on_interaction_changed(label: String) -> void:
@@ -60,3 +66,7 @@ func _on_interaction_changed(label: String) -> void:
 func _on_target_changed(target: Node3D) -> void:
 	surface.has_target = is_instance_valid(target)
 	surface.queue_redraw()
+
+
+func _on_combat_changed(snapshot: Dictionary) -> void:
+	surface.update_combat(snapshot)

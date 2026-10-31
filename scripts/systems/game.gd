@@ -7,6 +7,7 @@ signal scene_changed(destination: StringName)
 const LEVELS := {
 	&"sanctuary": "res://scenes/world/sanctuary.tscn",
 	&"dungeon": "res://scenes/world/dungeon.tscn",
+	&"combat_arena": "res://scenes/world/combat_arena.tscn",
 }
 
 @onready var player: VaultPlayer = $Player
@@ -91,4 +92,5 @@ func _on_travel(destination: StringName, entry_id: StringName) -> void:
 
 func _on_respawn() -> void:
 	if not transitioning and current_location != &"":
-		change_location.call_deferred(current_location, &"default")
+		# Death always returns to the safe hub; falling only reloads the current area.
+		change_location.call_deferred(&"sanctuary" if player.health <= 0.0 else current_location, &"default")

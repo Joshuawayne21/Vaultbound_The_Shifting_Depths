@@ -13,10 +13,22 @@ var _phase := 0.0
 var _damage_flash := 0.0
 var _armor: StandardMaterial3D
 var _armor_color := Color("296672")
+var _sword: Node3D
+var _shield: Node3D
+var _staff: Node3D
+var _staff_crystal: MeshInstance3D
+var _ward: MeshInstance3D
+var _weapon_style: StringName = &"sword"
+var _combat_state: StringName = &"idle"
+var _combat_progress := 0.0
+var _combo_index := 0
+var _charge_ratio := 0.0
+var _blocking := false
 
 
 func _ready() -> void:
 	_build()
+	set_weapon(_weapon_style)
 
 
 func _material(color: Color, unshaded: bool = false) -> StandardMaterial3D:
@@ -107,19 +119,70 @@ func _build() -> void:
 		_box(arm, Vector3(0.38, 0.035, 0.40), Vector3(0, -0.075, 0), gold)
 
 	# Sword is attached to the right-hand pivot; the strike swings the entire arm.
-	_box(_right_arm, Vector3(0.075, 0.075, 0.30), Vector3(0, -0.60, -0.03), leather)
-	_box(_right_arm, Vector3(0.34, 0.08, 0.07), Vector3(0, -0.60, -0.20), gold)
-	var blade := _box(_right_arm, Vector3(0.11, 0.055, 0.78), Vector3(0, -0.60, -0.61), steel)
+	_sword = _pivot(Vector3.ZERO, _right_arm)
+	_sword.name = "Sword"
+	_box(_sword, Vector3(0.075, 0.075, 0.30), Vector3(0, -0.60, -0.03), leather)
+	_box(_sword, Vector3(0.34, 0.08, 0.07), Vector3(0, -0.60, -0.20), gold)
+	var blade := _box(_sword, Vector3(0.11, 0.055, 0.78), Vector3(0, -0.60, -0.61), steel)
 	blade.rotation.z = 0.12
-	var tip := _cylinder(_right_arm, 0.0, 0.08, 0.20, Vector3(0, -0.60, -1.10), steel, 4)
+	var tip := _cylinder(_sword, 0.0, 0.08, 0.20, Vector3(0, -0.60, -1.10), steel, 4)
 	tip.rotation.x = -PI * 0.5
-	_box(_left_arm, Vector3(0.08, 0.38, 0.36), Vector3(-0.14, -0.34, -0.03), gold)
-	_box(_left_arm, Vector3(0.09, 0.29, 0.27), Vector3(-0.17, -0.34, -0.03), _armor)
+	_shield = _pivot(Vector3(-0.12, -0.34, -0.06), _left_arm)
+	_shield.name = "Shield"
+	_box(_shield, Vector3(0.12, 0.65, 0.53), Vector3.ZERO, gold)
+	_box(_shield, Vector3(0.14, 0.53, 0.42), Vector3.ZERO, _armor)
+	_box(_shield, Vector3(0.16, 0.10, 0.44), Vector3.ZERO, gold)
+	var boss := _cylinder(_shield, 0.12, 0.12, 0.12, Vector3(-0.13, 0, 0), steel)
+	boss.rotation.z = PI / 2.0
+	_staff = _pivot(Vector3(0.0, -0.50, -0.05), _right_arm)
+	_staff.name = "MagicStaff"
+	_cylinder(_staff, 0.045, 0.06, 1.8, Vector3(0, 0.35, 0), leather)
+	for height in [-0.45, 0.15, 0.95]:
+		_cylinder(_staff, 0.07, 0.07, 0.08, Vector3(0, height, 0), gold)
+	_cylinder(_staff, 0.22, 0.065, 0.24, Vector3(0, 1.30, 0), gold)
+	_staff_crystal = _box(_staff, Vector3(0.24, 0.34, 0.24), Vector3(0, 1.51, 0), glow)
+	_staff_crystal.rotation = Vector3(0.4, 0.0, 0.7)
+	_create_ward(glow)
 
 	_cape = _box(_body, Vector3(0.62, 0.82, 0.065), Vector3(0, 0.91, 0.29), cape_material)
 	_cape.rotation.x = 0.14
 	_box(_body, Vector3(0.64, 0.08, 0.09), Vector3(0, 1.30, 0.26), gold)
 	_create_slash()
+
+
+func _create_ward(material: Material) -> void:
+	_ward = MeshInstance3D.new()
+	_ward.name = "WardRing"
+	var ring := TorusMesh.new()
+	ring.inner_radius = 0.52
+	ring.outer_radius = 0.56
+	ring.rings = 24
+	ring.ring_segments = 5
+	_ward.mesh = ring
+	_ward.material_override = material
+	_ward.position = Vector3(0, 1.1, -0.6)
+	_ward.rotation.x = PI * 0.5
+	_ward.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_ward.visible = false
+	add_child(_ward)
+
+
+func set_weapon(style: StringName) -> void:
+	_weapon_style = &"staff" if style == &"staff" else &"sword"
+	if not is_instance_valid(_sword):
+		return
+	_sword.visible = _weapon_style == &"sword"
+	_shield.visible = _weapon_style == &"sword"
+	_staff.visible = _weapon_style == &"staff"
+
+
+func set_combat_pose(state: StringName, progress: float, combo_index: int,
+		charge_ratio: float, blocking: bool) -> void:
+	_combat_state = state
+	_combat_progress = clampf(progress, 0.0, 1.0)
+	_combo_index = clampi(combo_index, 0, 2)
+	_charge_ratio = clampf(charge_ratio, 0.0, 1.0)
+	_blocking = blocking
 
 
 func _create_slash() -> void:
@@ -150,20 +213,71 @@ func animate(delta: float, speed: float, attack_time: float, dodge_time: float) 
 	_left_leg.rotation.x = step * 0.6
 	_right_leg.rotation.x = -step * 0.6
 	_left_arm.rotation.x = -step * 0.35
+	_left_arm.rotation.y = 0.0
+	_left_arm.rotation.z = 0.0
 	_right_arm.rotation.x = step * 0.35
 	_right_arm.rotation.y = 0.0
 	_right_arm.rotation.z = 0.0
-	_body.position.y = absf(sin(_phase)) * stride * 0.055
-	_body.rotation.x = -0.20 if dodge_time > 0.0 else 0.0
-	_body.position.y -= 0.16 if dodge_time > 0.0 else 0.0
+	_body.position = Vector3(0, absf(sin(_phase)) * stride * 0.055, 0)
+	_body.rotation = Vector3.ZERO
 	_cape.rotation.x = 0.14 + stride * 0.22 + sin(_phase * 0.6) * 0.04
-	_slash.visible = attack_time > 0.10 and attack_time < 0.28
-	if attack_time > 0.0:
-		var progress := 1.0 - attack_time / 0.36
-		_right_arm.rotation.y = lerpf(-1.2, 1.1, progress)
-		_right_arm.rotation.x = -0.35
-		_right_arm.rotation.z = -0.35
-		_slash.rotation.y = lerpf(-0.3, 0.3, progress)
+	_slash.visible = false
+	_ward.visible = _weapon_style == &"staff" and _blocking
+	_staff_crystal.rotation.y += delta * (0.7 + _charge_ratio * 4.0)
+	_staff_crystal.scale = Vector3.ONE * (1.0 + _charge_ratio * 0.45)
+	if _blocking:
+		_left_arm.rotation.x = -1.1
+		_left_arm.rotation.z = -0.65
+		_right_arm.rotation.x = -0.65 if _weapon_style == &"staff" else 0.1
+		_body.rotation.x = 0.12
+	elif _combat_state == &"charge" or _combat_state == &"charging":
+		_right_arm.rotation.x = -1.7 if _weapon_style == &"sword" else -0.35
+		_right_arm.rotation.z = -0.45
+		_left_arm.rotation.x = -0.8
+		_body.rotation.z = -0.09 * _charge_ratio
+	elif attack_time > 0.0 or _combat_state in [&"windup", &"active", &"recovery", &"attack"]:
+		var progress := _combat_progress
+		if _combat_state == &"idle":
+			progress = clampf(1.0 - attack_time / 0.36, 0.0, 1.0)
+		if _weapon_style == &"staff":
+			_right_arm.rotation.x = -0.35 - sin(progress * PI) * 0.9
+			_left_arm.rotation.x = -0.55 - sin(progress * PI) * 0.8
+			_left_arm.rotation.z = -0.6
+		else:
+			var swing := smoothstep(0.15, 0.65, progress)
+			match _combo_index:
+				0:
+					_right_arm.rotation.y = lerpf(-1.2, 1.1, swing)
+					_right_arm.rotation.x = -0.35
+					_right_arm.rotation.z = -0.35
+				1:
+					_right_arm.rotation.y = lerpf(1.2, -1.3, swing)
+					_right_arm.rotation.x = -0.6
+					_body.rotation.y = lerpf(0.2, -0.22, swing)
+				2:
+					_right_arm.rotation.x = lerpf(-2.1, 0.3, swing)
+					_right_arm.rotation.y = -0.25
+					_body.rotation.x = sin(progress * PI) * 0.22
+			_slash.visible = progress > 0.20 and progress < 0.63
+			_slash.rotation.y = lerpf(-0.45, 0.45, swing) * (-1.0 if _combo_index == 1 else 1.0)
+	if dodge_time > 0.0:
+		var progress := _combat_progress if _combat_state == &"dodge" else clampf(1.0 - dodge_time / 0.28, 0.0, 1.0)
+		_body.rotation.x = -TAU * progress
+		# Rotate about the waist rather than the feet to keep the roll above ground.
+		var center := Vector3(0, 0.78, 0)
+		_body.position = center - Basis(Vector3.RIGHT, _body.rotation.x) * center
+		_left_leg.rotation.x = -0.8
+		_right_leg.rotation.x = -0.8
+		_left_arm.rotation.x = -1.0
+		_right_arm.rotation.x = -1.0
+		_slash.visible = false
+		_ward.visible = false
+	elif _combat_state == &"stagger":
+		_body.rotation.x = -0.20 * sin(_combat_progress * PI)
+	elif _combat_state == &"dead":
+		_body.rotation.z = lerpf(0.0, 1.35, _combat_progress)
+		_slash.visible = false
+		_ward.visible = false
 	_damage_flash = maxf(0.0, _damage_flash - delta)
 	_armor.albedo_color = Color("e7d5ab") if _damage_flash > 0.0 else _armor_color
 

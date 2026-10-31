@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/enemy_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+archetype = &"golem"
+display_name = "Corrupted Golem"
+max_health = 240.0
+damage = 28.0
+armor = 0.15
+move_speed = 1.35
+detection_range = 8.0
+attack_range = 3.1
+preferred_range = 2.6
+leash_radius = 11.0
+patrol_radius = 1.2
+windup_time = 1.4
+recovery_time = 1.6
+attack_active_time = 0.3
+radial_attack = true
+hit_recovery = 0.15
+stagger_resistance = 0.65
+collision_radius = 0.7
+collision_height = 2.7
+label_height = 3.3
+accent_color = Color(0.64, 0.5, 0.89, 1)

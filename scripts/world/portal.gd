@@ -41,6 +41,18 @@ func _ready() -> void:
 	surface_mesh.rings = 12
 	_surface = _mesh(surface_mesh, Vector3(0, 2.2, 0), _surface_material)
 	_surface.scale = Vector3(1.0, 1.15, 0.035)
+	# The opaque veil must retract a camera behind it without blocking the player.
+	var occluder := StaticBody3D.new()
+	occluder.name = "CameraOccluder"
+	occluder.position = Vector3(0, 2.2, 0)
+	occluder.collision_layer = 8
+	occluder.collision_mask = 0
+	var camera_shape := CollisionShape3D.new()
+	var veil_bounds := BoxShape3D.new()
+	veil_bounds.size = Vector3(3.6, 4.3, 0.12)
+	camera_shape.shape = veil_bounds
+	occluder.add_child(camera_shape)
+	add_child(occluder)
 	_ring(Vector3(0, 2.2, 0.11), 1.14, 1.16, glow, Vector3(1, 1, 1.15))
 	_ring(Vector3(0, 2.2, 0.12), 0.66, 0.68, gold, Vector3(1, 1, 1.15))
 
@@ -79,7 +91,11 @@ func _process(delta: float) -> void:
 
 
 func get_prompt() -> String:
-	return "Return to Sanctuary" if destination == &"sanctuary" else "Enter the Shifting Depths"
+	match destination:
+		&"sanctuary": return "Return to Sanctuary"
+		&"combat_arena": return "Enter the Proving Grounds"
+		&"dungeon": return "Return to the Sunken Vault" if entry_id == &"from_arena" else "Enter the Sunken Vault"
+	return "Use the passage"
 
 
 func interact(_player: Node3D) -> void:

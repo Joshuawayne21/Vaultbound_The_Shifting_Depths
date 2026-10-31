@@ -1,8 +1,10 @@
 class_name VaultPlayer
 extends CharacterBody3D
-## One gameplay controller, independent of the active camera perspective.
+## Persistent locomotion and actor facade. Combat simulation lives in PlayerCombat.
+## Neither damage resolution nor action timing depends on the active camera.
 
 signal stats_changed(health: float, max_health: float, stamina: float, max_stamina: float)
+signal combat_changed(snapshot: Dictionary)
 signal feedback(message: String)
 signal interaction_changed(label: String)
 signal target_changed(target: Node3D)
@@ -11,73 +13,90 @@ signal respawn_requested
 const MOVE_SPEED := 4.8
 const ACCELERATION := 24.0
 const DODGE_SPEED := 10.0
-const DODGE_DURATION := 0.28
+const DODGE_DURATION := 0.32
 const ATTACK_RANGE := 2.8
-const ATTACK_DAMAGE := 25.0
+const ATTACK_DAMAGE := 22.0
 const ATTACK_COST := 8.0
 const DODGE_COST := 24.0
 
-var health := 100.0
-var max_health := 100.0
-var stamina := 100.0
-var max_stamina := 100.0
+var health_component := HealthComponent.new()
+var stamina_component := StaminaComponent.new()
+var combat: PlayerCombat
+var health: float:
+	get: return health_component.current
+	set(value): health_component.current = clampf(value, 0.0, max_health)
+var max_health: float:
+	get: return health_component.maximum
+	set(value): health_component.maximum = maxf(1.0, value)
+var stamina: float:
+	get: return stamina_component.current
+	set(value): stamina_component.current = clampf(value, 0.0, max_stamina)
+var max_stamina: float:
+	get: return stamina_component.maximum
+	set(value): stamina_component.maximum = maxf(1.0, value)
+var attack_cooldown: float:
+	get: return combat.attack_cooldown if combat != null else 0.0
+var attack_remaining: float:
+	get: return combat.attack_remaining() if combat != null else 0.0
+var dodge_cooldown: float:
+	get: return combat.dodge_cooldown if combat != null else 0.0
+var dodge_remaining: float:
+	get: return combat.dodge_remaining if combat != null else 0.0
+var invulnerable_remaining: float:
+	get: return combat.invulnerable_remaining if combat != null else 0.0
+	set(value):
+		if combat != null:
+			combat.invulnerable_remaining = value
+var weapon_name: String:
+	get: return combat.weapon.display_name if combat != null else "Sword & Shield"
+
 var target: Node3D
+var target_locked := false
 var camera_rig: Node3D
 var controls_enabled := true
 var interaction_target: Node3D
-var attack_cooldown := 0.0
-var dodge_cooldown := 0.0
-var dodge_remaining := 0.0
-var attack_remaining := 0.0
-var invulnerable_remaining := 0.0
-var _stamina_delay := 0.0
 var _gravity := 20.0
 var _facing := Vector3.FORWARD
-var _dodge_direction := Vector3.FORWARD
 var _interaction_label := ""
 var _previous_stats := Vector2(-1.0, -1.0)
 var _target_ring: MeshInstance3D
 var _recovery_requested := false
+var _hud_elapsed := 0.0
+var _damage_receipts: Dictionary = {}
 
 @onready var visual: Node3D = $Visual
-
 
 func _ready() -> void:
 	add_to_group("player")
 	floor_snap_length = 0.35
+	combat = PlayerCombat.new(self)
 	InputHub.action_requested.connect(request_action)
+	InputHub.controls_reset.connect(_on_input_reset)
 	_create_target_ring()
+	visual.set_weapon(combat.weapon.style)
 	_emit_stats()
 
-
 func _physics_process(delta: float) -> void:
-	attack_cooldown = maxf(0.0, attack_cooldown - delta)
-	dodge_cooldown = maxf(0.0, dodge_cooldown - delta)
-	attack_remaining = maxf(0.0, attack_remaining - delta)
-	invulnerable_remaining = maxf(0.0, invulnerable_remaining - delta)
-	_stamina_delay = maxf(0.0, _stamina_delay - delta)
-	if _stamina_delay <= 0.0 and health > 0.0:
-		stamina = minf(max_stamina, stamina + 23.0 * delta)
-
+	combat.tick(delta)
+	stamina_component.tick(delta, health > 0.0 and combat.state not in [&"blocking", &"charging", &"dodge"])
 	var movement := Vector3.ZERO
 	if controls_enabled and InputHub.controls_enabled and health > 0.0:
 		var stick := InputHub.get_move_vector()
-		if is_instance_valid(camera_rig):
-			movement = camera_rig.movement_direction(stick)
-		else:
-			movement = Vector3(stick.x, 0.0, stick.y)
-
-	if dodge_remaining > 0.0:
-		dodge_remaining = maxf(0.0, dodge_remaining - delta)
-		velocity.x = _dodge_direction.x * DODGE_SPEED
-		velocity.z = _dodge_direction.z * DODGE_SPEED
+		movement = camera_rig.movement_direction(stick) if is_instance_valid(camera_rig) else Vector3(stick.x, 0.0, stick.y)
+	if combat.state == &"dodge":
+		velocity.x = combat.dodge_direction.x * combat.dodge_speed
+		velocity.z = combat.dodge_direction.z * combat.dodge_speed
 	else:
-		var speed := MOVE_SPEED * (0.55 if attack_remaining > 0.0 else 1.0)
+		var speed := MOVE_SPEED * combat.movement_scale()
 		velocity.x = move_toward(velocity.x, movement.x * speed, ACCELERATION * delta)
 		velocity.z = move_toward(velocity.z, movement.z * speed, ACCELERATION * delta)
-		if movement.length_squared() > 0.01 and attack_remaining <= 0.0:
+		if target_locked and is_instance_valid(target) and CombatRules.has_line_of_sight(self, target) and combat.state in [&"idle", &"blocking", &"charging"]:
+			var toward := target.global_position - global_position
+			toward.y = 0.0
+			if toward.length_squared() > 0.001:
+				_facing = toward.normalized()
+		elif movement.length_squared() > 0.01 and combat.state == &"idle":
 			_facing = movement.normalized()
-
 	if is_on_floor():
 		velocity.y = -0.4
 	else:
@@ -86,148 +105,125 @@ func _physics_process(delta: float) -> void:
 	var local_facing := global_basis.inverse() * _facing
 	var facing_yaw := atan2(-local_facing.x, -local_facing.z)
 	visual.rotation.y = lerp_angle(visual.rotation.y, facing_yaw, 1.0 - exp(-18.0 * delta))
+	visual.set_combat_pose(combat.state, combat.animation_progress(), combat.combo_index, combat.charge_ratio, combat.state == &"blocking")
 	visual.animate(delta, Vector2(velocity.x, velocity.z).length(), attack_remaining, dodge_remaining)
 	_update_interaction()
 	_update_target_ring()
 	_emit_stats()
+	_hud_elapsed += delta
+	if _hud_elapsed >= 0.05:
+		_hud_elapsed = 0.0
+		combat_changed.emit(combat.snapshot())
 	if global_position.y < -8.0 and not _recovery_requested:
-		# A recovery request is handled centrally by the scene transition system.
 		_recovery_requested = true
 		set_controls_enabled(false)
 		respawn_requested.emit()
 
-
 func request_action(action: StringName) -> void:
+	# Releases/cancellations must be honored even after focus loss or travel disabled input.
+	if action in [&"input_cancel", &"heavy_cancel"]:
+		combat.release_controls()
+		return
+	if action == &"defense_release":
+		combat.request(action)
+		return
 	if not controls_enabled or not InputHub.controls_enabled or health <= 0.0:
 		return
-	match action:
-		&"primary_attack":
-			_primary_attack()
-		&"dodge":
-			_dodge()
-		&"interact":
-			_update_interaction()
-			if is_instance_valid(interaction_target):
-				interaction_target.interact(self)
-			else:
-				feedback.emit("Move closer to a portal to interact")
-		&"skill_one":
-			feedback.emit("Skill I · reserved for a later milestone")
-		&"skill_two":
-			feedback.emit("Skill II · reserved for a later milestone")
+	if action == &"interact":
+		if combat.state != &"idle":
+			return
+		_update_interaction()
+		if is_instance_valid(interaction_target):
+			interaction_target.interact(self)
+		else:
+			feedback.emit("Move closer to an object to interact")
+	else:
+		combat.request(action)
+	combat_changed.emit(combat.snapshot())
 
+func _on_input_reset() -> void:
+	if combat != null:
+		combat.release_controls()
 
 func _primary_attack() -> void:
-	if attack_cooldown > 0.0 or dodge_remaining > 0.0:
-		return
-	if stamina < ATTACK_COST:
-		feedback.emit("Catch your breath · stamina is low")
-		return
-	stamina -= ATTACK_COST
-	_stamina_delay = 0.6
-	attack_cooldown = 0.48
-	attack_remaining = 0.36
-	var selected := _find_attack_target()
-	if is_instance_valid(selected):
-		if target != selected:
-			target = selected
-			target_changed.emit(target)
-		var toward := selected.global_position - global_position
-		toward.y = 0.0
-		if toward.length_squared() > 0.001:
-			_facing = toward.normalized()
-		selected.take_hit(ATTACK_DAMAGE, global_position)
-		feedback.emit("Training strike · 25 damage")
-	_emit_stats()
-
-
-func _find_attack_target() -> Node3D:
-	var nearest: Node3D
-	var best_distance := ATTACK_RANGE
-	for candidate: Node in get_tree().get_nodes_in_group("combat_targets"):
-		if not candidate is Node3D or not candidate.has_method("take_hit"):
-			continue
-		var toward: Vector3 = candidate.global_position - global_position
-		if absf(toward.y) > 1.8:
-			continue
-		toward.y = 0.0
-		var distance := toward.length()
-		if distance > best_distance:
-			continue
-		# A generous forward cone helps touchscreen aiming without attacking behind.
-		if distance > 0.1 and _facing.dot(toward / distance) < 0.25:
-			continue
-		var ray := PhysicsRayQueryParameters3D.create(
-			global_position + Vector3.UP,
-			candidate.global_position + Vector3.UP,
-			1, [get_rid()])
-		if not get_world_3d().direct_space_state.intersect_ray(ray).is_empty():
-			continue
-		nearest = candidate
-		best_distance = distance
-	return nearest
-
+	combat.light_attack()
 
 func _dodge() -> void:
-	if dodge_cooldown > 0.0 or attack_remaining > 0.0:
-		return
-	if stamina < DODGE_COST:
-		feedback.emit("Dodge needs 24 stamina")
-		return
-	stamina -= DODGE_COST
-	_stamina_delay = 0.85
-	dodge_cooldown = 0.65
-	dodge_remaining = DODGE_DURATION
-	invulnerable_remaining = 0.24
-	var stick := InputHub.get_move_vector()
-	_dodge_direction = _facing
-	if stick.length_squared() > 0.01 and is_instance_valid(camera_rig):
-		_dodge_direction = camera_rig.movement_direction(stick).normalized()
-	_facing = _dodge_direction
-	_emit_stats()
+	combat.start_dodge()
 
+func select_target(value: Node3D, locked: bool = false) -> void:
+	target_locked = locked and is_instance_valid(value)
+	if target != value:
+		target = value
+		target_changed.emit(target)
+
+func receive_hit(packet: Dictionary) -> bool:
+	var amount := float(packet.get("damage", 0.0))
+	if not is_finite(amount) or amount <= 0.0 or health <= 0.0 or not controls_enabled or invulnerable_remaining > 0.0:
+		return false
+	var receipt := int(packet.get("attack_id", 0))
+	if receipt > 0:
+		if _damage_receipts.has(receipt):
+			return false
+		_damage_receipts[receipt] = true
+		if _damage_receipts.size() > 64:
+			_damage_receipts.erase(_damage_receipts.keys()[0])
+	var blocked := combat.state == &"blocking"
+	var incoming: Vector3 = packet.get("source_position", global_position)
+	var original_amount := amount
+	amount = combat.block_damage(amount, incoming)
+	blocked = blocked and amount < original_amount
+	health_component.damage(amount)
+	visual.flash_damage()
+	if health <= 0.0:
+		combat.kill()
+		if not _recovery_requested:
+			_recovery_requested = true
+			feedback.emit("The Sanctuary calls you home")
+			set_controls_enabled(false)
+			respawn_requested.emit()
+	elif not blocked:
+		combat.interrupt(maxf(0.16, float(packet.get("stagger", 0.0))))
+	_emit_stats()
+	return true
 
 func take_damage(amount: float) -> void:
-	if invulnerable_remaining > 0.0 or health <= 0.0 or amount <= 0.0:
-		return
-	health = maxf(0.0, health - amount)
-	visual.flash_damage()
-	_emit_stats()
-	if health <= 0.0:
-		feedback.emit("The Sanctuary calls you home")
-		set_controls_enabled(false)
-		respawn_requested.emit()
+	receive_hit({"damage": amount, "attack_id": CombatRules.next_attack_id(), "source_position": global_position, "kind": &"environment"})
 
+func heal(amount: float) -> float:
+	var restored := health_component.heal(amount)
+	_emit_stats()
+	return restored
+
+func restore_stamina(amount: float) -> float:
+	var restored := clampf(amount, 0.0, max_stamina - stamina)
+	stamina += restored
+	_emit_stats()
+	return restored
 
 func set_controls_enabled(enabled: bool) -> void:
 	controls_enabled = enabled
 	if not enabled:
 		velocity = Vector3.ZERO
-		dodge_remaining = 0.0
-
+		if combat != null:
+			combat.cancel_action()
 
 func reset_for_spawn(spawn_transform: Transform3D) -> void:
 	global_transform = spawn_transform
 	_recovery_requested = false
 	velocity = Vector3.ZERO
-	dodge_remaining = 0.0
-	attack_remaining = 0.0
-	attack_cooldown = 0.0
-	dodge_cooldown = 0.0
-	invulnerable_remaining = 0.5
+	combat.reset_for_spawn()
 	_facing = -spawn_transform.basis.z.normalized()
 	visual.rotation.y = 0.0
-	# Scene-specific references must never survive freeing the old world.
-	target = null
+	select_target(null, false)
 	interaction_target = null
 	_interaction_label = ""
-	target_changed.emit(null)
 	interaction_changed.emit("")
+	_damage_receipts.clear()
 	if health <= 0.0:
-		health = max_health
-		stamina = max_stamina
+		health_component.reset()
+		stamina_component.reset()
 	_emit_stats()
-
 
 func _update_interaction() -> void:
 	interaction_target = null
@@ -268,14 +264,13 @@ func _create_target_ring() -> void:
 
 
 func _update_target_ring() -> void:
-	if is_instance_valid(target) and global_position.distance_to(target.global_position) < 12.0:
+	if is_instance_valid(target) and float(target.get("health")) > 0.0 and global_position.distance_to(target.global_position) < 14.0:
 		_target_ring.global_position = target.global_position + Vector3(0.0, 0.07, 0.0)
 		_target_ring.visible = true
 	else:
 		_target_ring.visible = false
 		if target != null:
-			target = null
-			target_changed.emit(null)
+			select_target(null, false)
 
 
 func _emit_stats() -> void:

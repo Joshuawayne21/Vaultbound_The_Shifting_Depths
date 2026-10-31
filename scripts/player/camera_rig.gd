@@ -116,7 +116,7 @@ func _clear_position(anchor: Vector3, desired: Vector3) -> Vector3:
 	query.shape = _collision_sphere
 	query.transform = Transform3D(Basis.IDENTITY, anchor)
 	query.motion = motion
-	query.collision_mask = 1
+	query.collision_mask = 1 | 8 # World plus camera-only portal veils.
 	query.collide_with_areas = false
 	query.margin = 0.03
 	if follow_target is CollisionObject3D:

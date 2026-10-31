@@ -15,6 +15,7 @@ var _touch_move := Vector2.ZERO
 var _look_delta := Vector2.ZERO
 var _mouse_looking := false
 var _has_focus := true
+var _held: Dictionary = {}
 
 const ACTION_KEYS := {
 	&"move_left": [KEY_A, KEY_LEFT],
@@ -27,6 +28,10 @@ const ACTION_KEYS := {
 	&"skill_two": [KEY_E],
 	&"camera_toggle": [KEY_C, KEY_TAB],
 	&"interact": [KEY_F],
+	&"heavy_attack": [KEY_K],
+	&"defense": [KEY_L],
+	&"target_lock": [KEY_T],
+	&"weapon_swap": [KEY_R],
 }
 
 func _ready() -> void:
@@ -58,19 +63,49 @@ func consume_look_delta() -> Vector2:
 	return result
 
 func request_action(action: StringName) -> void:
-	if controls_enabled and _has_focus:
+	if action == &"heavy_cancel":
+		_held.erase(&"heavy_start")
 		action_requested.emit(action)
+		return
+	if action == &"defense_release" or action == &"heavy_release":
+		var start: StringName = &"defense_start" if action == &"defense_release" else &"heavy_start"
+		if not _held.has(start):
+			return
+		_held.erase(start)
+		# Loss of focus/disabled gameplay cancels a charge instead of discharging it.
+		action_requested.emit(action if controls_enabled and _has_focus else (&"heavy_cancel" if start == &"heavy_start" else &"defense_release"))
+		return
+	if not controls_enabled or not _has_focus:
+		return
+	if action == &"heavy_start" or action == &"defense_start":
+		if _held.has(action):
+			return
+		_held[action] = true
+	action_requested.emit(action)
+
+func is_action_held(action: StringName) -> bool:
+	return _held.has(action)
 
 func reset_controls() -> void:
 	_touch_move = Vector2.ZERO
 	_look_delta = Vector2.ZERO
 	_mouse_looking = false
+	_held.clear()
+	action_requested.emit(&"input_cancel")
 	controls_reset.emit()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo:
+	if event is InputEventKey and not event.echo:
 		for action: StringName in ACTION_KEYS:
-			if not String(action).begins_with("move_") and event.is_action_pressed(action):
+			if action == &"heavy_attack" or action == &"defense":
+				if event.is_action(action):
+					if action == &"heavy_attack":
+						request_action(&"heavy_start" if event.pressed else &"heavy_release")
+					else:
+						request_action(&"defense_start" if event.pressed else &"defense_release")
+					get_viewport().set_input_as_handled()
+					return
+			elif not String(action).begins_with("move_") and event.is_action_pressed(action):
 				request_action(action)
 				get_viewport().set_input_as_handled()
 				return
@@ -83,8 +118,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		queue_look(event.relative)
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_APPLICATION_PAUSED:
 		_has_focus = false
 		reset_controls()
-	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
+	elif what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_APPLICATION_RESUMED:
 		_has_focus = true
