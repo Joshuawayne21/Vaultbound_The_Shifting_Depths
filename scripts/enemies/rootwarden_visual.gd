@@ -56,6 +56,7 @@ func _branch(start: Vector3, end: Vector3, width: float, mat: Material, parent: 
 
 func _build() -> void:
 	_bark = _mat(_bark_color)
+	_bark.roughness = 0.82
 	var light_bark := _mat(Color("816347"))
 	var dark := _mat(Color("302f28"))
 	var leaf := _mat(Color("2b7450"))
@@ -104,13 +105,17 @@ func animate(delta: float, speed: float, state: StringName, attack: StringName, 
 	_phase += delta * (1.5 + speed * 2.0)
 	_hit_flash = maxf(0.0, _hit_flash - delta)
 	_bark.albedo_color = Color("d3ca83") if _hit_flash > 0.0 else _bark_color
-	_glow.albedo_color = Color("e7f59d") if fury else Color("87f9ad")
+	var living_glow := Color("e7f59d") if fury else Color("87f9ad")
+	# The emerald core warms before a strike while keeping the arena's orange
+	# warning silhouette distinct from safe magical scenery.
+	_glow.albedo_color = living_glow.lerp(Color("ffba73"), progress * 0.7) if state == &"windup" else living_glow
 	if state == &"dead":
 		_death = minf(1.0, _death + delta * 0.65)
 		_body.rotation.x = _death * 1.32
 		_body.position.y = -_death * 0.25
 		_body.scale = Vector3.ONE * (1.0 - _death * 0.14)
-		_glow.albedo_color = Color("213d30")
+		_glow.albedo_color = living_glow.lerp(Color("213d30"), minf(1.0, _death * 2.0))
+		_bark.albedo_color = _bark_color.darkened(_death * 0.3)
 		return
 	_body.position.y = sin(_phase) * minf(speed, 1.6) * 0.035
 	_body.rotation = Vector3(0, 0, sin(_phase) * 0.025)

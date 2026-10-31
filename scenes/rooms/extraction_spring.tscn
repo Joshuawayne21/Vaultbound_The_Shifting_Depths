@@ -29,6 +29,7 @@ size = Vector3(0.13, 0.025, 0.7)
 
 [node name="ExtractionSpring" instance=ExtResource("1")]
 module_id = &"extraction_spring"
+visual_motif = &"spring_seal"
 room_kind = &"extraction"
 
 [node name="Decor00" parent="." instance=ExtResource("2")]

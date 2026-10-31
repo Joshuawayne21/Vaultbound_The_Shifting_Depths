@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/props/abyss_stream.tscn" id="1"]
 
@@ -7,6 +7,8 @@
 [ext_resource type="Material" path="res://resources/materials/abyss_water.tres" id="3"]
 
 [ext_resource type="Material" path="res://resources/materials/abyss_foam.tres" id="4"]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_falling_water.tres" id="5"]
 
 [sub_resource type="BoxMesh" id="r1"]
 size = Vector3(2.1, 6, 0.5)
@@ -33,6 +35,9 @@ ring_segments = 4
 position = Vector3(0, 3, 0)
 rotation = Vector3(1.5708, 0, 0)
 scale = Vector3(0.75, 1, 0.6)
+
+[node name="Water" parent="Flow" index="0"]
+material_override = ExtResource("5")
 
 [node name="RockBack" type="MeshInstance3D" parent="."]
 position = Vector3(0, 3, -0.2)

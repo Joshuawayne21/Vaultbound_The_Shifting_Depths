@@ -10,10 +10,24 @@ extends Node3D
 	Vector3(-5, 0.15, -5), Vector3(5, 0.15, -5),
 	Vector3(-5, 0.15, 5), Vector3(5, 0.15, 5),
 ]
+@export var visual_motif: StringName = &"pilgrim_grove"
 var openings: Array[StringName] = []
+var cosmetic_seed := 1
+var cosmetic_room_id := 0
+var dressing: AbyssDecoration
+
+func configure_visuals(expedition_seed: int, room_id: int) -> void:
+	# Separate from topology/encounter/loot seeds and stable across room culling.
+	cosmetic_seed = expedition_seed
+	cosmetic_room_id = room_id
 
 func _ready() -> void:
 	_apply_openings()
+	dressing = preload("res://scripts/visual/abyss_decoration.gd").new()
+	dressing.configure(module_id, visual_motif, cosmetic_seed, cosmetic_room_id)
+	add_child(dressing)
+	var ambience := preload("res://scripts/visual/visual_style.gd").add_ambience(self, &"abyss", Vector3(18, 2.6, 18), dressing.cosmetic_seed)
+	ambience.configure_budget(12)
 
 func configure_openings(directions: Array[StringName]) -> void:
 	openings.assign(directions)

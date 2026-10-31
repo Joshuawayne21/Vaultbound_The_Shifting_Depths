@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Material" path="res://resources/materials/abyss_stone.tres" id="1"]
 
@@ -37,6 +37,15 @@ size = Vector3(1.35, 0.32, 1.35)
 
 [sub_resource type="BoxMesh" id="r7"]
 size = Vector3(0.12, 0.72, 0.045)
+
+[sub_resource type="BoxMesh" id="ColumnFluteMesh"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="MultiMesh" id="ColumnFlutes"]
+transform_format = 1
+instance_count = 8
+mesh = SubResource("ColumnFluteMesh")
+buffer = PackedFloat32Array(0.025, 0, 0, 0.176417, 0, 2.8, 0, 2.12, 0, 0, 0.025, 0.425908, 0.025, 0, 0, 0.425908, 0, 2.8, 0, 2.12, 0, 0, 0.025, 0.176417, 0.025, 0, 0, 0.425908, 0, 2.8, 0, 2.12, 0, 0, 0.025, -0.176417, 0.025, 0, 0, 0.176417, 0, 2.8, 0, 2.12, 0, 0, 0.025, -0.425908, 0.025, 0, 0, -0.176417, 0, 2.8, 0, 2.12, 0, 0, 0.025, -0.425908, 0.025, 0, 0, -0.425908, 0, 2.8, 0, 2.12, 0, 0, 0.025, -0.176417, 0.025, 0, 0, -0.425908, 0, 2.8, 0, 2.12, 0, 0, 0.025, 0.176417, 0.025, 0, 0, -0.176417, 0, 2.8, 0, 2.12, 0, 0, 0.025, 0.425908)
 
 [node name="TempleColumn" type="Node3D"]
 
@@ -83,4 +92,9 @@ material_override = ExtResource("1")
 position = Vector3(0, 2.3, -0.505)
 mesh = SubResource("r7")
 material_override = ExtResource("4")
+cast_shadow = 0
+
+[node name="GildedFlutes" type="MultiMeshInstance3D" parent="."]
+multimesh = SubResource("ColumnFlutes")
+material_override = ExtResource("3")
 cast_shadow = 0

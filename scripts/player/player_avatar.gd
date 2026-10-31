@@ -2,6 +2,8 @@ extends Node3D
 ## Lightweight authored primitive figure. Replace with a rigged model later;
 ## the gameplay controller and camera do not depend on the animation source.
 
+const Presentation = preload("res://scripts/visual/combat_presentation.gd")
+
 var _body: Node3D
 var _left_leg: Node3D
 var _right_leg: Node3D
@@ -9,6 +11,11 @@ var _left_arm: Node3D
 var _right_arm: Node3D
 var _cape: MeshInstance3D
 var _slash: MeshInstance3D
+var _slash_material: StandardMaterial3D
+var _dodge_wake: MeshInstance3D
+var _dodge_material: StandardMaterial3D
+var _cast_ring: MeshInstance3D
+var _detail_quality := 1
 var _phase := 0.0
 var _damage_flash := 0.0
 var _armor: StandardMaterial3D
@@ -36,9 +43,15 @@ const EQUIPMENT_TINTS := {"common": Color("c8d0c7"), "uncommon": Color("83c795")
 
 
 func _ready() -> void:
+	add_to_group("visual_quality")
+	_detail_quality = Presentation.quality(self)
 	_unmodified_armor_color = _armor_color
 	_build()
 	set_weapon(_weapon_style)
+
+
+func apply_visual_settings(snapshot: Dictionary) -> void:
+	_detail_quality = int(snapshot.get("quality", snapshot.get("current_quality", 1)))
 
 
 func _material(color: Color, unshaded: bool = false) -> StandardMaterial3D:
@@ -86,10 +99,16 @@ func _pivot(at: Vector3, parent: Node3D) -> Node3D:
 
 func _build() -> void:
 	_armor = _material(_armor_color)
+	_armor.metallic = 0.22
+	_armor.roughness = 0.58
 	var navy := _material(Color("182d3e"))
 	var leather := _material(Color("26333e"))
 	var gold := _material(Color("c8a16c"))
 	var steel := _material(Color("b9d0cc"))
+	gold.metallic = 0.65
+	gold.roughness = 0.38
+	steel.metallic = 0.75
+	steel.roughness = 0.32
 	var glow := _material(Color("baf5da"), true)
 	var cape_material := _material(Color("347b81"))
 	_body = _pivot(Vector3.ZERO, self)
@@ -156,12 +175,27 @@ func _build() -> void:
 	_staff_crystal = _box(_staff, Vector3(0.24, 0.34, 0.24), Vector3(0, 1.51, 0), glow)
 	_equipment_surface("main_weapon", _staff_crystal)
 	_staff_crystal.rotation = Vector3(0.4, 0.0, 0.7)
+	_cast_ring = MeshInstance3D.new()
+	_cast_ring.name = "ChannelRune"
+	var channel := TorusMesh.new()
+	channel.inner_radius = 0.29
+	channel.outer_radius = 0.31
+	channel.rings = 16
+	channel.ring_segments = 3
+	_cast_ring.mesh = channel
+	_cast_ring.material_override = glow
+	_cast_ring.position = Vector3(0, 1.51, 0)
+	_cast_ring.rotation.x = 0.65
+	_cast_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_cast_ring.visible = false
+	_staff.add_child(_cast_ring)
 	_create_ward(glow)
 
 	_cape = _box(_body, Vector3(0.62, 0.82, 0.065), Vector3(0, 0.91, 0.29), cape_material)
 	_cape.rotation.x = 0.14
 	_box(_body, Vector3(0.64, 0.08, 0.09), Vector3(0, 1.30, 0.26), gold)
 	_create_slash()
+	_create_dodge_wake()
 
 
 func _create_ward(material: Material) -> void:
@@ -246,16 +280,39 @@ func _create_slash() -> void:
 	mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLE_STRIP)
 	for index in range(19):
 		var angle := lerpf(-1.05, 1.05, float(index) / 18.0)
-		for radius in [1.35, 1.57]:
+		var edge_fade := sin(float(index) / 18.0 * PI)
+		for radius in [1.30, 1.57]:
+			mesh.surface_set_color(Color(1, 1, 1, edge_fade * (0.12 if radius < 1.4 else 1.0)))
 			mesh.surface_add_vertex(Vector3(sin(angle) * radius, 0.73, -cos(angle) * radius))
 	mesh.surface_end()
 	_slash.mesh = mesh
-	var material := _material(Color("f2d494"), true)
-	material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	_slash.material_override = material
+	_slash_material = Presentation.unlit(Color("f2d494"), true)
+	_slash.material_override = _slash_material
 	_slash.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_slash.visible = false
 	add_child(_slash)
+
+
+func _create_dodge_wake() -> void:
+	# Two ground-hugging ribbons reuse one mesh instead of spawning afterimages.
+	# They are decorative only and cannot hide the existing invulnerability rules.
+	_dodge_wake = MeshInstance3D.new()
+	_dodge_wake.name = "DodgeWake"
+	var mesh := ImmediateMesh.new()
+	mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
+	for side in [-1.0, 1.0]:
+		mesh.surface_set_color(Color(1, 1, 1, 0.75))
+		mesh.surface_add_vertex(Vector3(side * 0.23, 0.10, 0.1))
+		mesh.surface_add_vertex(Vector3(side * 0.40, 0.10, 0.2))
+		mesh.surface_set_color(Color(1, 1, 1, 0))
+		mesh.surface_add_vertex(Vector3(side * 0.38, 0.10, 1.1))
+	mesh.surface_end()
+	_dodge_wake.mesh = mesh
+	_dodge_material = Presentation.unlit(Color("94bfc0"), true)
+	_dodge_wake.material_override = _dodge_material
+	_dodge_wake.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_dodge_wake.visible = false
+	add_child(_dodge_wake)
 
 
 func animate(delta: float, speed: float, attack_time: float, dodge_time: float) -> void:
@@ -276,6 +333,10 @@ func animate(delta: float, speed: float, attack_time: float, dodge_time: float) 
 	_body.rotation = Vector3.ZERO
 	_cape.rotation.x = 0.14 + stride * 0.22 + sin(_phase * 0.6) * 0.04
 	_slash.visible = false
+	_dodge_wake.visible = false
+	_cast_ring.visible = _detail_quality > 0 and _weapon_style == &"staff" and _combat_state in [&"charge", &"charging"]
+	_cast_ring.rotation.y += delta * 1.6
+	_cast_ring.scale = Vector3.ONE * (0.65 + _charge_ratio * 0.65)
 	_ward.visible = _weapon_style == &"staff" and _blocking
 	_staff_crystal.rotation.y += delta * (0.7 + _charge_ratio * 4.0)
 	_staff_crystal.scale = Vector3.ONE * (1.0 + _charge_ratio * 0.45)
@@ -313,9 +374,12 @@ func animate(delta: float, speed: float, attack_time: float, dodge_time: float) 
 					_right_arm.rotation.y = -0.25
 					_body.rotation.x = sin(progress * PI) * 0.22
 			_slash.visible = progress > 0.20 and progress < 0.63
+			_slash_material.albedo_color = Color(Color("f2d494"), sin(clampf((progress - 0.20) / 0.43, 0, 1) * PI))
 			_slash.rotation.y = lerpf(-0.45, 0.45, swing) * (-1.0 if _combo_index == 1 else 1.0)
 	if dodge_time > 0.0:
 		var progress := _combat_progress if _combat_state == &"dodge" else clampf(1.0 - dodge_time / 0.28, 0.0, 1.0)
+		_dodge_wake.visible = _detail_quality > 0 and progress < 0.85
+		_dodge_material.albedo_color = Color(Color("94bfc0"), (1.0 - progress) * 0.6)
 		_body.rotation.x = -TAU * progress
 		# Rotate about the waist rather than the feet to keep the roll above ground.
 		var center := Vector3(0, 0.78, 0)

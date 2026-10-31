@@ -48,6 +48,7 @@ var _owned_mouse := false
 var _party_notice := ""
 var progression_session: Node
 var rpg_panel: Control
+var graphics_panel: Control
 
 
 func _ready() -> void:
@@ -60,6 +61,10 @@ func _ready() -> void:
 		rpg_panel.name = "RPGPanel"
 		add_child(rpg_panel)
 		rpg_panel.close_requested.connect(close_modal)
+	graphics_panel = preload("res://scripts/ui/graphics_panel.gd").new()
+	graphics_panel.name = "GraphicsPanel"
+	add_child(graphics_panel)
+	graphics_panel.close_requested.connect(close_modal)
 
 
 func bind_progression_session(session: Node) -> void:
@@ -186,7 +191,16 @@ func open_pack() -> void:
 	_open_modal(&"pack")
 
 
+func open_graphics() -> void:
+	if mode != &"none" or not is_instance_valid(graphics_panel):
+		return
+	graphics_panel.open_panel()
+	_open_modal(&"graphics")
+
+
 func _open_modal(value: StringName) -> void:
+	if value != &"graphics" and is_instance_valid(graphics_panel):
+		graphics_panel.hide_panel()
 	if value != &"pack" and is_instance_valid(rpg_panel) and rpg_panel.visible:
 		rpg_panel.hide_panel()
 	var was_open := mode != &"none"
@@ -205,6 +219,8 @@ func close_modal() -> void:
 		return
 	var was_results := mode == &"results"
 	mode = &"none"
+	if is_instance_valid(graphics_panel):
+		graphics_panel.hide_panel()
 	if is_instance_valid(rpg_panel) and rpg_panel.visible:
 		rpg_panel.hide_panel()
 	InputHub.reset_controls()
@@ -234,6 +250,9 @@ func _input(event: InputEvent) -> void:
 		# Consume the complete event stream while open, including releases/drags;
 		# a finger that opened/closed a panel must never become a world attack.
 		get_viewport().set_input_as_handled()
+		if is_instance_valid(graphics_panel) and graphics_panel.visible:
+			graphics_panel.handle_event(event)
+			return
 		if is_instance_valid(rpg_panel) and rpg_panel.visible:
 			rpg_panel.handle_event(event)
 			return
@@ -273,11 +292,17 @@ func _input(event: InputEvent) -> void:
 		if event.physical_keycode == KEY_I:
 			get_viewport().set_input_as_handled()
 			open_pack()
+		elif event.physical_keycode == KEY_F10:
+			get_viewport().set_input_as_handled()
+			open_graphics()
 		elif event.physical_keycode == KEY_P:
 			get_viewport().set_input_as_handled()
 			performance_visible = not performance_visible
 		return
-	if _pack_rect().has_point(point):
+	if _graphics_rect().has_point(point):
+		_claim_press(event)
+		open_graphics()
+	elif _pack_rect().has_point(point):
 		_claim_press(event)
 		open_pack()
 	elif _tonic_rect().has_point(point):
@@ -379,6 +404,10 @@ func _pack_rect() -> Rect2:
 
 func _tonic_rect() -> Rect2:
 	return Rect2(Vector2(205, 331) + _safe(), Vector2(110, 62))
+
+
+func _graphics_rect() -> Rect2:
+	return Rect2(Vector2(size.x - 315 - _safe().x, 29 + _safe().y), Vector2(110, 62))
 
 
 func _party_rect() -> Rect2:
@@ -491,6 +520,10 @@ func _draw() -> void:
 	if is_instance_valid(source_surface) and source_surface.transition_alpha > 0.01:
 		return
 	_draw_pack_controls()
+	var graphics := _graphics_rect()
+	_panel(graphics, PANEL)
+	_text("GRAPHICS", graphics.get_center() + Vector2(0, -7), 12, GOLD, true)
+	_text("QUALITY / FPS", graphics.get_center() + Vector2(0, 14), 9, MUTED, true)
 	if is_instance_valid(party):
 		_draw_party_controls()
 	_draw_storage_warning()
@@ -500,7 +533,9 @@ func _draw() -> void:
 		_draw_boss()
 	_draw_notices()
 	if performance_visible:
-		var value := "%d FPS  ·  %d active foes  ·  %d draw calls" % [Engine.get_frames_per_second(), int(dungeon_snapshot.get("alive_enemies", 0)), int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))]
+		var settings := get_node_or_null("/root/VisualSettings")
+		var preset := "%s / %d target" % [settings.quality_name, settings.target_fps] if is_instance_valid(settings) else ""
+		var value := "%d FPS  ·  %d foes  ·  %d draws  ·  %.1f MiB video  ·  %s" % [Engine.get_frames_per_second(), int(dungeon_snapshot.get("alive_enemies", 0)), int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)), Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0, preset]
 		_text(value, Vector2(size.x * 0.5, size.y - 42 - _safe().y), 11, MUTED, true)
 	if mode != &"none":
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0.012, 0.025, 0.035, 0.88))

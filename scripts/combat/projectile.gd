@@ -2,6 +2,8 @@ extends Node3D
 ## Swept ray projectile: even low frame rates cannot tunnel through a thin wall.
 ## Its lifetime is owned by the current level, so travel removes pending attacks.
 
+const Presentation = preload("res://scripts/visual/combat_presentation.gd")
+
 var source: Node3D
 var direction := Vector3.FORWARD
 var damage := 20.0
@@ -36,13 +38,29 @@ func _ready() -> void:
 	mesh.radial_segments = 8
 	mesh.rings = 4
 	var visual := MeshInstance3D.new()
+	visual.name = "SpellCore"
 	visual.mesh = mesh
-	var material := StandardMaterial3D.new()
-	material.albedo_color = tint
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	var material := Presentation.unlit(tint.lightened(0.32))
 	visual.material_override = material
 	visual.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(visual)
+	# A short directional wake reads in both cameras. It has no collision and its
+	# lifetime is exactly the existing projectile's; it cannot create another hit.
+	if Presentation.quality(self) > 0:
+		var wake := MeshInstance3D.new()
+		wake.name = "BoltWake"
+		var taper := CylinderMesh.new()
+		taper.top_radius = mesh.radius * 0.7
+		taper.bottom_radius = 0.015
+		taper.height = 0.64
+		taper.radial_segments = 6
+		taper.rings = 1
+		wake.mesh = taper
+		wake.position = -direction * 0.3
+		wake.quaternion = Quaternion(Vector3.UP, direction)
+		wake.material_override = Presentation.unlit(Color(tint, 0.65), true)
+		wake.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(wake)
 
 func _physics_process(delta: float) -> void:
 	if _hit:

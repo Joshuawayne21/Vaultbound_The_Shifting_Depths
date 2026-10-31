@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/props/abyss_column.tscn" id="1"]
 
@@ -19,6 +19,15 @@ size = Vector3(7.5, 0.12, 1.35)
 
 [sub_resource type="BoxMesh" id="r4"]
 size = Vector3(0.65, 0.65, 1.45)
+
+[sub_resource type="BoxMesh" id="FriezeTileMesh"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="MultiMesh" id="FriezeTiles"]
+transform_format = 1
+instance_count = 15
+mesh = SubResource("FriezeTileMesh")
+buffer = PackedFloat32Array(0.31, 0, 0, -3.57, 0, 0.19, 0, 4.48, 0, 0, 0.025, -0.65, 0.31, 0, 0, -3.06, 0, 0.19, 0, 4.48, 0, 0, 0.025, -0.65, 0.31, 0, 0, -2.55, 0, 0.19, 0, 4.48, 0, 0, 0.025, -0.65, 0.31, 0, 0, -2.04, 0, 0.19, 0, 4.48, 0, 0, 0.025, -0.65, 0.31, 0, 0, -1.53, 0, 0.19, 0, 4.48, 0, 0, 0.025, -0.65, 0.31, 0, 0, -1.02, 0, 0.19, 0, 4.48, 0, 0, 0.025, -0.65, 0.31, 0, 0, -0.51, 0, 0.19, 0, 4.48, 0, 0, 0.025, -0.65, 0.31, 0, 0, 0, 0, 0.19, 0, 4.48, 0, 0, 0.025, -0.65, 0.31, 0, 0, 0.51, 0, 0.19, 0, 4.48, 0, 0, 0.025, -0.65, 0.31, 0, 0, 1.02, 0, 0.19, 0, 4.48, 0, 0, 0.025, -0.65, 0.31, 0, 0, 1.53, 0, 0.19, 0, 4.48, 0, 0, 0.025, -0.65, 0.31, 0, 0, 2.04, 0, 0.19, 0, 4.48, 0, 0, 0.025, -0.65, 0.31, 0, 0, 2.55, 0, 0.19, 0, 4.48, 0, 0, 0.025, -0.65, 0.31, 0, 0, 3.06, 0, 0.19, 0, 4.48, 0, 0, 0.025, -0.65, 0.31, 0, 0, 3.57, 0, 0.19, 0, 4.48, 0, 0, 0.025, -0.65)
 
 [node name="TempleArch" type="Node3D"]
 
@@ -50,3 +59,8 @@ position = Vector3(0, 4.6, 0)
 mesh = SubResource("r4")
 material_override = ExtResource("4")
 rotation = Vector3(0, 0, 0.7854)
+
+[node name="TempleFrieze" type="MultiMeshInstance3D" parent="."]
+multimesh = SubResource("FriezeTiles")
+material_override = ExtResource("3")
+cast_shadow = 0

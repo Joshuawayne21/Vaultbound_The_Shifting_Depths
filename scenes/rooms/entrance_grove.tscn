@@ -25,6 +25,7 @@ size = Vector3(0.13, 0.025, 0.7)
 
 [node name="EntranceGrove" instance=ExtResource("1")]
 module_id = &"entrance_grove"
+visual_motif = &"pilgrim_grove"
 room_kind = &"entrance"
 
 [node name="Decor00" parent="." instance=ExtResource("2")]

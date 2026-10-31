@@ -12,6 +12,7 @@
 
 [node name="CombatGrove" instance=ExtResource("1")]
 module_id = &"combat_grove"
+visual_motif = &"fern_court"
 room_kind = &"combat"
 
 [node name="Decor00" parent="." instance=ExtResource("2")]

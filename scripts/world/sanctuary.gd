@@ -6,6 +6,8 @@ const Portal = preload("res://scenes/world/portal.tscn")
 const TrainingTarget = preload("res://scenes/world/training_target.tscn")
 const Tavern = preload("res://scenes/party/tavern.tscn")
 const Shop = preload("res://scenes/world/npc_shop.tscn")
+const Dressing = preload("res://scripts/visual/sanctuary_dressing.gd")
+const VisualStyle = preload("res://scripts/visual/visual_style.gd")
 
 var display_name := "THE SANCTUARY"
 var objective := "West: Tavern & Hall · South: merchants & forge · East: expedition"
@@ -18,6 +20,7 @@ func _ready() -> void:
 	_build_border(kit)
 	_build_heart(kit)
 	_build_garden(kit)
+	_build_visual_pass(kit)
 	var tavern := Tavern.instantiate()
 	tavern.position = Vector3(-6.8, 0, 0)
 	add_child(tavern)
@@ -49,6 +52,7 @@ func _ready() -> void:
 	add_child(target)
 	kit.ring(Vector3(5.0, 0.055, 0.2), 1.65, 1.7, "gold")
 	kit.label("TRAINING COURT", Vector3(5.0, 0.18, 2.5), 23, Color("b8c9bd"))
+	preload("res://scripts/visual/static_visual_batcher.gd").bake(self)
 
 func _build_market() -> void:
 	var counters := [
@@ -113,6 +117,74 @@ func _build_garden(kit: Architecture) -> void:
 		for dx in [-1.0, 1.0]:
 			kit.box(Vector3(side * 8.6 + dx, 0.22, 5.0), Vector3(0.3, 0.44, 0.7), "dark_stone")
 		kit.crystal_cluster(Vector3(side * 7.5, 0, -11.5), 0.6)
+
+func _build_visual_pass(kit: Architecture) -> void:
+	# The suspended heart leaves the original plaza, aim lines and formation space open.
+	var art := Dressing.new(self, kit.palette)
+	art.facet(Vector3(0, 4.9, 0), Vector3(1.0, 1.65, 1.0), "crystal", PI / 6.0)
+	art.facet(Vector3(0, 4.9, 0.01), Vector3(0.48, 1.85, 0.48), "glow", PI / 6.0)
+	for index in range(4):
+		var angle := PI / 4.0 + index * TAU / 4.0
+		art.facet(Vector3(sin(angle) * 0.88, 4.2, cos(angle) * 0.88), Vector3(0.24, 0.48, 0.24), "gold", angle)
+	kit.ring(Vector3(0, 3.88, 0), 1.02, 1.065, "gold")
+	_camera_only_box(Vector3(0, 4.9, 0), Vector3(1.05, 2.45, 1.05))
+	for index in range(12):
+		var angle := index * TAU / 12.0
+		var radial := Vector3(sin(angle), 0, cos(angle))
+		art.box(radial * 2.5 + Vector3.UP * 0.105, Vector3(0.045, 0.02, 0.42), "gold", Basis(Vector3.UP, angle))
+		art.box(radial * 3.0 + Vector3.UP * 0.075, Vector3(0.18, 0.025, 0.18), "glow", Basis(Vector3.UP, angle + PI / 4.0))
+	# Pale stone courses and bronze panels articulate the existing wall silhouette.
+	for side in [-1.0, 1.0]:
+		for x in [3.3, 7.1, 10.6]:
+			art.box(Vector3(side * x, 1.5, -13.53), Vector3(0.3, 2.5, 0.12), "dark_stone")
+			art.box(Vector3(side * x, 2.78, -13.48), Vector3(0.55, 0.12, 0.2), "gold")
+		for x in [3.95, 6.4, 8.1, 11.8]:
+			art.inset(Vector3(side * x, 0.9, -13.48), Vector2(0.65, 1.35))
+			art.facet(Vector3(side * x, 1.6, -13.4), Vector3(0.18, 0.3, 0.07), "glow")
+		for z in [-10.0, -6.3, -0.7, 4.8, 9.7]:
+			art.box(Vector3(side * 12.87, 0.86, z), Vector3(0.045, 0.48, 1.45), "dark_stone")
+			art.box(Vector3(side * 12.82, 0.6, z), Vector3(0.055, 0.055, 1.5), "gold")
+		# The water runs against an existing solid boundary. Shallow pools stay flat.
+		_build_wall_spring(kit, side)
+		for z in [-11.8, -7.0, -0.8, 4.0, 11.8]:
+			var at := Vector3(side * 12.5, 0.05, z)
+			art.fern(at, 0.85, z)
+			art.blossom(at + Vector3(-side * 0.25, 0.35, 0.12), 0.8)
+		for pos in [Vector3(side * 9.1, 0.57, -9.2), Vector3(side * 9.1, 0.57, 8.1), Vector3(side * 9.5, 0.57, 2.0)]:
+			art.fern(pos + Vector3(-0.35, 0, 0.1), 0.7, pos.z)
+			art.blossom(pos + Vector3(0.3, 0.25, 0.15), 1.05)
+		# Decorative risers belong to the wall apron, not the playable route.
+		for step in range(3):
+			art.box(Vector3(side * 11.75, 0.02 + step * 0.02, -12.4 - step * 0.35), Vector3(2.1, 0.025, 0.28), "light_stone")
+	art.flush("SanctuaryOrnament")
+	VisualStyle.add_ambience(self, &"sanctuary", Vector3(23, 4, 24), 1055)
+
+func _build_wall_spring(kit: Architecture, side: float) -> void:
+	var x := side * 10.0
+	kit.box(Vector3(x, 1.35, -13.55), Vector3(1.5, 2.3, 0.09), "dark_stone")
+	kit.box(Vector3(x, 2.52, -13.44), Vector3(1.8, 0.12, 0.32), "gold")
+	var water := kit.box(Vector3(x, 1.25, -13.46), Vector3(0.75, 2.3, 0.025), "glow")
+	water.material_override = load("res://resources/materials/abyss_water.tres")
+	water.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var pool := kit.cylinder(Vector3(x, 0.06, -12.9), 0.9, 0.025, "glow", false, 20)
+	pool.scale.z = 0.62
+	pool.material_override = load("res://resources/materials/abyss_water.tres")
+	pool.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var shore := kit.ring(Vector3(x, 0.075, -12.9), 0.88, 0.92, "gold")
+	shore.scale.z = 0.62
+
+func _camera_only_box(at: Vector3, size: Vector3) -> void:
+	var body := StaticBody3D.new()
+	body.name = "HeartCameraOccluder"
+	body.collision_layer = 8
+	body.collision_mask = 0
+	body.position = at
+	var shape := CollisionShape3D.new()
+	var bounds := BoxShape3D.new()
+	bounds.size = size
+	shape.shape = bounds
+	body.add_child(shape)
+	add_child(body)
 
 func get_spawn_transform(entry_id: StringName) -> Transform3D:
 	var position := Vector3(0, 0.15, 8.0)

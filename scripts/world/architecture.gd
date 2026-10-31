@@ -6,22 +6,7 @@ var palette: Dictionary = {}
 
 func _init(parent: Node3D) -> void:
 	root = parent
-	palette = {
-		"stone": material(Color("718d94")),
-		"light_stone": material(Color("b6c1b5")),
-		"dark_stone": material(Color("263e48")),
-		"paving_a": material(Color("8b9e98")),
-		"paving_b": material(Color("829791")),
-		"path": material(Color("bdc2ab")),
-		"gold": material(Color("c8a767"), 0.25),
-		"wood": material(Color("594d43")),
-		"leaf": material(Color("2b786b")),
-		"leaf_light": material(Color("449383")),
-		"cloth": material(Color("285e65")),
-		"glow": material(Color("6cdbd0"), 0.0, true),
-		"flame": material(Color("ffbd70"), 0.0, true),
-		"crystal": material(Color("79bcba"), 0.15),
-	}
+	palette = preload("res://scripts/visual/visual_style.gd").palette()
 
 func material(color: Color, metallic: float = 0.0, emissive: bool = false) -> StandardMaterial3D:
 	var result := StandardMaterial3D.new()
@@ -39,6 +24,9 @@ func mesh_instance(mesh: Mesh, position: Vector3, mat: Material, parent: Node3D 
 	var instance := MeshInstance3D.new()
 	instance.mesh = mesh
 	instance.material_override = mat
+	instance.set_meta("static_architecture", true)
+	# Tiny trim, paving and vegetation do not need individual shadow draws.
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	instance.position = position
 	(parent if parent != null else root).add_child(instance)
 	return instance
@@ -78,6 +66,8 @@ func cone(position: Vector3, radius: float, height: float, mat_name: String, par
 	return mesh_instance(mesh, position, palette[mat_name], parent)
 
 func add_body(parent: Node3D, shape: Shape3D) -> void:
+	if parent is GeometryInstance3D:
+		parent.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	var body := StaticBody3D.new()
 	body.collision_layer = 1
 	body.collision_mask = 2
@@ -202,22 +192,4 @@ func label(text: String, position: Vector3, size: int = 32, tint: Color = Color(
 	return result
 
 func environment(dungeon: bool) -> void:
-	var world := WorldEnvironment.new()
-	var env := Environment.new()
-	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color("12232e") if dungeon else Color("416773")
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color("819eaa") if dungeon else Color("c0d4d0")
-	env.ambient_light_energy = 0.7 if dungeon else 0.65
-	env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
-	world.environment = env
-	root.add_child(world)
-	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-48, -28, 0)
-	sun.light_color = Color("ecd2a0") if dungeon else Color("ffecd1")
-	sun.light_energy = 0.8 if dungeon else 1.1
-	sun.shadow_enabled = true
-	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
-	sun.directional_shadow_max_distance = 44.0
-	sun.shadow_bias = 0.06
-	root.add_child(sun)
+	preload("res://scripts/visual/visual_style.gd").apply_environment(root, &"abyss" if dungeon else &"sanctuary")

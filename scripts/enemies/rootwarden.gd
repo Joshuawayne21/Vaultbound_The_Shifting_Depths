@@ -11,6 +11,7 @@ signal attack_committed(attack_id: int)
 signal state_changed(next_state: StringName)
 
 const Visual = preload("res://scripts/enemies/rootwarden_visual.gd")
+const Presentation = preload("res://scripts/visual/combat_presentation.gd")
 const BASE_PATTERN: Array[StringName] = [&"root_slam", &"thorn_eruption", &"vine_grasp"]
 const FURY_PATTERN: Array[StringName] = [&"root_slam", &"thorn_eruption", &"vine_grasp", &"root_slam"]
 const ATTACK_LABELS := {
@@ -50,7 +51,7 @@ var _label: Label3D
 var _damage_label: Label3D
 var _warnings: Array[MeshInstance3D] = []
 var _warning_material: StandardMaterial3D
-var _circle_mesh: CylinderMesh
+var _circle_mesh: ImmediateMesh
 var _slam_mesh: ImmediateMesh
 var _thorn_mesh: CylinderMesh
 var _vine_mesh: TorusMesh
@@ -495,12 +496,9 @@ func _build_labels() -> void:
 	add_child(_damage_label)
 
 func _build_warnings() -> void:
-	_circle_mesh = CylinderMesh.new()
-	_circle_mesh.top_radius = 1.0
-	_circle_mesh.bottom_radius = 1.0
-	_circle_mesh.height = 0.018
-	_circle_mesh.radial_segments = 32
-	_circle_mesh.rings = 1
+	# Presentation only: filled footprint, bright border and inward notches share
+	# the same warning mesh. The authored radius/cone and all hit rules are intact.
+	_circle_mesh = Presentation.warning_mesh()
 	_thorn_mesh = CylinderMesh.new()
 	_thorn_mesh.top_radius = 0.0
 	_thorn_mesh.bottom_radius = 0.8
@@ -515,20 +513,13 @@ func _build_warnings() -> void:
 	_root_material = StandardMaterial3D.new()
 	_root_material.albedo_color = Color("6a9a53")
 	_root_material.roughness = 0.9
-	_slam_mesh = ImmediateMesh.new()
-	_slam_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
-	for index in range(20):
-		var a := lerpf(-0.78, 0.78, float(index) / 20.0)
-		var b := lerpf(-0.78, 0.78, float(index + 1) / 20.0)
-		_slam_mesh.surface_add_vertex(Vector3.ZERO)
-		_slam_mesh.surface_add_vertex(Vector3(sin(a), 0, -cos(a)))
-		_slam_mesh.surface_add_vertex(Vector3(sin(b), 0, -cos(b)))
-	_slam_mesh.surface_end()
+	_slam_mesh = Presentation.warning_mesh(0.78)
 	_warning_material = StandardMaterial3D.new()
 	_warning_material.albedo_color = Color(0.95, 0.37, 0.12, 0.4)
 	_warning_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_warning_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_warning_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_warning_material.vertex_color_use_as_albedo = true
 	for i in range(4):
 		var warning := MeshInstance3D.new()
 		warning.name = "PooledWarning%d" % i

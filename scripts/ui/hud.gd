@@ -89,6 +89,13 @@ func toggle_inventory() -> void:
 		expedition_overlay.open_pack()
 
 
+func toggle_graphics() -> void:
+	if expedition_overlay.mode == &"graphics":
+		expedition_overlay.close_modal()
+	elif expedition_overlay.mode == &"none":
+		expedition_overlay.open_graphics()
+
+
 func toggle_performance() -> void:
 	expedition_overlay.performance_visible = not expedition_overlay.performance_visible
 	expedition_overlay.queue_redraw()

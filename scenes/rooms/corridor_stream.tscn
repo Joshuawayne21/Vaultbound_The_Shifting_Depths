@@ -19,6 +19,7 @@ size = Vector3(2.8, 0.025, 1.6)
 
 [node name="CorridorStream" instance=ExtResource("1")]
 module_id = &"corridor_stream"
+visual_motif = &"lost_aqueduct"
 room_kind = &"corridor"
 
 [node name="Decor00" parent="." instance=ExtResource("2")]

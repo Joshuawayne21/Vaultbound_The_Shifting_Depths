@@ -6,6 +6,8 @@ const Architecture = preload("res://scripts/world/architecture.gd")
 const Portal = preload("res://scenes/world/portal.tscn")
 const Stand = preload("res://scripts/world/collection_stand.gd")
 const Journal = preload("res://scripts/world/collection_journal.gd")
+const Dressing = preload("res://scripts/visual/sanctuary_dressing.gd")
+const VisualStyle = preload("res://scripts/visual/visual_style.gd")
 
 var display_name := "THE COLLECTION HALL"
 var objective := "Your legacy in stone · Display owned equipment and study discoveries"
@@ -20,13 +22,8 @@ var _trophy_label: Label3D
 func _ready() -> void:
 	add_to_group("collection_halls")
 	var kit := Architecture.new(self)
-	kit.palette["stone"] = kit.material(Color("454d54"))
-	kit.palette["dark_stone"] = kit.material(Color("1c2931"))
-	kit.palette["light_stone"] = kit.material(Color("86877d"))
-	kit.palette["gold"] = kit.material(Color("c8a267"), 0.35)
-	kit.palette["cloth"] = kit.material(Color("3c5450"))
-	kit.palette["path"] = kit.material(Color("766b57"))
 	_build_architecture(kit)
+	_build_hall_ornament(kit)
 	_build_displays(kit)
 	_build_journals(kit)
 	_build_trophy_wall(kit)
@@ -43,17 +40,13 @@ func _ready() -> void:
 	if is_instance_valid(_session):
 		_session.changed.connect(_on_profile_changed)
 	refresh_displays(true)
+	preload("res://scripts/visual/static_visual_batcher.gd").bake(self)
 
 func _build_architecture(kit: Architecture) -> void:
 	kit.environment(true)
 	for child: Node in get_children():
 		if child is WorldEnvironment:
-			child.environment.background_color = Color("0d1a21")
-			child.environment.ambient_light_color = Color("b1a590")
-			child.environment.ambient_light_energy = 0.62
-			child.environment.fog_enabled = true
-			child.environment.fog_light_color = Color("2c393c")
-			child.environment.fog_density = 0.007
+			child.environment = VisualStyle.environment_preset(&"hall")
 		elif child is DirectionalLight3D:
 			child.light_color = Color("f3d5a2")
 			child.light_energy = 0.82
@@ -87,6 +80,35 @@ func _build_architecture(kit: Architecture) -> void:
 	kit.ring(Vector3(0, 0.091, 0), 1.1, 1.15, "glow")
 	var welcome := kit.label("THE HALL OF REMEMBERED DEPTHS", Vector3(0, 5.2, -13.5), 38, Color("e7c995"))
 	welcome.pixel_size = 0.005
+
+func _build_hall_ornament(kit: Architecture) -> void:
+	var art := Dressing.new(self, kit.palette)
+	# Wall-mounted reliefs occupy the existing boundary; the exhibition aisles stay open.
+	for side in [-1.0, 1.0]:
+		for z in [-8.5, -3.5, 1.5, 6.5]:
+			art.box(Vector3(side * 13.67, 1.75, z), Vector3(0.05, 2.5, 2.7), "dark_stone")
+			for offset in [-1.42, 1.42]:
+				art.box(Vector3(side * 13.60, 1.75, z + offset), Vector3(0.06, 2.6, 0.065), "bronze")
+			for height in [0.42, 3.08]:
+				art.box(Vector3(side * 13.60, height, z), Vector3(0.06, 0.065, 2.9), "gold")
+			art.facet(Vector3(side * 13.53, 2.25, z), Vector3(0.12, 0.48, 0.42), "crystal")
+			art.box(Vector3(side * 13.48, 1.0, z), Vector3(0.18, 0.11, 1.35), "gold")
+			# Repeated brass wedges visually link each stand with its carved wall niche.
+			for offset in [-0.65, 0.0, 0.65]:
+				art.box(Vector3(side * 9.8, 0.055, z + offset), Vector3(0.5, 0.015, 0.04), "bronze")
+		for z in [-13.8, 10.8]:
+			art.fern(Vector3(side * 12.9, 0.12, z), 0.85, z)
+			art.blossom(Vector3(side * 12.65, 0.38, z + 0.2), 0.8)
+		for z in range(-12, 12, 2):
+			art.box(Vector3(side * 2.2, 0.055, z + 0.9), Vector3(0.27, 0.02, 0.27), "bronze", Basis(Vector3.UP, PI / 4.0))
+		for x in [4.0, 7.0, 10.0, 12.5]:
+			art.box(Vector3(side * x, 3.8, -15.07), Vector3(0.16, 1.4, 0.12), "gold")
+			art.box(Vector3(side * x, 3.1, -15.03), Vector3(0.62, 0.14, 0.18), "bronze")
+	for index in range(16):
+		var angle := index * TAU / 16.0
+		art.box(Vector3(sin(angle) * 2.1, 0.1, cos(angle) * 2.1), Vector3(0.06, 0.02, 0.4), "bronze", Basis(Vector3.UP, angle))
+	art.flush("HallRelief")
+	VisualStyle.add_ambience(self, &"hall", Vector3(22, 4, 24), 55)
 
 func _lantern(kit: Architecture, at: Vector3) -> void:
 	kit.box(at + Vector3(0, 0.45, 0), Vector3(0.36, 0.1, 0.36), "gold")
@@ -145,6 +167,13 @@ func _build_trophy_wall(kit: Architecture) -> void:
 		kit.box(Vector3(side * 0.25, 0.55, 0.26), Vector3(0.18, 0.1, 0.08), "glow", false, _trophy)
 	var heart := kit.cone(Vector3(0, -0.1, 0.3), 0.28, 0.65, "crystal", _trophy)
 	heart.rotation.z = PI
+	var carving := Dressing.new(_trophy, kit.palette)
+	for side in [-1.0, 1.0]:
+		carving.facet(Vector3(side * 0.48, 0.35, 0.25), Vector3(0.35, 1.1, 0.3), "wood", side * 0.3)
+		carving.facet(Vector3(side * 0.18, 0.94, 0.12), Vector3(0.22, 0.6, 0.18), "gold", side * 0.25)
+		carving.beam(Vector3(side * 0.65, 0.65, 0.06), Vector3(side * 1.35, 0.74, 0.12), 0.14, 0.16, "wood")
+		carving.beam(Vector3(side * 1.1, 0.7, 0.1), Vector3(side * 1.45, 1.0, 0.1), 0.08, 0.1, "bronze")
+	carving.flush("RootwardenCarving")
 	_trophy_label = kit.label("ROOTWARDEN · TROPHY UNCLAIMED", Vector3(0, 0.7, -14.1), 28, Color("d0bc96"))
 	_trophy_label.pixel_size = 0.0045
 

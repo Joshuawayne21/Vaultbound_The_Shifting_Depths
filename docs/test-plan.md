@@ -1,10 +1,10 @@
-# Milestone 5 review checklist
+# Milestone 5.5 review checklist
 
-These tests run the persistent game shell, physics, input hub, actor scenes, combat data, modular dungeon, treasure ledger and portal signals. They do not establish device performance or replace real Android multitouch and visual review. Current RPG results are in [Milestone 5 validation](milestone-5-validation.md). Earlier results remain archived in `milestone-1-validation.md`, `validation-report.md`, `milestone-3-validation.md` and `milestone-4-validation.md`.
+These tests run the persistent game shell, physics, input hub, actor scenes, combat data, modular dungeon, treasure ledger and portal signals. They do not establish device performance or replace real Android multitouch and visual review. Current visual-pass results are in [Milestone 5.5 validation](milestone-5.5-validation.md), with structural budgets in [the performance report](milestone-5.5-performance.md). The RPG baseline remains in [Milestone 5 validation](milestone-5-validation.md). Earlier results remain archived in `milestone-1-validation.md`, `validation-report.md`, `milestone-3-validation.md` and `milestone-4-validation.md`.
 
 ## Automated checks
 
-From the project directory, with Godot 4 installed:
+From the project directory, with Godot 4.6.3 installed:
 
 ```sh
 godot4 --headless --editor --path . --import --quit
@@ -29,6 +29,12 @@ godot4 --headless --path . --script res://tests/collection_world_test.gd
 godot4 --headless --path . --script res://tests/save_migration_test.gd
 godot4 --headless --path . --script res://tests/rpg_integration_test.gd
 godot4 --headless --path . --script res://tests/rpg_ui_test.gd
+godot4 --headless --path . --script res://tests/visual_style_test.gd
+godot4 --headless --path . --script res://tests/abyss_visual_test.gd
+godot4 --headless --path . --script res://tests/combat_presentation_test.gd
+godot4 --headless --path . --script res://tests/visual_settings_test.gd
+godot4 --headless --path . --script res://tests/visual_integration_test.gd
+godot4 --headless --path . --script res://tests/static_visual_batcher_test.gd
 godot4 --headless --path . --script res://tests/persistence_restart_test.gd -- --write /tmp/vaultbound-m3-restart/profile.json
 godot4 --headless --path . --script res://tests/persistence_restart_test.gd -- --read /tmp/vaultbound-m3-restart/profile.json
 godot4 --headless --path . --script res://tests/party_persistence_test.gd -- --write /tmp/vaultbound-m4-roster-restart/profile.json
@@ -37,11 +43,23 @@ godot4 --headless --path . --script res://tests/save_migration_test.gd -- --writ
 godot4 --headless --path . --script res://tests/save_migration_test.gd -- --read /tmp/vaultbound-m5-rpg-restart/profile.json
 ```
 
-Each test exits nonzero on failed assertions and prints its named `CHECKS PASSED` result on success. Also inspect every log for `SCRIPT ERROR`, `ERROR` and `WARNING`: Godot can log a script exception without changing the process exit status. Import first so global script classes and resources are indexed.
+Each test exits nonzero on failed assertions and prints a named success summary (usually `CHECKS PASSED`; the expedition UI suite prints its passed/failure counts). Also inspect every log for `SCRIPT ERROR`, `ERROR` and `WARNING`: Godot can log a script exception without changing the process exit status. Import first so global script classes and resources are indexed.
 
 In a restricted runner where the default user-data directory is not writable, point `XDG_DATA_HOME`, `XDG_CACHE_HOME` and `XDG_CONFIG_HOME` at writable temporary directories for the commands. A normal Android editor installation does not need this workaround.
 
 The persistence and expedition fixtures intentionally use isolated `/tmp/` paths on the Linux runner. Run the writer and reader as separate engine invocations in the shown order; the reader checks data created by the previous process. These tests never delete or alter the normal `user://vaultbound/profile.json` save.
+
+### Visual-pass suites
+
+- Load shared materials, original procedural textures, three environment presets and bounded ambient/water resources. Verify immutable material sharing and independent environments.
+- Exercise all fourteen cosmetic room motifs, deterministic separate art seeds, bounded batches, quality density and unchanged connectors/collision. Check real generated layouts with the existing 100-seed structural suite.
+- Validate impact budgets and cleanup, presentation-only sword/spell/dodge feedback and accurate Rootwarden warning footprints. Retain the full focused combat/boss behavior suites.
+- Apply Low/Medium/High and 30/60 targets, save/reload independent preferences, reject invalid/read-only writes, apply settings to newly loaded scenes and confirm progression remains unchanged.
+- Route synthetic graphics-menu taps, cancellation and simultaneous fingers through the existing modal input owner at three landscape sizes.
+- Sweep the real camera around Sanctuary services/heart/portal veils, generated entrances for seeds 7/23/81, and the Hall, in both perspectives and all quality tiers. Preserve room visibility, discovery and return travel.
+- Validate conservative static architecture batching: geometry/UVs/normals and collision identities/transforms stay unchanged; dynamic/shader/display geometry and nonuniform/reflected transforms remain excluded.
+
+These are logical and structural checks. The headless backend does not validate GPU shader compilation, rendered fog/alpha sorting, lighting exposure or sustained mobile performance.
 
 ### RPG suites
 
@@ -191,3 +209,22 @@ Use the normal Android import/run instructions in README. Back up an existing de
 No physical Android result is claimed by the headless suites. The RPG save is local development/offline data; server-side persistence and validation remain required before online play.
 
 Android device testing, APK export/signing, GPU visual review and device performance measurement remain pending. Multiplayer networking is outside this milestone; local attack IDs and a shared damage service do not implement multiplayer.
+
+## Milestone 5.5 physical Android visual review
+
+Use Godot 4.6.3 with Compatibility. Preserve a backup of the existing profile and record the device model, Android version, screen resolution, graphics tier, FPS target, seed and party composition. The baseline and report contain structural counts, not device FPS measurements.
+
+1. Import the full source, run from the root main scene and verify no missing textures/materials or shader errors in the Android debugger. Confirm existing inventory, gold, equipment, talents, discoveries, displays and recruited companions remain loaded.
+2. Start at Medium / 30 FPS. Review the crystal heart, bronze/slate edges, wall springs, portal surface, Tavern back bar, each merchant and the forge from the normal third-person arrival. Switch to isometric while moving and inspect the same locations.
+3. Orbit close to columns, the heart, Tavern canopy, all four stall canopies, Hall niches and portal veils. Check camera retraction, near-plane clipping, unwanted view obstruction and invisible blockers. Confirm walls/closed doors remain opaque in both views and on every quality tier.
+4. Approach every service, recruit/dismiss a companion, buy/sell, craft/upgrade, equip and assign a Hall display. Walk the old arrival and portal lanes; foliage and decorative slabs must not add unreachable areas or new navigation obstacles.
+5. Play displayed dungeon seeds 7, 23 and 81, then another seed chosen on-device. Review all available room themes, main-route connectors, optional branches and a secret passage. Verify roots, corner plants and reliefs vary without changing connectivity, chest locations or encounter rules.
+6. Examine creek banks, pools and falls from low and elevated angles. Check floating water, exposed seams, z-fighting, reversed flow, stretched highlights and alpha sorting on foam. Confirm floor movement and companion travel remain grounded.
+7. Inspect foliage/motes against dark stone and through entrances. Check shimmer, visible batching/culling pops, clipped sway, excessive repetition and effects that reveal enemies or hidden rooms through walls. Low should reduce cosmetic detail while keeping landmarks and gameplay geometry intact.
+8. Fight each monster and the Rootwarden with both weapon families and two companions. Switch cameras mid-swing, during projectile flight, dodge and boss windup. Damage/cooldowns must remain unchanged; bright impacts, spell wakes and foliage must not obscure warning boundaries or targets.
+9. Open GRAPHICS while moving, charging and after an app resume. Change each tier/target, cancel a touch, swipe over Apply, and confirm with two fingers. Gameplay should pause cleanly, one completed confirmation should apply once, and held input must not resume on close. Restart and verify preferences persist independently of progression.
+10. Complete an extraction, view saved rewards, return through the Hall and restart. Lose a later run and verify secured equipment and displays survive. Observe companion corridor movement, rescue and return behavior in the decorated scenes.
+11. For performance, run the same route at each tier with two companions and the maximum normal encounter, then the boss. Warm up first; record a sustained 15-minute sample of FPS/frame-time spikes, draw calls, thermal throttling, battery change and memory where device tooling allows. Capture the same viewpoints rather than comparing unrelated encounters. Repeat suspend/resume and several scene transitions to look for growing memory or effects.
+12. Evaluate the 30 FPS goal before trying 60 FPS on a capable device. Record failures and reduce quality if needed; do not label a tier/device supported from a short idle measurement. Review touch comfort, system gestures/cutouts, audio and battery separately from frame rate.
+
+No Android hardware measurement, GPU-rendered visual approval or APK export/signing result is claimed until that review is actually performed. Do not begin multiplayer work as part of this visual milestone.

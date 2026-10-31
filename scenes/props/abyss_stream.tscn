@@ -32,6 +32,7 @@ material_override = ExtResource("2")
 cast_shadow = 0
 
 [node name="DeepChannel" type="MeshInstance3D" parent="."]
+visible = false
 position = Vector3(0, 0.051, 0)
 mesh = SubResource("r2")
 material_override = ExtResource("3")

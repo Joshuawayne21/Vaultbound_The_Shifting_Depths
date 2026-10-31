@@ -32,6 +32,7 @@ size = Vector3(2.8, 0.025, 1.6)
 
 [node name="EntranceTemple" instance=ExtResource("1")]
 module_id = &"entrance_temple"
+visual_motif = &"pilgrim_gate"
 room_kind = &"entrance"
 
 [node name="Decor00" parent="." instance=ExtResource("2")]

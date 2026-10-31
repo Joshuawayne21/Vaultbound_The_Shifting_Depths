@@ -19,6 +19,7 @@ size = Vector3(2.8, 0.025, 1.6)
 
 [node name="CombatTemple" instance=ExtResource("1")]
 module_id = &"combat_temple"
+visual_motif = &"fallen_court"
 room_kind = &"combat"
 
 [node name="Decor00" parent="." instance=ExtResource("2")]

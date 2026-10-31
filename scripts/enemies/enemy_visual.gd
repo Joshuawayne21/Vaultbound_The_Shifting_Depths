@@ -12,6 +12,7 @@ var _head: Node3D
 var _skin: StandardMaterial3D
 var _skin_color := Color("d6cfad")
 var _accent: StandardMaterial3D
+var _accent_color := Color.WHITE
 var _phase := 0.0
 var _flash := 0.0
 var _slowed := false
@@ -41,6 +42,7 @@ func _build() -> void:
 			_build_golem()
 		_:
 			_build_skeleton()
+	_accent_color = _accent.albedo_color
 
 
 func _build_skeleton() -> void:
@@ -164,6 +166,8 @@ func animate(delta: float, speed: float, state: StringName, progress: float) -> 
 	_left_arm.rotation = Vector3(-step * 0.3, 0, 0)
 	_right_arm.rotation = Vector3(step * 0.3, 0, 0)
 	_body.position.y = absf(sin(_phase)) * stride * 0.035
+	_body.position.z = 0.0
+	_body.scale = Vector3.ONE
 	_body.rotation = Vector3.ZERO
 	_head.rotation.y = sin(_phase * 0.25) * 0.03
 	var t := clampf(progress, 0.0, 1.0)
@@ -190,7 +194,11 @@ func animate(delta: float, speed: float, state: StringName, progress: float) -> 
 	_flash = maxf(0.0, _flash - delta)
 	if _flash > 0.0 or key == "hit" or key == "hit_reaction":
 		_body.rotation.x = -0.11
+		_body.position.z = sin(clampf(_flash / 0.18, 0.0, 1.0) * PI) * 0.045
 	_skin.albedo_color = Color("f0d6b0") if _flash > 0.0 else _skin_color.lerp(Color("78cbe7"), 0.4 if _slowed else 0.0)
+	# Warm anticipation accents complement the persistent ground warning. These
+	# are lit pixels only, never extra lights or a replacement for attack timing.
+	_accent.albedo_color = _accent_color.lerp(Color("efad6c"), 0.65 * t) if key in ["windup", "telegraph"] else _accent_color
 	if key == "dead" or key == "death":
 		_death_blend = move_toward(_death_blend, 1.0, delta * 2.8)
 		_body.rotation.x = lerpf(0.0, -PI * 0.5, smoothstep(0.0, 1.0, _death_blend))
@@ -200,6 +208,8 @@ func animate(delta: float, speed: float, state: StringName, progress: float) -> 
 		_left_leg.rotation.x = 0.0
 		_right_leg.rotation.x = 0.0
 		_skin.albedo_color = _skin_color.darkened(0.35)
+		_accent.albedo_color = _accent_color.lerp(Color("27363a"), _death_blend)
+		_body.scale = Vector3.ONE * lerpf(1.0, 0.94, _death_blend)
 	else:
 		_death_blend = 0.0
 

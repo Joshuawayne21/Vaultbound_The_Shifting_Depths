@@ -10,17 +10,22 @@ signal travel_requested(destination: StringName, entry_id: StringName)
 
 var _runes: Node3D
 var _surface: MeshInstance3D
-var _surface_material: StandardMaterial3D
+var _surface_material: ShaderMaterial
 var _time: float = 0.0
 
 
 func _ready() -> void:
 	add_to_group("interactables")
-	var stone := _material(Color("7c9697"))
-	var dark_stone := _material(Color("334e56"))
-	var gold := _material(Color("c1a368"), 0.45)
-	var glow := _material(Color("73f2d7"), 0.1, true)
-	_surface_material = _material(Color("137b83"), 0.25, true)
+	var palette := preload("res://scripts/visual/visual_style.gd").palette()
+	var stone: Material = palette.light_stone
+	var dark_stone: Material = palette.dark_stone
+	var gold: Material = palette.gold
+	var glow: Material = palette.glow
+	_surface_material = ShaderMaterial.new()
+	_surface_material.shader = preload("res://resources/shaders/portal_veil.gdshader")
+	if destination == &"collection_hall":
+		_surface_material.set_shader_parameter("magic_color", Color("9f814c"))
+		_surface_material.set_shader_parameter("rim_color", Color("e4cea3"))
 	for side in [-1.0, 1.0]:
 		_box(Vector3(side * 1.95, 0.22, 0), Vector3(0.9, 0.44, 0.9), dark_stone)
 		_box(Vector3(side * 1.95, 1.7, 0), Vector3(0.56, 2.8, 0.62), stone, true)
@@ -34,13 +39,10 @@ func _ready() -> void:
 	_ring(Vector3(0, 2.2, 0), 1.76, 1.98, stone, Vector3(1, 1, 1.15))
 	_ring(Vector3(0, 2.2, 0.12), 1.69, 1.76, gold, Vector3(1, 1, 1.15))
 	_ring(Vector3(0, 2.2, 0.16), 1.62, 1.67, glow, Vector3(1, 1, 1.15))
-	var surface_mesh := SphereMesh.new()
-	surface_mesh.radius = 1.61
-	surface_mesh.height = 3.22
-	surface_mesh.radial_segments = 24
-	surface_mesh.rings = 12
+	var surface_mesh := QuadMesh.new()
+	surface_mesh.size = Vector2(3.22, 3.22)
 	_surface = _mesh(surface_mesh, Vector3(0, 2.2, 0), _surface_material)
-	_surface.scale = Vector3(1.0, 1.15, 0.035)
+	_surface.scale = Vector3(1.0, 1.15, 1.0)
 	# The opaque veil must retract a camera behind it without blocking the player.
 	var occluder := StaticBody3D.new()
 	occluder.name = "CameraOccluder"
@@ -60,16 +62,20 @@ func _ready() -> void:
 	_runes.name = "OrbitingRunes"
 	_runes.position = Vector3(0, 2.2, 0.18)
 	add_child(_runes)
+	var rune_mesh := BoxMesh.new()
+	rune_mesh.size = Vector3(0.09, 0.22, 0.045)
+	var rune_instances := MultiMesh.new()
+	rune_instances.transform_format = MultiMesh.TRANSFORM_3D
+	rune_instances.mesh = rune_mesh
+	rune_instances.instance_count = 12
 	for index in range(12):
 		var angle: float = TAU * float(index) / 12.0
-		var rune_mesh := BoxMesh.new()
-		rune_mesh.size = Vector3(0.09, 0.22, 0.045)
-		var rune := MeshInstance3D.new()
-		rune.mesh = rune_mesh
-		rune.material_override = glow
-		rune.position = Vector3(sin(angle) * 1.43, cos(angle) * 1.62, 0)
-		rune.rotation.z = -angle
-		_runes.add_child(rune)
+		rune_instances.set_instance_transform(index, Transform3D(Basis(Vector3.BACK, -angle), Vector3(sin(angle) * 1.43, cos(angle) * 1.62, 0)))
+	var rune_batch := MultiMeshInstance3D.new()
+	rune_batch.multimesh = rune_instances
+	rune_batch.material_override = glow
+	rune_batch.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_runes.add_child(rune_batch)
 
 	var keystone := _box(Vector3(0, 4.39, 0), Vector3(0.45, 0.45, 0.5), gold)
 	keystone.rotation.z = PI / 4.0
@@ -87,7 +93,6 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_time += delta
 	_runes.rotation.z = _time * 0.08
-	_surface_material.emission_energy_multiplier = 0.65 + sin(_time * 1.8) * 0.16
 
 
 func get_prompt() -> String:
@@ -104,23 +109,12 @@ func interact(_player: Node3D) -> void:
 	travel_requested.emit(destination, entry_id)
 
 
-func _material(color: Color, metallic: float = 0.0, emissive: bool = false) -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.roughness = 0.78
-	material.metallic = metallic
-	if emissive:
-		material.emission_enabled = true
-		material.emission = color
-		material.emission_energy_multiplier = 0.8
-	return material
-
-
 func _mesh(shape: Mesh, at: Vector3, material: Material) -> MeshInstance3D:
 	var instance := MeshInstance3D.new()
 	instance.mesh = shape
 	instance.position = at
 	instance.material_override = material
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(instance)
 	return instance
 
@@ -130,6 +124,7 @@ func _box(at: Vector3, size: Vector3, material: Material, collision: bool = fals
 	mesh.size = size
 	var instance := _mesh(mesh, at, material)
 	if collision:
+		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		var body := StaticBody3D.new()
 		body.collision_layer = 1
 		body.collision_mask = 0

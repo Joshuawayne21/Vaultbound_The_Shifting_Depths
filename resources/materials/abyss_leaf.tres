@@ -1,5 +1,6 @@
-[gd_resource type="StandardMaterial3D" format=3]
-
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+[ext_resource type="Shader" path="res://resources/shaders/living_foliage.gdshader" id="1"]
 [resource]
-albedo_color = Color(0.15686, 0.40784, 0.36078, 1)
-roughness = 0.94
+shader = ExtResource("1")
+shader_parameter/leaf_color = Color(0.14, 0.43, 0.29, 1)
+shader_parameter/sway = 0.035

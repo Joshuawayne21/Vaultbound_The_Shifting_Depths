@@ -62,14 +62,6 @@ func _ready() -> void:
 	_player = get_tree().get_first_node_in_group("player") as Node3D
 	var kit := Architecture.new(self)
 	kit.environment(true)
-	for child: Node in get_children():
-		if child is WorldEnvironment:
-			child.environment.background_color = Color("102c2c")
-			child.environment.ambient_light_color = Color("91bfb3")
-			child.environment.ambient_light_energy = 0.5
-			child.environment.fog_enabled = true
-			child.environment.fog_light_color = Color("456b62")
-			child.environment.fog_density = 0.014
 	var geometry := Node3D.new()
 	geometry.name = "RoomModules"
 	add_child(geometry)
@@ -82,6 +74,7 @@ func _ready() -> void:
 		for direction: StringName in room.openings:
 			openings.append(direction)
 		instance.configure_openings(openings)
+		instance.configure_visuals(seed_value, int(room.id))
 		geometry.add_child(instance)
 		_keep_static_collisions(instance)
 		rooms[int(room.id)] = instance

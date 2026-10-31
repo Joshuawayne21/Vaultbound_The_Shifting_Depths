@@ -1,12 +1,12 @@
 # Vaultbound: The Shifting Depths
 
-**Milestone 5 — Equipment, Inventory and RPG Progression.** A Godot 4 / GDScript-only, offline fantasy expedition prototype for Android landscape. Explore the Rootbound Abyss with recruited companions, extract treasure, equip and improve unique gear, trade with Sanctuary merchants, craft supplies, develop talents and exhibit owned treasures in the Collection Hall.
+**Milestone 5.5 — Enchanted Dark Fantasy Visual Pass.** A Godot 4 / GDScript-only, offline fantasy expedition prototype for Android landscape. The existing Sanctuary, Collection Hall and Rootbound Abyss now share slate-and-bronze architecture, turquoise magic, mossy ruins, living foliage and flowing water. Recruit companions, explore, fight, extract treasure and develop the character through the preserved RPG systems.
 
-The Sanctuary, practice dungeon and arena, player movement, sword/shield and staff combat, touch controls, both smoothly switchable cameras, procedural dungeons, treasure, boss encounters and secured progression from Milestones 1–4 remain available. `project.godot` stays at the repository root. The active party supports one human leader and up to two local AI companions. No online multiplayer, player-to-player trading, guilds or additional biomes are implemented.
+The Sanctuary, practice dungeon and arena, player movement, sword/shield and staff combat, touch controls, both smoothly switchable cameras, procedural dungeons, treasure, boss encounters and secured progression from Milestones 1–5 remain available. `project.godot` stays at the repository root. The active party supports one human leader and up to two local AI companions. No online multiplayer, player-to-player trading, guilds or additional biomes are implemented.
 
 ## Import and play on Android
 
-1. Install the official **Godot Android editor**, standard GDScript edition. **Godot 4.6.3** is the validated engine; the project targets Godot 4.4+ features.
+1. Install the official **Godot Android editor**, standard GDScript edition. Use **Godot 4.6.3**, the validated engine for this visual pass. Older Godot releases have not been validated with the new depth-fog and presentation settings.
 2. Download/extract the full repository or source ZIP into storage the editor can access. Grant the editor file access if requested.
 3. Choose **Import**, select the root `project.godot`, then open it with the **Compatibility** renderer. Wait for resource import to finish.
 4. Keep the device in landscape and choose **Run Project**. The main scene is `scenes/main.tscn`.
@@ -16,6 +16,7 @@ The Sanctuary, practice dungeon and arena, player movement, sword/shield and sta
 8. Review the results screen, then open **PACK → INVENTORY**. Select an owned item to compare and equip it, mark it as a favorite or lock it. The **EQUIPMENT** tab shows all six slots and a character preview; **CHARACTER** shows XP and talent allocation.
 9. Visit the four merchants/workbenches along the **south side of Sanctuary**: General Merchant, Blacksmith, Equipment Trader and Relic Appraiser. Review the displayed costs before confirming purchases, sales, crafts or improvements.
 10. Use the **northwestern Collection Hall passage** to assign owned equipment and relics to displays and view the discovery journals. Its return arch leads safely back to Sanctuary.
+11. Tap **GRAPHICS** to select **Low, Medium or High** and a **30 or 60 FPS target**, then **APPLY & SAVE**. Start with the default **Medium / 30 FPS**. Use Low if sustained play shows frame-time spikes; 60 FPS is an optional target for capable devices, not a measured guarantee.
 
 On desktop, open the same project and press F5. F6 runs only the selected scene and may omit the persistent shell. The original Sanctuary and character models are assembled at runtime; Abyss room geometry is authored in reusable native `.tscn` scenes.
 
@@ -39,13 +40,14 @@ Running inside the Android editor requires no APK export. The included ARM64 exp
 | Inventory | PACK | I |
 | Healing consumable | TONIC | H |
 | Performance display | METRICS inside PACK | P |
+| Graphics quality / frame target | GRAPHICS | F10 |
 | Party commands | PARTY | B |
 | Recruit / dismiss | USE at the Sanctuary Tavern | F at the Tavern |
 | Revive nearby ally | REVIVE prompt | Party menu / interact |
 
 Sword/shield retains its three-hit combo, charged heavy, Shield Bash and Cleave. Staff retains bolts, charged splash, Arcane Burst and Frost Nova. Both use identical damage, costs, cooldowns, range and targeting in either camera view. Charge, block and joystick touches cancel safely on focus loss, Android pause, travel and modal opening.
 
-PACK, merchant/workbench/Collection Hall screens, party/recruitment menus and expedition results pause the local player, companions and active world. Closing them restores input without resuming stale held buttons. Basic movement is grounded; jumping is intentionally omitted. The elevated tactical camera uses a narrow perspective lens for a continuous transition rather than a strict orthographic projection.
+PACK, GRAPHICS, merchant/workbench/Collection Hall screens, party/recruitment menus and expedition results pause the local player, companions and active world. Closing them restores input without resuming stale held buttons. Basic movement is grounded; jumping is intentionally omitted. The elevated tactical camera uses a narrow perspective lens for a continuous transition rather than a strict orthographic projection.
 
 ## Party and companions
 
@@ -118,6 +120,25 @@ A seed selects no modifier or one of two optional modifiers: **Thick Bark** incr
 
 Awareness grows from kills, treasure value, cursed chests and time. Configurable thresholds (25 / 50 / 75 by default) warn before patrols, environmental roots or an elite event. Only one warning/event can be active at a time; queued thresholds wait through a minimum event gap. Safe rooms suppress encounters; boss proximity suspends regular enemies and cancels environmental hazards. Leaving a room cancels its hazards rather than resuming a nearly completed trap on re-entry.
 
+## Visual presentation and graphics settings
+
+The Sanctuary adds a suspended crystal heart, carved bronze trim, wall springs, richer planters, a decorated open Tavern bar and distinct merchant/forge details. The Hall retains its twelve owned-item displays and adds niches, inlays and trophy carving. Fourteen existing Abyss modules gain seeded cosmetic variations, wall roots and moss, layered foliage, guardian/prism reliefs and shallow bridge dressing. Room connectors, floor collision, NPC/service locations and loot anchors remain tied to the original gameplay layout.
+
+Shared native materials use two original 128×128 procedural grain textures, restrained emission and one directional key light per world. Conventional depth fog adds distance atmosphere. Opaque water animates ripples without screen/depth-buffer sampling; small foam ribbons, anchored foliage sway and bounded firefly/mote batches add movement. Sword trails, spell wakes, hit sparks, dodge ribbons and Rootwarden warning borders improve presentation while the existing damage windows and radii remain authoritative. No paid or third-party asset pack was downloaded.
+
+| Setting | Low | Medium (default) | High |
+| --- | --- | --- | --- |
+| Optional plant density | 50% | 75% | 100% |
+| Small decoration range | 24 m | 34 m | 44 m |
+| Directional shadows | Off | 1024, 34 m | 2048, 44 m |
+| 3D antialiasing | Off | Off | 2× MSAA |
+| Ambient motes per batch | 8 | 16 | 24 |
+| Simultaneous impact bursts | 8 | 14 | 20 |
+
+Abyss mote batches additionally cap at twelve per room and follow existing room visibility. Essential geometry, interactables and combat warnings do not disappear on Low. The frame target changes rendering pacing; physics remains 60 Hz. Preferences live separately at `user://vaultbound/visual_settings.cfg`, leaving the version-two progression profile unchanged. Invalid graphics files retain current settings; an explicit successful change writes verified replacement preferences.
+
+The 30 FPS midrange Android goal and optional 60 FPS target require physical-device verification. Native primitives do not include authored mesh LOD chains; the tier's general LOD threshold prepares for compatible future assets, while current savings come from batching, shadow policy, visibility and bounded decoration/effects. See the [visual style guide](docs/visual-style-guide.md), [initial baseline](docs/milestone-5.5-baseline.md) and [performance report](docs/milestone-5.5-performance.md) for the measured scope and limitations.
+
 ## Project organization and mobile budget
 
 - `scripts/systems/`: persistent game shell, one input vocabulary and transitions.
@@ -125,15 +146,18 @@ Awareness grows from kills, treasure value, cursed chests and time. Configurable
 - `scripts/enemies/`, `resources/enemies/`: three original archetypes and Rootwarden data/AI.
 - `scripts/party/`, `resources/companions/`, `scenes/party/`: party lifecycle, AI decisions, navigation, companion data and Tavern recruitment.
 - `scenes/rooms/`, `scenes/props/`, `resources/materials/`: authored reusable Abyss geometry and materials.
+- `scripts/visual/`, `resources/environments/`, `resources/shaders/`, `resources/textures/`: shared style, cosmetic batching, ambient/combat presentation and independent device preferences.
 - `scripts/expedition/`: pure layout generation, room activation, encounters, pooled hazards, awareness, secrets and extraction.
 - `scripts/progression/`, `resources/items/`, `resources/loot/`, `resources/recipes/`, `resources/progression/`: definitions, instance inventory, transaction rules, recipes, character tables, transient loot and versioned local saves.
 - `scripts/ui/`: original combat/party controls, expedition HUD, discovery map and touch-scrollable RPG inventory/service panels.
 - `scenes/world/collection_hall.tscn`, `scripts/world/`: Sanctuary services, Hall exhibits/journals and existing travel destinations.
 - `tests/`, `docs/`: automated checks, archived milestone information and Android manual review.
 
-The level uses one shared environment and shadow-casting directional light, simple shared materials and native primitive collision. Far rooms stop rendering/simulating while their floor and boundary collision stay valid. Normal encounters cap at **six active enemies**; the boss encounter suspends them. Two environmental hazards and four boss warning meshes are reused. Paving uses MultiMesh draws; animated water uses three reused foam strips rather than fluid or particle simulation. Emissive decoration does not add realtime point lights. The metrics overlay shows FPS, active foes and draw calls.
+Each level uses one shared environment and one directional light, with shadows controlled by graphics quality, shared materials and native primitive collision. Far rooms stop rendering/simulating while their floor and boundary collision stay valid. Normal encounters cap at **six active enemies**; the boss encounter suspends them. Two environmental hazards and four boss warning meshes are reused. Paving and repeated cosmetic detail use MultiMesh batches, and eligible opaque static architecture is conservatively combined by material. Animated water reuses three foam strips; it has no fluid simulation. Emissive decoration does not add realtime point lights. The metrics overlay shows FPS, active foes and draw calls.
 
 ## Validation
+
+The completed Milestone 5.5 pass records **3,025 passing assertions across 33 engine invocations**, covering the visual additions and the existing gameplay/save systems. See the report for exact evidence and device limitations.
 
 Run from the repository root; substitute `godot` if that is your installed executable:
 
@@ -160,6 +184,12 @@ godot4 --headless --path . --script res://tests/collection_world_test.gd
 godot4 --headless --path . --script res://tests/save_migration_test.gd
 godot4 --headless --path . --script res://tests/rpg_integration_test.gd
 godot4 --headless --path . --script res://tests/rpg_ui_test.gd
+godot4 --headless --path . --script res://tests/visual_style_test.gd
+godot4 --headless --path . --script res://tests/abyss_visual_test.gd
+godot4 --headless --path . --script res://tests/combat_presentation_test.gd
+godot4 --headless --path . --script res://tests/visual_settings_test.gd
+godot4 --headless --path . --script res://tests/visual_integration_test.gd
+godot4 --headless --path . --script res://tests/static_visual_batcher_test.gd
 ```
 
 The persistence restart fixture uses **two separate engine processes**, with a disposable `/tmp` path on desktop/cloud (not an Android shell instruction):
@@ -175,12 +205,12 @@ godot4 --headless --path . --script res://tests/save_migration_test.gd -- --read
 
 Import first to index global GDScript classes. Assertions exit nonzero on failure; inspect logs for runtime errors too. Restricted Linux runners may need writable `XDG_DATA_HOME`, `XDG_CONFIG_HOME` and `XDG_CACHE_HOME`. Android SDK/build-tools warnings affect APK export setup, not scene resources.
 
-See [Milestone 5 validation](docs/milestone-5-validation.md) for current results and [the Android test plan](docs/test-plan.md) for the manual checklist. The [Milestone 4 report](docs/milestone-4-validation.md), [Milestone 3 report](docs/milestone-3-validation.md) and [Milestone 2 guide](docs/milestone-2-guide.md) retain the companion, expedition and combat baselines. The original GitHub roadmap is [archived separately](docs/original-github-roadmap.md) and describes future ideas, not shipped functionality.
+See [Milestone 5.5 validation](docs/milestone-5.5-validation.md) for current visual-pass results, [Milestone 5 validation](docs/milestone-5-validation.md) for the archived RPG baseline, and [the Android test plan](docs/test-plan.md) for the manual checklist. The [Milestone 4 report](docs/milestone-4-validation.md), [Milestone 3 report](docs/milestone-3-validation.md) and [Milestone 2 guide](docs/milestone-2-guide.md) retain the companion, expedition and combat baselines. The original GitHub roadmap is [archived separately](docs/original-github-roadmap.md) and describes future ideas, not shipped functionality.
 
 ## Remaining limits
 
-This is a complete expedition loop prototype, not a finished commercial game. Large talent trees, talent respec, additional floors/biomes, expedition resume, arbitrary stairs or multilevel navigation, companion gear/talents and additional classes are outside this milestone. Inventory capacity is forty active slots; the recoverable reserve preserves old saves and is not unlimited storage for new rewards. Companion pathfinding targets the authored flat modular floors; enemy steering remains intended for the open room modules. Geometry, procedural character animation and synthesized sounds are stylized placeholders.
+This is a complete expedition loop prototype, not a finished commercial game. Large talent trees, talent respec, additional floors/biomes, expedition resume, arbitrary stairs or multilevel navigation, companion gear/talents and additional classes are outside this milestone. Inventory capacity is forty active slots; the recoverable reserve preserves old saves and is not unlimited storage for new rewards. Companion pathfinding targets the authored flat modular floors; enemy steering remains intended for the open room modules. Characters retain their native low-poly proportions, procedural animation and synthesized sound placeholders. The Tavern interior is an open decorated bar; bridge/stair details stay on the existing flat navigable floor. A simulated wildlife system, detailed character art and new vertical cave navigation are not implemented.
 
-**No physical Android testing is claimed.** Rendered visual review, touchscreen comfort, APK export/signing, audio output, frame pacing, heat and battery use still need device verification. Headless checks establish logic and resource validity, not final game feel or a measured mobile frame rate.
+**No physical Android testing is claimed.** Rendered visual review, touchscreen comfort, APK export/signing, audio output, frame pacing, heat and battery use still need device verification. Headless checks establish logic and resource validity; they do not compile shaders on an Android GPU or establish final appearance, game feel or mobile frame rate.
 
-Work stops after Milestone 5 for review. Online multiplayer, player-to-player trading, guilds, additional companion classes and later milestones are not implemented.
+Work stops after Milestone 5.5 for visual and device review. Online multiplayer, player-to-player trading, guilds, additional companion classes and later milestones are not implemented.

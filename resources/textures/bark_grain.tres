@@ -1,0 +1,14 @@
+[gd_resource type="NoiseTexture2D" load_steps=3 format=3]
+[sub_resource type="FastNoiseLite" id="Noise"]
+noise_type = 1
+seed = 391
+frequency = 0.075
+fractal_octaves = 2
+[sub_resource type="Gradient" id="Grain"]
+colors = PackedColorArray(0.66, 0.66, 0.66, 1, 1, 1, 1, 1)
+[resource]
+width = 128
+height = 128
+seamless = true
+noise = SubResource("Noise")
+color_ramp = SubResource("Grain")

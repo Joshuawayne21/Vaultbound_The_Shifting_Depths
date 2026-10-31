@@ -20,6 +20,7 @@ ring_segments = 4
 
 [node name="TrapThorns" instance=ExtResource("1")]
 module_id = &"trap_thorns"
+visual_motif = &"thorn_seal"
 room_kind = &"trap"
 
 [node name="Decor00" parent="." instance=ExtResource("2")]

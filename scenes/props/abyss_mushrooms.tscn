@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Material" path="res://resources/materials/abyss_stone_light.tres" id="1"]
 
@@ -63,6 +63,18 @@ outer_radius = 0.384
 rings = 24
 ring_segments = 4
 
+[sub_resource type="SphereMesh" id="CapFleckMesh"]
+radius = 0.5
+height = 1.0
+radial_segments = 6
+rings = 2
+
+[sub_resource type="MultiMesh" id="CapFlecks"]
+transform_format = 1
+instance_count = 18
+mesh = SubResource("CapFleckMesh")
+buffer = PackedFloat32Array(0.055, 0, 0, 0.353952, 0, 0.025, 0, 1.65925, 0, 0, 0.055, 0.10949, 0.055, 0, 0, 0.082155, 0, 0.025, 0, 1.65925, 0, 0, 0.055, 0.361277, 0.055, 0, 0, -0.271797, 0, 0.025, 0, 1.65925, 0, 0, 0.055, 0.251786, 0.055, 0, 0, -0.353952, 0, 0.025, 0, 1.65925, 0, 0, 0.055, -0.10949, 0.055, 0, 0, -0.082155, 0, 0.025, 0, 1.65925, 0, 0, 0.055, -0.361277, 0.055, 0, 0, 0.271797, 0, 0.025, 0, 1.65925, 0, 0, 0.055, -0.251786, 0.055, 0, 0, 0.917817, 0, 0.025, 0, 0.898, 0, 0, 0.055, 0.317379, 0.055, 0, 0, 0.750557, 0, 0.025, 0, 0.898, 0, 0, 0.055, 0.472324, 0.055, 0, 0, 0.53274, 0, 0.025, 0, 0.898, 0, 0, 0.055, 0.404946, 0.055, 0, 0, 0.482183, 0, 0.025, 0, 0.898, 0, 0, 0.055, 0.182621, 0.055, 0, 0, 0.649443, 0, 0.025, 0, 0.898, 0, 0, 0.055, 0.027676, 0.055, 0, 0, 0.86726, 0, 0.025, 0, 0.898, 0, 0, 0.055, 0.095054, 0.055, 0, 0, -0.38862, 0, 0.025, 0, 1.1176, 0, 0, 0.055, 0.480854, 0.055, 0, 0, -0.589332, 0, 0.025, 0, 1.1176, 0, 0, 0.055, 0.666789, 0.055, 0, 0, -0.850712, 0, 0.025, 0, 1.1176, 0, 0, 0.055, 0.585935, 0.055, 0, 0, -0.91138, 0, 0.025, 0, 1.1176, 0, 0, 0.055, 0.319146, 0.055, 0, 0, -0.710668, 0, 0.025, 0, 1.1176, 0, 0, 0.055, 0.133211, 0.055, 0, 0, -0.449288, 0, 0.025, 0, 1.1176, 0, 0, 0.055, 0.214065)
+
 [node name="LuminousMushrooms" type="Node3D"]
 
 [node name="Stem0" type="MeshInstance3D" parent="."]
@@ -120,4 +132,9 @@ position = Vector3(-0.65, 0.95, 0.4)
 mesh = SubResource("r9")
 material_override = ExtResource("3")
 scale = Vector3(1, 0.3, 1)
+cast_shadow = 0
+
+[node name="LuminousCapFlecks" type="MultiMeshInstance3D" parent="."]
+multimesh = SubResource("CapFlecks")
+material_override = ExtResource("3")
 cast_shadow = 0
