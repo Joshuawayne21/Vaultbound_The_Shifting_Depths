@@ -65,6 +65,7 @@ var sanctuary_panel: Control
 var ui_scale := 1.0
 var reduced_motion := false
 var reduced_effects := false
+var high_contrast_prompts := false
 
 
 func _ready() -> void:
@@ -160,6 +161,7 @@ func apply_visual_settings(settings: Dictionary) -> void:
 	ui_scale = VaultUITheme.scale_from(settings)
 	reduced_motion = bool(settings.get("reduced_motion", false))
 	reduced_effects = bool(settings.get("reduced_effects", false))
+	high_contrast_prompts = bool(settings.get("high_contrast_prompts", false))
 	_owned_touches.clear()
 	_owned_mouse = false
 	queue_redraw()
@@ -820,14 +822,14 @@ func _draw_party_controls() -> void:
 		_text("Reviving…" if revive > 0.0 else state.capitalize(), card.position + Vector2(56, 62), 9, MUTED)
 	if _can_revive():
 		var revive := _revive_rect()
-		_panel(revive, Color(0.055, 0.19, 0.19, 0.96))
-		_text("REVIVE TEAMMATE", revive.get_center() + Vector2(0, -8), 14, TEAL, true)
-		_text(_fit_text(String(party_snapshot.get("revive_prompt", "")), revive.size.x - 24, 11), revive.get_center() + Vector2(0, 15), 11, IVORY, true)
+		VaultUITheme.prompt_frame(self, revive, Color(0.055, 0.19, 0.19, 0.96), TEAL, high_contrast_prompts)
+		_text("REVIVE TEAMMATE", revive.get_center() + Vector2(0, -8), 14, VaultUITheme.prompt_ink(TEAL, high_contrast_prompts), true)
+		_text(_fit_text(String(party_snapshot.get("revive_prompt", "")), revive.size.x - 24, 11), revive.get_center() + Vector2(0, 15), 11, VaultUITheme.prompt_ink(IVORY, high_contrast_prompts), true)
 	elif _leader_downed():
 		var downed := _revive_rect()
-		_panel(downed, PANEL)
-		_text("YOU ARE DOWNED", downed.get_center() + Vector2(0, -8), 15, WARNING, true)
-		_text("Give a Revive order. Allies need a safe approach.", downed.get_center() + Vector2(0, 15), 11, IVORY, true)
+		VaultUITheme.prompt_frame(self, downed, PANEL, WARNING, high_contrast_prompts)
+		_text("YOU ARE DOWNED", downed.get_center() + Vector2(0, -8), 15, VaultUITheme.prompt_ink(WARNING, high_contrast_prompts), true)
+		_text("Give a Revive order. Allies need a safe approach.", downed.get_center() + Vector2(0, 15), 11, VaultUITheme.prompt_ink(IVORY, high_contrast_prompts), true)
 
 
 func _draw_party_menu() -> void:

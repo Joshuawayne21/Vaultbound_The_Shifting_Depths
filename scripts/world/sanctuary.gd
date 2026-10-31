@@ -9,6 +9,9 @@ const Shop = preload("res://scenes/world/npc_shop.tscn")
 const Terminal = preload("res://scripts/sanctuary/city_terminal.gd")
 const CityBuilder = preload("res://scripts/sanctuary/sanctuary_city_builder.gd")
 const DistrictArt = preload("res://scripts/sanctuary/sanctuary_district_art.gd")
+const Landscape = preload("res://scripts/sanctuary/sanctuary_landscape.gd")
+const Ambience = preload("res://scripts/sanctuary/sanctuary_ambience.gd")
+const Fauna = preload("res://scripts/visual/ambient_fauna.gd")
 const VisualStyle = preload("res://scripts/visual/visual_style.gd")
 const CITY_LAYOUT = preload("res://resources/sanctuary/city_layout.tres")
 
@@ -23,9 +26,22 @@ func _ready() -> void:
 	_build_tavern()
 	_build_training_court()
 	_build_terminals()
-	# Existing ambience remains bounded; expanded landscape/fauna belong to 6C.
+	_build_scenery()
 	VisualStyle.add_ambience(self, &"sanctuary", Vector3(23, 4, 24), 1055)
 	preload("res://scripts/visual/static_visual_batcher.gd").bake(self, 8.0)
+
+func _build_scenery() -> void:
+	Landscape.new().build(self, CITY_LAYOUT, bool(get_tree().get_meta("capture_city_scenery_geometry", false)))
+	var ambience := Ambience.new()
+	ambience.configure(self, CITY_LAYOUT)
+	add_child(ambience)
+	for index in range(4):
+		var angle := (float(index * 2) + 0.5) * TAU / 8.0
+		var fauna := Fauna.new()
+		fauna.position = Vector3(sin(angle), 0, -cos(angle)) * 30.9
+		fauna.rotation.y = -angle
+		fauna.configure(PackedVector3Array([Vector3(-0.45, 1.0, -0.25), Vector3(0.45, 1.15, 0.25), Vector3(-0.35, 0.9, 0.3), Vector3(0.35, 1.05, -0.3)]), 1071 + index, 4, self)
+		add_child(fauna)
 
 func _build_portals() -> void:
 	for id: StringName in [&"dungeon", &"rootbound_abyss", &"combat_arena", &"collection_hall"]:

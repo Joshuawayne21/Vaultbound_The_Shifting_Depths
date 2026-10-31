@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="VaultBiomeArtDirection" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/visual/biome_art_direction.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"crystal_caverns"
+display_name = "Crystal Caverns"
+direction_summary = "Huge crystals define tall cavern silhouettes, with restrained blue glitter in protected wall pockets. This is an unavailable future art direction."
+motifs = PackedStringArray("huge crystals", "blue glitter", "faceted cavern walls")
+palette = PackedColorArray(0.10, 0.20, 0.34, 1, 0.25, 0.63, 0.85, 1, 0.70, 0.86, 0.97, 1)

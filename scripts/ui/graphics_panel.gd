@@ -8,12 +8,16 @@ const MUTED := VaultUITheme.MUTED
 const TEAL := VaultUITheme.TEAL
 const PANEL := VaultUITheme.PANEL
 const DETAILS := ["Fewer decorative plants and motes. Dynamic shadows off.", "Balanced decoration and soft dynamic shadows.", "Richer decoration, sharper shadows and smoother edges."]
+const TABS := ["graphics", "accessibility", "ambience"]
 var settings: Node
 var selected_quality := 1
 var selected_fps := 30
 var selected_ui_scale := 100
 var selected_reduced_motion := false
 var selected_reduced_effects := false
+var selected_ambient_density := 100
+var selected_high_contrast := false
+var selected_ambient_sound := false
 var section := "graphics"
 var ui_scale := 1.0
 var notice := ""
@@ -36,6 +40,9 @@ func open_panel() -> void:
 		selected_ui_scale = settings.ui_scale_percent
 		selected_reduced_motion = settings.reduced_motion
 		selected_reduced_effects = settings.reduced_effects
+		selected_ambient_density = settings.ambient_density_percent
+		selected_high_contrast = settings.high_contrast_prompts
+		selected_ambient_sound = settings.ambient_sound_enabled
 		notice = settings.storage_error
 	else:
 		notice = "Graphics settings are unavailable."
@@ -106,13 +113,19 @@ func _end(id: int, point: Vector2, canceled: bool) -> void:
 func _hit(point: Vector2) -> String:
 	if close_rect().has_point(point): return "close"
 	if apply_rect().has_point(point): return "apply"
-	for index in range(2):
+	for index in range(TABS.size()):
 		if tab_rect(index).has_point(point): return "tab_%d" % index
 	if section == "accessibility":
 		for index in range(3):
 			if scale_rect(index).has_point(point): return "scale_%d" % index
 		if motion_rect().has_point(point): return "motion"
 		if effects_rect().has_point(point): return "effects"
+		if contrast_rect().has_point(point): return "contrast"
+		return ""
+	if section == "ambience":
+		for index in range(3):
+			if density_rect(index).has_point(point): return "density_%d" % index
+		if sound_rect().has_point(point): return "sound"
 		return ""
 	for index in range(3):
 		if quality_rect(index).has_point(point): return "quality_%d" % index
@@ -125,7 +138,7 @@ func _activate(action: String) -> void:
 	if action == "close":
 		close_requested.emit()
 	elif action == "apply" and is_instance_valid(settings):
-		if settings.set_preferences(selected_quality, selected_fps, selected_ui_scale, selected_reduced_motion, selected_reduced_effects):
+		if settings.set_presentation_preferences(selected_quality, selected_fps, selected_ui_scale, selected_reduced_motion, selected_reduced_effects, selected_ambient_density, selected_high_contrast, selected_ambient_sound):
 			notice = "%s · %d FPS target · UI %d%% saved" % [settings.quality_name, settings.target_fps, settings.ui_scale_percent]
 		else:
 			notice = settings.storage_error
@@ -134,13 +147,19 @@ func _activate(action: String) -> void:
 	elif action.begins_with("fps_"):
 		selected_fps = 30 if action.ends_with("0") else 60
 	elif action.begins_with("tab_"):
-		section = "graphics" if action.ends_with("0") else "accessibility"
+		section = TABS[clampi(action.trim_prefix("tab_").to_int(), 0, TABS.size() - 1)]
 	elif action.begins_with("scale_"):
 		selected_ui_scale = [100, 110, 120][action.trim_prefix("scale_").to_int()]
 	elif action == "motion":
 		selected_reduced_motion = not selected_reduced_motion
 	elif action == "effects":
 		selected_reduced_effects = not selected_reduced_effects
+	elif action == "contrast":
+		selected_high_contrast = not selected_high_contrast
+	elif action.begins_with("density_"):
+		selected_ambient_density = [0, 50, 100][clampi(action.trim_prefix("density_").to_int(), 0, 2)]
+	elif action == "sound":
+		selected_ambient_sound = not selected_ambient_sound
 	queue_redraw()
 
 func panel_rect() -> Rect2:
@@ -167,11 +186,22 @@ func scale_rect(index: int) -> Rect2:
 
 func motion_rect() -> Rect2:
 	var rect := panel_rect()
-	return Rect2(rect.position + Vector2(32, 290), Vector2(rect.size.x - 64, 64))
+	return Rect2(rect.position + Vector2(32, 282), Vector2(rect.size.x - 64, 60))
 
 func effects_rect() -> Rect2:
 	var rect := panel_rect()
-	return Rect2(rect.position + Vector2(32, 382), Vector2(rect.size.x - 64, 64))
+	return Rect2(rect.position + Vector2(32, 354), Vector2(rect.size.x - 64, 60))
+
+func contrast_rect() -> Rect2:
+	var rect := panel_rect()
+	return Rect2(rect.position + Vector2(32, 426), Vector2(rect.size.x - 64, 60))
+
+func density_rect(index: int) -> Rect2:
+	return quality_rect(index)
+
+func sound_rect() -> Rect2:
+	var rect := panel_rect()
+	return Rect2(rect.position + Vector2(32, 330), Vector2(rect.size.x - 64, 64))
 
 func close_rect() -> Rect2:
 	var rect := panel_rect()
@@ -189,8 +219,11 @@ func _draw() -> void:
 	_text("DISPLAY & ACCESSIBILITY", rect.position + Vector2(32, 44), 25, IVORY)
 	_button(tab_rect(0), "GRAPHICS", section == "graphics")
 	_button(tab_rect(1), "ACCESSIBILITY", section == "accessibility")
+	_button(tab_rect(2), "AMBIENCE", section == "ambience")
 	if section == "accessibility":
 		_draw_accessibility(rect)
+	elif section == "ambience":
+		_draw_ambience(rect)
 	else:
 		_draw_graphics(rect)
 	if not notice.is_empty():
@@ -216,10 +249,29 @@ func _draw_accessibility(rect: Rect2) -> void:
 		var value: int = [100, 110, 120][index]
 		_button(scale_rect(index), "%d%%" % value, selected_ui_scale == value)
 	_text("Menus reflow at larger sizes; gameplay controls retain safe anchors.", rect.position + Vector2(32, 260), 12, MUTED)
-	_button(motion_rect(), "REDUCED MOTION: " + ("ON" if selected_reduced_motion else "OFF"), selected_reduced_motion)
-	_text("Calmer UI transitions and cosmetic character movement.", rect.position + Vector2(32, 374), 12, MUTED)
-	_button(effects_rect(), "REDUCED PARTICLES & AURAS: " + ("ON" if selected_reduced_effects else "OFF"), selected_reduced_effects)
-	_text("Lower decorative effects; attack warnings remain readable.", rect.position + Vector2(32, 470), 12, MUTED)
+	_toggle_button(motion_rect(), "REDUCED MOTION: " + ("ON" if selected_reduced_motion else "OFF"), "Calmer UI and static decorative water, foliage and motes.", selected_reduced_motion)
+	_toggle_button(effects_rect(), "REDUCED PARTICLES & AURAS: " + ("ON" if selected_reduced_effects else "OFF"), "Lower decorative effects; attack warnings remain readable.", selected_reduced_effects)
+	_toggle_button(contrast_rect(), "HIGH CONTRAST PROMPTS: " + ("ON" if selected_high_contrast else "OFF"), "Stronger interaction frames, portal labels and entry actions.", selected_high_contrast)
+
+func _draw_ambience(rect: Rect2) -> void:
+	_text("AMBIENT DENSITY", rect.position + Vector2(32, 156), 13, GOLD)
+	for index in range(3):
+		var density: int = [0, 50, 100][index]
+		_button(density_rect(index), "%d%%%s" % [density, " · OFF" if density == 0 else ""], selected_ambient_density == density)
+	_text("Motes and butterflies only; routes and combat warnings remain visible.", rect.position + Vector2(32, 260), 12, MUTED)
+	_text("Density respects the selected quality ceiling and reduced effects.", rect.position + Vector2(32, 284), 12, MUTED)
+	_toggle_button(sound_rect(), "AMBIENT SOUND: " + ("ON" if selected_ambient_sound else "OFF"), "Quiet Sanctuary wind and water · off by default.", selected_ambient_sound)
+	_text("Original generated placeholder audio; device listening remains to be tested.", rect.position + Vector2(32, 430), 12, MUTED)
+	_text("Your selections take effect only after Apply & Save.", rect.position + Vector2(32, 458), 12, IVORY)
+
+func _toggle_button(rect: Rect2, label: String, detail: String, selected: bool) -> void:
+	VaultUITheme.frame(self, rect, Color("173549") if selected else Color("141e32"), TEAL if selected else GOLD, selected)
+	_centered_text(label, rect.get_center() + Vector2(0, -5), 14, IVORY)
+	_centered_text(detail, rect.get_center() + Vector2(0, 18), 11, MUTED)
+
+func _centered_text(value: String, at: Vector2, pixels: int, tint: Color) -> void:
+	var width := _font.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, roundi(pixels * ui_scale)).x
+	_text(value, at - Vector2(width * 0.5, 0), pixels, tint)
 
 func _button(rect: Rect2, label: String, selected: bool) -> void:
 	VaultUITheme.frame(self, rect, Color("173549") if selected else Color("141e32"), TEAL if selected else GOLD, selected)

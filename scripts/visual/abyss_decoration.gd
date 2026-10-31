@@ -14,6 +14,20 @@ const MATERIALS := {
 	"mushroom": preload("res://resources/materials/abyss_mushroom.tres"),
 }
 const MAX_BATCHES := 8
+const MAX_INSTANCES := 512
+const MAX_STORY_INSTANCES := 64
+## Explicit test/inspection opt-in; production retains no transform snapshots.
+static var capture_geometry_for_validation := false
+const STORY_TITLES := {
+	&"pilgrim_grove": "The seed keepers", &"pilgrim_gate": "The pilgrims' procession",
+	&"root_walk": "Roots reclaim the bindings", &"lost_aqueduct": "The silent sluice",
+	&"fern_court": "The unfurling court", &"fallen_court": "The broken crown",
+	&"cascade_court": "Steps of the cascade", &"prism_grotto": "The prism survey",
+	&"moon_garden": "Seeds beneath the moon", &"gilded_vault": "The votive keep",
+	&"thorn_seal": "The blunted thorn", &"secret_orchid": "The orchid constellation",
+	&"warden_oath": "The three rootbound oaths", &"spring_seal": "The returning spring",
+}
+const STORY_MESHES := {"stone": "box", "rock": "rock", "gold": "box", "bark": "cylinder", "glow": "cone"}
 const MESHES := {
 	"box": preload("res://resources/meshes/abyss_detail_box.tres"),
 	"cylinder": preload("res://resources/meshes/abyss_detail_cylinder.tres"),
@@ -25,9 +39,15 @@ var module_id: StringName
 var motif: StringName
 var cosmetic_seed := 0
 var instance_total := 0
+var story_instance_total := 0
+var story_title := ""
 var _batches: Dictionary = {}
+var _story_starts: Dictionary = {}
+var _story_turn := Basis.IDENTITY
+var _story_center := Vector3.ZERO
 var _foliage: Array[MultiMeshInstance3D] = []
 var _rng := RandomNumberGenerator.new()
+var _fingerprint := 0
 
 func configure(id: StringName, authored_motif: StringName, expedition_seed: int, room_id: int) -> void:
 	module_id = id
@@ -41,6 +61,7 @@ func _ready() -> void:
 	_wall_dressing()
 	_corner_gardens()
 	_landmark()
+	_storytelling()
 	_flush_batches()
 	var settings := get_node_or_null("/root/VisualSettings")
 	if settings != null and settings.has_method("apply_to"):
@@ -57,11 +78,7 @@ func apply_visual_settings(settings: Dictionary) -> void:
 		visual.visibility_range_end_margin = 3.0
 
 func fingerprint() -> int:
-	var signature: Array = [module_id, motif, cosmetic_seed]
-	for child: Node in get_children():
-		if child is MultiMeshInstance3D:
-			signature.append(child.multimesh.buffer)
-	return hash(signature)
+	return _fingerprint
 
 func _wall_dressing() -> void:
 	# All tall surfaces remain inside the original wall footprint. Doorways
@@ -187,16 +204,165 @@ func _bridge(center: Vector3) -> void:
 	for side: float in [-1.0, 1.0]:
 		_add("gold", "box", "gold", center + Vector3(side * 1.05, 0.12, 0), Vector3(0.045, 0.018, 1.78))
 
+func _storytelling() -> void:
+	# Two shallow reliefs use the existing wall apron; none is a reward, altar
+	# interaction or new obstacle. A separate seed leaves the old garden RNG alone.
+	story_title = String(STORY_TITLES.get(motif, ""))
+	for key: String in _batches:
+		_story_starts[key] = _batches[key].transforms.size()
+	var before := instance_total
+	var random := RandomNumberGenerator.new()
+	random.seed = cosmetic_seed ^ 0x5A17
+	var wall := random.randi_range(0, 3)
+	for panel in range(2):
+		_story_turn = Basis(Vector3.UP, float((wall + panel * 2) % 4) * PI * 0.5)
+		_story_center = Vector3(-9.6 if panel == 0 else 9.6, 1.25, -11.42)
+		match motif:
+			&"pilgrim_grove":
+				_story_arc(Vector2.ZERO, 0.63, 8, 0.0, TAU, "gold")
+				_story_piece("rock", Vector3(0, -0.04, 0.04), Vector3(0.46, 0.67, 0.08))
+				_story_piece("glow", Vector3(0, 0.31, 0.07), Vector3(0.18, 0.4, 0.05))
+				_story_piece("stone", Vector3(0, -0.75, 0), Vector3(1.25, 0.12, 0.06))
+			&"pilgrim_gate":
+				for index in range(3):
+					var x := float(index - 1) * 0.5
+					_story_piece("rock", Vector3(x, 0.37, 0.04), Vector3(0.19, 0.22, 0.07))
+					_story_piece("stone", Vector3(x, 0.05, 0), Vector3(0.22, 0.43, 0.06), -0.12)
+					_story_piece("gold", Vector3(x - 0.15, -0.11, 0.04), Vector3(0.035, 0.74, 0.04), -0.1)
+					_story_piece("stone", Vector3(x + 0.1, -0.3, 0), Vector3(0.08, 0.3, 0.05), 0.4)
+				_story_piece("gold", Vector3(0, -0.51, 0), Vector3(1.6, 0.04, 0.04))
+			&"root_walk":
+				for strand in [-1.0, 1.0]:
+					for index in range(5):
+						_story_piece("bark", Vector3(strand * sin(index * 1.4) * 0.3, -0.65 + index * 0.3, 0.03), Vector3(0.1, 0.39, 0.06), strand * cos(index * 1.4) * -0.6)
+				for y in [-0.55, 0.0, 0.55]:
+					_story_piece("gold", Vector3(0, y, 0.08), Vector3(0.82, 0.065, 0.04))
+			&"lost_aqueduct":
+				for side in [-1.0, 1.0]:
+					_story_piece("stone", Vector3(side * 0.62, 0, 0), Vector3(0.13, 1.5, 0.08))
+					_story_piece("stone", Vector3(0, side * 0.72, 0), Vector3(1.37, 0.13, 0.08))
+				for index in range(5):
+					_story_piece("gold", Vector3((index - 2) * 0.22, 0, 0.05), Vector3(0.055, 1.17 - index * 0.09, 0.04), 0.04 * index)
+				for index in range(3):
+					_story_piece("glow", Vector3((index - 1) * 0.4, -0.47, 0.09), Vector3(0.1, 0.25, 0.035), PI)
+			&"fern_court":
+				for index in range(7):
+					var angle := float(index - 3) * 0.22
+					_story_piece("gold", Vector3(sin(angle) * 0.45, cos(angle) * 0.37, 0.02), Vector3(0.07, 0.82, 0.05), -angle)
+				_story_piece("bark", Vector3(0, -0.3, 0.03), Vector3(0.1, 0.55, 0.07))
+				_story_piece("stone", Vector3(0, -0.65, 0), Vector3(1.35, 0.16, 0.08))
+			&"fallen_court":
+				for index in range(5):
+					var x := (index - 2) * 0.29
+					_story_piece("stone", Vector3(x, -0.22 - absf(x) * 0.2, 0), Vector3(0.28, 0.17, 0.08), x * 0.3)
+					_story_piece("gold", Vector3(x, 0.11 - absf(x) * 0.28, 0.05), Vector3(0.08, 0.48, 0.04), -x * 0.6)
+				for index in range(3):
+					_story_piece("rock", Vector3(-0.45 + index * 0.4, -0.62, 0.02), Vector3(0.22, 0.18, 0.08), index * 0.3)
+			&"cascade_court":
+				for index in range(6):
+					_story_piece("stone", Vector3(sin(index * 0.8) * 0.22, 0.65 - index * 0.24, 0), Vector3(1.35 - index * 0.1, 0.1, 0.07))
+				for side in [-1.0, 0.0, 1.0]:
+					_story_piece("glow", Vector3(side * 0.42, 0.02, 0.07), Vector3(0.055, 1.5, 0.04), PI)
+				_story_arc(Vector2(0, 0.71), 0.3, 6, 0.0, PI, "gold")
+			&"prism_grotto":
+				_story_arc(Vector2.ZERO, 0.72, 12, 0.0, TAU, "gold")
+				for index in range(3):
+					_story_piece("glow", Vector3((index - 1) * 0.36, 0, 0.05), Vector3(0.19, 0.95 if index == 1 else 0.55, 0.05), (index - 1) * -0.2)
+				_story_piece("stone", Vector3(0, -0.8, 0), Vector3(1.55, 0.09, 0.06))
+			&"moon_garden":
+				_story_arc(Vector2(-0.1, 0.15), 0.67, 10, 0.45, 5.35, "gold")
+				for index in range(3):
+					_story_piece("glow", Vector3(0.1 + index * 0.2, 0.45 - index * 0.4, 0.04), Vector3(0.1, 0.19, 0.045), index * 0.6)
+				_story_piece("rock", Vector3(-0.16, -0.65, 0), Vector3(0.55, 0.21, 0.07))
+			&"gilded_vault":
+				for index in range(3):
+					var x := (index - 1) * 0.53
+					for side in [-1.0, 1.0]:
+						_story_piece("stone", Vector3(x + side * 0.2, 0, 0), Vector3(0.06, 1.08, 0.06))
+						_story_piece("gold", Vector3(x, side * 0.51, 0.04), Vector3(0.46, 0.065, 0.04))
+					_story_piece("glow", Vector3(x, 0, 0.045), Vector3(0.13, 0.44, 0.045))
+			&"thorn_seal":
+				_story_piece("rock", Vector3.ZERO, Vector3(1.1, 1.4, 0.07))
+				for side in [-1.0, 1.0]:
+					for index in range(4):
+						_story_piece("bark", Vector3(side * 0.25, -0.5 + index * 0.32, 0.07), Vector3(0.07, 0.39, 0.04), side * 0.75)
+					_story_piece("gold", Vector3(side * 0.55, 0, 0.02), Vector3(0.05, 1.25, 0.04), side * -0.18)
+			&"secret_orchid":
+				var stars := [Vector2(-0.61, -0.38), Vector2(-0.38, 0.32), Vector2(0, 0.65), Vector2(0.46, 0.36), Vector2(0.6, -0.32), Vector2(0, -0.58)]
+				for index in range(stars.size()):
+					var from: Vector2 = stars[index]
+					var to: Vector2 = stars[(index + 1) % stars.size()]
+					_story_piece("glow", Vector3(from.x, from.y, 0.055), Vector3(0.16, 0.2, 0.04), float(index) * 0.5)
+					var midpoint := (from + to) * 0.5
+					_story_piece("gold", Vector3(midpoint.x, midpoint.y, 0.02), Vector3(0.025, from.distance_to(to), 0.035), -atan2(to.x - from.x, to.y - from.y))
+			&"warden_oath":
+				for index in range(3):
+					var x := (index - 1) * 0.5
+					_story_piece("stone", Vector3(x, 0, 0), Vector3(0.32, 1.45, 0.075), x * 0.07)
+					for line in range(3):
+						_story_piece("gold", Vector3(x, 0.4 - line * 0.33, 0.07), Vector3(0.18, 0.045, 0.025), 0.13 if line % 2 else -0.13)
+				for side in [-1.0, 1.0]:
+					_story_piece("bark", Vector3(side * 0.4, -0.52, 0.09), Vector3(0.085, 1.0, 0.05), side * 1.1)
+			&"spring_seal":
+				for ring in range(2):
+					_story_arc(Vector2(0, 0.14), 0.37 + ring * 0.3, 7, 0.3, 2.55, "gold")
+				for index in range(3):
+					_story_piece("glow", Vector3((index - 1) * 0.37, -0.24, 0.05), Vector3(0.12, 0.4, 0.04), PI)
+				_story_piece("stone", Vector3(0, -0.66, 0), Vector3(1.55, 0.12, 0.07))
+	story_instance_total = instance_total - before
+
+func _story_piece(key: String, offset: Vector3, dimensions: Vector3, angle: float = 0.0) -> void:
+	var basis := _story_turn * Basis(Vector3.BACK, angle)
+	_add(key, STORY_MESHES[key], key, _story_turn * (_story_center + offset), dimensions, basis.get_euler())
+
+func _story_arc(center: Vector2, radius: float, pieces: int, first: float, sweep: float, key: String) -> void:
+	for index in range(pieces):
+		var angle := first + sweep * float(index) / float(pieces)
+		_story_piece(key, Vector3(center.x + sin(angle) * radius, center.y + cos(angle) * radius, 0.035), Vector3(0.17, 0.055, 0.04), -angle)
+
+func _distribute_foliage(data: Dictionary, key: String) -> void:
+	# Round-robin corner groups make every quality prefix spatially balanced.
+	# This seed is presentation-only and never advances the construction RNG.
+	var corners: Array[Array] = [[], [], [], []]
+	for index in range(data.transforms.size()):
+		var at: Vector3 = data.transforms[index].origin
+		corners[(0 if at.x < 0.0 else 1) + (0 if at.z < 0.0 else 2)].append(index)
+	var random := RandomNumberGenerator.new()
+	random.seed = cosmetic_seed ^ String(key).hash() ^ 0x31F7
+	var maximum := 0
+	for indices: Array in corners:
+		maximum = maxi(maximum, indices.size())
+		for index in range(indices.size() - 1, 0, -1):
+			var other := random.randi_range(0, index)
+			var held: int = indices[index]
+			indices[index] = indices[other]
+			indices[other] = held
+	var transforms: Array = []
+	var colors: Array = []
+	for position in range(maximum):
+		for indices: Array in corners:
+			if position < indices.size():
+				transforms.append(data.transforms[indices[position]])
+				colors.append(data.colors[indices[position]])
+	data.transforms = transforms
+	data.colors = colors
+
 func _add(key: String, mesh_kind: String, material_key: String, at: Vector3, dimensions: Vector3, angles := Vector3.ZERO, tint := Color.WHITE) -> void:
 	if not _batches.has(key):
 		_batches[key] = {"shape": mesh_kind, "material": material_key, "transforms": [], "colors": []}
-	_batches[key].transforms.append(Transform3D(Basis.from_euler(angles).scaled(dimensions), at))
+	# Dimensions describe the mesh's own axes, including quarter-turned walls.
+	_batches[key].transforms.append(Transform3D(Basis.from_euler(angles) * Basis.from_scale(dimensions), at))
 	_batches[key].colors.append(tint)
 	instance_total += 1
 
 func _flush_batches() -> void:
+	# Hash only draw inputs: different seeds must change actual appearance,
+	# rather than passing a reproducibility check through seed metadata alone.
+	var signature: Array = []
 	for key: String in _batches:
 		var data: Dictionary = _batches[key]
+		if key in ["leaf", "flower"]:
+			_distribute_foliage(data, key)
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.use_colors = true
@@ -210,8 +376,15 @@ func _flush_batches() -> void:
 		visual.multimesh = mm
 		visual.material_override = MATERIALS[data.material]
 		visual.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		visual.set_meta("story_start", int(_story_starts.get(key, mm.instance_count)))
+		# Dummy rendering has no real instance readback. Inspection can retain
+		# the exact authored transforms; normal play keeps only the fingerprint.
+		if capture_geometry_for_validation:
+			visual.set_meta("authored_transforms", data.transforms)
+		signature.append([key, data.shape, data.material, data.transforms, data.colors])
 		add_child(visual)
 		if key in ["leaf", "flower"]:
 			_foliage.append(visual)
+	_fingerprint = hash(signature)
 	_batches.clear()
 

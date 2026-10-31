@@ -15,6 +15,7 @@ var openings: Array[StringName] = []
 var cosmetic_seed := 1
 var cosmetic_room_id := 0
 var dressing: AbyssDecoration
+var ambient_fauna: VaultAmbientFauna
 
 func configure_visuals(expedition_seed: int, room_id: int) -> void:
 	# Separate from topology/encounter/loot seeds and stable across room culling.
@@ -28,6 +29,28 @@ func _ready() -> void:
 	add_child(dressing)
 	var ambience := preload("res://scripts/visual/visual_style.gd").add_ambience(self, &"abyss", Vector3(18, 2.6, 18), dressing.cosmetic_seed)
 	ambience.configure_budget(12)
+	ambient_fauna = preload("res://scripts/visual/ambient_fauna.gd").new()
+	# Hovering corner pockets stay outside combat, doorway and spawn envelopes.
+	# Pass the actual world explicitly: rooms sit under an intermediate holder.
+	ambient_fauna.configure(PackedVector3Array([
+		Vector3(-9.1, 1.15, -9.1), Vector3(9.1, 1.15, -9.1),
+		Vector3(-9.1, 1.15, 9.1), Vector3(9.1, 1.15, 9.1),
+	]), dressing.cosmetic_seed ^ 0xB771, 4, _ambient_world_root())
+	add_child(ambient_fauna)
+
+func _ambient_world_root() -> Node3D:
+	var candidate := get_parent()
+	var fallback: Node3D = self
+	# A nested preview viewport is a separate presentation world even when its
+	# container lives below the main Game/level hierarchy.
+	while candidate != null and candidate.get_viewport() == get_viewport():
+		if candidate is Node3D:
+			fallback = candidate
+			if candidate.has_method("get_spawn_transform"):
+				return candidate as Node3D
+		candidate = candidate.get_parent()
+	# A room instantiated alone for a preview/test belongs to that stage.
+	return fallback
 
 func configure_openings(directions: Array[StringName]) -> void:
 	openings.assign(directions)

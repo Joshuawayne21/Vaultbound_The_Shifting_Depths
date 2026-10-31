@@ -45,7 +45,7 @@ func configure_budget(count: int) -> void:
 	_apply_budget()
 
 func apply_visual_settings(settings: Dictionary) -> void:
-	_quality_budget = clampi(int(settings.get("ambient_budget", 16)), 0, 24)
+	_quality_budget = clampi(int(settings.get("ambient_particle_budget", settings.get("ambient_budget", 16))), 0, 24)
 	_apply_budget()
 
 func _apply_budget() -> void:

@@ -1,5 +1,6 @@
 shader_type spatial;
 render_mode cull_disabled, diffuse_burley, specular_schlick_ggx;
+global uniform float vault_decorative_motion_scale;
 // Opaque hand-authored water: one sine pair, no scene/depth/refraction sampling.
 uniform vec4 deep_color : source_color = vec4(0.025, 0.17, 0.19, 1.0);
 uniform vec4 shallow_color : source_color = vec4(0.08, 0.42, 0.40, 1.0);
@@ -9,7 +10,7 @@ uniform float ripple_scale : hint_range(1.0, 40.0) = 18.0;
 uniform float bank_width : hint_range(0.0, 0.5) = 0.18;
 uniform float falling : hint_range(0.0, 1.0) = 0.0;
 void fragment() {
- float along = UV.y * ripple_scale - TIME * flow_speed;
+ float along = UV.y * ripple_scale - TIME * vault_decorative_motion_scale * flow_speed;
  float ripple = sin(along * 6.283185 + sin(UV.x * 13.0) * 0.7);
  float fine = sin(UV.x * 39.0 + along * 3.0);
  float edge = min(UV.x, 1.0 - UV.x);

@@ -13,6 +13,7 @@ var selected_district: StringName = &"map"
 var ui_scale := 1.0
 var notice := ""
 var entry_enabled := false
+var high_contrast_prompts := false
 var _font: Font
 var _pointers: Dictionary = {}
 var _epoch := 0
@@ -52,6 +53,7 @@ func hide_panel() -> void:
 
 func apply_visual_settings(settings: Dictionary) -> void:
 	ui_scale = UI.scale_from(settings)
+	high_contrast_prompts = bool(settings.get("high_contrast_prompts", false))
 	_cancel_pointers()
 	queue_redraw()
 
@@ -194,10 +196,10 @@ func _draw() -> void:
 	if kind == &"map":
 		_button(clear_rect(), "CLEAR WAYPOINT", false)
 		_button(primary_rect(), "GUIDE TO DISTRICT", true)
-	elif kind == &"portal": _button(primary_rect(), "ENTER" if entry_enabled else "ENTRY UNAVAILABLE", entry_enabled)
+	elif kind == &"portal": _button(primary_rect(), "ENTER" if entry_enabled else "ENTRY UNAVAILABLE", entry_enabled, high_contrast_prompts)
 	else: _button(primary_rect(), "OPEN CITY MAP", true)
 	if not notice.is_empty():
-		_text(notice, rect.position + Vector2(24, rect.size.y - 94), 12, UI.WARNING, rect.size.x - 48)
+		_text(notice, rect.position + Vector2(24, rect.size.y - 94), 12, UI.prompt_ink(UI.WARNING, high_contrast_prompts), rect.size.x - 48)
 
 func _draw_map() -> void:
 	var rect := map_rect()
@@ -238,11 +240,14 @@ func _draw_information() -> void:
 		_text(line, Vector2(rect.position.x + 32, y), 15, UI.IVORY, rect.size.x - 64)
 		y += 42 * ui_scale
 
-func _button(rect: Rect2, label: String, selected: bool) -> void:
-	UI.frame(self, rect, Color("16424a") if selected else Color("141e32"), UI.TEAL if selected else UI.GOLD, selected)
+func _button(rect: Rect2, label: String, selected: bool, strong_prompt: bool = false) -> void:
+	if strong_prompt:
+		UI.prompt_frame(self, rect, Color("16424a") if selected else Color("141e32"), UI.TEAL if selected else UI.GOLD, true)
+	else:
+		UI.frame(self, rect, Color("16424a") if selected else Color("141e32"), UI.TEAL if selected else UI.GOLD, selected)
 	var text := _fit(label, rect.size.x - 16, 13)
 	var width := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, roundi(13 * ui_scale)).x
-	_text(text, rect.get_center() + Vector2(-width * 0.5, 5), 13, UI.IVORY)
+	_text(text, rect.get_center() + Vector2(-width * 0.5, 5), 13, UI.prompt_ink(UI.IVORY, strong_prompt))
 
 func _fit(value: String, width: float, pixels: int) -> String:
 	var result := value

@@ -1,5 +1,6 @@
 shader_type spatial;
 render_mode unshaded, cull_disabled, fog_disabled;
+global uniform float vault_decorative_motion_scale;
 
 // Opaque, depth-tested portal veil. Two analytic bands replace texture layers,
 // refraction and post-process glow; the outer opening retains its oval silhouette.
@@ -12,7 +13,7 @@ void fragment() {
 	float radius = length(point) * 2.0;
 	if (radius > 1.0) { discard; }
 	float angle = atan(point.y, point.x);
-	float curl = sin(radius * 17.0 - angle * 2.0 - TIME * 0.75);
+	float curl = sin(radius * 17.0 - angle * 2.0 - TIME * vault_decorative_motion_scale * 0.75);
 	float thread = pow(0.5 + 0.5 * curl, 5.0);
 	float rim = smoothstep(0.85, 0.98, radius);
 	float core = 1.0 - smoothstep(0.05, 0.64, radius);

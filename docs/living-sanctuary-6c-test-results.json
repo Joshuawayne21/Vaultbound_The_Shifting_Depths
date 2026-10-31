@@ -1,0 +1,1965 @@
+{
+  "milestone": "Living Sanctuary 6C",
+  "engine": "Godot 4.6.3.stable.official.7d41c59c4",
+  "platform": "Linux headless, Compatibility",
+  "source_snapshot": "/tmp/vaultbound-living-6c-frozen-source",
+  "source_origin": {
+    "base_commit": "9bbf08fd148f608cf5e61faa30520a7d41f0a46f",
+    "working_tree_snapshot": true,
+    "frozen_at_utc": "2026-10-31T22:31:56.316231+00:00"
+  },
+  "release_metadata": {
+    "project_version": "0.6.0-6c",
+    "android_version_name": "0.6.0-6c",
+    "android_version_code": 9,
+    "export_presets_sha256": "5b554892318049e8de81386fddf619536fce1a9f53a1430db11b2c6eb6222868",
+    "matches_workspace_export_preset": true,
+    "apk_export_tested": false
+  },
+  "completed_at_utc": "2026-10-31T22:40:17.201689+00:00",
+  "source_signature": {
+    "sha256": "bf971952455568829b5883cc24c8c3ae1b00bd0ee3740d8f948aa1be1384f3ca",
+    "semantic_file_count": 702,
+    "opening_equals_closing": true,
+    "matches_final_workspace": true,
+    "scope": [
+      "project.godot",
+      "scripts/**",
+      "resources/**",
+      "scenes/**",
+      "assets/**",
+      "tests/**"
+    ],
+    "excluded_generated_suffixes": [
+      ".uid",
+      ".import"
+    ]
+  },
+  "suite_count": 65,
+  "invocation_count": 79,
+  "preserved_suite_count": 62,
+  "preserved_invocation_count": 75,
+  "new_suites": [
+    "biome_art_direction_test",
+    "city_scenery_test",
+    "visual_accessibility_test"
+  ],
+  "passed_assertions": 11480,
+  "failed_invocations": 0,
+  "process_order": "Sequential; every listed invocation is a separate engine process, with readers after their writers.",
+  "storage_isolation": "All processes, including editor import and startup, use disposable XDG_DATA_HOME, XDG_CONFIG_HOME and XDG_CACHE_HOME. Explicit persistent test fixtures remain under /tmp. Normal play storage was not used.",
+  "setup": [
+    {
+      "suite": "import",
+      "exit_code": 0,
+      "passed": 0,
+      "errors": [],
+      "environment_notices": [
+        "ERROR: Condition \"_sock == -1\" is true. Returning: FAILED",
+        "ERROR: Condition \"err != OK\" is true. Returning: ERR_CANT_CREATE",
+        "ERROR: Condition \"_sock == -1\" is true. Returning: FAILED",
+        "ERROR: Condition \"err != OK\" is true. Returning: ERR_CANT_CREATE",
+        "Unable to open Android 'build-tools' directory."
+      ],
+      "seconds": 6.179,
+      "log": "/tmp/vaultbound-living-6c-final-regression/import.log",
+      "ok": true
+    },
+    {
+      "suite": "startup",
+      "exit_code": 0,
+      "passed": 0,
+      "errors": [],
+      "environment_notices": [],
+      "seconds": 4.925,
+      "log": "/tmp/vaultbound-living-6c-final-regression/startup.log",
+      "ok": true
+    }
+  ],
+  "setup_commands": [
+    [
+      "env",
+      "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/import/data",
+      "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/import/config",
+      "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/import/cache",
+      "godot4",
+      "--headless",
+      "--path",
+      "/tmp/vaultbound-living-6c-frozen-source",
+      "--editor",
+      "--import",
+      "--quit"
+    ],
+    [
+      "env",
+      "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/startup/data",
+      "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/startup/config",
+      "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/startup/cache",
+      "godot4",
+      "--headless",
+      "--path",
+      "/tmp/vaultbound-living-6c-frozen-source",
+      "--quit-after",
+      "120"
+    ]
+  ],
+  "layout_coverage": {
+    "seed_min": 0,
+    "seed_max": 99,
+    "seed_count": 100,
+    "structural_pass_records": 100,
+    "reproducibility_pass_records": 100
+  },
+  "city_navigation_metrics": {
+    "Guardian": {
+      "geometry_probes": 14095,
+      "recoveries": 0,
+      "replans": 270
+    },
+    "Mystic": {
+      "geometry_probes": 11141,
+      "recoveries": 0,
+      "replans": 233
+    },
+    "distance": {
+      "Guardian": 488.236421655325,
+      "Mystic": 496.265685070539,
+      "Player": 496.334543232922
+    },
+    "maximum_actor_step": 0.089333787560463,
+    "observed_physics_frames": 7067,
+    "player": {
+      "geometry_probes": 18796,
+      "replans": 165
+    }
+  },
+  "cosmetic_coverage": {
+    "seed_count": 100,
+    "module_count": 14,
+    "cases": 1400,
+    "source": "Captured construction inputs, native mesh AABBs and shader sway; dummy MultiMesh transform readback is not used."
+  },
+  "explicit_new_reader": "visual_accessibility_test --read",
+  "independent_reader_invocations": 11,
+  "invocations": [
+    {
+      "suite": "abyss_visual_test",
+      "arguments": [],
+      "passed_assertions": 325,
+      "seconds": 6.232,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/abyss_visual_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/abyss_visual_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/abyss_visual_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/abyss_visual_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/abyss_visual_test.log",
+      "log_sha256": "512c98dba386ec6b9971aa3f54cbc2e7fbdd502d932afcfd673d8b5fc5199784"
+    },
+    {
+      "suite": "accessibility_preferences_test",
+      "arguments": [],
+      "passed_assertions": 41,
+      "seconds": 0.466,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/accessibility_preferences_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/accessibility_preferences_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/accessibility_preferences_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/accessibility_preferences_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/accessibility_preferences_test.log",
+      "log_sha256": "bafcc141e2785e95030643c93c4b493717a4224d68a40d7acb9c70d59e3505ec"
+    },
+    {
+      "suite": "accessibility_preferences_test",
+      "arguments": [
+        "--read"
+      ],
+      "passed_assertions": 3,
+      "seconds": 0.465,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/accessibility_preferences_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/accessibility_preferences_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/accessibility_preferences_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/accessibility_preferences_test.gd",
+        "--",
+        "--read"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/accessibility_preferences_test_read.log",
+      "log_sha256": "d79854b9862b7bac767d4fa28530c16af9de5d6f88e8bf4b05b12614530c4000"
+    },
+    {
+      "suite": "biome_art_direction_test",
+      "arguments": [],
+      "passed_assertions": 47,
+      "seconds": 0.665,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/biome_art_direction_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/biome_art_direction_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/biome_art_direction_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/biome_art_direction_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/biome_art_direction_test.log",
+      "log_sha256": "1f0d7f714a8a77a4555c29c8215fca38c5ed4578b0a813eaaebfdf3ac2fae054"
+    },
+    {
+      "suite": "catalog_category_integration_test",
+      "arguments": [],
+      "passed_assertions": 87,
+      "seconds": 6.177,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/catalog_category_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/catalog_category_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/catalog_category_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/catalog_category_integration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/catalog_category_integration_test.log",
+      "log_sha256": "b8d448c88078575bbac49c72934d530eae4433d488b6d8df2b00886418e7198e"
+    },
+    {
+      "suite": "catalog_category_integration_test",
+      "arguments": [
+        "--read"
+      ],
+      "passed_assertions": 13,
+      "seconds": 3.922,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/catalog_category_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/catalog_category_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/catalog_category_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/catalog_category_integration_test.gd",
+        "--",
+        "--read"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/catalog_category_integration_test_read.log",
+      "log_sha256": "f9cb365e0d85b7cd95ff930593d06745d2eec5318bcfe09a30ebe71ed456925f"
+    },
+    {
+      "suite": "catalog_equipment_batch_test",
+      "arguments": [],
+      "passed_assertions": 1063,
+      "seconds": 3.173,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/catalog_equipment_batch_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/catalog_equipment_batch_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/catalog_equipment_batch_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/catalog_equipment_batch_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/catalog_equipment_batch_test.log",
+      "log_sha256": "dbc49fb4abd18a4c66123fe98af925a28a1279b5c4d8a4e27bf96a9f1ff9a103"
+    },
+    {
+      "suite": "catalog_runtime_integration_test",
+      "arguments": [],
+      "passed_assertions": 67,
+      "seconds": 13.144,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/catalog_runtime_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/catalog_runtime_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/catalog_runtime_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/catalog_runtime_integration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/catalog_runtime_integration_test.log",
+      "log_sha256": "e4c3ff63dd3101dd8ab983b9312bf406db2abb605eba64983e7c3133141e1acb"
+    },
+    {
+      "suite": "catalog_stackable_batch_test",
+      "arguments": [],
+      "passed_assertions": 1174,
+      "seconds": 3.927,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/catalog_stackable_batch_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/catalog_stackable_batch_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/catalog_stackable_batch_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/catalog_stackable_batch_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/catalog_stackable_batch_test.log",
+      "log_sha256": "a3f5186b57d47586d2cc1a04ade5b4c08d32c3c989b301be01c7c01cb425d639"
+    },
+    {
+      "suite": "catalog_weapon_batch_test",
+      "arguments": [],
+      "passed_assertions": 308,
+      "seconds": 1.519,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/catalog_weapon_batch_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/catalog_weapon_batch_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/catalog_weapon_batch_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/catalog_weapon_batch_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/catalog_weapon_batch_test.log",
+      "log_sha256": "cefff4eeb99b1bf8a724adbb4d4ebf4a0f97986a367b6de438946f893659cb9d"
+    },
+    {
+      "suite": "character_presentation_test",
+      "arguments": [],
+      "passed_assertions": 21,
+      "seconds": 0.566,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/character_presentation_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/character_presentation_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/character_presentation_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/character_presentation_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/character_presentation_test.log",
+      "log_sha256": "2431304b4ed32503067b0c76759abbe1e9af8c1b9c24a91e291871449fe39882"
+    },
+    {
+      "suite": "character_progression_test",
+      "arguments": [],
+      "passed_assertions": 69,
+      "seconds": 2.22,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/character_progression_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/character_progression_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/character_progression_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/character_progression_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/character_progression_test.log",
+      "log_sha256": "cc00fe31e73856829251f7dede8eb205901110ccd2ada3ceb92ac3626f94f945"
+    },
+    {
+      "suite": "city_navigation_test",
+      "arguments": [],
+      "passed_assertions": 68,
+      "seconds": 119.359,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/city_navigation_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/city_navigation_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/city_navigation_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/city_navigation_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/city_navigation_test.log",
+      "log_sha256": "fb335c70fb003f827773072e9504b6fdab9edd099521c410e7ebc88ce2e2a79f"
+    },
+    {
+      "suite": "city_scenery_test",
+      "arguments": [],
+      "passed_assertions": 141,
+      "seconds": 2.072,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/city_scenery_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/city_scenery_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/city_scenery_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/city_scenery_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/city_scenery_test.log",
+      "log_sha256": "fedd6508312c6461849c681d085e1c6f25aeecd0b4653263d3d0f2ce70db0d66"
+    },
+    {
+      "suite": "city_surface_test",
+      "arguments": [],
+      "passed_assertions": 21,
+      "seconds": 6.632,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/city_surface_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/city_surface_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/city_surface_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/city_surface_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/city_surface_test.log",
+      "log_sha256": "756511c070bb81e24ba8541ee0aa64c0cba7f32447cc85b75aedec6d042db711"
+    },
+    {
+      "suite": "collection_world_test",
+      "arguments": [],
+      "passed_assertions": 36,
+      "seconds": 1.218,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/collection_world_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/collection_world_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/collection_world_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/collection_world_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/collection_world_test.log",
+      "log_sha256": "6dfeb920214cbcb661710a4c725cfaf4c1979f79e8516cb0b3334de8ad38d397"
+    },
+    {
+      "suite": "combat_presentation_test",
+      "arguments": [],
+      "passed_assertions": 33,
+      "seconds": 0.666,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/combat_presentation_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/combat_presentation_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/combat_presentation_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/combat_presentation_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/combat_presentation_test.log",
+      "log_sha256": "0dab9f4aeb2654123291502a5d7291536951cf2ae7d0423c0a28214b1bf7ea72"
+    },
+    {
+      "suite": "combat_test",
+      "arguments": [],
+      "passed_assertions": 177,
+      "seconds": 42.324,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/combat_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/combat_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/combat_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/combat_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/combat_test.log",
+      "log_sha256": "d8a0597ae4c1f474d87f2aa846df21de82a0b5776ae048ba0cb537b783c5c888"
+    },
+    {
+      "suite": "companion_behavior_test",
+      "arguments": [],
+      "passed_assertions": 38,
+      "seconds": 12.744,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/companion_behavior_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/companion_behavior_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/companion_behavior_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/companion_behavior_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/companion_behavior_test.log",
+      "log_sha256": "56fd9145fd9a0317dde824ac9c3821e8f191d312ef9b72abc7148308612ded27"
+    },
+    {
+      "suite": "companion_navigation_test",
+      "arguments": [],
+      "passed_assertions": 26,
+      "seconds": 12.665,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/companion_navigation_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/companion_navigation_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/companion_navigation_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/companion_navigation_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/companion_navigation_test.log",
+      "log_sha256": "d87d045775055b3854dbb75c07fa6d43b563e01d85c9e65007e5278853118797"
+    },
+    {
+      "suite": "dungeon_layout_test",
+      "arguments": [],
+      "passed_assertions": 480,
+      "seconds": 2.22,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/dungeon_layout_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/dungeon_layout_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/dungeon_layout_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/dungeon_layout_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/dungeon_layout_test.log",
+      "log_sha256": "0f17bc96603eaef693759fa1e8105f18395de107adc9c1359c4ca8582e9a1967"
+    },
+    {
+      "suite": "encounter_loot_test",
+      "arguments": [],
+      "passed_assertions": 36,
+      "seconds": 3.779,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/encounter_loot_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/encounter_loot_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/encounter_loot_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/encounter_loot_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/encounter_loot_test.log",
+      "log_sha256": "1bacd3f479eb2e08d2616fd370d9d350a01a41c1747992b434b72b3689234697"
+    },
+    {
+      "suite": "enhancement_integration_test",
+      "arguments": [],
+      "passed_assertions": 170,
+      "seconds": 15.768,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/enhancement_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/enhancement_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/enhancement_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/enhancement_integration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/enhancement_integration_test.log",
+      "log_sha256": "460db056ecb9ce1bcfc097b6365d226098ef9c3593857db3f0b20dcfd1e7db73"
+    },
+    {
+      "suite": "enhancement_integration_test",
+      "arguments": [
+        "--read"
+      ],
+      "passed_assertions": 20,
+      "seconds": 4.224,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/enhancement_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/enhancement_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/enhancement_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/enhancement_integration_test.gd",
+        "--",
+        "--read"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/enhancement_integration_test_read.log",
+      "log_sha256": "f53f2c06d02b646bd857b656ffa213ed94bcc2f6607fd201f902e8be8a026d2a"
+    },
+    {
+      "suite": "enhancement_policy_test",
+      "arguments": [],
+      "passed_assertions": 54,
+      "seconds": 0.866,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/enhancement_policy_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/enhancement_policy_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/enhancement_policy_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/enhancement_policy_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/enhancement_policy_test.log",
+      "log_sha256": "7c83edb4a647e1d2b70e6ff2fc453da621bfed230364fd06272f6b52aa9fce68"
+    },
+    {
+      "suite": "enhancement_ui_test",
+      "arguments": [],
+      "passed_assertions": 39,
+      "seconds": 3.923,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/enhancement_ui_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/enhancement_ui_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/enhancement_ui_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/enhancement_ui_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/enhancement_ui_test.log",
+      "log_sha256": "716c78a3c24064b7b938b67011cd93f2a9fc6e8945a995aec4a869ccd7c7155f"
+    },
+    {
+      "suite": "equipment_effects_integration_test",
+      "arguments": [],
+      "passed_assertions": 40,
+      "seconds": 6.428,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/equipment_effects_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/equipment_effects_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/equipment_effects_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/equipment_effects_integration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/equipment_effects_integration_test.log",
+      "log_sha256": "eaf8054e870dc638f18662e828d41c357b16de18cd099189d85fb1914210cff4"
+    },
+    {
+      "suite": "equipment_effects_test",
+      "arguments": [],
+      "passed_assertions": 49,
+      "seconds": 1.768,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/equipment_effects_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/equipment_effects_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/equipment_effects_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/equipment_effects_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/equipment_effects_test.log",
+      "log_sha256": "cbedc711fe310c9d11e8162c6c4d100013796cba3a7c66e598f46e10417df040"
+    },
+    {
+      "suite": "expedition_test",
+      "arguments": [],
+      "passed_assertions": 115,
+      "seconds": 8.184,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/expedition_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/expedition_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/expedition_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/expedition_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/expedition_test.log",
+      "log_sha256": "f90f8cfd74db4149a8a14428fe5cc51620b92f097920c23211b906e01272b8a0"
+    },
+    {
+      "suite": "expedition_ui_test",
+      "arguments": [],
+      "passed_assertions": 19,
+      "seconds": 0.866,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/expedition_ui_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/expedition_ui_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/expedition_ui_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/expedition_ui_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/expedition_ui_test.log",
+      "log_sha256": "761dd86e99ce26380afb5244fe8a97abf0a6058ceb9e805a1b8a3e0c56e9394b"
+    },
+    {
+      "suite": "hall_inspection_ui_test",
+      "arguments": [],
+      "passed_assertions": 73,
+      "seconds": 4.474,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/hall_inspection_ui_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/hall_inspection_ui_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/hall_inspection_ui_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/hall_inspection_ui_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/hall_inspection_ui_test.log",
+      "log_sha256": "45208206b78335cb8a792e1fa7281add41d227107bff24a0fe7347fdb7814b22"
+    },
+    {
+      "suite": "inventory_economy_test",
+      "arguments": [],
+      "passed_assertions": 170,
+      "seconds": 1.318,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/inventory_economy_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/inventory_economy_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/inventory_economy_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/inventory_economy_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/inventory_economy_test.log",
+      "log_sha256": "b696294091cf58c4b79493abd06157a55c3941c091c07f75b9fc44ef0bfb270e"
+    },
+    {
+      "suite": "item_catalog_test",
+      "arguments": [],
+      "passed_assertions": 2704,
+      "seconds": 2.325,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/item_catalog_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/item_catalog_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/item_catalog_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/item_catalog_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/item_catalog_test.log",
+      "log_sha256": "7cc97a0fbd0482b301fff41ec6b92d2ee547e9ba38be9fd0b4f1abb8d25f77a5"
+    },
+    {
+      "suite": "item_presentation_test",
+      "arguments": [],
+      "passed_assertions": 54,
+      "seconds": 0.917,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/item_presentation_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/item_presentation_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/item_presentation_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/item_presentation_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/item_presentation_test.log",
+      "log_sha256": "ec9bcb01858728c2a3d46d7c7e57eca7c8b703fbf445dd3538c201d676b74d7c"
+    },
+    {
+      "suite": "loadout_integration_test",
+      "arguments": [],
+      "passed_assertions": 78,
+      "seconds": 7.331,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loadout_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loadout_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loadout_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/loadout_integration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/loadout_integration_test.log",
+      "log_sha256": "57f1b1b60c0cf4c3c57de4d99475ef39cd323c03c6df09bdb8d1115b03a90bc8"
+    },
+    {
+      "suite": "loadout_integration_test",
+      "arguments": [
+        "--read"
+      ],
+      "passed_assertions": 10,
+      "seconds": 1.517,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loadout_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loadout_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loadout_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/loadout_integration_test.gd",
+        "--",
+        "--read"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/loadout_integration_test_read.log",
+      "log_sha256": "b62e058579d7dac77ecb9c70f4a846f6b1bf02555c5694fa9794ae2a891832b9"
+    },
+    {
+      "suite": "loadout_migration_test",
+      "arguments": [],
+      "passed_assertions": 50,
+      "seconds": 1.217,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loadout_migration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loadout_migration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loadout_migration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/loadout_migration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/loadout_migration_test.log",
+      "log_sha256": "bee228ee8ef81a9c2e0915224b7fa04036cf3ce9f6253934eaec9b29bd38e1e0"
+    },
+    {
+      "suite": "loadout_migration_test",
+      "arguments": [
+        "--write",
+        "/tmp/vaultbound-final-loadout-restart/profile.json"
+      ],
+      "passed_assertions": 2,
+      "seconds": 0.466,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loadout_migration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loadout_migration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loadout_migration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/loadout_migration_test.gd",
+        "--",
+        "--write",
+        "/tmp/vaultbound-final-loadout-restart/profile.json"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/loadout_migration_test_write.log",
+      "log_sha256": "791d745ce6d2c85d2764c301cccb0234e0e9c8e234583dea162e774a394517bc"
+    },
+    {
+      "suite": "loadout_migration_test",
+      "arguments": [
+        "--read",
+        "/tmp/vaultbound-final-loadout-restart/profile.json"
+      ],
+      "passed_assertions": 3,
+      "seconds": 0.465,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loadout_migration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loadout_migration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loadout_migration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/loadout_migration_test.gd",
+        "--",
+        "--read",
+        "/tmp/vaultbound-final-loadout-restart/profile.json"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/loadout_migration_test_read.log",
+      "log_sha256": "9f8eaf86b4bd83b54e620ac34c921d1f8643de888a14c11540f0d76a87892533"
+    },
+    {
+      "suite": "loadout_ui_test",
+      "arguments": [],
+      "passed_assertions": 87,
+      "seconds": 0.866,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loadout_ui_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loadout_ui_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loadout_ui_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/loadout_ui_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/loadout_ui_test.log",
+      "log_sha256": "26431b5f10fd65cf6f073e1a82dbcef04518880f8a6ba9b85f6fde36fe648935"
+    },
+    {
+      "suite": "loot_cache_world_test",
+      "arguments": [],
+      "passed_assertions": 30,
+      "seconds": 1.969,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loot_cache_world_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loot_cache_world_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loot_cache_world_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/loot_cache_world_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/loot_cache_world_test.log",
+      "log_sha256": "c98599158758c61f0f0272a502e803c784c2fc5ce47cafc82bf0eb5327ac135f"
+    },
+    {
+      "suite": "loot_ledger_test",
+      "arguments": [],
+      "passed_assertions": 44,
+      "seconds": 4.58,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loot_ledger_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loot_ledger_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loot_ledger_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/loot_ledger_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/loot_ledger_test.log",
+      "log_sha256": "85a5f94e9a7016c9ee9896e5aa7cf959a1b3063e52dbb5b6d3111db1457aa10c"
+    },
+    {
+      "suite": "loot_persistence_test",
+      "arguments": [],
+      "passed_assertions": 47,
+      "seconds": 2.32,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loot_persistence_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loot_persistence_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/loot_persistence_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/loot_persistence_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/loot_persistence_test.log",
+      "log_sha256": "083e3a710d55a76f59ecc80402f4c4468e4bf577b7230c27db7880cadda7a609"
+    },
+    {
+      "suite": "mobile_ui_integration_test",
+      "arguments": [],
+      "passed_assertions": 152,
+      "seconds": 2.521,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/mobile_ui_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/mobile_ui_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/mobile_ui_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/mobile_ui_integration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/mobile_ui_integration_test.log",
+      "log_sha256": "e5871f7aec91af3d91b44c8d197e20b5491ad77f1cc7ad3aa6408e1cd7b0424f"
+    },
+    {
+      "suite": "party_character_integration_test",
+      "arguments": [],
+      "passed_assertions": 35,
+      "seconds": 2.32,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/party_character_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/party_character_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/party_character_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/party_character_integration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/party_character_integration_test.log",
+      "log_sha256": "8560d95fc1f75ab88b9682e5f9c37442296fe33c83cf60130ba0d5a5f65e7f49"
+    },
+    {
+      "suite": "party_persistence_test",
+      "arguments": [],
+      "passed_assertions": 70,
+      "seconds": 1.318,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/party_persistence_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/party_persistence_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/party_persistence_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/party_persistence_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/party_persistence_test.log",
+      "log_sha256": "22eb2e53e18e487d09a0b3f7010a466cf70e224abc3b3197eaf1ca6c69ca00ed"
+    },
+    {
+      "suite": "party_persistence_test",
+      "arguments": [
+        "--write",
+        "/tmp/vaultbound-final-roster-restart/profile.json"
+      ],
+      "passed_assertions": 5,
+      "seconds": 0.466,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/party_persistence_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/party_persistence_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/party_persistence_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/party_persistence_test.gd",
+        "--",
+        "--write",
+        "/tmp/vaultbound-final-roster-restart/profile.json"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/party_persistence_test_write.log",
+      "log_sha256": "bb7edd8b04c17229e1976240ff3f8b6623d91ffc01db4567b59325ccc4883102"
+    },
+    {
+      "suite": "party_persistence_test",
+      "arguments": [
+        "--read",
+        "/tmp/vaultbound-final-roster-restart/profile.json"
+      ],
+      "passed_assertions": 8,
+      "seconds": 0.465,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/party_persistence_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/party_persistence_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/party_persistence_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/party_persistence_test.gd",
+        "--",
+        "--read",
+        "/tmp/vaultbound-final-roster-restart/profile.json"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/party_persistence_test_read.log",
+      "log_sha256": "240528567a9fe2a2a4d478d8a406ad488f31828e4d6a335fbfbc53301228e26a"
+    },
+    {
+      "suite": "party_targeting_test",
+      "arguments": [],
+      "passed_assertions": 38,
+      "seconds": 5.878,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/party_targeting_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/party_targeting_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/party_targeting_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/party_targeting_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/party_targeting_test.log",
+      "log_sha256": "bdfa71d2623d2e44c2806df3d03bb3d4bce5f3527a91976099d66a0503779c14"
+    },
+    {
+      "suite": "party_test",
+      "arguments": [],
+      "passed_assertions": 88,
+      "seconds": 15.356,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/party_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/party_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/party_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/party_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/party_test.log",
+      "log_sha256": "4d8c79739195ee25950776dfd02ad1180fb52e966289b20f9b7e55320a0dc7ec"
+    },
+    {
+      "suite": "party_ui_test",
+      "arguments": [],
+      "passed_assertions": 137,
+      "seconds": 2.32,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/party_ui_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/party_ui_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/party_ui_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/party_ui_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/party_ui_test.log",
+      "log_sha256": "6b84e7674172f59029a8adc3987703c76416f6edfa46e67cf1d3a59c249a7ae1"
+    },
+    {
+      "suite": "persistence_restart_test",
+      "arguments": [
+        "--write",
+        "/tmp/vaultbound-final-restart/profile.json"
+      ],
+      "passed_assertions": 8,
+      "seconds": 0.466,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/persistence_restart_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/persistence_restart_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/persistence_restart_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/persistence_restart_test.gd",
+        "--",
+        "--write",
+        "/tmp/vaultbound-final-restart/profile.json"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/persistence_restart_test_write.log",
+      "log_sha256": "fd570217d27b05d734625cd578d2fe541a33b5b6fe4f795bf9073aa143535c9d"
+    },
+    {
+      "suite": "persistence_restart_test",
+      "arguments": [
+        "--read",
+        "/tmp/vaultbound-final-restart/profile.json"
+      ],
+      "passed_assertions": 13,
+      "seconds": 0.465,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/persistence_restart_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/persistence_restart_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/persistence_restart_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/persistence_restart_test.gd",
+        "--",
+        "--read",
+        "/tmp/vaultbound-final-restart/profile.json"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/persistence_restart_test_read.log",
+      "log_sha256": "faec9d7b128e6db861aeff6b21590cc7d9688b0fba4d23cf361df806829091de"
+    },
+    {
+      "suite": "profile_roundtrip_test",
+      "arguments": [],
+      "passed_assertions": 55,
+      "seconds": 2.219,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/profile_roundtrip_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/profile_roundtrip_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/profile_roundtrip_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/profile_roundtrip_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/profile_roundtrip_test.log",
+      "log_sha256": "76c75334664aba4a62dbfa41500d50dbf7898cc7134072299c70802936c19953"
+    },
+    {
+      "suite": "profile_roundtrip_test",
+      "arguments": [
+        "--read"
+      ],
+      "passed_assertions": 3,
+      "seconds": 0.465,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/profile_roundtrip_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/profile_roundtrip_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/profile_roundtrip_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/profile_roundtrip_test.gd",
+        "--",
+        "--read"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/profile_roundtrip_test_read.log",
+      "log_sha256": "ca78307bb9e6b816ed39120884da2046880bdf12e02b13097ea99952616dc388"
+    },
+    {
+      "suite": "profile_v4_test",
+      "arguments": [],
+      "passed_assertions": 84,
+      "seconds": 1.317,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/profile_v4_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/profile_v4_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/profile_v4_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/profile_v4_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/profile_v4_test.log",
+      "log_sha256": "10f2de0837bc98f093f59faa12b05e14d6b2e937b927a23b5620ca5280cf1dbb"
+    },
+    {
+      "suite": "rare_discovery_test",
+      "arguments": [],
+      "passed_assertions": 64,
+      "seconds": 2.821,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/rare_discovery_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/rare_discovery_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/rare_discovery_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/rare_discovery_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/rare_discovery_test.log",
+      "log_sha256": "69293cc95dd0aaa170625fbff10d56c8fb8b8b49fdb2e28b315def6ac4b623a1"
+    },
+    {
+      "suite": "rarity_ui_test",
+      "arguments": [],
+      "passed_assertions": 32,
+      "seconds": 0.966,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/rarity_ui_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/rarity_ui_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/rarity_ui_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/rarity_ui_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/rarity_ui_test.log",
+      "log_sha256": "3dec5095e88737de4bbaa0d0a0c03f189551978da25817bc1a5d5187cf2cef27"
+    },
+    {
+      "suite": "rootwarden_test",
+      "arguments": [],
+      "passed_assertions": 53,
+      "seconds": 16.659,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/rootwarden_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/rootwarden_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/rootwarden_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/rootwarden_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/rootwarden_test.log",
+      "log_sha256": "efcefd51879e139d21fd0b3b4999c1ff6e887a9e9e552b8bdeeef493f3399c7e"
+    },
+    {
+      "suite": "rpg_integration_test",
+      "arguments": [],
+      "passed_assertions": 118,
+      "seconds": 17.003,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/rpg_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/rpg_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/rpg_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/rpg_integration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/rpg_integration_test.log",
+      "log_sha256": "d2044fea7672131e5cb94c3a3f8da2a89d8ca9aa4315eec121b97a887fb02824"
+    },
+    {
+      "suite": "rpg_ui_test",
+      "arguments": [],
+      "passed_assertions": 66,
+      "seconds": 31.64,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/rpg_ui_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/rpg_ui_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/rpg_ui_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/rpg_ui_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/rpg_ui_test.log",
+      "log_sha256": "649a9724ae7a59006d1277854e5b42d57ea6dfeaaf746090077d46825f46d8d1"
+    },
+    {
+      "suite": "sanctuary_ui_test",
+      "arguments": [],
+      "passed_assertions": 59,
+      "seconds": 3.622,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/sanctuary_ui_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/sanctuary_ui_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/sanctuary_ui_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/sanctuary_ui_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/sanctuary_ui_test.log",
+      "log_sha256": "57cde54abfe56ee12db5c711640904817e175be31cf5060d6315da06d5e7dba3"
+    },
+    {
+      "suite": "sanctuary_world_test",
+      "arguments": [],
+      "passed_assertions": 225,
+      "seconds": 12.649,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/sanctuary_world_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/sanctuary_world_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/sanctuary_world_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/sanctuary_world_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/sanctuary_world_test.log",
+      "log_sha256": "571de13a2c5427cee5e94f47b592087a6ad054301383bdf2d2ee5779eabfad7b"
+    },
+    {
+      "suite": "save_migration_test",
+      "arguments": [],
+      "passed_assertions": 42,
+      "seconds": 0.666,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/save_migration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/save_migration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/save_migration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/save_migration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/save_migration_test.log",
+      "log_sha256": "832fa24c0946cabe442b8f93225a3087a47332628a8ca782b99a9a490df96199"
+    },
+    {
+      "suite": "save_migration_test",
+      "arguments": [
+        "--write",
+        "/tmp/vaultbound-final-rpg-restart/profile.json"
+      ],
+      "passed_assertions": 3,
+      "seconds": 0.466,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/save_migration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/save_migration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/save_migration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/save_migration_test.gd",
+        "--",
+        "--write",
+        "/tmp/vaultbound-final-rpg-restart/profile.json"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/save_migration_test_write.log",
+      "log_sha256": "53154eb44f5cacc441684616e35eba0c5bf275d09b0080cc8040abe19fee9d5f"
+    },
+    {
+      "suite": "save_migration_test",
+      "arguments": [
+        "--read",
+        "/tmp/vaultbound-final-rpg-restart/profile.json"
+      ],
+      "passed_assertions": 19,
+      "seconds": 2.17,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/save_migration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/save_migration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/save_migration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/save_migration_test.gd",
+        "--",
+        "--read",
+        "/tmp/vaultbound-final-rpg-restart/profile.json"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/save_migration_test_read.log",
+      "log_sha256": "677c6bc7c3414f54f79f9ae140358243472fc6b819b9a2be9aa1e33410ccda87"
+    },
+    {
+      "suite": "searchable_loot_integration_test",
+      "arguments": [],
+      "passed_assertions": 149,
+      "seconds": 7.433,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/searchable_loot_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/searchable_loot_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/searchable_loot_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/searchable_loot_integration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/searchable_loot_integration_test.log",
+      "log_sha256": "654e2e297c9164094b1f7fa4bed2e43e4eba81cb34a2a22b6038f8042d42ae71"
+    },
+    {
+      "suite": "searchable_loot_integration_test",
+      "arguments": [
+        "--read"
+      ],
+      "passed_assertions": 14,
+      "seconds": 2.521,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/searchable_loot_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/searchable_loot_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/searchable_loot_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/searchable_loot_integration_test.gd",
+        "--",
+        "--read"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/searchable_loot_integration_test_read.log",
+      "log_sha256": "0618a0aa1ee1c026a42bd5fcc79ce2463a32f4557fbcb91865bca640e3705a98"
+    },
+    {
+      "suite": "session_loot_test",
+      "arguments": [],
+      "passed_assertions": 75,
+      "seconds": 2.369,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/session_loot_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/session_loot_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/session_loot_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/session_loot_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/session_loot_test.log",
+      "log_sha256": "8a13de8e51494c490cae0cec34ea9fee528ef4a0877a16a9367f4b1a0427f99d"
+    },
+    {
+      "suite": "smoke_test",
+      "arguments": [],
+      "passed_assertions": 710,
+      "seconds": 7.736,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/smoke_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/smoke_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/smoke_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/smoke_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/smoke_test.log",
+      "log_sha256": "a3fd30a35afdb95c16afbd526a0db9ca75141d2f4b3deb7a1246d1c61ae6f641"
+    },
+    {
+      "suite": "starter_items_integration_test",
+      "arguments": [],
+      "passed_assertions": 107,
+      "seconds": 8.843,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/starter_items_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/starter_items_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/starter_items_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/starter_items_integration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/starter_items_integration_test.log",
+      "log_sha256": "3e11693551072a9ef9a3f28d18ad0312a802181558b743f5d501243df88aa350"
+    },
+    {
+      "suite": "starter_sources_test",
+      "arguments": [],
+      "passed_assertions": 324,
+      "seconds": 3.525,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/starter_sources_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/starter_sources_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/starter_sources_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/starter_sources_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/starter_sources_test.log",
+      "log_sha256": "2e03a7ca43fb4b615d1a60913a61805573ca1b482dbad3f05d67b1e1db35b396"
+    },
+    {
+      "suite": "static_visual_batcher_test",
+      "arguments": [],
+      "passed_assertions": 32,
+      "seconds": 1.016,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/static_visual_batcher_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/static_visual_batcher_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/static_visual_batcher_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/static_visual_batcher_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/static_visual_batcher_test.log",
+      "log_sha256": "6e4827920f418ed5215445afb2e2051adfeef0260fcedfda23a88e0b10378a40"
+    },
+    {
+      "suite": "ui_layout_test",
+      "arguments": [],
+      "passed_assertions": 247,
+      "seconds": 0.966,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/ui_layout_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/ui_layout_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/ui_layout_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/ui_layout_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/ui_layout_test.log",
+      "log_sha256": "69e85ebf3aaad1eff0fae6bbe0fad4f84f1a9bd4f39af318c87a1508db0878f0"
+    },
+    {
+      "suite": "visual_accessibility_test",
+      "arguments": [],
+      "passed_assertions": 144,
+      "seconds": 2.62,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/visual_accessibility_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/visual_accessibility_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/visual_accessibility_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/visual_accessibility_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/visual_accessibility_test.log",
+      "log_sha256": "d6a92780b2f3acccbd26eb927dcd92938ec590b5b825a1920a5d1cb0f1805720"
+    },
+    {
+      "suite": "visual_accessibility_test",
+      "arguments": [
+        "--read"
+      ],
+      "passed_assertions": 4,
+      "seconds": 0.465,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/visual_accessibility_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/visual_accessibility_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/visual_accessibility_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/visual_accessibility_test.gd",
+        "--",
+        "--read"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/visual_accessibility_test_read.log",
+      "log_sha256": "40b2ad51132272ea709cc17b63f06a5c09877a459e3b8ea594ac0ed1510a96a4"
+    },
+    {
+      "suite": "visual_integration_test",
+      "arguments": [],
+      "passed_assertions": 63,
+      "seconds": 8.187,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/visual_integration_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/visual_integration_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/visual_integration_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/visual_integration_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/visual_integration_test.log",
+      "log_sha256": "c2518128a07a474a677fbdd9f78430e042af86288002d7aed1fcb3bca99cdfbf"
+    },
+    {
+      "suite": "visual_settings_test",
+      "arguments": [],
+      "passed_assertions": 54,
+      "seconds": 0.917,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/visual_settings_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/visual_settings_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/visual_settings_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/visual_settings_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/visual_settings_test.log",
+      "log_sha256": "9d79ff262ccc6fb1db8aa8b89de2cf025570d9f1f3d1a6f5c1ff0cbf8623401c"
+    },
+    {
+      "suite": "visual_style_test",
+      "arguments": [],
+      "passed_assertions": 48,
+      "seconds": 0.666,
+      "exit_code": 0,
+      "errors": [],
+      "command": [
+        "env",
+        "XDG_DATA_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/visual_style_test/data",
+        "XDG_CONFIG_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/visual_style_test/config",
+        "XDG_CACHE_HOME=/tmp/vaultbound-living-6c-final-regression/xdg/visual_style_test/cache",
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-living-6c-frozen-source",
+        "--script",
+        "res://tests/visual_style_test.gd"
+      ],
+      "evidence_log": "/tmp/vaultbound-living-6c-final-regression/visual_style_test.log",
+      "log_sha256": "a19d127a155043f61ad461f5bdfd71805324571335449325fc8c9309dccd2744"
+    }
+  ],
+  "limits": [
+    "Headless logic, resource, physics and simulated-input evidence only; no rendered GPU or physical Android result.",
+    "No APK export, sustained device FPS, thermal, Android keyboard/cutout comfort or production art-quality claim.",
+    "Earlier focused/development runs are excluded from this complete-gate assertion count."
+  ]
+}

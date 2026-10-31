@@ -7,6 +7,7 @@ extends Node3D
 var _distance := 0.0
 var _elapsed := 0.0
 var _interval := 1.0 / 15.0
+var _motion_scale := 1.0
 var _foam: Array[Node3D] = []
 
 func _ready() -> void:
@@ -20,16 +21,20 @@ func _ready() -> void:
 		settings.apply_to(self)
 
 func apply_visual_settings(settings: Dictionary) -> void:
+	_motion_scale = clampf(float(settings.get("decorative_motion_scale", 0.0 if bool(settings.get("reduced_motion", false)) else 1.0)), 0.0, 1.0)
+	_elapsed = 0.0 # Never accumulate a catch-up jump while decorative motion is off.
 	var quality := clampi(int(settings.get("quality", settings.get("current_quality", 1))), 0, 2)
 	_interval = 1.0 / float(10 + quality * 5)
 	for index in range(_foam.size()):
 		_foam[index].visible = quality > 0 or index < 2
 
 func _process(delta: float) -> void:
+	if _motion_scale <= 0.0:
+		return
 	_elapsed += delta
 	if _elapsed < _interval or not is_visible_in_tree():
 		return
-	_distance = fposmod(_distance + _elapsed * flow_speed, maxf(0.1, flow_length))
+	_distance = fposmod(_distance + _elapsed * flow_speed * _motion_scale, maxf(0.1, flow_length))
 	_elapsed = 0.0
 	for index in range(_foam.size()):
 		_foam[index].position.z = fposmod(_distance + index * flow_length / 3.0, flow_length) - flow_length * 0.5

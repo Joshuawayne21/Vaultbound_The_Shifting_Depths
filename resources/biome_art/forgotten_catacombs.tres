@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="VaultBiomeArtDirection" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/visual/biome_art_direction.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"forgotten_catacombs"
+display_name = "Forgotten Catacombs"
+direction_summary = "Weathered statues and candle niches emerge through ash and low mist along burial walls. This is an unavailable future art direction."
+motifs = PackedStringArray("statues", "candles", "ash", "mist")
+palette = PackedColorArray(0.22, 0.22, 0.24, 1, 0.45, 0.42, 0.36, 1, 0.82, 0.70, 0.43, 1)

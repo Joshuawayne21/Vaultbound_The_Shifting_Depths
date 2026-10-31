@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="VaultBiomeArtDirection" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/visual/biome_art_direction.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"flooded_ruins"
+display_name = "Flooded Ruins"
+direction_summary = "Still pools and moss line broken masonry beneath distant waterfalls and a thin mist. This is an unavailable future art direction, with no new water traversal."
+motifs = PackedStringArray("pools", "moss", "waterfalls", "mist")
+palette = PackedColorArray(0.12, 0.25, 0.27, 1, 0.32, 0.49, 0.35, 1, 0.63, 0.78, 0.78, 1)

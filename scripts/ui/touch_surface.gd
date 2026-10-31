@@ -54,6 +54,7 @@ var _switch_feedback := 0.0
 var ui_scale := 1.0
 var reduced_motion := false
 var reduced_effects := false
+var high_contrast_prompts := false
 
 
 func _ready() -> void:
@@ -100,6 +101,7 @@ func apply_visual_settings(settings: Dictionary) -> void:
 	ui_scale = VaultUITheme.scale_from(settings)
 	reduced_motion = bool(settings.get("reduced_motion", false))
 	reduced_effects = bool(settings.get("reduced_effects", false))
+	high_contrast_prompts = bool(settings.get("high_contrast_prompts", false))
 	if reduced_motion:
 		_switch_feedback = 0.0
 	reset_touches()
@@ -502,8 +504,12 @@ func _draw_action_buttons() -> void:
 		if not available:
 			tint = Color(MUTED, 0.5)
 		var fill := Color(0.11, 0.26, 0.27, 0.95) if _pressed(action) else PANEL
+		var strong_prompt := high_contrast_prompts and action == &"interact" and available
+		if strong_prompt:
+			fill = VaultUITheme.prompt_fill(fill, true)
+			tint = Color.WHITE
 		draw_circle(center, radius, fill, true, -1.0, true)
-		draw_arc(center, radius, 0.0, TAU, 48, Color(tint, 0.85 if primary else 0.55), 1.5, true)
+		draw_arc(center, radius, 0.0, TAU, 48, Color(tint, 1.0 if strong_prompt else 0.85 if primary else 0.55), 3.0 if strong_prompt else 1.5, true)
 		if primary:
 			draw_arc(center, radius - 5.0, 0.0, TAU, 48, Color(GOLD, 0.25), 1.0, true)
 		if cooldown > 0.0:
@@ -652,10 +658,10 @@ func _draw_prompts() -> void:
 	if not interaction.is_empty() and not party_revive_prompt_active:
 		var width := clampf(_font.get_string_size(interaction, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x + 76.0, 270.0, 480.0)
 		var rect := Rect2(center_x - width * 0.5, bottom - (268.0 if party_visible else 176.0), width, 44.0)
-		_panel(rect, PANEL)
-		_text("F", rect.position + Vector2(22.0, 28.0), 15, GOLD, true)
+		VaultUITheme.prompt_frame(self, rect, PANEL, GOLD, high_contrast_prompts)
+		_text("F", rect.position + Vector2(22.0, 28.0), 15, VaultUITheme.prompt_ink(GOLD, high_contrast_prompts), true)
 		draw_line(rect.position + Vector2(41.0, 11.0), rect.position + Vector2(41.0, 33.0), Color(GOLD, 0.35), 1.0)
-		_text(interaction, rect.position + Vector2(55.0, 28.0), 16, IVORY)
+		_text(interaction, rect.position + Vector2(55.0, 28.0), 16, VaultUITheme.prompt_ink(IVORY, high_contrast_prompts))
 	if message_remaining > 0.0 and not message.is_empty():
 		var alpha := minf(1.0, message_remaining)
 		var width := minf(550.0, _font.get_string_size(message, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 32.0)

@@ -1,13 +1,15 @@
 shader_type spatial;
 render_mode unshaded, blend_add, cull_disabled, depth_draw_never, shadows_disabled, fog_disabled;
+global uniform float vault_decorative_motion_scale;
 varying float pulse;
 void vertex() {
  float phase = INSTANCE_CUSTOM.x * 6.283185;
- vec3 drift = vec3(sin(TIME * 0.26 + phase) * 0.35, sin(TIME * 0.37 + phase * 1.7) * 0.2, cos(TIME * 0.22 + phase) * 0.35);
+ float decorative_time = TIME * vault_decorative_motion_scale;
+ vec3 drift = vec3(sin(decorative_time * 0.26 + phase) * 0.35, sin(decorative_time * 0.37 + phase * 1.7) * 0.2, cos(decorative_time * 0.22 + phase) * 0.35);
  mat4 facing = mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
  facing[3].xyz += drift;
  MODELVIEW_MATRIX = VIEW_MATRIX * facing;
- pulse = 0.42 + 0.58 * pow(0.5 + 0.5 * sin(TIME * (0.7 + INSTANCE_CUSTOM.y * 0.3) + phase), 2.0);
+ pulse = 0.42 + 0.58 * pow(0.5 + 0.5 * sin(decorative_time * (0.7 + INSTANCE_CUSTOM.y * 0.3) + phase), 2.0);
 }
 void fragment() {
  float r = length(UV - vec2(0.5)) * 2.0;

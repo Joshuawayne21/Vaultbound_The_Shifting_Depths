@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="VaultBiomeArtDirection" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/visual/biome_art_direction.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"rootbound_abyss"
+display_name = "Rootbound Abyss"
+availability = "playable"
+runtime_destination = &"rootbound_abyss"
+direction_summary = "Living roots reclaim stone courts. Luminous flowers and climbing vines frame worn pilgrim reliefs while the center stays legible for combat."
+motifs = PackedStringArray("living roots", "luminous flowers", "vines", "pilgrim wall reliefs")
+palette = PackedColorArray(0.11, 0.29, 0.20, 1, 0.39, 0.56, 0.48, 1, 0.73, 0.63, 0.86, 1)
+asset_status = "existing_native_primitives"
+asset_note = "Playable through the existing Abyss destination and fourteen native room modules. Original primitive meshes and shaders; no new imported biome models."

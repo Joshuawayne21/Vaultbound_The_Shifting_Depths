@@ -4,8 +4,9 @@ extends Node
 signal settings_changed(settings: Dictionary)
 
 const QUALITY_NAMES := ["Low", "Medium", "High"]
-const PREFERENCE_VERSION := 2
+const PREFERENCE_VERSION := 3
 const UI_SCALES := [100, 110, 120]
+const AMBIENT_DENSITIES := [0, 50, 100]
 const PRESETS := [
 	{"decoration_density": 0.5, "decoration_distance": 24.0, "ambient_budget": 8, "effect_budget": 8, "shadow_size": 512, "shadow_distance": 24.0, "shadows": false, "msaa": Viewport.MSAA_DISABLED, "lod_threshold": 3.0},
 	{"decoration_density": 0.75, "decoration_distance": 34.0, "ambient_budget": 16, "effect_budget": 14, "shadow_size": 1024, "shadow_distance": 34.0, "shadows": true, "msaa": Viewport.MSAA_DISABLED, "lod_threshold": 2.0},
@@ -16,8 +17,12 @@ var target_fps := 30
 var ui_scale_percent := 100
 var reduced_motion := false
 var reduced_effects := false
+var ambient_density_percent := 100
+var high_contrast_prompts := false
+var ambient_sound_enabled := false
 var storage_path := "user://vaultbound/visual_settings.cfg"
 var storage_error := ""
+var _future_storage_path := ""
 var quality_name: String:
 	get: return QUALITY_NAMES[current_quality]
 var decoration_density: float:
@@ -28,6 +33,10 @@ var ambient_budget: int:
 	get: return maxi(4, int(float(PRESETS[current_quality].ambient_budget) * 0.5)) if reduced_effects else int(PRESETS[current_quality].ambient_budget)
 var effect_budget: int:
 	get: return maxi(4, int(float(PRESETS[current_quality].effect_budget) * 0.5)) if reduced_effects else int(PRESETS[current_quality].effect_budget)
+var ambient_particle_budget: int:
+	get: return floori(ambient_budget * ambient_density_percent / 100.0)
+var decorative_motion_scale: float:
+	get: return 0.0 if reduced_motion else 1.0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -45,6 +54,11 @@ func snapshot() -> Dictionary:
 	result["reduced_effects"] = reduced_effects
 	result["ambient_budget"] = ambient_budget
 	result["effect_budget"] = effect_budget
+	result["ambient_density_percent"] = ambient_density_percent
+	result["ambient_particle_budget"] = ambient_particle_budget
+	result["high_contrast_prompts"] = high_contrast_prompts
+	result["ambient_sound_enabled"] = ambient_sound_enabled
+	result["decorative_motion_scale"] = decorative_motion_scale
 	return result
 
 func load_preferences(path: String = "") -> bool:
@@ -58,10 +72,17 @@ func load_preferences(path: String = "") -> bool:
 	if error != OK:
 		storage_error = "Graphics preferences could not be loaded; current settings remain."
 		return false
+	var version: Variant = config.get_value("graphics", "version", 1)
+	if typeof(version) == TYPE_INT and int(version) > PREFERENCE_VERSION:
+		_future_storage_path = ProjectSettings.globalize_path(storage_path)
+		storage_error = "Preferences belong to a newer build and will not be replaced. Current settings remain."
+		return false
 	var preferences := _read_preferences(config)
 	if preferences.is_empty():
 		storage_error = "Graphics preferences are invalid; current settings remain."
 		return false
+	if _future_storage_path == ProjectSettings.globalize_path(storage_path):
+		_future_storage_path = ""
 	_install_preferences(preferences)
 	if is_inside_tree():
 		_apply()
@@ -74,12 +95,30 @@ func set_accessibility(scale_percent: int, motion: bool, effects: bool) -> bool:
 	return set_preferences(current_quality, target_fps, scale_percent, motion, effects)
 
 func set_preferences(quality: int, fps: int, scale: int, motion: bool, effects: bool) -> bool:
-	if quality not in [0, 1, 2] or fps not in [30, 60] or scale not in UI_SCALES:
-		storage_error = "Choose a graphics preset, 30 or 60 FPS, and 100%, 110% or 120% UI scale."
+	# Preserve the added selections for every existing five-argument caller.
+	return set_presentation_preferences(quality, fps, scale, motion, effects, ambient_density_percent, high_contrast_prompts, ambient_sound_enabled)
+
+func set_presentation_preferences(quality: int, fps: int, scale: int, motion: bool, effects: bool,
+		density: int, contrast: bool, sound: bool) -> bool:
+	# Another build may have replaced the destination since our last load.
+	# Check its header even for unchanged selections or a newly assigned path.
+	if FileAccess.file_exists(storage_path):
+		var destination := ConfigFile.new()
+		if destination.load(storage_path) == OK:
+			var destination_version: Variant = destination.get_value("graphics", "version", 1)
+			if typeof(destination_version) == TYPE_INT and int(destination_version) > PREFERENCE_VERSION:
+				_future_storage_path = ProjectSettings.globalize_path(storage_path)
+	if _future_storage_path == ProjectSettings.globalize_path(storage_path):
+		storage_error = "Preferences belong to a newer build and will not be replaced. Current settings remain."
+		return false
+	if quality not in [0, 1, 2] or fps not in [30, 60] or scale not in UI_SCALES or density not in AMBIENT_DENSITIES:
+		storage_error = "Choose a preset, 30/60 FPS, UI 100/110/120%, and ambient density 0/50/100%."
 		return false
 	var preferences := {"quality": quality, "target_fps": fps, "ui_scale_percent": scale,
-		"reduced_motion": motion, "reduced_effects": effects}
-	if quality == current_quality and fps == target_fps and scale == ui_scale_percent and motion == reduced_motion and effects == reduced_effects and storage_error.is_empty():
+		"reduced_motion": motion, "reduced_effects": effects, "ambient_density_percent": density,
+		"high_contrast_prompts": contrast, "ambient_sound_enabled": sound}
+	if quality == current_quality and fps == target_fps and scale == ui_scale_percent and motion == reduced_motion and effects == reduced_effects \
+			and density == ambient_density_percent and contrast == high_contrast_prompts and sound == ambient_sound_enabled and storage_error.is_empty():
 		return true
 	var config := ConfigFile.new()
 	config.set_value("graphics", "version", PREFERENCE_VERSION)
@@ -88,6 +127,9 @@ func set_preferences(quality: int, fps: int, scale: int, motion: bool, effects: 
 	config.set_value("accessibility", "ui_scale_percent", scale)
 	config.set_value("accessibility", "reduced_motion", motion)
 	config.set_value("accessibility", "reduced_effects", effects)
+	config.set_value("accessibility", "high_contrast_prompts", contrast)
+	config.set_value("ambience", "ambient_density_percent", density)
+	config.set_value("ambience", "ambient_sound_enabled", sound)
 	var directory := ProjectSettings.globalize_path(storage_path).get_base_dir()
 	if DirAccess.make_dir_recursive_absolute(directory) != OK or config.save(storage_path + ".tmp") != OK:
 		storage_error = "Could not save graphics preferences; settings were not changed."
@@ -113,10 +155,11 @@ func _read_preferences(config: ConfigFile) -> Dictionary:
 	var version: Variant = config.get_value("graphics", "version", 1)
 	var quality: Variant = config.get_value("graphics", "quality", 1)
 	var fps: Variant = config.get_value("graphics", "target_fps", 30)
-	if typeof(version) != TYPE_INT or int(version) not in [1, PREFERENCE_VERSION] or typeof(quality) != TYPE_INT or typeof(fps) != TYPE_INT or int(quality) not in [0, 1, 2] or int(fps) not in [30, 60]:
+	if typeof(version) != TYPE_INT or int(version) not in [1, 2, PREFERENCE_VERSION] or typeof(quality) != TYPE_INT or typeof(fps) != TYPE_INT or int(quality) not in [0, 1, 2] or int(fps) not in [30, 60]:
 		return {}
 	var preferences := {"quality": int(quality), "target_fps": int(fps), "ui_scale_percent": 100,
-		"reduced_motion": false, "reduced_effects": false}
+		"reduced_motion": false, "reduced_effects": false, "ambient_density_percent": 100,
+		"high_contrast_prompts": false, "ambient_sound_enabled": false}
 	if int(version) == 1:
 		return preferences # Original graphics-only files migrate in memory, without a write.
 	var scale: Variant = config.get_value("accessibility", "ui_scale_percent", -1)
@@ -127,6 +170,16 @@ func _read_preferences(config: ConfigFile) -> Dictionary:
 	preferences.ui_scale_percent = int(scale)
 	preferences.reduced_motion = bool(motion)
 	preferences.reduced_effects = bool(effects)
+	if int(version) == 2:
+		return preferences # All five original choices survive; additions default in memory.
+	var density: Variant = config.get_value("ambience", "ambient_density_percent", "missing")
+	var contrast: Variant = config.get_value("accessibility", "high_contrast_prompts", "missing")
+	var sound: Variant = config.get_value("ambience", "ambient_sound_enabled", "missing")
+	if typeof(density) != TYPE_INT or int(density) not in AMBIENT_DENSITIES or not contrast is bool or not sound is bool:
+		return {}
+	preferences.ambient_density_percent = int(density)
+	preferences.high_contrast_prompts = bool(contrast)
+	preferences.ambient_sound_enabled = bool(sound)
 	return preferences
 
 func _install_preferences(preferences: Dictionary) -> void:
@@ -135,12 +188,18 @@ func _install_preferences(preferences: Dictionary) -> void:
 	ui_scale_percent = int(preferences.ui_scale_percent)
 	reduced_motion = bool(preferences.reduced_motion)
 	reduced_effects = bool(preferences.reduced_effects)
+	ambient_density_percent = int(preferences.ambient_density_percent)
+	high_contrast_prompts = bool(preferences.high_contrast_prompts)
+	ambient_sound_enabled = bool(preferences.ambient_sound_enabled)
 
 func _apply() -> void:
 	Engine.max_fps = target_fps
 	if not is_inside_tree():
 		return
 	var preset := snapshot()
+	# Shared decorative shader state changes only on preference application.
+	# Reduced motion selects deterministic phase zero; combat shaders are separate.
+	RenderingServer.global_shader_parameter_set("vault_decorative_motion_scale", decorative_motion_scale)
 	get_tree().root.msaa_3d = preset.msaa
 	get_tree().root.mesh_lod_threshold = preset.lod_threshold
 	RenderingServer.directional_shadow_atlas_set_size(int(preset.shadow_size), true)

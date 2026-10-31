@@ -89,6 +89,17 @@ static func frame(canvas: CanvasItem, rect: Rect2, fill: Color, accent: Color = 
 static func scale_from(settings: Dictionary) -> float:
 	return clampf(float(settings.get("ui_scale_percent", 100)) / 100.0, 1.0, 1.2)
 
+static func prompt_fill(ordinary: Color, high_contrast: bool) -> Color:
+	return Color("030710") if high_contrast else ordinary
+
+static func prompt_ink(ordinary: Color, high_contrast: bool) -> Color:
+	return Color.WHITE if high_contrast else ordinary
+
+static func prompt_frame(canvas: CanvasItem, rect: Rect2, fill: Color, accent: Color, high_contrast: bool) -> void:
+	frame(canvas, rect, prompt_fill(fill, high_contrast), prompt_ink(accent, high_contrast), high_contrast)
+	if high_contrast:
+		canvas.draw_rect(rect.grow(-2.0), Color.WHITE, false, 2.0)
+
 static func safe_inset(control: Control) -> Vector2:
 	var overlay := control.get_parent()
 	if is_instance_valid(overlay) and overlay.get("source_surface") is Control:

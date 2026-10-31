@@ -18,6 +18,8 @@ var _range_label: Label3D
 var _range_material: StandardMaterial3D
 var _range_elapsed := 0.0
 var _near_player: Node3D
+var _motion_scale := 1.0
+var _high_contrast := false
 
 
 func _ready() -> void:
@@ -119,7 +121,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	_time += delta
+	_time += delta * _motion_scale
 	_runes.rotation.z = _time * 0.08
 	if require_entry_card and is_instance_valid(_range_label):
 		_range_elapsed += delta
@@ -127,7 +129,18 @@ func _process(delta: float) -> void:
 			_range_elapsed = 0.0
 			var in_reach := can_interact(_near_player)
 			_range_label.visible = in_reach
-			_range_material.albedo_color = Color("a5fff0") if in_reach else Color("6a9791")
+			_range_material.albedo_color = Color.WHITE if _high_contrast and in_reach else Color("a5fff0") if in_reach else Color("b4ccc6") if _high_contrast else Color("6a9791")
+
+
+func apply_visual_settings(settings: Dictionary) -> void:
+	_motion_scale = clampf(float(settings.get("decorative_motion_scale", 0.0 if bool(settings.get("reduced_motion", false)) else 1.0)), 0.0, 1.0)
+	_high_contrast = bool(settings.get("high_contrast_prompts", false))
+	if is_instance_valid(_range_label):
+		_range_label.modulate = Color.WHITE if _high_contrast else Color("f1f1e8")
+		_range_label.outline_size = 16 if _high_contrast else 12
+		_range_label.font_size = 48 if _high_contrast else 42
+		# Polling is intentionally independent from rune animation and remains active.
+		_range_elapsed = 0.15
 
 
 func get_prompt() -> String:

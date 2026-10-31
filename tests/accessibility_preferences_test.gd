@@ -54,7 +54,7 @@ func _run() -> void:
 	check(events == 1 and receiver.received.ui_scale_percent == 120 and receiver.received.reduced_motion and receiver.received.reduced_effects, "Existing receivers get one complete accessibility update")
 	check(settings.current_quality == 2 and settings.target_fps == 30 and settings.ui_scale_percent == 120 and settings.reduced_motion and settings.reduced_effects, "All five live fields commit together")
 	var current := ConfigFile.new()
-	check(current.load(PREFS) == OK and current.get_value("graphics", "version") == 2, "Saved preferences use the extended versioned format")
+	check(current.load(PREFS) == OK and current.get_value("graphics", "version") == 3, "Saved preferences use the current extended versioned format")
 	var restored := Settings.new()
 	check(restored.load_preferences(PREFS) and restored.snapshot() == settings.snapshot(), "A new preference object restores the complete snapshot")
 	restored.free()
