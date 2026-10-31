@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="VaultLootTable" load_steps=24 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/loot_table.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="2"]
+[ext_resource type="Resource" path="res://resources/items/root_fiber.tres" id="4"]
+[ext_resource type="Resource" path="res://resources/items/mooncap_tonic.tres" id="5"]
+[ext_resource type="Resource" path="res://resources/items/emerald_dust.tres" id="6"]
+[ext_resource type="Resource" path="res://resources/items/sunfruit_elixir.tres" id="7"]
+[ext_resource type="Resource" path="res://resources/items/temple_blade.tres" id="8"]
+[ext_resource type="Resource" path="res://resources/items/runic_staff.tres" id="9"]
+[ext_resource type="Resource" path="res://resources/items/warden_shield.tres" id="10"]
+[ext_resource type="Resource" path="res://resources/items/ancient_seed.tres" id="11"]
+[ext_resource type="Resource" path="res://resources/items/aurora_bloom.tres" id="12"]
+[ext_resource type="Resource" path="res://resources/items/heartwood_blade.tres" id="13"]
+[ext_resource type="Resource" path="res://resources/items/tempered_ingot.tres" id="15"]
+[ext_resource type="Resource" path="res://resources/items/ancient_shard.tres" id="16"]
+[ext_resource type="Resource" path="res://resources/items/mossguard_helm.tres" id="17"]
+[ext_resource type="Resource" path="res://resources/items/warden_cuirass.tres" id="18"]
+[ext_resource type="Resource" path="res://resources/items/rootstep_boots.tres" id="19"]
+[ext_resource type="Resource" path="res://resources/items/emerald_pendant.tres" id="20"]
+[ext_resource type="Resource" path="res://resources/items/stamina_draught.tres" id="21"]
+[ext_resource type="Resource" path="res://resources/items/sealed_reliquary.tres" id="22"]
+[ext_resource type="Resource" path="res://resources/items/abyss_crown.tres" id="23"]
+
+[ext_resource type="Resource" path="res://resources/items/common_enhancement_stone.tres" id="24"]
+
+[ext_resource type="Resource" path="res://resources/items/elite_monster_fragment.tres" id="25"]
+
+[resource]
+script = ExtResource("1")
+category = &"ancient"
+label = "Elite Rootbound Cache"
+gold_min = 45
+gold_max = 80
+minimum_rolls = 2
+maximum_rolls = 3
+entries = Array[ExtResource("2")]( [ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20"), ExtResource("21"), ExtResource("22"), ExtResource("23"), ExtResource("24")] )
+weights = PackedFloat32Array(5, 8, 12, 10, 12, 14, 12, 12, 6, 4, 6, 3, 6, 6, 6, 2, 5, 0.8, 0.2, 10)
+reward_source = "monster:elite"
+guaranteed_item = ExtResource("25")

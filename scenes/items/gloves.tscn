@@ -1,0 +1,72 @@
+[gd_scene load_steps=7 format=3]
+
+[sub_resource type="StandardMaterial3D" id="Leather"]
+albedo_color = Color(0.14, 0.24, 0.29, 1)
+roughness = 0.88
+
+[sub_resource type="StandardMaterial3D" id="Bronze"]
+albedo_color = Color(0.72, 0.53, 0.26, 1)
+metallic = 0.45
+roughness = 0.55
+
+[sub_resource type="StandardMaterial3D" id="Crystal"]
+albedo_color = Color(0.23, 0.78, 0.69, 1)
+roughness = 0.5
+
+[sub_resource type="CapsuleMesh" id="Palm"]
+radius = 0.11
+height = 0.32
+radial_segments = 8
+rings = 4
+
+[sub_resource type="CapsuleMesh" id="Thumb"]
+radius = 0.045
+height = 0.2
+radial_segments = 8
+rings = 4
+
+[sub_resource type="CylinderMesh" id="Cuff"]
+top_radius = 0.14
+bottom_radius = 0.13
+height = 0.12
+radial_segments = 8
+
+[node name="GlovesFamilyDisplay" type="Node3D"]
+
+[node name="Part0" type="MeshInstance3D" parent="."]
+position = Vector3(-0.2, 0.26, 0)
+mesh = SubResource("Palm")
+material_override = SubResource("Leather")
+cast_shadow = 0
+
+[node name="Part1" type="MeshInstance3D" parent="."]
+position = Vector3(0.2, 0.26, 0)
+mesh = SubResource("Palm")
+material_override = SubResource("Leather")
+cast_shadow = 0
+
+[node name="Part2" type="MeshInstance3D" parent="."]
+position = Vector3(-0.07, 0.23, 0)
+rotation = Vector3(0, 0, -0.45)
+mesh = SubResource("Thumb")
+material_override = SubResource("Leather")
+cast_shadow = 0
+
+[node name="Part3" type="MeshInstance3D" parent="."]
+position = Vector3(0.07, 0.23, 0)
+rotation = Vector3(0, 0, 0.45)
+mesh = SubResource("Thumb")
+material_override = SubResource("Leather")
+cast_shadow = 0
+
+[node name="Part4" type="MeshInstance3D" parent="."]
+position = Vector3(-0.2, 0.08, 0)
+mesh = SubResource("Cuff")
+material_override = SubResource("Bronze")
+cast_shadow = 0
+
+[node name="Part5" type="MeshInstance3D" parent="."]
+position = Vector3(0.2, 0.08, 0)
+mesh = SubResource("Cuff")
+material_override = SubResource("Bronze")
+cast_shadow = 0

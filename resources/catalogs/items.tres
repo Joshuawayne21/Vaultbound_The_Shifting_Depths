@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="VaultItemCatalogData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_catalog_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+item_ids = PackedStringArray("abyss_crown", "amber_ring", "ancient_forged_core", "ancient_heartstone", "ancient_seed", "ancient_shard", "apprentice_staff", "aurora_bloom", "common_enhancement_stone", "elite_monster_fragment", "emerald_dust", "emerald_pendant", "expedition_trousers", "glow_spore", "gold_coin", "heartwood_blade", "iron_helm", "iron_ore", "mooncap_tonic", "mossguard_helm", "root_fiber", "rootstep_boots", "rootwarden_essence", "rootwarden_heart", "round_shield", "runic_staff", "sealed_reliquary", "sentinel_ring", "stamina_draught", "sunfruit_elixir", "tempered_ingot", "temple_blade", "trail_boots", "trailgrip_gloves", "traveler_coat", "traveler_sword", "vaultheart_staff", "verdant_oathblade", "warden_cuirass", "warden_shield", "wayfarer_necklace")

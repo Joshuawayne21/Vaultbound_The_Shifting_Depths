@@ -195,7 +195,7 @@ static func active_weapon_entry(profile: Dictionary) -> Dictionary:
 	return find(profile, String(profile.get("equipment", {}).get(active_weapon_slot(profile), "")))
 
 static func slot_accepts(definition: VaultItemDefinition, slot: String) -> bool:
-	if definition == null or definition.category != "equipment" or slot not in SLOTS:
+	if definition == null or not definition.can_equip() or slot not in SLOTS:
 		return false
 	if slot in LOADOUT_SLOTS:
 		return definition.slot == &"main_weapon" and definition.weapon_style in [&"sword", &"staff"]
@@ -222,7 +222,7 @@ static func add_items(profile: Dictionary, items: Dictionary, seed: int = 0) -> 
 			return false
 		var id := String(raw_id)
 		var definition := Catalog.item_for(id)
-		if definition == null or definition.category == "gold":
+		if definition == null or definition.category == "gold" or not definition.obtainable:
 			return false
 		if int(totals(next).get(id, 0)) > MAX_COUNT - int(items[id]):
 			return false

@@ -10,6 +10,9 @@ var overlay: Control
 var panel: Control
 var actions: Array[StringName] = []
 
+# Keep this representative UI fixture bounded when the full catalog grows.
+const TOUCH_ITEM_IDS := ["root_fiber", "mooncap_tonic", "emerald_dust", "sunfruit_elixir", "temple_blade", "runic_staff", "warden_shield", "ancient_seed", "aurora_bloom", "heartwood_blade", "rootwarden_heart", "iron_ore", "tempered_ingot", "glow_spore", "ancient_shard", "traveler_sword", "apprentice_staff", "round_shield", "iron_helm", "mossguard_helm", "traveler_coat", "warden_cuirass", "trail_boots", "rootstep_boots", "amber_ring", "emerald_pendant", "stamina_draught", "sealed_reliquary", "abyss_crown", "trailgrip_gloves", "expedition_trousers", "wayfarer_necklace", "sentinel_ring", "verdant_oathblade", "vaultheart_staff"]
+
 func _initialize() -> void:
 	Engine.max_fps = 120
 	suite_name = "VAULTBOUND RPG UI"
@@ -47,11 +50,11 @@ func _prepare() -> void:
 	profile.discoveries = ["temple_blade"]
 	profile.monster_discoveries = ["skeleton"]
 	var items := {}
-	for id: String in VaultLootTable.ITEM_IDS:
+	for id: String in TOUCH_ITEM_IDS:
 		var item := VaultLootTable.item_for(id)
 		if item.category != "gold":
-			items[id] = 20 if item.category in ["material", "consumable"] else 1
-	check(Inventory.add_items(profile, items, 561), "Touch fixture contains the full usable catalog within forty slots")
+			items[id] = mini(20, maxi(1, item.stack_limit - 1)) if item.category in ["material", "consumable"] else 1
+	check(Inventory.add_items(profile, items, 561), "Representative touch fixture fits thirty-five slots without raising the forty-slot capacity")
 	# A higher-base-value damaged staff should sort below the intact starter sword
 	# when a merchant shows the actual per-item sale proceeds.
 	for entry: Dictionary in profile.inventory:

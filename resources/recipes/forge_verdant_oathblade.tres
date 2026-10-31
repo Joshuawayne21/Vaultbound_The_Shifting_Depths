@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="VaultCraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/crafting_recipe.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "forge_verdant_oathblade"
+label = "Forge Verdant Oathblade"
+description = "Temper a Mythic sword with components earned from the existing Rootwarden encounter."
+ingredients = {"root_fiber": 12, "tempered_ingot": 8, "rootwarden_essence": 3, "ancient_shard": 2}
+gold = 450
+output_id = "verdant_oathblade"
+required_level = 10
+output_quantity = 1

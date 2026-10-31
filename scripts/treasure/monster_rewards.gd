@@ -65,6 +65,7 @@ func roll(seed_value: int, receipt: String, source: String, depth: int = 0) -> D
 	var original := _table(source)
 	var table := VaultLootTable.new()
 	table.category = &"boss" if source == "boss" else (&"reinforced" if source == "elite" else &"common")
+	table.reward_source = "monster:" + source
 	table.minimum_rolls = roll_counts[source].x
 	table.maximum_rolls = roll_counts[source].y
 	var multiplier := 1.0
@@ -84,10 +85,15 @@ func roll(seed_value: int, receipt: String, source: String, depth: int = 0) -> D
 		table.weights.append(original.weights[index])
 	if original.guaranteed_item != null and _allows(String(original.guaranteed_item.id), source):
 		table.guaranteed_item = original.guaranteed_item
+	for item: VaultItemDefinition in original.guaranteed_items:
+		if _allows(String(item.id), source):
+			table.guaranteed_items.append(item)
 	return table.roll(seed_value ^ int(source.hash()), receipt)
 
 func _allows(item_id: String, source: String) -> bool:
-	return not source_restrictions.has(item_id) or source_restrictions[item_id].has(source)
+	var definition := VaultLootTable.item_for(item_id)
+	return definition != null and definition.allows_source("monster:" + source) \
+		and (not source_restrictions.has(item_id) or source_restrictions[item_id].has(source))
 
 func _table(source: String) -> VaultLootTable:
 	match source:

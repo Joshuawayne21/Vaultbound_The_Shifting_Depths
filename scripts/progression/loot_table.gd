@@ -3,12 +3,12 @@ extends Resource
 ## Each chest samples a configured table with its own RNG; opening order and
 ## combat RNG cannot change an already generated expedition's treasure.
 
-const ITEM_IDS := ["gold_coin", "root_fiber", "mooncap_tonic", "emerald_dust", "sunfruit_elixir",
-	"temple_blade", "runic_staff", "warden_shield", "ancient_seed", "aurora_bloom",
-	"heartwood_blade", "rootwarden_heart", "iron_ore", "tempered_ingot", "glow_spore",
-	"ancient_shard", "traveler_sword", "apprentice_staff", "round_shield", "iron_helm",
-	"mossguard_helm", "traveler_coat", "warden_cuirass", "trail_boots", "rootstep_boots",
-	"amber_ring", "emerald_pendant", "stamina_draught", "sealed_reliquary", "abyss_crown"]
+const MANIFEST = preload("res://resources/catalogs/items.tres")
+## Compatibility accessor: callers receive a copy and cannot edit the registry.
+static var ITEM_IDS: PackedStringArray:
+	get:
+		return item_ids()
+
 const CATEGORIES := ["common", "reinforced", "ancient", "cursed", "boss"]
 
 @export var category: StringName = &"common"
@@ -20,15 +20,25 @@ const CATEGORIES := ["common", "reinforced", "ancient", "cursed", "boss"]
 @export var entries: Array[VaultItemDefinition] = []
 @export var weights := PackedFloat32Array()
 @export var guaranteed_item: VaultItemDefinition
+## Default tables are chest sources; encounter tables set their explicit source.
+@export var reward_source := ""
+## Supplemental fixed encounter rewards; bounded and distinct from the legacy item.
+@export var guaranteed_items: Array[VaultItemDefinition] = []
+
+static func item_ids() -> PackedStringArray:
+	return MANIFEST.item_ids.duplicate()
+
+func source_tag() -> String:
+	return reward_source if not reward_source.is_empty() else "chest:" + String(category)
 
 static func catalog() -> Dictionary:
 	var result := {}
-	for item_id: String in ITEM_IDS:
+	for item_id: String in item_ids():
 		result[item_id] = load("res://resources/items/" + item_id + ".tres")
 	return result
 
 static func item_for(item_id: String) -> VaultItemDefinition:
-	if not ITEM_IDS.has(item_id):
+	if not MANIFEST.item_ids.has(item_id):
 		return null
 	return load("res://resources/items/" + item_id + ".tres") as VaultItemDefinition
 
@@ -44,9 +54,21 @@ func is_valid() -> bool:
 		return false
 	var total := 0.0
 	for index in range(entries.size()):
-		if entries[index] == null or weights[index] < 0.0 or not is_finite(weights[index]):
+		if entries[index] == null or not entries[index].allows_source(source_tag()) \
+				or item_for(String(entries[index].id)) == null or weights[index] < 0.0 or not is_finite(weights[index]):
 			return false
 		total += weights[index]
+	if guaranteed_items.size() > 8:
+		return false
+	var guaranteed_ids := {}
+	var fixed: Array[VaultItemDefinition] = guaranteed_items.duplicate()
+	if guaranteed_item != null:
+		fixed.append(guaranteed_item)
+	for item: VaultItemDefinition in fixed:
+		if item == null or item.category == "gold" or not item.allows_source(source_tag()) \
+				or item_for(String(item.id)) == null or guaranteed_ids.has(item.id):
+			return false
+		guaranteed_ids[item.id] = true
 	return total > 0.0
 
 func roll(seed_value: int, chest_id: String) -> Dictionary:
@@ -74,8 +96,11 @@ func roll(seed_value: int, chest_id: String) -> Dictionary:
 			gold += quantity
 		else:
 			totals[String(selected.id)] = int(totals.get(String(selected.id), 0)) + quantity
+	var fixed: Array[VaultItemDefinition] = guaranteed_items.duplicate()
 	if guaranteed_item != null:
-		totals[String(guaranteed_item.id)] = int(totals.get(String(guaranteed_item.id), 0)) + 1
+		fixed.append(guaranteed_item)
+	for item: VaultItemDefinition in fixed:
+		totals[String(item.id)] = int(totals.get(String(item.id), 0)) + 1
 	var items: Array[Dictionary] = []
 	var value := gold
 	var ids: Array = totals.keys()

@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="VaultItemDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/items/material.svg" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"ancient_heartstone"
+label = "Ancient Heartstone"
+description = "A rare crafted focus combining repeated Rootwarden victories with crystallized temple magic. Reserved for the highest enhancements."
+category = "material"
+rarity = "ancient_relic"
+value = 1200
+quantity_min = 1
+quantity_max = 1
+weapon_style = &""
+stack_limit = 99
+slot = &""
+required_level = 1
+base_stats = {}
+salvage = {}
+crafting_tags = Array[String](["enhancement"])
+icon = ExtResource("2")
+catalog_group = "material"
+weapon_family = ""
+combat_supported = true
+obtainable = true
+lore = "The Sanctuary forge condenses many conquered echoes into one still, luminous heart."
+acquisition_sources = Array[String](["craft:condense_ancient_heartstone"])
+icon_art_status = "original_family_icon"
+model_art_status = "not_applicable"
+display_animation = {"rotation_speed": 0.22, "bob_height": 0.0, "bob_speed": 1.2}
+aura_profile = &"ancient_relic"

@@ -183,6 +183,8 @@ func _crafting_and_smith() -> void:
 		check(salvage.profile.items.get(id, 0) == previous.items.get(id, 0) + int(salvage.outputs[id]), "Salvage grants the authored output quantity: " + id)
 	profile = salvage.profile
 	for recipe: Dictionary in Recipes.recipes():
+		profile = _profile()
+		check(Inventory.add_items(profile, recipe.ingredients), "Recipe fixture fits the real inventory: " + recipe.id)
 		var before := profile.duplicate(true)
 		var result := _plan(profile, &"craft", {"recipe_id": recipe.id})
 		check(result.ok, "The starter recipe is executable with obtainable materials: " + recipe.id)

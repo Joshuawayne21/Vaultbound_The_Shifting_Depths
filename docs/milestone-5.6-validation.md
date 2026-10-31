@@ -116,7 +116,7 @@ Eight reusable cache views include one reserved boss view. The per-run ledger re
 
 ### Automated gate and regression fixes
 
-**The working-tree checkpoint gate passed 2,183 assertions across 30 engine invocations.** Counts include each final listed invocation once; earlier failed/debugging runs and repeated suites are excluded. All final game-test logs were inspected and clean. An exact-source archive gate remains part of publication validation.
+**The working-tree checkpoint gate passed 2,183 assertions across 30 engine invocations.** Counts include each final listed invocation once; earlier failed/debugging runs and repeated suites are excluded. All final game-test logs were inspected and clean. Local commit `a0fb2e0`, published as `4090b19`, additionally passed an exact-source archive gate of **543 assertions across five invocations**: smoke 330, Search runtime/read 149 + 14 and precision-save runtime/read 47 + 3. These repeated checks are reported separately, not added to the working-tree total. Archive evidence is `/tmp/vaultbound-56-c4-source-checks/results.json`.
 
 | Suite | Passed assertions | Coverage |
 | --- | ---: | --- |
@@ -157,3 +157,39 @@ Evidence paths include `/tmp/vaultbound-56-checkpoint4-regression/results.json` 
 On a physical Android device, defeat a normal enemy, elite and Rootwarden, inspect cache placement/rarity cues from both cameras and verify Search/Take controls with two fingers. Fill the inventory, try Take All, collect only DM, use supplies to free space and retry the remaining items. Leave and revisit the room, extract, restart and lose a subsequent expedition; verify secured ownership survives. Check scrolling, canceled touches, app focus changes, modal pause, merchant sell-value previews and reduced-motion/effects behavior. Cache and currency feedback must stay readable without obscuring combat or causing visible frame stalls.
 
 The prototype remains offline. Unsecured expedition rewards follow the existing run lifecycle and are lost on death/abandonment; this is not a mid-expedition application-crash resume system. Local save files are not an online security boundary. Shared family art and native cache geometry remain the available visual assets. No physical Android touch, rendered GPU placement, sustained frame-rate, thermal, APK export or multiplayer validation is claimed.
+
+## Checkpoint 5 — functional starter catalog and rarity language
+
+The native item registry now contains **40 functional noncurrency starter definitions plus the preserved currency record**, with every original ID retained. Four pieces fill the existing new gloves, leg armor, necklace and ring slots without displacing legacy accessories. Two higher-rarity weapons use the implemented sword/staff rules. Five new materials and four recipes extend the Blacksmith to twelve recipes. Elite fragments and Rootwarden essence require their completed encounters; the Heart remains boss-only. Future unavailable definitions cannot enter either direct inventory grants or the Session reward path.
+
+Rarity presentation adds readable I–VII markers and full labels alongside colors, including dual turquoise/gold accents for Ancient Relics. Inventory/loot inspection exposes honest family-art and source information. This checkpoint does not claim the later 350-item expansion, +10 enhancement implementation, new weapon mechanics or unique production models. See [starter catalog](starter-item-catalog.md) for source paths and art status.
+
+**The working-tree gate passed 2,506 assertions across 21 engine invocations.** The independent preservation runner contributed 1,355 assertions in fourteen invocations, the five catalog/economy/runtime/UI suites contributed 1,014, rarity presentation contributed 32 and the new real-game starter suite contributed 105. Repeated RPG UI runs are counted once. All final logs were inspected for errors, warnings and leaked resources and were clean; no unresolved critical regression remains. Publication still requires the separate exact-source archive gate.
+
+| Suite | Passed assertions | Coverage |
+| --- | ---: | --- |
+| `starter_items_integration_test.gd` | 105 | Real player stat deltas, no free healing/resources, all four new equipment slots, legacy accessory coexistence, matching preview materials, active-only weapon bonuses, unavailable reward rollback, real seed-42 basic/elite/Rootwarden deaths, Search/Take/extraction, four recipe chains, level/material gates, exact costs, replay rejection and saved final state |
+| `starter_sources_test.gd` | 291 | Forty-item starter boundary, all original IDs, exact source eligibility/reachability, earned elite/boss gates, seeded encounter samples, future-content rejection and legacy preservation |
+| `item_catalog_test.gd` | 483 | Registry/resources, seven rarity definitions, stock, twelve recipes and acquisition contracts |
+| `inventory_economy_test.gd` | 138 | Forty-slot capacity, instance ownership, real recipe ingredients and atomic transactions |
+| `encounter_loot_test.gd` | 36 | Actual registered encounter hooks and duplicate/foreign death protection |
+| `rarity_ui_test.gd` | 32 | Text/symbol/color rarity agreement, Ancient dual accents, honest art/source notes and unsupported-equipment actions |
+| `rpg_ui_test.gd` | 66 | Real touch transactions, equipment/crafting and sale quote/value agreement with a bounded representative inventory |
+| `smoke_test.gd` | 353 | All resources, startup, movement, cameras, touch and original portals |
+| `combat_test.gd` | 177 | Existing shared combat, abilities, attacks and all three enemy archetypes |
+| `character_progression_test.gd` | 69 | Existing player stats, equipment and progression contracts |
+| `loadout_integration_test.gd`, runtime/read | 78 + 10 | Owned loadouts, combat restrictions, both cameras/touch and independent restart |
+| `searchable_loot_integration_test.gd`, runtime/read | 149 + 14 | Three generated layouts, real Search/Take, capacity/reentry, extraction, restart and later death |
+| `expedition_test.gd` | 115 | Existing dungeon, awareness, treasure, boss and extraction behavior |
+| `loot_persistence_test.gd` | 47 | Seeded treasure, preserved rarity contract and save recovery |
+| `save_migration_test.gd` | 42 | Existing progression migration and ownership protection |
+| `party_persistence_test.gd` | 70 | Existing companion identity, progression and persistence |
+| `rpg_integration_test.gd` | 117 | Merchants, Blacksmith, Hall, equipment, extraction and wipe |
+| `party_test.gd` | 88 | Recruitment, commands, combat, rescue/wipe and extraction |
+| `companion_navigation_test.gd` | 26 | Physical companion navigation across multiple generated layouts |
+
+The new integration suite uses controlled levels and supplements legitimately defined crafting materials to exercise exact recipe boundaries; it does not claim a human level-fifteen playthrough or balanced acquisition rates. Its separate real encounter path proves that an elite and Rootwarden actually produce their gated materials, that the Search window transfers them and that extraction saves them. It then proves that a missing final boss essence prevents crafting without charging currency or consuming other ingredients. Preview checks establish matching equipment records and independent tint materials, not rendered armor-fit quality.
+
+Evidence is `/tmp/vaultbound-56-checkpoint5-regression/results.json` and its fourteen adjacent logs, `/tmp/vaultbound-m56-starter-integration.log`, `/tmp/vaultbound-m56-stage5-live-{starter_sources,item_catalog,inventory_economy,encounter_loot}.log` and `/tmp/vaultbound-stage5-rarity-{ui,rpg-ui}.log`. The original catalog-sized RPG UI fixture was deliberately replaced by a representative 35-item fixture with authored stack limits; the inventory capacity and original touch/transaction assertions were retained.
+
+Android review must buy/equip each new slot piece, compare stats and preview against gameplay in both cameras, inspect I–VII rarity labels at every UI scale, earn and search elite/boss materials, extract/restart and try both valid and blocked recipes at the Blacksmith. Check touch scrolling with a full inventory, icon clarity, armor/weapon clipping and protected legacy equipment. Native family display geometry and SVG icons remain explicit asset placeholders; no physical-device, rendered GPU, sustained FPS, thermal or APK result is claimed.

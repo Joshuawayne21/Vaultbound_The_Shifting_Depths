@@ -287,7 +287,7 @@ func _validate_reward(reward: Dictionary) -> Dictionary:
 		if not item is Dictionary or not item.get("id", "") is String:
 			return {}
 		var definition := VaultLootTable.item_for(item.id)
-		if definition == null or definition.category == "gold" or not VaultProfileStore._integer(item.get("quantity"), 1, 1000000):
+		if definition == null or not definition.obtainable or definition.category == "gold" or not VaultProfileStore._integer(item.get("quantity"), 1, 1000000):
 			return {}
 		var quantity := int(item.quantity)
 		totals[item.id] = int(totals.get(item.id, 0)) + quantity

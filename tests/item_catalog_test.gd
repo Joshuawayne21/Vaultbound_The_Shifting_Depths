@@ -10,7 +10,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var catalog: Dictionary = Loot.catalog()
-	check(catalog.size() == 30, "The starter catalog contains exactly thirty unique definitions")
+	check(catalog.size() == 41, "The starter catalog contains forty functional items plus the preserved currency definition")
 	var rarities := {}
 	var obtainable := {"gold_coin": true}
 	var models := {}
@@ -47,7 +47,7 @@ func _run() -> void:
 		check(not first and bounds.position.y >= -0.01 and bounds.end.y <= 1.7 and bounds.size.x <= 1.6 and bounds.size.z <= 1.6, "%s is grounded and bounded for a display stand" % path.get_file())
 		actor.free()
 	var recipes: Array[Dictionary] = Recipes.recipes()
-	check(recipes.size() == 8, "Exactly eight useful recipes are authored")
+	check(recipes.size() == 12, "Twelve useful recipes are authored")
 	var recipe_ids := {}
 	for recipe: Dictionary in recipes:
 		check(not recipe_ids.has(recipe.id) and catalog.has(recipe.output_id) and int(recipe.output_quantity) > 0 and int(recipe.gold) >= 0, "%s has a unique valid output and cost" % recipe.id)
@@ -75,12 +75,23 @@ func _run() -> void:
 		check(table != null and table.is_valid(), "%s loot remains valid after catalog expansion" % category)
 		for definition: Resource in table.entries:
 			obtainable[String(definition.id)] = true
+		if table.guaranteed_item != null:
+			obtainable[String(table.guaranteed_item.id)] = true
+		for definition: Resource in table.guaranteed_items:
+			obtainable[String(definition.id)] = true
 		for seed_value in range(1000):
 			var reward: Dictionary = table.roll(seed_value * 43, "catalog_fixture")
 			for item: Dictionary in reward.items:
 				observed[catalog[item.id].rarity] = true
 		check(table.roll(511, "stable") == table.roll(511, "stable"), "%s expanded loot remains seeded and reproducible" % category)
 	check(observed.size() == 7, "Five thousand configured chest rolls can reach all seven rarity tiers")
+	var encounters := load("res://resources/loot/monster_rewards.tres") as VaultMonsterRewards
+	for source: String in VaultMonsterRewards.SOURCES:
+		var table := encounters._table(source)
+		if table.guaranteed_item != null:
+			obtainable[String(table.guaranteed_item.id)] = true
+		for definition: VaultItemDefinition in table.guaranteed_items:
+			obtainable[String(definition.id)] = true
 	for id: String in catalog:
 		check(obtainable.has(id), "%s has a loot, recipe or merchant acquisition path" % id)
 	check(Loot.table_for(&"boss").guaranteed_item.id == &"rootwarden_heart", "Rootwarden trophy reward remains guaranteed")

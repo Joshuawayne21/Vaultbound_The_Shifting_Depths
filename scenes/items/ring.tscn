@@ -1,0 +1,50 @@
+[gd_scene load_steps=7 format=3]
+
+[sub_resource type="StandardMaterial3D" id="Leather"]
+albedo_color = Color(0.14, 0.24, 0.29, 1)
+roughness = 0.88
+
+[sub_resource type="StandardMaterial3D" id="Bronze"]
+albedo_color = Color(0.72, 0.53, 0.26, 1)
+metallic = 0.45
+roughness = 0.55
+
+[sub_resource type="StandardMaterial3D" id="Crystal"]
+albedo_color = Color(0.23, 0.78, 0.69, 1)
+roughness = 0.5
+
+[sub_resource type="TorusMesh" id="Band"]
+inner_radius = 0.12
+outer_radius = 0.18
+rings = 16
+ring_segments = 6
+
+[sub_resource type="CylinderMesh" id="Setting"]
+top_radius = 0.13
+bottom_radius = 0.1
+height = 0.1
+radial_segments = 6
+
+[sub_resource type="PrismMesh" id="Gem"]
+size = Vector3(0.17, 0.1, 0.15)
+
+[node name="RingFamilyDisplay" type="Node3D"]
+
+[node name="Part0" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.18, 0)
+rotation = Vector3(1.5707963, 0, 0)
+mesh = SubResource("Band")
+material_override = SubResource("Bronze")
+cast_shadow = 0
+
+[node name="Part1" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.37, 0)
+mesh = SubResource("Setting")
+material_override = SubResource("Bronze")
+cast_shadow = 0
+
+[node name="Part2" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.44, 0)
+mesh = SubResource("Gem")
+material_override = SubResource("Crystal")
+cast_shadow = 0

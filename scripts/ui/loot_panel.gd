@@ -294,13 +294,14 @@ func draw_rows(canvas: Control) -> void:
 		var item: Dictionary = entries[index]
 		var selected: bool = String(item.get("id", "")) == selected_id
 		var tint := _rarity_color(String(item.get("rarity", "common")))
-		VaultUITheme.frame(canvas, rect, Color("193249") if selected else Color("121e30"), tint, selected)
+		if String(item.get("id", "")) == CURRENCY_ROW:
+			VaultUITheme.frame(canvas, rect, Color("193249") if selected else Color("121e30"), tint, selected)
+		else:
+			VaultUITheme.rarity_frame(canvas, rect, Color("193249") if selected else Color("121e30"), String(item.get("rarity", "common")), selected)
 		_icon(canvas, item, Rect2(rect.position + Vector2(12, 12), Vector2(42, 42) * ui_scale), tint)
 		var text_x := 68.0 * ui_scale
 		_text(_fit(String(item.get("label", "Item")), rect.size.x - text_x - 18, 15), rect.position + Vector2(text_x, 28 * ui_scale), 15, tint, canvas)
-		var rarity := String(item.get("rarity", "common")).replace("_", " ").to_upper()
-		var label := "%d DM" % int(item.quantity) if String(item.get("id", "")) == CURRENCY_ROW else "%s · ×%d" % [rarity, int(item.quantity)]
-		_text(label, rect.position + Vector2(text_x, 52 * ui_scale), 11, VaultUITheme.MUTED, canvas)
+		_text(row_caption(item), rect.position + Vector2(text_x, 52 * ui_scale), 11, VaultUITheme.MUTED, canvas)
 	var total := entries.size() * 80.0 * ui_scale
 	if total > viewport.size.y:
 		var height := maxf(24, viewport.size.y * viewport.size.y / total)
@@ -315,9 +316,11 @@ func _draw_details() -> void:
 		_wrap("Swipe to browse. Take one, a chosen quantity, or all rewards. If your bag is full, leave items in the cache and retry when space is available.", rect.position + Vector2(18, 78), rect.size.x - 36, 14, 7)
 		return
 	var tint := _rarity_color(String(item.get("rarity", "common")))
+	if String(item.get("rarity", "")) == "ancient_relic":
+		VaultUITheme.rarity_frame(self, rect, Color("111d30"), "ancient_relic")
 	_text(_fit(String(item.get("label", "Item")), rect.size.x - 36, 18), rect.position + Vector2(18, 31), 18, tint)
 	_icon(self, item, Rect2(rect.position + Vector2(18, 52), Vector2(50, 50) * ui_scale), tint)
-	_text(String(item.get("rarity", "common")).replace("_", " ").to_upper(), rect.position + Vector2(88, 77), 12, tint)
+	_text(VaultUITheme.rarity_label(String(item.get("rarity", "common"))), rect.position + Vector2(88, 77), 12, tint)
 	_text(String(item.get("category", "item")).capitalize(), rect.position + Vector2(88, 101), 12, VaultUITheme.MUTED)
 	_wrap(String(item.get("description", "")), rect.position + Vector2(18, 143), rect.size.x - 36, 12, 2)
 	var amount := int(item.quantity) if quantity == 0 else quantity
@@ -325,6 +328,9 @@ func _draw_details() -> void:
 	for index in range(4):
 		_button(quantity_rect(index), ["ONE", "−", "+", "ALL"][index], true, (index == 0 and quantity == 1) or (index == 3 and quantity == 0))
 	_button(take_rect(), "TAKE %d%s" % [amount, " DM" if selected_id == CURRENCY_ROW else ""], true, true)
+
+func row_caption(item: Dictionary) -> String:
+	return "%d DM" % int(item.get("quantity", 0)) if String(item.get("id", "")) == CURRENCY_ROW else "%s · ×%d" % [VaultUITheme.rarity_label(String(item.get("rarity", "common"))), int(item.get("quantity", 0))]
 
 func _icon(canvas: CanvasItem, item: Dictionary, rect: Rect2, tint: Color) -> void:
 	if String(item.get("id", "")) == CURRENCY_ROW:

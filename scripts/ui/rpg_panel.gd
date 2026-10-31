@@ -488,6 +488,8 @@ func _selected_actions(entry: Dictionary) -> Array[Dictionary]:
 		&"inventory":
 			if FILTERS[filter_index] == "reserve":
 				action = &"claim_reserve"; label = "CLAIM ×%d" % quantity; args = {"item_id": String(entry.get("item_id", "")), "quantity": quantity}
+			elif not bool(entry.get("obtainable", true)) or (entry.get("category", "") == "equipment" and not bool(entry.get("combat_supported", true))):
+				return result
 			elif entry.get("category", "") == "equipment":
 				if String(entry.get("slot", "")) == "main_weapon":
 					return [
@@ -660,8 +662,7 @@ func draw_list(canvas: Control) -> void:
 		var item: Dictionary = _display_entry(entries[index])
 		var tint := rarity_color(String(item.get("rarity", "common")))
 		var selected := _entry_key(entries[index]) == (selected_uid if not selected_uid.is_empty() else selected_key)
-		canvas.draw_rect(item_rect, Color("1a3e40") if selected else Color("142e35"))
-		canvas.draw_rect(item_rect.grow(-1), tint if selected else Color(tint, 0.55), false, 2 if selected else 1)
+		VaultUITheme.rarity_frame(canvas, item_rect, Color("1a3e40") if selected else Color("142e35"), String(item.get("rarity", "common")), selected)
 		if _grid_mode():
 			_draw_icon(item, Rect2(item_rect.position + Vector2(8, 8), Vector2(38, 38) * ui_scale), tint, canvas)
 			_list_text(canvas, _fit(String(item.get("label", "Unknown")), item_rect.size.x - 12, 11), item_rect.position + Vector2(6, 62 * ui_scale), 11, tint)
@@ -671,6 +672,7 @@ func draw_list(canvas: Control) -> void:
 			_list_text(canvas, tag, item_rect.position + Vector2(6, 81 * ui_scale), 10, MUTED)
 			var mark := "L" if bool(item.get("locked", false)) else "★" if bool(item.get("favorite", false)) else "E" if bool(item.get("equipped", false)) else "D" if bool(item.get("displayed", false)) else "?" if not bool(item.get("identified", true)) else ""
 			_list_text(canvas, mark, item_rect.position + Vector2(item_rect.size.x - 18, 24), 14, GOLD)
+			_list_text(canvas, item_rarity_mark(item), item_rect.position + Vector2(item_rect.size.x - 18, 46 * ui_scale), 10, tint, true)
 		else:
 			_draw_icon(item, Rect2(item_rect.position + Vector2(9, 10), Vector2(42, 42) * ui_scale), tint, canvas)
 			_list_text(canvas, _fit(String(item.get("label", item.get("name", "Unknown"))), item_rect.size.x - 80 * ui_scale, 15), item_rect.position + Vector2(62, 27) * ui_scale, 15, tint)
@@ -678,6 +680,7 @@ func draw_list(canvas: Control) -> void:
 			if section == &"buy": detail = "%d DM · %d remaining" % [int(item.get("price", 0)), int(item.get("remaining", item.get("quantity", 0)))]
 			elif section == &"craft": detail = "%d DM · Level %d" % [int(item.get("gold", 0)), int(item.get("required_level", 1))]
 			elif section == &"bag" or FILTERS[filter_index] == "reserve": detail = "× %d" % int(item.get("quantity", 1))
+			detail = item_rarity_caption(item) + " · " + detail
 			_list_text(canvas, _fit(detail, item_rect.size.x - 80 * ui_scale, 12), item_rect.position + Vector2(62, 49) * ui_scale, 12, MUTED)
 	if entries.is_empty():
 		_list_text(canvas, "No items in this view", viewport.get_center(), 16, MUTED, true)
@@ -708,6 +711,12 @@ func _display_entry(entry: Dictionary) -> Dictionary:
 		result.sell_value = VaultEconomy.sell_price(entry)
 	return result
 
+func item_rarity_mark(item: Dictionary) -> String:
+	return VaultUITheme.rarity_marker(String(item.get("rarity", "common")))
+
+func item_rarity_caption(item: Dictionary) -> String:
+	return VaultUITheme.rarity_label(String(item.get("rarity", "common")))
+
 func _draw_details() -> void:
 	var rect := detail_rect()
 	_panel(rect, Color("132f34"))
@@ -723,10 +732,15 @@ func _draw_details() -> void:
 		return
 	var item := _display_entry(selected)
 	var tint := rarity_color(String(item.get("rarity", "common")))
+	if String(item.get("rarity", "")) == "ancient_relic":
+		VaultUITheme.rarity_frame(self, rect, Color("132f34"), "ancient_relic")
 	_draw_icon(item, Rect2(rect.position + Vector2(20, 18), Vector2(52, 52)), tint)
 	_text(_fit(String(item.get("label", item.get("name", "Item"))), rect.size.x - 106, 20), rect.position + Vector2(88, 40), 20, tint)
-	_text(String(item.get("rarity", "common")).replace("_", " ").to_upper() + " · " + String(item.get("category", "item")).to_upper(), rect.position + Vector2(88, 63), 11, MUTED)
-	_wrap(String(item.get("description", "")), rect.position + Vector2(20, 98), rect.size.x - 40, 13, IVORY, 3)
+	_text(item_rarity_caption(item) + " · " + String(item.get("category", "item")).to_upper(), rect.position + Vector2(88, 63), 11, MUTED)
+	var inspection_note := VaultUITheme.item_inspection_note(item)
+	_wrap(String(item.get("description", "")), rect.position + Vector2(20, 98), rect.size.x - 40, 13, IVORY, 3 if inspection_note.is_empty() else 2)
+	if not inspection_note.is_empty():
+		_text(_fit(inspection_note, rect.size.x - 40, 10), rect.position + Vector2(20, 142), 10, MUTED)
 	var at := rect.position + Vector2(20, 160)
 	if section == &"craft":
 		_text("MATERIALS REQUIRED", at, 12, GOLD)

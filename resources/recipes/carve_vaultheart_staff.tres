@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="VaultCraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/crafting_recipe.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "carve_vaultheart_staff"
+label = "Carve Vaultheart Staff"
+description = "Set an Ancient Heartstone into enchanted wood for the existing staff combat family."
+ingredients = {"root_fiber": 16, "emerald_dust": 12, "rootwarden_essence": 4, "ancient_forged_core": 1, "ancient_heartstone": 1}
+gold = 900
+output_id = "vaultheart_staff"
+required_level = 15
+output_quantity = 1

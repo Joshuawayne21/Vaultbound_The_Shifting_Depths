@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="VaultCraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/crafting_recipe.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "condense_ancient_heartstone"
+label = "Condense Ancient Heartstone"
+description = "Focus the essence of repeated Rootwarden victories into a lasting enhancement heart."
+ingredients = {"ancient_forged_core": 1, "rootwarden_essence": 4, "ancient_shard": 5}
+gold = 600
+output_id = "ancient_heartstone"
+required_level = 15
+output_quantity = 1

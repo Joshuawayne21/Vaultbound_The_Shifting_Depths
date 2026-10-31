@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="VaultCraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/crafting_recipe.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "forge_ancient_core"
+label = "Forge Ancient Core"
+description = "Bind earned elite fragments and Rootwarden essence inside tempered ancient metal."
+ingredients = {"elite_monster_fragment": 3, "rootwarden_essence": 1, "tempered_ingot": 4}
+gold = 150
+output_id = "ancient_forged_core"
+required_level = 8
+output_quantity = 1
