@@ -191,7 +191,10 @@ func _sorting() -> void:
 			match mode:
 				"value": ordered = ordered and int(a.value) >= int(b.value)
 				"rarity_low": ordered = ordered and panel.RARITIES.find(a.rarity) <= panel.RARITIES.find(b.rarity)
-				"category": ordered = ordered and String(a.category).naturalnocasecmp_to(String(b.category)) <= 0
+				"category":
+					var group_order := String(a.get("catalog_group", a.category)).naturalnocasecmp_to(String(b.get("catalog_group", b.category)))
+					var slot_order := String(a.get("slot", "")).naturalnocasecmp_to(String(b.get("slot", "")))
+					ordered = ordered and (group_order < 0 or (group_order == 0 and (slot_order < 0 or (slot_order == 0 and String(a.label).naturalnocasecmp_to(String(b.label)) <= 0))))
 				"recent": ordered = ordered and String(a.uid) >= String(b.uid)
 		check(ordered and panel.SORTS[panel.sort_index] == mode, "Touch sorting applies the requested " + mode + " ordering to owned instances")
 	game.hud.close_modals()

@@ -3,8 +3,14 @@ extends Node3D
 ## A production rig and authored animation clips are still future art assets;
 ## the gameplay controller and camera do not depend on the animation source.
 
+const ItemPresentation = preload("res://scripts/visual/item_presentation.gd")
 const Presentation = preload("res://scripts/visual/combat_presentation.gd")
 
+## Set before add_child for an explicitly demand-rendered Equipment preview.
+var static_item_presentation := false
+var _sword_presentation: VaultItemPresentation
+var _staff_presentation: VaultItemPresentation
+var _item_presentation_signature := ""
 var _body: Node3D
 var _left_leg: Node3D
 var _right_leg: Node3D
@@ -55,6 +61,8 @@ func _ready() -> void:
 	_detail_quality = Presentation.quality(self)
 	_unmodified_armor_color = _armor_color
 	_build()
+	static_item_presentation = static_item_presentation or get_viewport() is SubViewport
+	_build_item_presentations()
 	set_weapon(_weapon_style)
 
 
@@ -301,6 +309,36 @@ func set_equipment_appearance(appearance: Dictionary) -> void:
 			material.albedo_color = _equipment_color(entry, _surface_base_colors[mesh.get_instance_id()])
 			mesh.material_override = material
 	_armor.albedo_color = _armor_color
+	_update_item_presentation()
+
+
+func _build_item_presentations() -> void:
+	_sword_presentation = ItemPresentation.new()
+	_sword_presentation.name = "EnhancementCue"
+	_sword_presentation.position = Vector3(0, -0.60, -0.65)
+	_sword_presentation.rotation.x = PI * 0.5
+	_sword.add_child(_sword_presentation)
+	_staff_presentation = ItemPresentation.new()
+	_staff_presentation.name = "EnhancementCue"
+	_staff_presentation.position = Vector3(0, 1.51, 0)
+	_staff.add_child(_staff_presentation)
+
+
+func _update_item_presentation() -> void:
+	if not is_instance_valid(_sword_presentation):
+		return
+	var entry: Dictionary = _equipment_appearance.get("main_weapon", {})
+	var signature := "%s:%s:%d:%s" % [_weapon_style, String(entry.get("item_id", "")), int(entry.get("enhancement", 0)), str(static_item_presentation)]
+	if signature == _item_presentation_signature:
+		return
+	_item_presentation_signature = signature
+	_sword_presentation.clear()
+	_staff_presentation.clear()
+	var definition := VaultLootTable.item_for(String(entry.get("item_id", "")))
+	if definition == null or definition.weapon_style != _weapon_style or int(entry.get("enhancement", 0)) <= 0:
+		return
+	var cue := _staff_presentation if _weapon_style == &"staff" else _sword_presentation
+	cue.configure(definition, entry, null, &"weapon_preview" if static_item_presentation else &"weapon")
 
 
 func _equipment_color(entry: Dictionary, base: Color) -> Color:

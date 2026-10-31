@@ -405,7 +405,7 @@ Twenty-seven trophy artifacts complete **350 noncurrency definitions plus the pr
 
 Seventeen new artifacts use existing Ancient Chest or completed Rootwarden sources. The other ten have no acquisition path and cannot enter playable inventory or rewards. Their catalog artwork may truthfully reuse the existing relic family icon/model; shared placeholder art does not imply an implemented encounter. The existing Rootwarden Heart remains tied to the real boss reward and retains its singular ownership path.
 
-**The frozen-batch gate passed 5,155 assertions across seven invocations.** Four focused catalog/source/economy suites contributed 4,372; three independent runtime/read/resource invocations contributed 783. Both gates and their opening/closing manifests match the unchanged semantic source (`4a9d89c22f15910887d570dab07f40b874288da02ba8160356ca9e6b8b8e8345`). All final logs were clean on the first run. Committed-source checks and the complete milestone regression remain separate.
+**The frozen-batch gate passed 5,155 assertions across seven invocations.** Four focused catalog/source/economy suites contributed 4,372; three independent runtime/read/resource invocations contributed 783. Local commit `004ec6b`, published as `75fd051`, additionally passed **1,957 assertions across four exact-source invocations**: stackable batch 1,174, category runtime/read 87 + 13 and smoke 683. Opening/closing archive manifests, both working gates and their source records match the unchanged semantic source (`4a9d89c22f15910887d570dab07f40b874288da02ba8160356ca9e6b8b8e8345`). Archive evidence is `/tmp/vaultbound-56-c7g-source-checks/`; repeated publication checks are reported separately. All final logs were clean on the first run. The complete milestone regression remains separate.
 
 | Suite | Passed assertions | Coverage |
 | --- | ---: | --- |
@@ -421,3 +421,33 @@ The runtime extension selects Singing Stone Idol from the unmodified Ancient Che
 Evidence is `/tmp/vaultbound-m56-7g-focused-final/results.json` and matching source-before/after records, plus `/tmp/vaultbound-56-checkpoint7g-regression/results.json`, logs and source-opening/closing manifests. Fresh import succeeded with only the known sandbox editor-socket and absent Android build-tools notices. Native family visuals remain shared placeholders; source eligibility and controlled acquisition do not establish unique artwork or balanced natural drop rates.
 
 On Android, acquire an existing-source artifact, extract it, assign its owned reference, restart and confirm later expedition loss preserves the exhibit. Future encounter artifacts must remain unavailable. Inspect labels, family models and collection readability; rendered appearance, physical input and performance remain manual checks.
+
+## Checkpoint 8 — collection presentation and integration
+
+The existing owned Hall references now receive bounded native rarity/enhancement accents and optional model motion. Eight equipment stands and four relic pedestals preserve their original interaction positions, collision and saved UIDs. Collection completion counts secured discoveries against the 300 currently obtainable noncurrency definitions. Display updates remain revision-driven, and inspection remains read-only.
+
+The item inspector preserves real ownership origins and quantities, including UID-less merchant, catalog and unsecured references. Inventory gains explicit weapon, armor, accessory, valuable and trophy filters. Static previews shut down child processing before entering the scene tree and allocate no decorative sparks. World item sparks share 4/8/12-instance Low/Medium/High limits; reduced motion/effects preserve readable rarity cues. These are structural budgets, not rendered performance measurements.
+
+Accepted Rare+ expedition transfers can queue one compact discovery card plus at most four waiting cards. Its quantity is the accepted quantity, and its label remains **UNSECURED · Extract to keep**. Rejected/replayed transfers cannot announce a find; menus defer the card, and leaving/restarting a run clears it. Existing reward ownership and extraction remain authoritative.
+
+**The narrow gameplay gate passed 752 assertions across thirteen invocations.** Seven presentation/UI suites passed 449 on the complete 351-definition integration copy; six independent ownership/loadout/combat/loot invocations passed 303 on main. All 673 semantic source files in the integration copy match main exactly, and the independent opening/closing manifests are unchanged (`ea5dbaed89920d6489fd36b7ba68ee6e6bac788c4714b88c7197586f11753987`). This gate precedes the release-version metadata update; the complete committed-release archive gate below validates that final metadata and all gameplay source together.
+
+| Suite | Passed assertions | Coverage |
+| --- | ---: | --- |
+| `item_presentation_test.gd` | 54 | Shared spark budgets, finite bounded motion, reset, hidden/distant shutdown, static previews, weapon anchors, depth testing and read-only Hall completion |
+| `hall_inspection_ui_test.gd` | 73 | Owned/UID-less inspection origins, actual valuable UID/quantity, group filters, drag ownership, hidden child shutdown and same-instance refresh |
+| `rare_discovery_test.gd` | 64 | Actual accepted Search rewards, quantities/replay, bounded queue, modal timing, run resets and safe-area layout across UI scales |
+| `rpg_ui_test.gd` | 66 | Existing transactional menus, protected actions, owned Hall assignment and exact sale values |
+| `mobile_ui_integration_test.gd` | 152 | Existing menu, preview, scale/safe-area and accessibility behavior |
+| `expedition_ui_test.gd` | 19 | Existing dungeon HUD/results and modal input isolation |
+| `character_presentation_test.gd` | 21 | Preserved finite character poses and attachment/collision contracts |
+| `catalog_category_integration_test.gd`, runtime/read | 87 + 13 | Actual valuable/trophy Hall models and saved references, material/supply transactions, independent restart and later death on the integrated presentation source |
+| `loadout_integration_test.gd`, runtime/read | 78 + 10 | Owned switching, moving touch/cameras, combat-state guards, exact loadout persistence and independent restart |
+| `equipment_effects_integration_test.gd` | 40 | Actual bounded modifier-driven projectile, ability and defensive behavior |
+| `session_loot_test.gd` | 75 | Real loot authority, capacity, stale/reentrant requests, access control and freed-view/manager safety |
+
+The Hall test owns a real three-unit Mossworn Obol stack and checks its allocated UID; no synthetic valuable substitutes for integrated catalog behavior. The independent category reader reconstructs the actual extracted valuable and trophy exhibits and verifies ownership after a later death. All final runtime logs were clean; no production fix or fixture correction was needed during the integrated gate.
+
+Evidence is `/tmp/vaultbound-m56-presentation-finish/focused-results-351.json`, `integrated-source-351.json`, source-stability records and logs, plus `/tmp/vaultbound-56-checkpoint8-regression/results.json`, source-opening/closing manifests and logs. Editor import succeeded with the known sandbox socket and absent Android build-tools notices. The earlier 7c/302-definition scratch runs are development evidence and are not added to this total.
+
+On Android, fill the Hall, rotate inspections, inspect real equipment and trophies, change all graphics/accessibility presets and reopen both preview screens. Check rarity and discovery-card readability during combat in both cameras, with touch controls, scene changes and app suspension. Shared family art, procedural characters, occlusion/clipping, GPU frame time, thermals and physical touch comfort still require device review; no imported production rig, bespoke item models or device/FPS result is claimed.

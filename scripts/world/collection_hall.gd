@@ -18,6 +18,8 @@ var _session: Node
 var _last_revision := -1
 var _trophy: Node3D
 var _trophy_label: Label3D
+var _completion_label: Label3D
+var collection_completion: Dictionary = {}
 
 func _ready() -> void:
 	add_to_group("collection_halls")
@@ -27,6 +29,9 @@ func _ready() -> void:
 	_build_displays(kit)
 	_build_journals(kit)
 	_build_trophy_wall(kit)
+	_completion_label = kit.label("COLLECTION DISCOVERIES", Vector3(0, 2.9, 10.7), 25, Color("9ce3d8"))
+	_completion_label.name = "CollectionCompletion"
+	_completion_label.pixel_size = 0.004
 	var portal := Portal.instantiate()
 	portal.name = "SanctuaryReturn"
 	portal.position = Vector3(0, 0, 13)
@@ -198,8 +203,27 @@ func refresh_displays(force: bool = true) -> void:
 		var definition := VaultLootTable.item_for(String(entry.get("item_id", "")))
 		stands[id].set_display(entry, definition)
 	trophy_unlocked = profile.get("discoveries", []).has("rootwarden_heart") or profile.get("monster_discoveries", []).has("rootwarden")
+	collection_completion = completion_snapshot(profile, VaultLootTable.catalog())
+	_completion_label.text = "DISCOVERIES %d / %d · TROPHIES %d / %d\nAvailable catalog discoveries" % [collection_completion.discovered, collection_completion.total, collection_completion.trophies, collection_completion.trophy_total]
 	_trophy.visible = trophy_unlocked
 	_trophy_label.text = "ROOTWARDEN · GUARDIAN OF THE ABYSS" if trophy_unlocked else "ROOTWARDEN · TROPHY UNCLAIMED"
+
+static func completion_snapshot(profile: Dictionary, catalog: Dictionary) -> Dictionary:
+	# Read-only discovery ledger, not an item grant. Future content is excluded.
+	var result := {"discovered": 0, "total": 0, "trophies": 0, "trophy_total": 0}
+	var discovered: Array = profile.get("discoveries", [])
+	for definition: VaultItemDefinition in catalog.values():
+		if not definition.obtainable or definition.catalog_group == "currency":
+			continue
+		result.total += 1
+		var known := discovered.has(String(definition.id))
+		if known:
+			result.discovered += 1
+		if definition.catalog_group == "trophy":
+			result.trophy_total += 1
+			if known:
+				result.trophies += 1
+	return result
 
 func _keep_static_collision(node: Node) -> void:
 	if node is StaticBody3D:

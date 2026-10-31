@@ -1,6 +1,7 @@
 extends Node3D
 ## A display references an owned inventory UID. It never moves or creates items.
 
+const ItemPresentation = preload("res://scripts/visual/item_presentation.gd")
 const Architecture = preload("res://scripts/world/architecture.gd")
 @export var stand_id := "equipment_0"
 @export var display_kind := "equipment"
@@ -13,6 +14,7 @@ var shared_palette: Dictionary = {}
 var _item_label: Label3D
 var _model_anchor: Node3D
 var _display_signature := ""
+var _presentation: VaultItemPresentation
 
 func _ready() -> void:
 	add_to_group("interactables")
@@ -32,6 +34,10 @@ func _ready() -> void:
 	_model_anchor.name = "OwnedItemDisplay"
 	_model_anchor.position.y = 1.22
 	add_child(_model_anchor)
+	_presentation = ItemPresentation.new()
+	_presentation.name = "ItemPresentation"
+	_presentation.position.y = 1.22
+	add_child(_presentation)
 	_item_label = kit.label("Empty relic pedestal" if relic else "Empty equipment stand", Vector3(0, 0.32, 1.1), 22, Color("d8c9a8"))
 	_item_label.pixel_size = 0.004
 	var marker := kit.label(("RELIC " if relic else "DISPLAY ") + str(int(stand_id.get_slice("_", 1)) + 1), Vector3(0, 2.95, 0), 21, Color("b79a65"))
@@ -50,6 +56,7 @@ func set_display(entry: Dictionary, definition: Resource) -> void:
 	if signature == _display_signature and (next_uid.is_empty() or is_instance_valid(displayed_model)):
 		return
 	_display_signature = signature
+	_presentation.clear()
 	if is_instance_valid(displayed_model):
 		_model_anchor.remove_child(displayed_model)
 		displayed_model.queue_free()
@@ -68,9 +75,11 @@ func set_display(entry: Dictionary, definition: Resource) -> void:
 		kit.cone(Vector3(0, 0.55, 0), 0.26, 1.0, "crystal")
 	_model_anchor.add_child(displayed_model)
 	displayed_uid = next_uid
+	_presentation.configure(definition, entry, _model_anchor, &"display")
 	_item_label.text = String(definition.get("label"))
 	if int(entry.get("enhancement", 0)) > 0:
 		_item_label.text += " +%d" % int(entry.enhancement)
+	_item_label.text += "\n" + String(definition.get("rarity")).replace("_", " ").capitalize()
 
 func get_prompt() -> String:
 	return ("Relic pedestal" if display_kind == "relic" else "Equipment stand") + " · Choose a display"

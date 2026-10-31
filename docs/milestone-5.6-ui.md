@@ -126,3 +126,78 @@ Known limitations: icons and portraits remain reusable family artwork; the
 preview is a deliberately static pose that rotates on demand; very long names and
 descriptions use truncation/wrapping; first-person or portrait layouts are outside
 this landscape milestone. Final visual sign-off requires rendered Android review.
+
+## Item and Collection Hall inspection
+
+Tap the labeled **Inspect** icon on a selected owned item, or interact with a
+Collection Hall stand and inspect its preselected display. The read-only viewer
+shows the saved instance ID, enhancement, durability, lore, accessible rarity
+label and the existing model's honest artwork status. Drag the model to rotate;
+swipe the independently clipped text to read the full lore. **Back** returns to
+the same inventory or Hall selection while the existing gameplay modal stays
+paused. Neither inspecting nor displaying creates another item.
+
+The item viewer has a separate, isolated 384×384 viewport. It renders only on
+opening, dragging, resizing or preference changes, and stops rendering when
+closed. It does not change the character preview or introduce a new avatar rig.
+Missing artwork remains labeled unavailable; shared family models remain
+identified as prototypes. The shared presentation component supplies a static
+rarity rim and runes; no particles or scheduler run inside inspection. Both mesh
+and MultiMesh bounds are included when framing small items. No bespoke trophy
+artwork is claimed.
+
+Journals show collection completion from obtainable noncurrency definitions.
+The Catalog filter permits read-only browsing of future definitions, explicitly
+marked unavailable; these never count toward completion or grant ownership.
+Journal rows and counts rebuild on saved snapshot refresh, not every frame.
+Only visible rows draw within the existing native clipping and touch scrolling.
+
+Automated inspection coverage is available with:
+
+```sh
+godot4 --headless --path . --script res://tests/hall_inspection_ui_test.gd
+```
+
+On Android, check the Inspect target, model framing, lore scroll and Back gesture
+at every UI scale and graphics preset. Try two fingers, cancel a gesture, suspend
+and resume the app, inspect from both Inventory and a Hall stand, and restart to
+verify the displayed owned instance remains unchanged. Confirm labels, shared
+model shapes and contrast on a rendered device; the cloud tests establish input,
+geometry, ownership and rendering request behavior, not final visual appearance.
+
+Inspection distinguishes owned instances, unsecured expedition stacks, secured
+legacy overflow, merchant stock and catalog references; UID-less stacks retain
+their real quantity and never receive fabricated instance IDs. Same-UID saved
+updates refresh enhancement, durability, lore and static aura while preserving the
+inspection angle. Authored item scripts and every descendant process mode are
+disabled before insertion into the preview tree.
+
+Inventory additionally offers Weapons, Armor, Accessories, Valuables and Trophies
+group filters. Existing generic Equipment, favorites, locked and reserve filters
+retain their IDs and behavior. Category sorting uses catalog group, equipment
+slot and deterministic item-name ordering.
+
+## Rare find feedback
+
+Accepted Rare through Ancient Relic expedition rewards queue a compact,
+noninteractive card with the existing shared family icon, readable rarity, exact
+accepted quantity and **UNSECURED · Extract to keep**. Search inspection,
+rejected transfers and repeated confirmations never create a discovery card.
+Ownership and persistence remain with the existing reward and extraction rules.
+
+One card is visible for 3.2 seconds, with at most four waiting cards. Waiting
+copies of the same item combine their quantities; a larger burst discards the
+oldest pending announcement without changing collected loot. Cards wait for
+Search, Inventory, other menus and existing notices. Open menus, scene fades,
+downed state or insufficient safe HUD space pause the visible lifetime. Leaving
+or restarting a run clears its remaining announcements, including repeated seeds.
+Reduced motion or effects removes the short border reveal. There are no added
+particles, timers, preview viewports or input targets.
+
+`tests/rare_discovery_test.gd` covers real accepted Search transfers, replay
+rejection, exact quantities, queue limits, preserved save bytes, modal timing,
+run resets and safe-area layout at all three UI scales. On a rendered Android
+device, check readability over combat and Rootwarden telegraphs, touch-through
+behavior, suspension/resume and late notices after death or extraction. Geometry
+checks establish separation from HUD controls; they cannot establish whether a
+world enemy or attack is briefly obscured behind the card.

@@ -20,6 +20,9 @@ const RARITY_COLORS := {
 	"mythic": Color("ef8eb7"), "ancient_relic": Color("74eadb"),
 }
 const PAGE_SIZE := 5
+const DISCOVERY_LIMIT := 4
+const DISCOVERY_DURATION := 3.2
+const DISCOVERY_REVEAL := 0.18
 const PARTY_COMMANDS := [
 	[&"follow", "FOLLOW ME", "Regroup in formation behind the leader."],
 	[&"attack", "ATTACK MY TARGET", "Focus the leader's visible locked target."],
@@ -42,6 +45,11 @@ var performance_visible := false
 var _font: Font
 var _elapsed := 0.0
 var _notifications: Array[Dictionary] = []
+# Presentation only: at most one visible card and four pending finds. Definitions
+# supply the original shared-family icon; ownership remains entirely in Session.
+var _discovery_queue: Array[Dictionary] = []
+var _discovery: Dictionary = {}
+var _discovery_remaining := 0.0
 var _party_health: Dictionary = {}
 var _owned_touches: Dictionary = {}
 var _owned_mouse := false
@@ -109,6 +117,7 @@ func _process(delta: float) -> void:
 		notice.remaining = maxf(0.0, float(notice.remaining) - delta)
 	while not _notifications.is_empty() and float(_notifications[0].remaining) <= 0.0:
 		_notifications.pop_front()
+	_update_discovery(delta)
 	_elapsed += delta
 	if _elapsed >= 1.0 / 30.0:
 		_elapsed = 0.0
@@ -125,6 +134,8 @@ func apply_visual_settings(settings: Dictionary) -> void:
 
 
 func set_session_snapshot(data: Dictionary) -> void:
+	if not bool(data.get("active", false)) or int(data.get("run_generation", -1)) != int(session_snapshot.get("run_generation", -1)):
+		_clear_discoveries()
 	session_snapshot = data.duplicate(true)
 	if is_instance_valid(rpg_panel) and rpg_panel.visible:
 		rpg_panel.refresh()
@@ -203,15 +214,111 @@ func add_notice(message: String) -> void:
 
 
 func _on_reward_collected(reward: Dictionary) -> void:
-	# Only the Session's accepted-reward signal creates a currency popup. Loot
-	# inspection, quote failures and repeated empty-cache requests never reach here.
+	# Only the Session's accepted-reward signal creates feedback. Loot inspection,
+	# quote failures and repeated empty-cache requests never reach this listener.
 	var amount := int(reward.get("gold", 0))
-	if amount <= 0:
-		return
-	_notifications.append({"message": "+%d DM" % amount, "remaining": 1.4, "currency": true})
-	while _notifications.size() > 3:
-		_notifications.pop_front()
+	if amount > 0:
+		_notifications.append({"message": "+%d DM" % amount, "remaining": 1.4, "currency": true})
+		while _notifications.size() > 3:
+			_notifications.pop_front()
+	if bool(session_snapshot.get("active", false)):
+		for item: Dictionary in reward.get("items", []):
+			var definition := VaultLootTable.item_for(String(item.get("id", "")))
+			if definition == null or VaultUITheme.RARITIES.find(definition.rarity) < 2 or int(item.get("quantity", 0)) <= 0:
+				continue
+			var merged := false
+			for queued: Dictionary in _discovery_queue:
+				if queued.id == String(definition.id):
+					queued.quantity = int(queued.quantity) + int(item.quantity)
+					merged = true
+					break
+			if not merged:
+				_discovery_queue.append({"id": String(definition.id), "label": definition.label,
+					"rarity": definition.rarity, "quantity": int(item.quantity), "icon": definition.icon,
+					"generation": int(session_snapshot.get("run_generation", -1))})
+			while _discovery_queue.size() > DISCOVERY_LIMIT:
+				_discovery_queue.pop_front()
 	queue_redraw()
+
+
+func _clear_discoveries() -> void:
+	_discovery_queue.clear()
+	_discovery.clear()
+	_discovery_remaining = 0.0
+
+
+func _discovery_can_show() -> bool:
+	# Keep accepted finds until the player closes Search/Inventory/other modals.
+	# Existing DM and text notices retain their own original timing and position.
+	if mode != &"none" or not _notifications.is_empty() or _leader_downed() or not bool(session_snapshot.get("active", false)):
+		return false
+	if is_instance_valid(source_surface) and source_surface.transition_alpha > 0.01:
+		return false
+	var rect := discovery_rect()
+	var bounds := Rect2(_safe(), size - _safe() * 2)
+	if not bounds.encloses(rect) or rect.intersects(_party_rect()) or (_can_revive() and rect.intersects(_revive_rect())):
+		return false
+	return true
+
+
+func _update_discovery(delta: float) -> void:
+	# Session normally publishes changed before reward_collected. Also check the
+	# live generation so a scene/death change cannot expose a stale queued card.
+	if not bool(session_snapshot.get("active", false)) or (is_instance_valid(progression_session) and (
+			not progression_session.active or int(progression_session.run_generation) != int(session_snapshot.get("run_generation", -1)))):
+		_clear_discoveries()
+		return
+	if not _discovery_can_show():
+		return
+	if not _discovery.is_empty():
+		_discovery_remaining = maxf(0.0, _discovery_remaining - delta)
+		if _discovery_remaining <= 0.0:
+			_discovery.clear()
+	if _discovery.is_empty() and not _discovery_queue.is_empty():
+		_discovery = _discovery_queue.pop_front()
+		_discovery_remaining = DISCOVERY_DURATION
+
+
+func discovery_rect() -> Rect2:
+	# Dedicated center lane below the boss bar, above interaction/revive prompts.
+	# At the supported 720-high landscape canvas this fits every 100–120% scale.
+	var extent := Vector2(minf(440.0 * ui_scale, size.x - _safe().x * 2 - 64), 70.0 * ui_scale)
+	return Rect2(Vector2((size.x - extent.x) * 0.5, 285.0 + _safe().y), extent)
+
+
+func discovery_visible() -> bool:
+	return not _discovery.is_empty() and _discovery_can_show()
+
+
+func _discovery_reveal() -> float:
+	return 1.0 if reduced_motion or reduced_effects else clampf((DISCOVERY_DURATION - _discovery_remaining) / DISCOVERY_REVEAL, 0.0, 1.0)
+
+
+func _draw_discovery() -> void:
+	if not discovery_visible():
+		return
+	var rect := discovery_rect()
+	var rarity := String(_discovery.rarity)
+	var tint: Color = VaultUITheme.rarity_accents(rarity)[0]
+	VaultUITheme.rarity_frame(self, rect, PANEL, rarity)
+	var icon_rect := Rect2(rect.position + Vector2(10, 11) * ui_scale, Vector2(48, 48) * ui_scale)
+	draw_rect(icon_rect, Color(tint, 0.08))
+	var texture := _discovery.get("icon") as Texture2D
+	if texture != null:
+		draw_texture_rect(texture, icon_rect, false)
+	else:
+		_diamond(icon_rect.get_center(), 12 * ui_scale, tint)
+	var origin := rect.position + Vector2(70, 0) * ui_scale
+	var width := rect.end.x - origin.x - 14 * ui_scale
+	_text(_fit_text(VaultUITheme.rarity_label(rarity) + " FIND", width, 10), origin + Vector2(0, 18) * ui_scale, 10, tint)
+	var quantity := " ×%d" % int(_discovery.quantity)
+	var quantity_width := _font.get_string_size(quantity, HORIZONTAL_ALIGNMENT_LEFT, -1, roundi(15 * ui_scale)).x
+	var name := _fit_text(String(_discovery.label), maxf(20, width - quantity_width), 15)
+	_text(name + quantity, origin + Vector2(0, 39) * ui_scale, 15, IVORY)
+	_text("UNSECURED · Extract to keep", origin + Vector2(0, 58) * ui_scale, 10, MUTED)
+	# A single short border reveal; reduced effects/motion makes it static. No
+	# extra particles, shader, input target, timer node, or inventory refresh.
+	draw_line(rect.position + Vector2(8, 3), rect.position + Vector2(8 + (rect.size.x - 16) * _discovery_reveal(), 3), tint, 2)
 
 
 func show_results(data: Dictionary) -> void:
@@ -598,6 +705,7 @@ func _draw() -> void:
 		_draw_expedition_status()
 		_draw_boss()
 	_draw_notices()
+	_draw_discovery()
 	if performance_visible:
 		var settings := get_node_or_null("/root/VisualSettings")
 		var preset := "%s / %d target" % [settings.quality_name, settings.target_fps] if is_instance_valid(settings) else ""

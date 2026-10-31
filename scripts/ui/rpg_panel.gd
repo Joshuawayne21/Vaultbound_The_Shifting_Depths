@@ -12,7 +12,8 @@ const WARNING := VaultUITheme.WARNING
 const PANEL := VaultUITheme.PANEL
 const RARITIES := ["common", "uncommon", "rare", "epic", "legendary", "mythic", "ancient_relic"]
 const RARITY_COLORS := VaultUITheme.RARITY_COLORS
-const FILTERS := ["all", "equipment", "consumable", "material", "collectible", "favorites", "locked", "reserve"]
+const FILTERS := ["all", "equipment", "consumable", "material", "collectible", "favorites", "locked", "reserve", "weapons", "armor", "accessories", "valuables", "trophies"]
+const FILTER_GROUPS := {"weapons": "weapon", "armor": "armor", "accessories": "accessory", "valuables": "valuable", "trophies": "trophy"}
 const SORTS := ["name", "rarity", "level", "value", "rarity_low", "category", "recent"]
 const SLOTS := ["main_weapon", "secondary_weapon", "off_hand", "helmet", "chest_armor", "gloves", "leg_armor", "boots", "necklace", "ring", "accessory"]
 const SLOT_LABELS := ["MAIN WEAPON", "SECONDARY WEAPON", "SHIELD", "HELMET", "CHEST ARMOR", "GLOVES", "LEG ARMOR", "BOOTS", "NECKLACE", "RING", "CHARM"]
@@ -21,6 +22,11 @@ const STAT_LABELS := {"max_health": "Health", "max_stamina": "Stamina", "damage_
 const STAT_ORDER := ["max_health", "max_stamina", "damage_bonus", "armor", "stamina_regen", "crit_chance", "lifesteal", "block_strength", "ability_cooldown_reduction"]
 const ENHANCEMENT = preload("res://scripts/progression/enhancement_policy.gd")
 const EFFECTS = preload("res://resources/progression/equipment_effects.tres")
+
+var item_inspector: VaultItemInspectionPanel
+var _journal_cache: Array[Array] = [[], [], [], []]
+var _collection_progress: Dictionary = {}
+var journal_rebuilds := 0
 
 var session: Node
 var data: Dictionary = {}
@@ -92,6 +98,10 @@ func _ready() -> void:
 	_stats_canvas.panel = self
 	_stats_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_stats_clip.add_child(_stats_canvas)
+	item_inspector = preload("res://scripts/ui/item_inspection_panel.gd").new()
+	item_inspector.name = "ItemInspection"
+	add_child(item_inspector)
+	item_inspector.close_requested.connect(_close_inspection)
 	set_process(false)
 	hide()
 
@@ -107,6 +117,7 @@ func bind_session(value: Node) -> void:
 	session = value
 
 func open_context(value: StringName, details: Dictionary = {}) -> void:
+	item_inspector.close_view()
 	kind = value
 	context = details.duplicate(true)
 	section = &"buy" if value == &"merchant" else &"upgrade" if value == &"blacksmith" else &"display" if value == &"collection" else &"character" if value == &"character" else &"inventory"
@@ -138,8 +149,12 @@ func open_context(value: StringName, details: Dictionary = {}) -> void:
 	_epoch += 1
 	show()
 	refresh()
+	if section == &"display":
+		selected_uid = String(Dictionary(data.get("displays", {})).get(String(context.get("stand_id", "")), ""))
+		selected_key = selected_uid
 
 func hide_panel() -> void:
+	item_inspector.close_view()
 	hide()
 	upgrade_feedback_remaining = 0.0
 	set_process(false)
@@ -161,10 +176,12 @@ func hide_panel() -> void:
 func refresh() -> void:
 	if is_instance_valid(session) and session.has_method("progression_snapshot"):
 		data = session.progression_snapshot().duplicate(true)
+	_rebuild_journal()
 	_clamp_scroll()
 	_clamp_stat_scroll()
 	if visible and section == &"equipment":
 		_update_preview()
+	_refresh_inspection()
 	queue_redraw()
 
 func set_notice(message: String) -> void:
@@ -184,6 +201,7 @@ func apply_visual_settings(settings: Dictionary) -> void:
 	ui_scale = VaultUITheme.scale_from(settings)
 	reduced_motion = bool(settings.get("reduced_motion", false))
 	reduced_effects = bool(settings.get("reduced_effects", false))
+	item_inspector.apply_visual_settings(settings)
 	_pointers.clear()
 	_preview_pointer_id = -2
 	_epoch += 1
@@ -196,6 +214,9 @@ func apply_visual_settings(settings: Dictionary) -> void:
 
 func handle_event(event: InputEvent) -> void:
 	if not visible:
+		return
+	if item_inspector.visible:
+		item_inspector.handle_event(event)
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.physical_keycode in [KEY_ESCAPE, KEY_I, KEY_O]:
@@ -406,15 +427,7 @@ func _entries() -> Array:
 	if section == &"craft":
 		return data.get("recipes", [])
 	if section == &"journal":
-		var journal: Array = []
-		for id: String in (data.get("discoveries", []) if journal_filter != 2 else []):
-			var definition := VaultLootTable.item_for(id)
-			if definition != null:
-				journal.append({"id": id, "label": definition.label, "description": definition.get("description"), "rarity": definition.rarity, "category": "Collection discovered", "icon": definition.get("icon")})
-		for id: String in (data.get("monster_discoveries", []) if journal_filter != 1 else []):
-			journal.append({"id": "monster:" + id, "label": id.replace("_", " ").capitalize(), "description": "Recorded during an extracted expedition.", "rarity": "rare", "category": "Monster journal"})
-		journal.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return String(a.label).naturalnocasecmp_to(String(b.label)) < 0)
-		return journal
+		return _journal_cache[journal_filter]
 	if FILTERS[filter_index] == "reserve":
 		for id: String in data.get("legacy_reserve", {}):
 			var definition := VaultLootTable.item_for(id)
@@ -435,7 +448,9 @@ func _entries() -> Array:
 			continue
 		if filter_name == "locked" and not bool(entry.get("locked", false)):
 			continue
-		if filter_name not in ["all", "favorites", "locked"] and category != filter_name:
+		if FILTER_GROUPS.has(filter_name):
+			if String(entry.get("catalog_group", "")) != String(FILTER_GROUPS[filter_name]): continue
+		elif filter_name not in ["all", "favorites", "locked"] and category != filter_name:
 			continue
 		result.append(entry)
 	result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
@@ -443,8 +458,13 @@ func _entries() -> Array:
 			return _sort_value(a) > _sort_value(b)
 		if SORTS[sort_index] == "rarity_low" and a.get("rarity", "common") != b.get("rarity", "common"):
 			return RARITIES.find(String(a.get("rarity", "common"))) < RARITIES.find(String(b.get("rarity", "common")))
-		if SORTS[sort_index] == "category" and a.get("category", "") != b.get("category", ""):
-			return String(a.get("category", "")).naturalnocasecmp_to(String(b.get("category", ""))) < 0
+		if SORTS[sort_index] == "category":
+			var group_a := String(a.get("catalog_group", a.get("category", "")))
+			var group_b := String(b.get("catalog_group", b.get("category", "")))
+			if group_a != group_b: return group_a.naturalnocasecmp_to(group_b) < 0
+			var slot_a := String(a.get("slot", ""))
+			var slot_b := String(b.get("slot", ""))
+			if slot_a != slot_b: return slot_a.naturalnocasecmp_to(slot_b) < 0
 		if SORTS[sort_index] == "recent" and a.get("uid", "") != b.get("uid", ""):
 			# Stable monotonically allocated instance IDs, independent of device time.
 			return String(a.get("uid", "")).naturalnocasecmp_to(String(b.get("uid", ""))) > 0
@@ -452,7 +472,8 @@ func _entries() -> Array:
 			return RARITIES.find(String(a.get("rarity", "common"))) > RARITIES.find(String(b.get("rarity", "common")))
 		if SORTS[sort_index] == "level" and int(a.get("required_level", 1)) != int(b.get("required_level", 1)):
 			return int(a.get("required_level", 1)) > int(b.get("required_level", 1))
-		return String(a.get("label", "")).naturalnocasecmp_to(String(b.get("label", ""))) < 0)
+		var by_name := String(a.get("label", "")).naturalnocasecmp_to(String(b.get("label", "")))
+		return by_name < 0 if by_name != 0 else String(a.get("uid", "")).naturalnocasecmp_to(String(b.get("uid", ""))) < 0)
 	return result
 
 func _sort_value(entry: Dictionary) -> int:
@@ -483,6 +504,7 @@ func _hit_action(point: Vector2) -> Dictionary:
 		if confirm_rect(false).has_point(point): return {"type": "cancel"}
 		return {}
 	if close_rect().has_point(point): return {"type": "close"}
+	if _can_inspect() and inspect_rect().has_point(point): return {"type": "inspect"}
 	for index in range(tabs().size()):
 		if tab_rect(index).has_point(point): return {"type": "tab", "value": tabs()[index][0]}
 	if section == &"equipment":
@@ -568,6 +590,7 @@ func _selected_actions(entry: Dictionary) -> Array[Dictionary]:
 func _activate(action: Dictionary) -> void:
 	match String(action.get("type", "")):
 		"close": close_requested.emit()
+		"inspect": _open_inspection()
 		"cancel": pending_quote.clear(); _epoch += 1
 		"confirm":
 			# Clear before calling authority. A second simultaneous finger retains
@@ -593,7 +616,7 @@ func _activate(action: Dictionary) -> void:
 			equipment_page = clampi(equipment_page + int(action.value), 0, ceili(float(SLOTS.size()) / equipment_page_size()) - 1)
 			_epoch += 1
 		"filter": filter_index = (filter_index + 1) % FILTERS.size(); scroll_offset = 0; selected_uid = ""; selected_key = ""; _epoch += 1
-		"journal_filter": journal_filter = (journal_filter + 1) % 3; scroll_offset = 0; selected_uid = ""; selected_key = ""; _epoch += 1
+		"journal_filter": journal_filter = (journal_filter + 1) % 4; scroll_offset = 0; selected_uid = ""; selected_key = ""; _epoch += 1
 		"sort": sort_index = (sort_index + 1) % SORTS.size(); scroll_offset = 0; _epoch += 1
 		"quantity": quantity = clampi(quantity + int(action.value), 1, _maximum_quantity()); _epoch += 1
 		"select": selected_uid = String(action.uid); selected_key = String(action.key); quantity = 1; item_stats_scroll = 0.0; _epoch += 1
@@ -638,6 +661,11 @@ func _request_quote(action: StringName, arguments: Dictionary, needs_confirmatio
 
 func _draw() -> void:
 	if _font == null or not visible:
+		return
+	if item_inspector.visible:
+		_list_clip.hide()
+		_stats_clip.hide()
+		if is_instance_valid(_preview_texture): _preview_texture.hide()
 		return
 	_list_clip.visible = pending_quote.is_empty() and section not in [&"equipment", &"character"]
 	_list_clip.position = list_rect().position
@@ -695,7 +723,7 @@ func _context_hint() -> String:
 	if section == &"craft": return "Choose a recipe to review the exact materials and Depthmark cost before crafting."
 	if section == &"upgrade": return "Guaranteed upgrades · Common–Legendary +5 · Mythic/Ancient Relic +10 · Review costs before confirming."
 	if _has_item_stats(): return effect_limits_caption()
-	if section == &"journal": return "The journal records acquired items and monsters from completed expeditions."
+	if section == &"journal": return "Completion counts obtainable items only. Catalog references do not grant ownership; future content remains unavailable."
 	if not Dictionary(data.get("legacy_reserve", {})).is_empty(): return "An older save has preserved overflow. Choose Filter: Reserve to claim items into free slots."
 	return "Swipe the item list to scroll. Locked, equipped and displayed belongings are protected from sale."
 
@@ -705,8 +733,8 @@ func _draw_collection() -> void:
 		var sort_label := ("SELL VALUE" if section == &"sell" else "BASE VALUE") if SORTS[sort_index] == "value" else String(SORTS[sort_index]).replace("_", " ").to_upper()
 		_button(sort_rect(), "SORT · " + sort_label, true)
 	elif section == &"journal":
-		_button(filter_rect(), "JOURNAL · " + ["ALL", "ITEMS", "MONSTERS"][journal_filter], true)
-		_text("%d DISCOVERIES" % _entries().size(), sort_rect().position + Vector2(8, 29), 12, GOLD)
+		_button(filter_rect(), "JOURNAL · " + ["ALL", "ITEMS", "MONSTERS", "CATALOG"][journal_filter], true)
+		_text("%d / %d COLLECTED" % [int(_collection_progress.get("discovered", 0)), int(_collection_progress.get("total", 0))], sort_rect().position + Vector2(8, 29), 12, GOLD)
 	else:
 		var caption := "UNSECURED · %d DM" % int(data.get("unsecured_gold", 0)) if section == &"bag" else "AVAILABLE RECIPES" if section == &"craft" else "COLLECTION & MONSTER JOURNAL" if section == &"journal" else "STOCK · EXPEDITION ROTATION %d" % int(Dictionary(data.get("statistics", {})).get("completed", 0))
 		_text(caption, filter_rect().position + Vector2(0, 28), 12, GOLD)
@@ -802,6 +830,9 @@ func _draw_details() -> void:
 	var tint := rarity_color(String(item.get("rarity", "common")))
 	if String(item.get("rarity", "")) == "ancient_relic":
 		VaultUITheme.rarity_frame(self, rect, Color("132f34"), "ancient_relic")
+	if _can_inspect():
+		VaultUITheme.frame(self, inspect_rect(), Color("193f44"))
+		_text("INSPECT", inspect_rect().position + Vector2(8, 68), 10, GOLD)
 	_draw_icon(item, Rect2(rect.position + Vector2(20, 18), Vector2(52, 52)), tint)
 	_text(_fit(String(item.get("label", item.get("name", "Item"))), rect.size.x - 106, 20), rect.position + Vector2(88, 40), 20, tint)
 	_text(item_rarity_caption(item) + " · " + String(item.get("category", "item")).to_upper(), rect.position + Vector2(88, 63), 11, MUTED)
@@ -1089,6 +1120,10 @@ func _update_preview() -> void:
 		stage.add_child(light)
 		var avatar_script := load("res://scripts/player/player_avatar.gd") as Script
 		_preview_avatar = avatar_script.new() as Node3D
+		# New avatar presentation opts into static preview BEFORE its _ready.
+		if "static_item_presentation" in _preview_avatar:
+			_preview_avatar.static_item_presentation = true
+		_preview_avatar.process_mode = Node.PROCESS_MODE_DISABLED
 		stage.add_child(_preview_avatar)
 		var camera := Camera3D.new()
 		stage.add_child(camera)
@@ -1189,3 +1224,86 @@ func _wrap(value: String, at: Vector2, width: float, font_size: int, color: Colo
 			line = candidate
 	if not line.is_empty() and row < maximum_lines:
 		_text(_fit(line, width, font_size), at + Vector2(0, row * (font_size * ui_scale + 7)), font_size, color)
+
+func inspect_rect() -> Rect2:
+	return Rect2(detail_rect().position + Vector2(12, 12), Vector2(68, 76))
+
+func _can_inspect() -> bool:
+	if section in [&"equipment", &"character", &"craft"] or not pending_quote.is_empty(): return false
+	var entry := selected_entry()
+	return not entry.is_empty() and VaultLootTable.item_for(String(entry.get("item_id", entry.get("id", "")))) != null
+
+func _open_inspection() -> void:
+	if not _can_inspect(): return
+	_pointers.clear()
+	_preview_pointer_id = -2
+	_epoch += 1
+	if is_instance_valid(_preview_viewport): _preview_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	item_inspector.open_item(_inspection_entry(selected_entry()))
+	queue_redraw()
+
+func _close_inspection() -> void:
+	item_inspector.close_view()
+	_pointers.clear()
+	_preview_pointer_id = -2
+	_epoch += 1
+	queue_redraw()
+
+func collection_completion() -> Dictionary:
+	return _collection_progress.duplicate(true)
+
+static func summarize_collection(definitions: Array, discovered: Array) -> Dictionary:
+	var result := {"discovered": 0, "total": 0, "future": 0}
+	for definition: VaultItemDefinition in definitions:
+		if definition.category == "gold": continue
+		if not definition.obtainable:
+			result.future += 1
+			continue
+		result.total += 1
+		if discovered.has(String(definition.id)): result.discovered += 1
+	return result
+
+func _rebuild_journal() -> void:
+	journal_rebuilds += 1
+	_journal_cache = [[], [], [], []]
+	var definitions: Array = VaultLootTable.catalog().values()
+	var discoveries: Array = data.get("discoveries", [])
+	_collection_progress = summarize_collection(definitions, discoveries)
+	for definition: VaultItemDefinition in definitions:
+		if definition.category == "gold": continue
+		var entry := definition.describe()
+		entry.category = "Collection discovered" if discoveries.has(String(definition.id)) else "Available discovery" if definition.obtainable else "Unavailable · Future content"
+		_journal_cache[3].append(entry)
+		if discoveries.has(String(definition.id)):
+			_journal_cache[0].append(entry)
+			_journal_cache[1].append(entry)
+	for id: String in data.get("monster_discoveries", []):
+		var monster := {"id": "monster:" + id, "label": id.replace("_", " ").capitalize(), "description": "Recorded during an extracted expedition.", "rarity": "rare", "category": "Monster journal"}
+		_journal_cache[0].append(monster)
+		_journal_cache[2].append(monster)
+	for entries: Array in _journal_cache:
+		entries.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return String(a.label).naturalnocasecmp_to(String(b.label)) < 0)
+
+func _inspection_origin() -> String:
+	if section == &"bag": return "unsecured_stack"
+	if section == &"buy": return "merchant"
+	if FILTERS[filter_index] == "reserve" and section != &"journal": return "secured_reserve"
+	return "catalog" if section == &"journal" else "owned_instance"
+
+func _inspection_entry(entry: Dictionary) -> Dictionary:
+	var result := _display_entry(entry)
+	result.inspection_origin = _inspection_origin()
+	if not result.has("identified"):
+		result.identified = bool(result.get("identified_by_default", true))
+	return result
+
+func _refresh_inspection() -> void:
+	if not is_instance_valid(item_inspector) or not item_inspector.visible: return
+	var previous: Dictionary = item_inspector.item
+	var uid := String(previous.get("uid", ""))
+	var key := String(previous.get("item_id", previous.get("id", "")))
+	for entry: Dictionary in _entries():
+		if (not uid.is_empty() and entry.get("uid", "") == uid) or (uid.is_empty() and String(entry.get("item_id", entry.get("id", ""))) == key):
+			item_inspector.refresh_item(_inspection_entry(entry))
+			return
+	_close_inspection()
