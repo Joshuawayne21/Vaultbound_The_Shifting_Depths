@@ -5,6 +5,7 @@ extends RefCounted
 
 const SWORD: WeaponData = preload("res://resources/weapons/sword.tres")
 const STAFF: WeaponData = preload("res://resources/weapons/staff.tres")
+const EFFECTS = preload("res://resources/progression/equipment_effects.tres")
 const WEAPON_SWITCH_DURATION := 0.32
 
 var actor: CharacterBody3D
@@ -33,6 +34,7 @@ var _combo_remaining := 0.0
 var _next_combo := 0
 var _is_light := false
 var _action_cooldowns: Dictionary = {}
+var _committed_attack_id := 0
 
 func _init(owner_actor: CharacterBody3D) -> void:
 	actor = owner_actor
@@ -172,6 +174,9 @@ func _begin_attack(data: AttackData, light: bool, charged: bool = false) -> bool
 	attack_cooldown = data.duration()
 	attack_id = CombatRules.next_attack_id()
 	_action_cooldowns[data.get_instance_id()] = data.cooldown
+	if data == weapon.ability_one or data == weapon.ability_two:
+		_action_cooldowns[data.get_instance_id()] = EFFECTS.ability_cooldown(data.cooldown,
+			data.duration(), float(_equipment_effects().ability_cooldown_reduction))
 	_buffered_light = false
 	if not charged:
 		_charged_multiplier = 1.0
@@ -196,10 +201,15 @@ func _finish_attack() -> void:
 		light_attack()
 
 func _commit_hit() -> void:
+	if current_attack == null or attack_id <= 0 or _committed_attack_id == attack_id:
+		return
+	_committed_attack_id = attack_id
 	var data := current_attack
 	var damage := data.damage * _charged_multiplier
 	if actor.has_method("combat_damage_multiplier"):
 		damage *= actor.combat_damage_multiplier()
+	var effects := CombatRules.commit_attack_effects(actor, attack_id, _equipment_effects())
+	damage *= float(effects.get("damage_multiplier", 1.0))
 	var selected := find_target(data.attack_range)
 	match data.mode:
 		&"projectile":
@@ -232,6 +242,12 @@ func _commit_hit() -> void:
 		_:
 			if _within_melee(selected, data):
 				CombatRules.apply_hit(actor, selected, damage, attack_id, &"melee", data.stagger)
+
+func _equipment_effects() -> Dictionary:
+	if actor.has_method("combat_effect_snapshot"):
+		return EFFECTS.clamp_effects(actor.combat_effect_snapshot())
+	# Guardian and Mystic keep their existing combat tuning without player gear.
+	return EFFECTS.empty_effects()
 
 func _within_melee(candidate: Variant, data: AttackData) -> bool:
 	if not _valid_target(candidate):
@@ -337,7 +353,7 @@ func block_damage(amount: float, source_position: Vector3) -> float:
 		return amount
 	if actor.stamina_component.spend(3.0 + amount * weapon.block_stamina_per_damage, 0.8):
 		actor.feedback.emit("Blocked" if weapon.style == &"sword" else "Arcane ward")
-		return amount * weapon.block_damage_multiplier
+		return amount * EFFECTS.blocked_multiplier(weapon.block_damage_multiplier, float(_equipment_effects().block_strength))
 	actor.stamina = 0.0
 	interrupt(0.6)
 	actor.feedback.emit("Guard broken")

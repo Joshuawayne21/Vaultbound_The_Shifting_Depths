@@ -48,7 +48,7 @@ func _prepare_profile() -> void:
 		"iron_helm": 1, "traveler_coat": 1, "trail_boots": 1, "amber_ring": 1,
 		"sealed_reliquary": 1, "rootwarden_heart": 1, "root_fiber": 100,
 		"emerald_dust": 60, "iron_ore": 60, "tempered_ingot": 30,
-		"glow_spore": 40, "ancient_seed": 5, "mooncap_tonic": 10}
+		"glow_spore": 40, "ancient_seed": 5, "mooncap_tonic": 10, "common_enhancement_stone": 2}
 	check(Inventory.add_items(profile, items, 53001), "Fixture creates valid owned equipment, materials and consumable stacks")
 	for entry: Dictionary in profile.inventory:
 		if entry.item_id == "temple_blade":

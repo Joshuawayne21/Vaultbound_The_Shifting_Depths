@@ -285,6 +285,20 @@ func on_weapon_style_changed() -> void:
 func combat_damage_multiplier() -> float:
 	return clampf(float(_derived_stats.get("damage_multiplier", 1.0)), 1.0, 2.0)
 
+func combat_effect_snapshot() -> Dictionary:
+	return CharacterProgression.EFFECTS.clamp_effects(_derived_stats)
+
+func on_combat_damage_confirmed(receipt: Dictionary) -> void:
+	# Only CombatRules dispatches this after accepted, deduplicated enemy health
+	# loss. Its committed snapshot owns the shared per-attack lifesteal budget.
+	if health <= 0.0 or not controls_enabled or downed or eliminated:
+		return
+	if bool(receipt.get("first_critical", false)):
+		feedback.emit("Critical strike")
+	var restored := CharacterProgression.EFFECTS.safe_value(receipt.get("lifesteal_amount", 0.0), 4.0)
+	if restored > 0.0:
+		heal(restored)
+
 func progression_stats() -> Dictionary:
 	return _derived_stats.duplicate(true)
 

@@ -17,7 +17,10 @@ const SORTS := ["name", "rarity", "level", "value", "rarity_low", "category", "r
 const SLOTS := ["main_weapon", "secondary_weapon", "off_hand", "helmet", "chest_armor", "gloves", "leg_armor", "boots", "necklace", "ring", "accessory"]
 const SLOT_LABELS := ["MAIN WEAPON", "SECONDARY WEAPON", "SHIELD", "HELMET", "CHEST ARMOR", "GLOVES", "LEG ARMOR", "BOOTS", "NECKLACE", "RING", "CHARM"]
 const EQUIPMENT_PAGE_SIZE := 6
-const STAT_LABELS := {"max_health": "Health", "max_stamina": "Stamina", "damage_bonus": "Damage", "damage_multiplier": "Damage", "armor": "Protection", "stamina_regen": "Stamina recovery"}
+const STAT_LABELS := {"max_health": "Health", "max_stamina": "Stamina", "damage_bonus": "Damage", "damage_multiplier": "Damage", "armor": "Protection", "stamina_regen": "Stamina regen", "crit_chance": "Critical chance", "lifesteal": "Lifesteal", "block_strength": "Block strength", "ability_cooldown_reduction": "Ability recovery"}
+const STAT_ORDER := ["max_health", "max_stamina", "damage_bonus", "armor", "stamina_regen", "crit_chance", "lifesteal", "block_strength", "ability_cooldown_reduction"]
+const ENHANCEMENT = preload("res://scripts/progression/enhancement_policy.gd")
+const EFFECTS = preload("res://resources/progression/equipment_effects.tres")
 
 var session: Node
 var data: Dictionary = {}
@@ -49,12 +52,25 @@ var reduced_effects := false
 var preview_yaw := 0.0
 var _preview_pointer_id := -2
 var _preview_frame_requests := 0
+var item_stats_scroll := 0.0
+var _stats_clip: Control
+var _stats_canvas: Control
+var upgrade_feedback: Dictionary = {}
+var upgrade_feedback_remaining := 0.0
+var upgrade_feedback_count := 0
+const UPGRADE_FEEDBACK_DURATION := 1.0
 
 class ItemCanvas extends Control:
 	var panel: VaultRPGPanel
 	func _draw() -> void:
 		if is_instance_valid(panel):
 			panel.draw_list(self)
+
+class StatCanvas extends Control:
+	var panel: VaultRPGPanel
+	func _draw() -> void:
+		if is_instance_valid(panel):
+			panel.draw_item_stats(self)
 
 func _ready() -> void:
 	_font = ThemeDB.fallback_font
@@ -68,7 +84,24 @@ func _ready() -> void:
 	_list_canvas.panel = self
 	_list_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_list_clip.add_child(_list_canvas)
+	_stats_clip = Control.new()
+	_stats_clip.clip_contents = true
+	_stats_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_stats_clip)
+	_stats_canvas = StatCanvas.new()
+	_stats_canvas.panel = self
+	_stats_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_stats_clip.add_child(_stats_canvas)
+	set_process(false)
 	hide()
+
+func _process(delta: float) -> void:
+	# The panel has no idle per-frame work. Only this one-second committed-upgrade
+	# cue requests redraws; inventory, stats and quotes are never refreshed here.
+	upgrade_feedback_remaining = maxf(0, upgrade_feedback_remaining - delta)
+	queue_redraw()
+	if upgrade_feedback_remaining <= 0:
+		set_process(false)
 
 func bind_session(value: Node) -> void:
 	session = value
@@ -93,6 +126,10 @@ func open_context(value: StringName, details: Dictionary = {}) -> void:
 	selected_uid = ""
 	selected_key = ""
 	scroll_offset = 0.0
+	item_stats_scroll = 0.0
+	upgrade_feedback.clear()
+	upgrade_feedback_remaining = 0.0
+	set_process(false)
 	quantity = 1
 	status = ""
 	pending_quote.clear()
@@ -104,6 +141,8 @@ func open_context(value: StringName, details: Dictionary = {}) -> void:
 
 func hide_panel() -> void:
 	hide()
+	upgrade_feedback_remaining = 0.0
+	set_process(false)
 	pending_quote.clear()
 	_pointers.clear()
 	_preview_pointer_id = -2
@@ -112,6 +151,8 @@ func hide_panel() -> void:
 		_preview_texture.hide()
 	if is_instance_valid(_list_clip):
 		_list_clip.hide()
+	if is_instance_valid(_stats_clip):
+		_stats_clip.hide()
 	if is_instance_valid(_preview_viewport):
 		_preview_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	if is_instance_valid(session) and session.has_method("close_service"):
@@ -121,6 +162,7 @@ func refresh() -> void:
 	if is_instance_valid(session) and session.has_method("progression_snapshot"):
 		data = session.progression_snapshot().duplicate(true)
 	_clamp_scroll()
+	_clamp_stat_scroll()
 	if visible and section == &"equipment":
 		_update_preview()
 	queue_redraw()
@@ -147,6 +189,7 @@ func apply_visual_settings(settings: Dictionary) -> void:
 	_epoch += 1
 	equipment_page = mini(equipment_page, ceili(float(SLOTS.size()) / equipment_page_size()) - 1)
 	_clamp_scroll()
+	_clamp_stat_scroll()
 	if visible and section == &"equipment":
 		_update_preview()
 	queue_redraw()
@@ -182,6 +225,10 @@ func handle_event(event: InputEvent) -> void:
 			scroll_offset += -70.0 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 70.0
 			_clamp_scroll()
 			queue_redraw()
+		elif event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN] and _has_item_stats() and stats_rect().has_point(point):
+			item_stats_scroll += -44.0 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 44.0
+			_clamp_stat_scroll()
+			_stats_canvas.queue_redraw()
 	elif event is InputEventMouseMotion and _pointers.has(-1):
 		_drag_pointer(-1, _local_point(event.position))
 
@@ -195,6 +242,7 @@ func _begin_pointer(id: int, point: Vector2) -> void:
 	if preview:
 		_preview_pointer_id = id
 	_pointers[id] = {"start": point, "last": point, "dragged": false, "epoch": _epoch, "preview": preview,
+		"stats_scroll": pending_quote.is_empty() and _has_item_stats() and stats_rect().has_point(point),
 		"scroll": pending_quote.is_empty() and list_rect().has_point(point) and section not in [&"equipment", &"character"], "action": _hit_action(point)}
 
 func _drag_pointer(id: int, point: Vector2) -> void:
@@ -211,6 +259,10 @@ func _drag_pointer(id: int, point: Vector2) -> void:
 		scroll_offset -= point.y - Vector2(pointer.last).y
 		_clamp_scroll()
 		queue_redraw()
+	if pointer.dragged and bool(pointer.get("stats_scroll", false)):
+		item_stats_scroll -= point.y - Vector2(pointer.last).y
+		_clamp_stat_scroll()
+		_stats_canvas.queue_redraw()
 	pointer.last = point
 
 func _end_pointer(id: int, point: Vector2, canceled: bool) -> void:
@@ -255,6 +307,10 @@ func detail_rect() -> Rect2:
 	var rect := panel_rect()
 	var left := list_rect()
 	return Rect2(Vector2(left.end.x + 22, rect.position.y + 150), Vector2(rect.end.x - left.end.x - 46, rect.size.y - 222))
+
+func stats_rect() -> Rect2:
+	var rect := detail_rect()
+	return Rect2(rect.position + Vector2(20, 190), Vector2(rect.size.x - 40, 76))
 
 func filter_rect() -> Rect2:
 	return Rect2(panel_rect().position + Vector2(24, 150), Vector2(list_rect().size.x * 0.58 - 4, 48))
@@ -327,12 +383,14 @@ func talent_button_rect(index: int) -> Rect2:
 	return Rect2(rect.end - Vector2(154, 62), Vector2(140, 50))
 
 func confirmation_rect() -> Rect2:
-	var extent := Vector2(660, 364)
+	var inset := VaultUITheme.safe_inset(self)
+	var extent := Vector2(minf(880, size.x - 80 - inset.x * 2), minf(560, size.y - 80 - inset.y * 2)) if _is_upgrade_quote() else Vector2(660, 364)
 	return Rect2((size - extent) * 0.5, extent)
 
 func confirm_rect(accept: bool) -> Rect2:
 	var rect := confirmation_rect()
-	return Rect2(rect.position + Vector2(342 if accept else 28, rect.size.y - 82), Vector2(290, 56))
+	var width := (rect.size.x - 84) * 0.5
+	return Rect2(rect.position + Vector2(rect.size.x * 0.5 + 14 if accept else 28, rect.size.y - 82), Vector2(width, 56))
 
 func _grid_mode() -> bool:
 	return section in [&"inventory", &"sell", &"upgrade", &"repair", &"salvage", &"identify", &"display"] and FILTERS[filter_index] != "reserve"
@@ -520,6 +578,9 @@ func _activate(action: Dictionary) -> void:
 			if not quote.is_empty():
 				var applied: bool = session.commit_action(quote)
 				if not applied and status.is_empty(): status = "That transaction could not be completed. Select it again."
+				if applied and String(quote.get("action", quote.get("ui_action", ""))) == "upgrade":
+					refresh()
+					_begin_upgrade_feedback(String(Dictionary(quote.get("arguments", {})).get("uid", "")))
 			refresh()
 		"tab":
 			section = action.value
@@ -535,7 +596,7 @@ func _activate(action: Dictionary) -> void:
 		"journal_filter": journal_filter = (journal_filter + 1) % 3; scroll_offset = 0; selected_uid = ""; selected_key = ""; _epoch += 1
 		"sort": sort_index = (sort_index + 1) % SORTS.size(); scroll_offset = 0; _epoch += 1
 		"quantity": quantity = clampi(quantity + int(action.value), 1, _maximum_quantity()); _epoch += 1
-		"select": selected_uid = String(action.uid); selected_key = String(action.key); quantity = 1; _epoch += 1
+		"select": selected_uid = String(action.uid); selected_key = String(action.key); quantity = 1; item_stats_scroll = 0.0; _epoch += 1
 		"slot":
 			selected_uid = String(Dictionary(data.get("equipment", {})).get(String(action.slot), ""))
 			selected_key = selected_uid
@@ -583,6 +644,11 @@ func _draw() -> void:
 	_list_clip.size = list_rect().size
 	_list_canvas.size = _list_clip.size
 	_list_canvas.queue_redraw()
+	_stats_clip.visible = pending_quote.is_empty() and _has_item_stats()
+	_stats_clip.position = stats_rect().position
+	_stats_clip.size = stats_rect().size
+	_stats_canvas.size = _stats_clip.size
+	_stats_canvas.queue_redraw()
 	var rect := panel_rect()
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0.012, 0.025, 0.035, 0.95))
 	_panel(rect, PANEL)
@@ -602,6 +668,7 @@ func _draw() -> void:
 	var note := status if not status.is_empty() else _context_hint()
 	_text(_fit(note, rect.size.x - 48, 13), rect.position + Vector2(24, rect.size.y - 28), 13, TEAL if not status.is_empty() else MUTED)
 	if not pending_quote.is_empty(): _draw_confirmation()
+	elif upgrade_feedback_remaining > 0: _draw_upgrade_feedback()
 
 func _title() -> String:
 	if section == &"equipment":
@@ -626,7 +693,8 @@ func _context_hint() -> String:
 	if section == &"bag": return "Unsecured finds become inventory items only after extraction. Death preserves secured equipment."
 	if section == &"display": return "Display references your owned item. It stays in your inventory and cannot be sold while displayed."
 	if section == &"craft": return "Choose a recipe to review the exact materials and Depthmark cost before crafting."
-	if section == &"upgrade": return "Deterministic upgrades · Maximum +5 · Review the next enhancement before paying."
+	if section == &"upgrade": return "Guaranteed upgrades · Common–Legendary +5 · Mythic/Ancient Relic +10 · Review costs before confirming."
+	if _has_item_stats(): return effect_limits_caption()
 	if section == &"journal": return "The journal records acquired items and monsters from completed expeditions."
 	if not Dictionary(data.get("legacy_reserve", {})).is_empty(): return "An older save has preserved overflow. Choose Filter: Reserve to claim items into free slots."
 	return "Swipe the item list to scroll. Locked, equipped and displayed belongings are protected from sale."
@@ -752,17 +820,12 @@ func _draw_details() -> void:
 	elif item.get("category", "") == "equipment":
 		var price := "SELL %d DM" % int(item.sell_value) if item.has("sell_value") else "BASE %d DM" % int(item.get("value", 0))
 		_text(_fit("LV %d · %s · +%d · %d%% · %s" % [int(item.get("required_level", 1)), String(item.get("slot", "equipment")).replace("_", " ").to_upper(), int(item.get("enhancement", 0)), int(item.get("durability", 100)), price], rect.size.x - 40, 11), at, 11, MUTED)
-		var stats: Dictionary = item.get("effective_stats", item.get("base_stats", {}))
-		var row := 0
-		for key: String in stats:
-			if is_zero_approx(float(stats[key])): continue
-			if row >= 4: break
-			_text("%s  %s" % [STAT_LABELS.get(key, key.capitalize()), _stat_value(key, float(stats[key]))], at + Vector2(0, 25 + row * 21), 13, IVORY)
-			row += 1
 		if not bool(item.get("identified", true)):
 			_text("Hidden properties · visit the Relic Appraiser", at + Vector2(0, 45), 13, WARNING)
 		else:
-			_draw_comparison(item, at + Vector2(rect.size.x * 0.51, 25), rect.size.x * 0.45)
+			var cap := ENHANCEMENT.cap_for(VaultLootTable.item_for(String(item.get("item_id", item.get("id", "")))))
+			_text("ITEM STATS · SWIPE", at + Vector2(0, 23), 10, GOLD)
+			_text("VS EQUIPPED · CAP +%d" % cap, at + Vector2(stats_rect().size.x * 0.56, 23), 10, GOLD)
 	else:
 		var price := "SELL %d DM / EACH" % int(item.sell_value) if item.has("sell_value") else "BASE VALUE %d DM" % int(item.get("value", 0))
 		_text(_fit("%s · STACK %d / %d" % [price, int(item.get("quantity", 1)), int(item.get("stack_limit", 99))], rect.size.x - 40, 12), at, 12, GOLD)
@@ -783,26 +846,51 @@ func _draw_details() -> void:
 	for index in range(buttons.size()):
 		_button(action_rect(index, buttons.size()), String(buttons[index].label), true)
 
-func _draw_comparison(item: Dictionary, at: Vector2, width: float) -> void:
-	if String(item.get("slot", "")).is_empty(): return
-	var equipped_uid := String(Dictionary(data.get("equipment", {})).get(String(item.slot), ""))
+func item_stat_rows(item: Dictionary) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if not bool(item.get("identified", true)): return result
+	var slot := String(item.get("slot", ""))
+	if slot == "main_weapon": slot = String(data.get("active_loadout", "main_weapon"))
+	var equipped_uid := String(Dictionary(data.get("equipment", {})).get(slot, ""))
 	var current: Dictionary = {}
 	for entry: Dictionary in data.get("entries", []):
 		if String(entry.get("uid", "")) == equipped_uid:
 			current = entry
 	var candidate_stats: Dictionary = CharacterProgression.item_stats(item) if item.has("uid") else item.get("base_stats", {})
 	var current_stats: Dictionary = CharacterProgression.item_stats(current)
-	_text("VS EQUIPPED", at + Vector2(0, -22), 10, GOLD)
-	var row := 0
-	var keys: Array = candidate_stats.keys()
-	for key: String in current_stats:
-		if not keys.has(key): keys.append(key)
-	for key: String in keys:
+	for key: String in STAT_ORDER:
 		if is_zero_approx(float(candidate_stats.get(key, 0))) and is_zero_approx(float(current_stats.get(key, 0))): continue
-		if row >= 4: break
-		var difference := float(candidate_stats.get(key, 0)) - float(current_stats.get(key, 0))
-		_text(_fit("%s %s%s" % [STAT_LABELS.get(key, key.capitalize()), "+" if difference >= 0 else "", _stat_value(key, difference)], width, 12), at + Vector2(0, row * 21), 12, TEAL if difference > 0 else WARNING if difference < 0 else MUTED)
-		row += 1
+		result.append({"key": key, "label": STAT_LABELS[key], "value": float(candidate_stats.get(key, 0)), "difference": float(candidate_stats.get(key, 0)) - float(current_stats.get(key, 0))})
+	return result
+
+func _has_item_stats() -> bool:
+	if section in [&"equipment", &"character", &"craft"]: return false
+	var item := selected_entry()
+	return item.get("category", "") == "equipment" and bool(item.get("identified", true))
+
+func _clamp_stat_scroll() -> void:
+	var count := item_stat_rows(_display_entry(selected_entry())).size() if _has_item_stats() else 0
+	item_stats_scroll = clampf(item_stats_scroll, 0, maxf(0, count * 24.0 * ui_scale - stats_rect().size.y))
+
+func draw_item_stats(canvas: Control) -> void:
+	if not _has_item_stats(): return
+	var rows := item_stat_rows(_display_entry(selected_entry()))
+	var width := stats_rect().size.x
+	for index in range(rows.size()):
+		var row: Dictionary = rows[index]
+		var at := Vector2(0, 18 * ui_scale + index * 24.0 * ui_scale - item_stats_scroll)
+		_list_text(canvas, _fit("%s  %s" % [row.label, _stat_value(row.key, row.value)], width * 0.55 - 8, 12), at, 12, IVORY)
+		var difference := float(row.difference)
+		_list_text(canvas, "%s%s" % ["+" if difference >= 0 else "", _stat_value(row.key, difference)], at + Vector2(width * 0.56, 0), 12, TEAL if difference > 0 else WARNING if difference < 0 else MUTED)
+	var total := rows.size() * 24.0 * ui_scale
+	if total > stats_rect().size.y:
+		var height := stats_rect().size.y
+		var thumb := maxf(18, height * height / total)
+		canvas.draw_rect(Rect2(width - 3, 0, 3, height), Color(MUTED, 0.18))
+		canvas.draw_rect(Rect2(width - 3, (height - thumb) * item_stats_scroll / (total - height), 3, thumb), TEAL)
+
+func effect_limits_caption() -> String:
+	return "Active gear caps · Crit %s (×%s) · Lifesteal %s / %s HP per attack · Block +%s · Ability recovery %s" % [_stat_value("crit_chance", EFFECTS.aggregate_caps.crit_chance), _stat_value("multiplier", EFFECTS.critical_multiplier), _stat_value("lifesteal", EFFECTS.aggregate_caps.lifesteal), _stat_value("health", EFFECTS.lifesteal_per_attack), _stat_value("block_strength", EFFECTS.aggregate_caps.block_strength), _stat_value("ability_cooldown_reduction", EFFECTS.aggregate_caps.ability_cooldown_reduction)]
 
 func _draw_equipment() -> void:
 	_panel(preview_rect(), Color("0b2028"))
@@ -824,6 +912,7 @@ func _draw_equipment() -> void:
 	_text("SLOTS %d / %d" % [equipment_page + 1, ceili(float(SLOTS.size()) / equipment_page_size())], panel_rect().end - Vector2(290, 68), 11, MUTED)
 	var at := panel_rect().position + Vector2(32, 555)
 	_text("HEALTH %d   ·   STAMINA %d   ·   DAMAGE ×%.2f   ·   PROTECTION %d%%" % [int(stats.get("max_health", 100)), int(stats.get("max_stamina", 100)), float(stats.get("damage_multiplier", 1.0)), int(round(float(stats.get("armor", 0)) * 100))], at, 14, IVORY)
+	_text("CRITICAL %s · LIFESTEAL %s · BLOCK +%s · ABILITY RECOVERY %s" % [_stat_value("crit_chance", stats.get("crit_chance", 0)), _stat_value("lifesteal", stats.get("lifesteal", 0)), _stat_value("block_strength", stats.get("block_strength", 0)), _stat_value("ability_cooldown_reduction", stats.get("ability_cooldown_reduction", 0))], at + Vector2(0, 25), 12, TEAL)
 
 func _draw_character() -> void:
 	var rect := panel_rect()
@@ -860,11 +949,94 @@ func _draw_character() -> void:
 		_text("Permanent allocation", card.position + Vector2(16, 87), 11, MUTED)
 		_button(talent_button_rect(index), "ALLOCATE +1", int(character.get("talent_points", character.get("available_points", 0))) > 0 and rank < 10)
 
+func _is_upgrade_quote() -> bool:
+	return not pending_quote.is_empty() and String(pending_quote.get("ui_action", pending_quote.get("action", ""))) == "upgrade"
+
+func upgrade_preview() -> Dictionary:
+	# Presentation reads the authority's quoted instances and prices. It never
+	# submits a locally calculated price, result or stat value to the transaction.
+	if not _is_upgrade_quote(): return {}
+	var preview: Dictionary = pending_quote.get("preview", pending_quote)
+	var before: Dictionary = preview.get("before", selected_entry())
+	var after: Dictionary = preview.get("after", {})
+	var definition := VaultLootTable.item_for(String(before.get("item_id", "")))
+	var old_stats := CharacterProgression.item_stats(before)
+	var new_stats := CharacterProgression.item_stats(after) if not after.is_empty() else old_stats
+	var rows: Array[Dictionary] = []
+	for key: String in STAT_ORDER:
+		if is_zero_approx(float(old_stats.get(key, 0))) and is_zero_approx(float(new_stats.get(key, 0))): continue
+		rows.append({"key": key, "label": STAT_LABELS[key], "before": float(old_stats.get(key, 0)), "after": float(new_stats.get(key, 0))})
+	return {"item": definition.label if definition != null else String(pending_quote.get("ui_item", "Equipment")),
+		"rarity": definition.rarity if definition != null else "common", "cap": ENHANCEMENT.cap_for(definition),
+		"before_rank": int(before.get("enhancement", 0)), "after_rank": int(after.get("enhancement", before.get("enhancement", 0))),
+		"gold": int(preview.get("cost_gold", 0)), "materials": Dictionary(preview.get("materials", {})).duplicate(true),
+		"rows": rows, "available": bool(pending_quote.get("ok", false)), "error": String(preview.get("error", pending_quote.get("error", "")))}
+
+func _draw_upgrade_confirmation(rect: Rect2) -> void:
+	var view := upgrade_preview()
+	_text("REVIEW ENHANCEMENT", rect.position + Vector2(28, 42), 22, GOLD)
+	_text(_fit(String(view.item), rect.size.x - 56, 18), rect.position + Vector2(28, 78), 18, rarity_color(view.rarity))
+	_text("+%d → +%d  ·  %s  ·  CAP +%d" % [view.before_rank, view.after_rank, VaultUITheme.rarity_label(view.rarity), view.cap], rect.position + Vector2(28, 106), 13, GOLD)
+	_text(_fit("Guaranteed upgrade · no random failures" if bool(view.available) else String(view.error), rect.size.x - 56, 12), rect.position + Vector2(28, 134), 12, TEAL if bool(view.available) else WARNING)
+	var column_width := (rect.size.x - 84) * 0.5
+	var left := rect.position + Vector2(28, 169)
+	var right := left + Vector2(column_width + 28, 0)
+	_text("DEPTHMARK COST", left, 12, GOLD)
+	_text("%d DM" % int(view.gold), left + Vector2(0, 30), 23, IVORY)
+	_text("MATERIALS CONSUMED", left + Vector2(0, 66), 12, GOLD)
+	var material_row := 0
+	for id: String in view.materials:
+		var item := VaultLootTable.item_for(id)
+		var label: String = item.label if item != null else id
+		_text(_fit("%s ×%d" % [label, int(view.materials[id])], column_width, 12), left + Vector2(0, 94 + material_row * 27), 12, IVORY)
+		material_row += 1
+	_text("CURRENT  →  UPGRADED", right, 12, GOLD)
+	var row := 0
+	for stat: Dictionary in view.rows:
+		var changed := not is_equal_approx(float(stat.before), float(stat.after))
+		_text(_fit("%s  %s → %s" % [stat.label, _stat_value(stat.key, stat.before), _stat_value(stat.key, stat.after)], column_width, 12), right + Vector2(0, 28 + row * 26), 12, TEAL if changed else MUTED)
+		row += 1
+	_text(_fit("Enhancements increase base stats. Rolled bonuses and special effects stay fixed.", rect.size.x - 56, 11), rect.position + Vector2(28, rect.size.y - 104), 11, MUTED)
+	_button(confirm_rect(false), "CANCEL", true)
+	_button(confirm_rect(true), "CONFIRM UPGRADE" if bool(view.available) else "UNAVAILABLE", bool(view.available), true)
+
+func _begin_upgrade_feedback(uid: String) -> void:
+	for entry: Dictionary in data.get("entries", []):
+		if String(entry.get("uid", "")) != uid: continue
+		upgrade_feedback = {"uid": uid, "label": String(entry.get("label", "Equipment")), "enhancement": int(entry.get("enhancement", 0)), "rarity": String(entry.get("rarity", "common"))}
+		upgrade_feedback_count += 1
+		upgrade_feedback_remaining = UPGRADE_FEEDBACK_DURATION
+		set_process(true)
+		return
+
+func upgrade_feedback_style() -> Dictionary:
+	var progress := clampf(1.0 - upgrade_feedback_remaining / UPGRADE_FEEDBACK_DURATION, 0.0, 1.0)
+	return {"ring_scale": 1.0 if reduced_motion else 0.9 + sin(progress * PI) * 0.18,
+		"spark_count": 0 if reduced_effects or reduced_motion else 6, "alpha": 1.0 if reduced_motion else minf(1.0, (1.0 - progress) * 4.0)}
+
+func _draw_upgrade_feedback() -> void:
+	var rect := detail_rect()
+	var cue := Rect2(rect.position + Vector2(14, 8), Vector2(rect.size.x - 28, 74))
+	var style := upgrade_feedback_style()
+	VaultUITheme.frame(self, cue, Color("173e43"), GOLD, true)
+	var center := cue.position + Vector2(32, 37)
+	var radius := 20.0 * float(style.ring_scale)
+	draw_arc(center, radius, 0, TAU, 24, Color(GOLD, float(style.alpha)), 2, true)
+	for index in range(int(style.spark_count)):
+		var angle := float(index) * TAU / float(style.spark_count) + (1.0 - upgrade_feedback_remaining) * 0.4
+		draw_circle(center + Vector2.from_angle(angle) * (radius + 7), 1.6, Color(TEAL, float(style.alpha)))
+	_text("+%d" % int(upgrade_feedback.enhancement), center + Vector2(0, 5), 13, GOLD, true)
+	_text("ENHANCEMENT SAVED", cue.position + Vector2(64, 29), 12, TEAL)
+	_text(_fit(String(upgrade_feedback.label), cue.size.x - 78, 14), cue.position + Vector2(64, 53), 14, IVORY)
+
 func _draw_confirmation() -> void:
 	if is_instance_valid(_preview_texture): _preview_texture.hide()
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0.0, 0.015, 0.02, 0.91))
 	var rect := confirmation_rect()
 	_panel(rect, Color("19383c"))
+	if _is_upgrade_quote():
+		_draw_upgrade_confirmation(rect)
+		return
 	_text("CONFIRM " + String(pending_quote.get("ui_action", "ACTION")).replace("_", " ").to_upper(), rect.position + Vector2(28, 42), 24, GOLD)
 	var preview: Dictionary = pending_quote.get("preview", pending_quote)
 	_wrap(String(preview.get("message", pending_quote.get("ui_item", "Review this transaction"))), rect.position + Vector2(28, 78), rect.size.x - 56, 16, IVORY, 2)
@@ -968,9 +1140,10 @@ func _draw_icon(item: Dictionary, rect: Rect2, tint: Color, canvas: CanvasItem =
 		target.draw_colored_polygon(PackedVector2Array([center + Vector2(0, -rect.size.y * 0.35), center + Vector2(rect.size.x * 0.3, 0), center + Vector2(0, rect.size.y * 0.35), center + Vector2(-rect.size.x * 0.3, 0)]), tint)
 
 func _stat_value(key: String, value: float) -> String:
-	if key in ["armor", "damage_bonus"]: return "%g%%" % snappedf(value * 100.0, 0.1)
+	if key in ["armor", "damage_bonus", "crit_chance", "lifesteal", "block_strength", "ability_cooldown_reduction"]: return String.num(snappedf(value * 100.0, 0.1), 1).trim_suffix(".0") + "%"
 	if key == "damage_multiplier": return "×%.2f" % value
-	return "%g" % snappedf(value, 0.1)
+	if key == "stamina_regen": return String.num(snappedf(value, 0.1), 1).trim_suffix(".0") + "/s"
+	return String.num(snappedf(value, 0.1), 1).trim_suffix(".0")
 
 func _panel(rect: Rect2, fill: Color) -> void:
 	VaultUITheme.frame(self, rect, fill)

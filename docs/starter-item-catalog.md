@@ -21,7 +21,7 @@ Definitions declare `weapon_family`, `combat_supported`, `obtainable`, lore, exa
 | Verdant Oathblade | Sword, Mythic | Existing sword/shield attacks; health and damage bonuses | Completed Rootwarden reward or earned-component recipe |
 | Vaultheart Staff | Staff, Ancient Relic | Existing staff attacks; stamina and damage bonuses | Completed Rootwarden reward or earned-component recipe |
 
-The high-rarity weapons require levels 10 and 15 respectively. They do not introduce a new weapon mechanic. Enhancement caps and extended modifier behavior remain owned by the next checkpoint.
+The high-rarity weapons require levels 10 and 15 respectively. They do not introduce a new weapon mechanic. Checkpoint 6 adds the shared [enhancement policy](enhancement-policy.md) and [bounded equipment effects](equipment-effects.md), preserving existing instance rolls.
 
 ## Earned material chain
 

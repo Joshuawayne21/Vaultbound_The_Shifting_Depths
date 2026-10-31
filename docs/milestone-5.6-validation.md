@@ -164,7 +164,7 @@ The native item registry now contains **40 functional noncurrency starter defini
 
 Rarity presentation adds readable I–VII markers and full labels alongside colors, including dual turquoise/gold accents for Ancient Relics. Inventory/loot inspection exposes honest family-art and source information. This checkpoint does not claim the later 350-item expansion, +10 enhancement implementation, new weapon mechanics or unique production models. See [starter catalog](starter-item-catalog.md) for source paths and art status.
 
-**The working-tree gate passed 2,506 assertions across 21 engine invocations.** The independent preservation runner contributed 1,355 assertions in fourteen invocations, the five catalog/economy/runtime/UI suites contributed 1,014, rarity presentation contributed 32 and the new real-game starter suite contributed 105. Repeated RPG UI runs are counted once. All final logs were inspected for errors, warnings and leaked resources and were clean; no unresolved critical regression remains. Publication still requires the separate exact-source archive gate.
+**The working-tree gate passed 2,506 assertions across 21 engine invocations.** The independent preservation runner contributed 1,355 assertions in fourteen invocations, the five catalog/economy/runtime/UI suites contributed 1,014, rarity presentation contributed 32 and the new real-game starter suite contributed 105. Repeated RPG UI runs are counted once. All final logs were inspected for errors, warnings and leaked resources and were clean; no unresolved critical regression remains. The committed source archive for `d0e727c` additionally passed **781 assertions across four invocations**: smoke 353, source eligibility 291, actual starter integration 105 and rarity UI 32. Archive evidence is `/tmp/vaultbound-56-c5-source-checks/results.json`; these repeated checks are not added to the working-tree total.
 
 | Suite | Passed assertions | Coverage |
 | --- | ---: | --- |
@@ -193,3 +193,50 @@ The new integration suite uses controlled levels and supplements legitimately de
 Evidence is `/tmp/vaultbound-56-checkpoint5-regression/results.json` and its fourteen adjacent logs, `/tmp/vaultbound-m56-starter-integration.log`, `/tmp/vaultbound-m56-stage5-live-{starter_sources,item_catalog,inventory_economy,encounter_loot}.log` and `/tmp/vaultbound-stage5-rarity-{ui,rpg-ui}.log`. The original catalog-sized RPG UI fixture was deliberately replaced by a representative 35-item fixture with authored stack limits; the inventory capacity and original touch/transaction assertions were retained.
 
 Android review must buy/equip each new slot piece, compare stats and preview against gameplay in both cameras, inspect I–VII rarity labels at every UI scale, earn and search elite/boss materials, extract/restart and try both valid and blocked recipes at the Blacksmith. Check touch scrolling with a full inventory, icon clarity, armor/weapon clipping and protected legacy equipment. Native family display geometry and SVG icons remain explicit asset placeholders; no physical-device, rendered GPU, sustained FPS, thermal or APK result is claimed.
+
+## Checkpoint 6 — enhancement, bounded equipment effects and save version 4
+
+The Blacksmith now uses one native enhancement policy for deterministic prices, material requirements and rarity caps. Common through Legendary supported equipment stops at +5; Mythic and Ancient Relic equipment reaches +10. Existing accessories remain eligible, preserving their historical upgrades. Trophies, materials and unsupported weapons cannot be enhanced. The five original base-stat bonuses scale linearly by 8% per rank; new proc effects never scale with enhancement. The touch preview shows current/next ranks and statistics, exact DM/material costs and the applicable cap.
+
+Four reusable equipment effects are functional: bounded critical chance, small confirmed-damage lifesteal, block strength and ability cooldown reduction. Critical chance caps at 20% with a 1.5× multiplier, lifesteal caps at 4% with one shared four-health budget per attack, block strength caps at 20% and ability cooldown reduction caps at 15%. An attack captures its effects once at the active edge. Later projectile impacts retain that snapshot through camera/loadout changes, and duplicate delivery cannot grant extra damage or healing. Ability reduction preserves original attack phases and stamina costs. Unsupported fire, frost and poison resistance effects are not rolled or represented as functional.
+
+Version 4 preserves original instance identities, old modifiers/enhancements, both loadouts, protected gear, displays and companion progression. Legacy versions retain their original stricter boundaries; new caps and modifier keys are accepted only by the current format. Migration preserves exact backups. Missing, unavailable or unsupported owned content makes a save read-only instead of replacing it with empty defaults or silently selecting an older fallback. See [enhancement policy](enhancement-policy.md) and [equipment effects](equipment-effects.md) for the authored balance and limitations.
+
+**The final working-tree gate passed 3,152 assertions across 29 engine invocations.** Each listed invocation is counted once; repeated/debugging runs are excluded. The independent preservation runner supplied 1,241 assertions in twelve runs, the enhancement writer/reader supplied 190, and the other focused source/effect/UI/save suites supplied the remaining 1,721. All final game logs were clean. No critical regression remains; the committed-source archive gate is still a separate publication step.
+
+| Suite | Passed assertions | Coverage |
+| --- | ---: | --- |
+| `enhancement_integration_test.gd`, runtime/read | 170 + 20 | Actual nearby Blacksmith, full common +5/Mythic +10/Ancient +10 chains, legacy accessory +6, independent expected costs/materials, protected ingredients, stale/replayed/read-only failures, same UIDs/modifiers, active-only stats, preview, cameras, separate-process restart, actual boss Search/extraction and later party wipe |
+| `equipment_effects_integration_test.gd` | 40 | Real saved modifier-bearing equipment, actual staff critical projectile in flight across camera/loadout switches, original lifesteal rate, duplicate-impact rejection, actual shortened ability clock and shield block/stamina |
+| `enhancement_policy_test.gd` | 54 | Authored price/material matrix, seven rarity caps, supported equipment eligibility, guaranteed transactions and inaccessible content restrictions |
+| `equipment_effects_test.gd` | 49 | Seeded roll boundaries, nine modifier families, aggregate caps, actual armor/overkill/ward eligibility, four-health shared budget, bounded source-bound contexts, walls, duplicate sweep/projectile commits and interrupted windups |
+| `enhancement_ui_test.gd` | 39 | Real upgrade previews, current/next stats/caps, touch confirmation deduplication, scrolling effect statistics and reduced presentation preferences |
+| `profile_v4_test.gd` | 84 | Exact migration backups, preserved pre-v3 backup, strict legacy/current fields, unavailable/unsupported-content recovery and stale-writer protections |
+| `loadout_migration_test.gd` | 50 | Existing owned loadouts, unique assignments and legacy progression migration |
+| `profile_roundtrip_test.gd`, runtime/read | 55 + 3 | Nine modifier boundaries, exact encoded/discrete save verification, original precision regression and independent restart |
+| `starter_sources_test.gd` | 324 | Authored effects, source eligibility and earned material chains without fictitious resistance mechanics |
+| `item_catalog_test.gd` | 483 | Existing forty-item registry, resources, rarity, recipes and source contracts |
+| `starter_items_integration_test.gd` | 107 | Actual four-slot equipment, elite/boss materials, Search/extraction, recipes and rejection of unavailable or unsupported rewards before either bag or ledger mutation |
+| `inventory_economy_test.gd` | 138 | Exact authored new uncommon-upgrade cost/material debit plus original capacity and transaction protections |
+| `rpg_integration_test.gd` | 117 | Existing merchants, crafting, Blacksmith, Collection Hall, companions, extraction and wipe |
+| `combat_test.gd` | 177 | Existing attack/combo/weapon rules and all enemy archetypes |
+| `character_progression_test.gd` | 69 | Existing equipment statistics, progression and no free healing |
+| `companion_behavior_test.gd` | 38 | Existing Guardian/Mystic combat and support behavior |
+| `loadout_integration_test.gd` | 78 | Existing owned switching, shared cooldown/damage state, touch and both cameras |
+| `rpg_ui_test.gd` | 66 | Existing commerce, equipment and crafting touch flows |
+| `mobile_ui_integration_test.gd` | 152 | Existing safe-area/scale layouts, inspection, modal behavior and accessibility |
+| `smoke_test.gd` | 358 | Resources, startup, movement, both cameras, touch and original portals |
+| `searchable_loot_integration_test.gd`, runtime/read | 149 + 14 | Existing Search across three generated layouts, capacity/reentry, extraction, restart and later death |
+| `expedition_test.gd` | 115 | Existing generation, awareness, boss, treasure and extraction |
+| `save_migration_test.gd` | 42 | Legacy progression and protected ownership after the availability guard |
+| `loot_persistence_test.gd` | 47 | Seeded chest contract, save precision and recovery |
+| `party_test.gd` | 88 | Recruitment, commands, rescue/wipe, combat and extraction |
+| `companion_navigation_test.gd` | 26 | Physical navigation through multiple generated layouts |
+
+The new upgrade fixture supplies controlled levels, funds and currently obtainable materials to test every supported rank. It does not claim natural economy pacing or a human +10 progression playthrough. The separate restart reader verifies exact enhanced instances through extraction and death, allowing only the existing two-point extraction/eight-point death wear on equipped items. The real effect fixture uses bounded saved modifiers and a reproducible session seed; it does not replace attack methods or force an already committed effect context.
+
+The real enhanced Equipment preview exposed a runtime formatter error: Godot does not support `%g`. The UI now renders those values through supported concise formatting, and both the actual upgrade/inspection suite and focused UI gate are clean. Two new test-fixture issues were also corrected without loosening gameplay rules: independent JSON expectations now pass through the same strict profile normalizer before exact comparison, and rejected loot registration is checked through its documented `ok: false` result. Neither correction changed production saving or reward behavior.
+
+Evidence is `/tmp/vaultbound-56-checkpoint6-regression/results.json` and adjacent logs, `/tmp/vaultbound-m56-enhancement-{integration,read}.log`, `/tmp/vaultbound-m56-enhancement.log`, `/tmp/vaultbound-m56-effects-*.log`, `/tmp/vaultbound-m56-profile-v4.log`, `/tmp/vaultbound-m56-v4-*.log`, `/tmp/vaultbound-m56-stage6-{starter_sources,item_catalog}.log` and `/tmp/vaultbound-stage6-{enhancement-ui,rpg-ui,mobile-ui}.log`. The independent precision reader was also checked in its own engine process.
+
+On Android, inspect every upgrade cost and current/next stat at all UI scales, cancel and confirm upgrades with multiple fingers, restart with +10 gear and verify both loadouts and Hall exhibits. Check critical/lifesteal feedback during moving combat in both cameras, projectile impacts while switching weapons, shield stamina and ability recovery. Confirm reduced motion/effects remains readable and menus scroll comfortably. Balanced drop rates, long-term upgrade affordability, rendered effects, sustained FPS, thermal behavior and physical touchscreen operation still require device play-testing; no physical Android/GPU or APK validation is claimed.

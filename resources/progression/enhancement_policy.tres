@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="VaultEnhancementPolicyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/enhancement_policy_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+base_depthmark_costs = PackedInt32Array(30, 70, 150, 300, 600, 1000, 1700, 2800, 4500, 7500)
+rarity_caps = {"common": 5, "uncommon": 5, "rare": 5, "epic": 5, "legendary": 5, "mythic": 10, "ancient_relic": 10}
+rarity_cost_percent = {"common": 100, "uncommon": 110, "rare": 125, "epic": 150, "legendary": 175, "mythic": 200, "ancient_relic": 250}
+materials_by_rank = Array[Dictionary]([
+{"common_enhancement_stone": 2, "root_fiber": 2},
+{"common_enhancement_stone": 4, "root_fiber": 4},
+{"common_enhancement_stone": 6, "emerald_dust": 4},
+{"elite_monster_fragment": 3, "emerald_dust": 6},
+{"rootwarden_essence": 2, "elite_monster_fragment": 4},
+{"ancient_shard": 3, "rootwarden_essence": 3},
+{"ancient_shard": 5, "rootwarden_essence": 4},
+{"ancient_forged_core": 2, "rootwarden_essence": 4},
+{"ancient_forged_core": 3, "aurora_bloom": 2, "emerald_dust": 10},
+{"ancient_heartstone": 1, "rootwarden_essence": 8}
+])

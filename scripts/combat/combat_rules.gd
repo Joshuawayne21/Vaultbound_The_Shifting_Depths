@@ -4,6 +4,8 @@ extends RefCounted
 ## this service validates and deduplicates damage commands for all perspectives.
 ## IDs are local only. No transport, remote trust, or multiplayer is implemented.
 
+const EFFECTS = preload("res://resources/progression/equipment_effects.tres")
+
 static func _runtime_state() -> Dictionary:
 	# The SceneTree owns session state so freeing the last combat actor also frees
 	# every script resource cleanly. No Node references enter the receipt ledger.
@@ -12,6 +14,7 @@ static func _runtime_state() -> Dictionary:
 	if not loop.has_meta(&"vaultbound_combat_runtime"):
 		loop.set_meta(&"vaultbound_combat_runtime", {
 			"sequence": 0, "hit_receipts": {}, "receipt_order": [],
+			"effect_contexts": {}, "effect_order": [], "effect_seed": randi(),
 		})
 	var state: Dictionary = loop.get_meta(&"vaultbound_combat_runtime")
 	return state
@@ -20,6 +23,37 @@ static func next_attack_id() -> int:
 	var state := _runtime_state()
 	state["sequence"] = int(state["sequence"]) + 1
 	return int(state["sequence"])
+
+static func commit_attack_effects(source: Node3D, attack_id: int, values: Dictionary) -> Dictionary:
+	# Called at the active edge, never by a camera or a target hit. One roll and
+	# source-bound snapshot covers melee, AoE and every later projectile impact.
+	if not is_instance_valid(source) or not source.is_inside_tree() or attack_id <= 0:
+		return {}
+	var runtime := _runtime_state()
+	var contexts: Dictionary = runtime.effect_contexts
+	if contexts.has(attack_id):
+		var previous: Dictionary = contexts[attack_id]
+		return previous.duplicate(true) if previous.source_id == source.get_instance_id() else {}
+	var stats := EFFECTS.clamp_effects(values)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(runtime.effect_seed) ^ attack_id ^ source.get_instance_id()
+	var multiplier := EFFECTS.critical_factor(stats.crit_chance, rng.randf())
+	var context := {"attack_id": attack_id, "source_id": source.get_instance_id(),
+		"damage_multiplier": multiplier, "critical": multiplier > 1.0,
+		"lifesteal": float(stats.lifesteal), "heal_remaining": minf(4.0, EFFECTS.lifesteal_per_attack),
+		"critical_notified": false}
+	contexts[attack_id] = context
+	var order: Array = runtime.effect_order
+	order.append(attack_id)
+	if order.size() > 256:
+		contexts.erase(order.pop_front())
+	return context.duplicate(true)
+
+static func attack_effect_snapshot(source: Node3D, attack_id: int) -> Dictionary:
+	if not is_instance_valid(source):
+		return {}
+	var context: Dictionary = _runtime_state().effect_contexts.get(attack_id, {})
+	return context.duplicate(true) if context.get("source_id", 0) == source.get_instance_id() else {}
 
 static func party_target_available(actor: Variant) -> bool:
 	# Both human and AI members use the same damage eligibility. A downed member
@@ -88,6 +122,12 @@ static func apply_hit(source: Node3D, target: Node3D, amount: float, attack_id: 
 		"slow_factor": clampf(slow_factor, 0.1, 1.0),
 	}
 	var accepted := true
+	# Enemy labels report nominal post-armor damage, which can exceed remaining
+	# health. Capture actual health loss here, after all hit/ward eligibility.
+	var enemy_eligible: bool = target.is_in_group("enemies") and target.has_method("receive_hit") \
+		and bool(target.get("combat_active")) and target.get("state") not in [&"dead", &"return"]
+	var health_before := float(target.get("health")) if enemy_eligible else 0.0
+	enemy_eligible = enemy_eligible and is_finite(health_before) and health_before > 0.0
 	if target.has_method("receive_hit"):
 		accepted = bool(target.receive_hit(packet))
 	elif target.has_method("take_hit"):
@@ -95,9 +135,32 @@ static func apply_hit(source: Node3D, target: Node3D, amount: float, attack_id: 
 	else:
 		target.take_damage(amount)
 	if accepted:
+		if enemy_eligible and is_instance_valid(target):
+			var health_after := float(target.get("health"))
+			if is_finite(health_after):
+				_confirm_damage(source, attack_id, clampf(health_before - health_after, 0.0, health_before))
 		var tint := Color("9bdfe0") if kind == &"magic" or kind == &"frost" else Color("edbe7c")
 		effect(target.global_position + Vector3.UP * 1.0, tint, 0.42, 0.2, _effect_parent(target))
 	return accepted
+
+static func _confirm_damage(source: Node3D, attack_id: int, actual: float) -> void:
+	if actual <= 0.0 or not is_instance_valid(source) or not source.is_inside_tree() \
+			or not source.has_method("on_combat_damage_confirmed"):
+		return
+	if not party_target_available(source):
+		return
+	var contexts: Dictionary = _runtime_state().effect_contexts
+	var context: Dictionary = contexts.get(attack_id, {})
+	if context.get("source_id", 0) != source.get_instance_id():
+		return
+	var healing := EFFECTS.healing_for_damage(actual, float(context.lifesteal), float(context.heal_remaining))
+	var first_critical := bool(context.critical) and not bool(context.critical_notified)
+	# Reserve before notifying an actor: signal callbacks cannot spend this budget
+	# a second time through a nested splash/area hit. Full-health healing uses it too.
+	context.heal_remaining = maxf(0.0, float(context.heal_remaining) - healing)
+	context.critical_notified = bool(context.critical_notified) or first_critical
+	source.on_combat_damage_confirmed({"attack_id": attack_id, "actual_damage": actual,
+		"lifesteal_amount": healing, "first_critical": first_critical})
 
 static func spawn_projectile(source: Node3D, origin: Vector3, direction: Vector3,
 		damage: float, speed: float, lifetime: float, attack_id: int,

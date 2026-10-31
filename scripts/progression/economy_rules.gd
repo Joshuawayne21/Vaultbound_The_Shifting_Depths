@@ -5,6 +5,7 @@ extends RefCounted
 
 const Inventory = preload("res://scripts/progression/inventory_model.gd")
 const Catalog = preload("res://scripts/progression/loot_table.gd")
+const Enhancement = preload("res://scripts/progression/enhancement_policy.gd")
 const ACTIONS := [&"buy", &"sell", &"equip", &"unequip", &"lock", &"favorite", &"craft",
 	&"upgrade", &"repair", &"salvage", &"identify", &"display", &"claim_reserve", &"talent", &"use", &"activate_loadout"]
 
@@ -199,18 +200,25 @@ static func _evaluate(profile: Dictionary, action: StringName, arguments: Dictio
 					next.gold += result.gold_gain
 					result.message = "Sold %s ×%d for %d DM" % [definition.label, count, result.gold_gain]
 				&"upgrade":
-					if definition.category != "equipment" or not entry.identified or int(entry.enhancement) >= 5:
-						return _failure("Choose identified equipment below enhancement +5.")
+					if not entry.identified:
+						return _failure("Identify the equipment's hidden properties before upgrading.")
+					var costs := upgrade_cost(entry)
+					result["enhancement_quote"] = costs.duplicate(true)
+					if not bool(costs.get("ok", false)):
+						return _failure(String(costs.get("error", "This item cannot be enhanced.")), result)
 					if int(entry.durability) <= 0:
 						return _failure("Repair broken equipment before upgrading.")
-					var costs := upgrade_cost(entry)
 					result.cost_gold = costs.gold
-					result.materials = costs.materials
+					result.materials = costs.materials.duplicate(true)
+					# Affordability failures still show the exact proposed item/stats;
+					# neither the original instance nor its rolled modifiers changes.
+					result.after = entry.duplicate(true)
+					result.after.enhancement = int(costs.next_level)
 					if not _spend(next, result.cost_gold) or not Inventory.consume_items(next, result.materials):
 						return _failure("The upgrade needs %d DM and the listed unlocked materials." % int(result.cost_gold), result)
 					# consume_items replaces its inventory copy; reacquire by identity.
 					entry = Inventory.find(next, uid)
-					entry.enhancement += 1
+					entry.enhancement = int(costs.next_level)
 					result.message = "%s upgraded to +%d · guaranteed" % [definition.label, entry.enhancement]
 				&"repair":
 					if definition.category != "equipment" or int(entry.durability) >= 100:
@@ -254,11 +262,9 @@ static func _evaluate(profile: Dictionary, action: StringName, arguments: Dictio
 	return result
 
 static func upgrade_cost(entry: Dictionary) -> Dictionary:
-	var rank := clampi(int(entry.get("enhancement", 0)) + 1, 1, 5)
-	var materials := {"root_fiber": rank * 2, "emerald_dust": rank}
-	if rank >= 4:
-		materials["tempered_ingot"] = rank - 3
-	return {"gold": rank * rank * 25, "materials": materials}
+	var definition := Catalog.item_for(String(entry.get("item_id", "")))
+	var rank: Variant = entry.get("enhancement", 0)
+	return Enhancement.quote(definition, int(rank) if rank is int else -1)
 
 static func _resolve_active_loadout(profile: Dictionary) -> void:
 	var active_slot := Inventory.active_weapon_slot(profile)
@@ -306,7 +312,7 @@ static func _remove_selected(profile: Dictionary, entry: Dictionary, quantity: i
 static func _failure(message: String, preview_data: Dictionary = {}) -> Dictionary:
 	var result := {"ok": false, "error": message, "message": message, "cost_gold": 0,
 		"gold_gain": 0, "materials": {}, "outputs": {}, "before": {}, "after": {}}
-	for key: String in ["cost_gold", "gold_gain", "materials", "outputs", "before", "after"]:
+	for key: String in ["cost_gold", "gold_gain", "materials", "outputs", "before", "after", "enhancement_quote"]:
 		if preview_data.has(key):
 			result[key] = preview_data[key]
 	return result.duplicate(true)

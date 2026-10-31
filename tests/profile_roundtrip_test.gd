@@ -74,7 +74,7 @@ func _profile() -> Dictionary:
 	profile.statistics.last_seed = 2147483647
 	profile.statistics.best_seconds = FAILED_TIME_BYTES.hex_decode().decode_double(0)
 	profile.revision = Store.MAX_COUNT
-	check(Inventory.add_items(profile, {"traveler_sword": 5, "apprentice_staff": 1, "rootwarden_heart": 1}), "Roundtrip fixture creates real distinct owned equipment and collectible instances")
+	check(Inventory.add_items(profile, {"traveler_sword": Inventory.MODIFIER_LIMITS.size(), "apprentice_staff": 1, "rootwarden_heart": 1}), "Roundtrip fixture creates real distinct owned equipment and collectible instances")
 	var stat_index := 0
 	var keys: Array = Inventory.MODIFIER_LIMITS.keys()
 	for entry: Dictionary in profile.inventory:

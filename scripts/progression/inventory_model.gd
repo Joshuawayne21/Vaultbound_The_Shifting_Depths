@@ -4,6 +4,8 @@ extends RefCounted
 ## publishing changes. Definitions are shared resources; instances are plain data.
 
 const Catalog = preload("res://scripts/progression/loot_table.gd")
+const EnhancementPolicy = preload("res://scripts/progression/enhancement_policy.gd")
+const Effects = preload("res://resources/progression/equipment_effects.tres")
 const CAPACITY := 40
 const MAX_COUNT := 2147483647
 const MAX_RECEIPTS := 64
@@ -13,8 +15,11 @@ const LEGACY_SLOTS := ["main_weapon", "off_hand", "helmet", "chest_armor", "boot
 const SLOTS := ["main_weapon", "off_hand", "helmet", "chest_armor", "boots", "accessory",
 	"secondary_weapon", "gloves", "leg_armor", "necklace", "ring"]
 const LOADOUT_SLOTS := ["main_weapon", "secondary_weapon"]
-const MODIFIER_LIMITS := {"max_health": 12.0, "max_stamina": 10.0, "damage_bonus": 0.05,
+const LEGACY_MODIFIER_LIMITS := {"max_health": 12.0, "max_stamina": 10.0, "damage_bonus": 0.05,
 	"armor": 0.04, "stamina_regen": 1.5}
+const MODIFIER_LIMITS := {"max_health": 12.0, "max_stamina": 10.0, "damage_bonus": 0.05,
+	"armor": 0.04, "stamina_regen": 1.5, "crit_chance": 0.05, "lifesteal": 0.015,
+	"block_strength": 0.05, "ability_cooldown_reduction": 0.05}
 
 static func empty_fields() -> Dictionary:
 	var equipment := {}
@@ -45,10 +50,10 @@ static func migrate_legacy(items: Dictionary, equipped_item: String = "") -> Dic
 			return {}
 		var remaining := int(items[id])
 		var definition := Catalog.item_for(id)
-		if definition != null and definition.category != "gold":
+		if definition_available(definition) and definition.category != "gold":
 			while remaining > 0 and result.inventory.size() < CAPACITY:
 				var amount := mini(remaining, stack_limit(definition))
-				var entry := _new_entry(result, id, amount, 0)
+				var entry := _new_entry(result, id, amount, 0, false)
 				# Legacy ownership did not contain random modifiers or hidden properties.
 				entry.modifiers = {}
 				entry.identified = true
@@ -60,8 +65,13 @@ static func migrate_legacy(items: Dictionary, equipped_item: String = "") -> Dic
 			result.legacy_reserve[id] = remaining
 	return result
 
-static func normalize_fields(value: Dictionary, source_version: int = 3) -> Dictionary:
-	if source_version not in [2, 3]:
+static func normalize_fields(value: Dictionary, source_version: int = 4) -> Dictionary:
+	return _normalize_fields(value, source_version, {})
+
+static func _normalize_fields(value: Dictionary, source_version: int, unavailable_items: Dictionary) -> Dictionary:
+	# Unavailable IDs are used only by ProfileStore's read-only classification.
+	# The normal inventory API never accepts them or creates substitute items.
+	if source_version not in [2, 3, 4]:
 		return {}
 	if not value.get("inventory") is Array or value.inventory.size() > CAPACITY:
 		return {}
@@ -79,7 +89,7 @@ static func normalize_fields(value: Dictionary, source_version: int = 3) -> Dict
 	for slot: String in expected_slots:
 		if not value.equipment.has(slot):
 			return {}
-	if source_version == 3 and (not value.get("active_loadout") is String or value.active_loadout not in LOADOUT_SLOTS):
+	if source_version >= 3 and (not value.get("active_loadout") is String or value.active_loadout not in LOADOUT_SLOTS):
 		return {}
 	for index in range(8):
 		if not value.displays.has("equipment_%d" % index):
@@ -90,8 +100,9 @@ static func normalize_fields(value: Dictionary, source_version: int = 3) -> Dict
 	if not value.get("transaction_receipts") is Array or value.transaction_receipts.size() > MAX_RECEIPTS:
 		return {}
 	var result := empty_fields()
-	if source_version == 3:
+	if source_version >= 3:
 		result.active_loadout = String(value.active_loadout)
+	var modifier_limits: Dictionary = LEGACY_MODIFIER_LIMITS if source_version < 4 else MODIFIER_LIMITS
 	result.next_item_id = int(value.next_item_id)
 	var used := {}
 	for raw: Variant in value.inventory:
@@ -99,14 +110,18 @@ static func normalize_fields(value: Dictionary, source_version: int = 3) -> Dict
 			return {}
 		var uid: Variant = raw.get("uid")
 		var item_id: Variant = raw.get("item_id")
-		if not uid is String or not _uid_valid(uid) or used.has(uid) or not item_id is String:
+		if not uid is String or not _uid_valid(uid) or used.has(uid) or not item_id is String or not _text(item_id, 96):
 			return {}
 		if int(String(uid).trim_prefix("item_")) >= result.next_item_id:
 			return {}
 		var definition := Catalog.item_for(item_id)
-		if definition == null or definition.category == "gold" or not _integer(raw.get("quantity"), 1, stack_limit(definition)):
+		var unavailable := unavailable_items.has(item_id)
+		if not unavailable and not definition_available(definition):
 			return {}
-		if not _integer(raw.get("enhancement"), 0, 5) or not _integer(raw.get("durability"), 0, 100):
+		if (not unavailable and definition.category == "gold") or not _integer(raw.get("quantity"), 1, MAX_COUNT if unavailable else stack_limit(definition)):
+			return {}
+		var enhancement_cap: int = 5 if source_version < 4 else 10 if unavailable else EnhancementPolicy.cap_for(definition)
+		if not _integer(raw.get("enhancement"), 0, enhancement_cap) or not _integer(raw.get("durability"), 0, 100):
 			return {}
 		for key: String in ["identified", "locked", "favorite"]:
 			if not raw.get(key) is bool:
@@ -115,13 +130,13 @@ static func normalize_fields(value: Dictionary, source_version: int = 3) -> Dict
 			return {}
 		var modifiers := {}
 		for stat: Variant in raw.modifiers:
-			if not stat is String or not MODIFIER_LIMITS.has(stat):
+			if not stat is String or not modifier_limits.has(stat):
 				return {}
 			var amount: Variant = raw.modifiers[stat]
-			if not _number(amount, 0.0, MODIFIER_LIMITS[stat]) or float(amount) <= 0.0:
+			if not _number(amount, 0.0, modifier_limits[stat]) or float(amount) <= 0.0:
 				return {}
 			modifiers[stat] = float(amount)
-		if definition.category != "equipment" and (int(raw.enhancement) != 0 or int(raw.durability) != 100 or not modifiers.is_empty() or not raw.identified):
+		if not unavailable and definition.category != "equipment" and (int(raw.enhancement) != 0 or int(raw.durability) != 100 or not modifiers.is_empty() or not raw.identified):
 			return {}
 		var entry := {"uid": String(uid), "item_id": String(item_id), "quantity": int(raw.quantity),
 			"enhancement": int(raw.enhancement), "durability": int(raw.durability), "modifiers": modifiers,
@@ -137,7 +152,7 @@ static func normalize_fields(value: Dictionary, source_version: int = 3) -> Dict
 			if not used.has(uid) or assigned.has(uid):
 				return {}
 			var definition := Catalog.item_for(used[uid].item_id)
-			if not slot_accepts(definition, slot) or not used[uid].identified:
+			if (not unavailable_items.has(used[uid].item_id) and not slot_accepts(definition, slot)) or not used[uid].identified:
 				return {}
 			assigned[uid] = true
 		result.equipment[slot] = uid
@@ -156,7 +171,9 @@ static func normalize_fields(value: Dictionary, source_version: int = 3) -> Dict
 			return {}
 		var uid: String = value.displays[stand]
 		if not uid.is_empty():
-			if not used.has(uid) or displayed.has(uid) or not display_eligible(used[uid], stand):
+			if not used.has(uid) or displayed.has(uid):
+				return {}
+			if (not unavailable_items.has(used[uid].item_id) and not display_eligible(used[uid], stand)) or not used[uid].identified:
 				return {}
 			displayed[uid] = true
 		result.displays[stand] = uid
@@ -213,6 +230,12 @@ static func used_slots(profile: Dictionary) -> int:
 static func stack_limit(definition: VaultItemDefinition) -> int:
 	return 1 if definition.category == "equipment" else clampi(int(definition.stack_limit), 1, 999)
 
+static func definition_available(definition: VaultItemDefinition) -> bool:
+	# A catalog entry can describe future content without enabling its owned
+	# instances in this build. Currency has separate inventory exclusion rules.
+	return definition != null and definition.obtainable \
+		and (definition.category != "equipment" or definition.can_equip())
+
 static func add_items(profile: Dictionary, items: Dictionary, seed: int = 0) -> bool:
 	var next := profile.duplicate(true)
 	var ids: Array = items.keys()
@@ -222,7 +245,7 @@ static func add_items(profile: Dictionary, items: Dictionary, seed: int = 0) -> 
 			return false
 		var id := String(raw_id)
 		var definition := Catalog.item_for(id)
-		if definition == null or definition.category == "gold" or not definition.obtainable:
+		if not definition_available(definition) or definition.category == "gold":
 			return false
 		if int(totals(next).get(id, 0)) > MAX_COUNT - int(items[id]):
 			return false
@@ -307,7 +330,7 @@ static func describe_entries(profile: Dictionary) -> Array[Dictionary]:
 		result.append(detail)
 	return result
 
-static func _new_entry(profile: Dictionary, item_id: String, quantity: int, seed: int) -> Dictionary:
+static func _new_entry(profile: Dictionary, item_id: String, quantity: int, seed: int, roll_modifiers: bool = true) -> Dictionary:
 	var uid := "item_%010d" % int(profile.next_item_id)
 	profile.next_item_id = int(profile.next_item_id) + 1
 	var definition := Catalog.item_for(item_id)
@@ -315,14 +338,8 @@ static func _new_entry(profile: Dictionary, item_id: String, quantity: int, seed
 		"durability": 100, "modifiers": {}, "identified": bool(definition.identified_by_default),
 		"locked": false, "favorite": false}
 	if definition.category == "equipment":
-		var rank := ["common", "uncommon", "rare", "epic", "legendary", "mythic", "ancient_relic"].find(definition.rarity)
-		if rank >= 2:
-			var rng := RandomNumberGenerator.new()
-			rng.seed = seed ^ int(uid.hash()) ^ int(item_id.hash())
-			var options := ["max_health", "max_stamina", "damage_bonus", "stamina_regen"]
-			var stat: String = options[rng.randi_range(0, options.size() - 1)]
-			var scale: float = [1.0, 1.0, 0.005, 0.1][options.find(stat)]
-			entry.modifiers[stat] = snappedf(float(rng.randi_range(1, mini(rank + 1, 6))) * float(scale), 0.001)
+		if roll_modifiers:
+			entry.modifiers = Effects.roll_modifiers(definition.rarity, seed ^ int(uid.hash()) ^ int(item_id.hash()), definition.base_stats)
 	else:
 		entry.identified = true
 	return entry

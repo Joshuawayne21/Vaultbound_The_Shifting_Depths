@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="VaultEquipmentEffectRules" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/equipment_effect_rules.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+modifier_limits = {"max_health": 12.0, "max_stamina": 10.0, "damage_bonus": 0.05, "armor": 0.04, "stamina_regen": 1.5, "crit_chance": 0.05, "lifesteal": 0.015, "block_strength": 0.05, "ability_cooldown_reduction": 0.05}
+aggregate_caps = {"crit_chance": 0.20, "lifesteal": 0.04, "block_strength": 0.20, "ability_cooldown_reduction": 0.15}
+roll_weights = {"max_health": 4.0, "max_stamina": 4.0, "damage_bonus": 3.0, "armor": 2.0, "stamina_regen": 3.0, "crit_chance": 2.0, "lifesteal": 1.0, "block_strength": 2.0, "ability_cooldown_reduction": 1.0}
+rarity_rolls = {"common": {"count": 0}, "uncommon": {"count": 0}, "rare": {"count": 1, "minimum": 0.25, "maximum": 0.50}, "epic": {"count": 1, "minimum": 0.40, "maximum": 0.70}, "legendary": {"count": 2, "minimum": 0.55, "maximum": 0.85}, "mythic": {"count": 2, "minimum": 0.70, "maximum": 0.95}, "ancient_relic": {"count": 2, "minimum": 0.85, "maximum": 1.0}}
+critical_multiplier = 1.5
+lifesteal_per_attack = 4.0

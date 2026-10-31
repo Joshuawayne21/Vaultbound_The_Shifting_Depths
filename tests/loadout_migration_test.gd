@@ -4,6 +4,7 @@ extends "res://tests/test_harness.gd"
 const Store = preload("res://scripts/progression/profile_store.gd")
 const Inventory = preload("res://scripts/progression/inventory_model.gd")
 const Progression = preload("res://scripts/progression/character_progression.gd")
+const MIGRATION_PREFIX := ".pre-v%d" % Store.VERSION
 const PATH := "/tmp/vaultbound-m56-loadout-migration/profile.json"
 
 func _initialize() -> void:
@@ -28,8 +29,8 @@ func _clean(path: String) -> void:
 	for filename: String in directory.get_files():
 		if filename.begins_with(path.get_file()):
 			DirAccess.remove_absolute(path.get_base_dir().path_join(filename))
-	if DirAccess.dir_exists_absolute(path + ".pre-v3.bak.tmp"):
-		DirAccess.remove_absolute(path + ".pre-v3.bak.tmp")
+	if DirAccess.dir_exists_absolute(path + MIGRATION_PREFIX + ".bak.tmp"):
+		DirAccess.remove_absolute(path + MIGRATION_PREFIX + ".bak.tmp")
 
 func _write(path: String, bytes: String) -> void:
 	var file := FileAccess.open(path, FileAccess.WRITE)
@@ -71,6 +72,8 @@ func _owned() -> Dictionary:
 func _version_two_profile() -> Dictionary:
 	var profile := _owned()
 	profile.version = 2
+	for entry: Dictionary in profile.inventory:
+		entry.modifiers = {"max_health": 4.0} if entry.item_id == "temple_blade" else {}
 	profile.erase("active_loadout")
 	for slot: String in Inventory.SLOTS:
 		if slot not in Inventory.LEGACY_SLOTS:
@@ -84,8 +87,8 @@ func _version_two() -> void:
 	_write(PATH, exact)
 	var store := Store.new(PATH)
 	var profile := store.load_profile()
-	check(not store.read_only and profile.version == 3, "A complete version-two profile migrates into version three")
-	check(FileAccess.get_file_as_string(PATH) == exact and not FileAccess.file_exists(PATH + ".pre-v3.bak"), "Loading changes neither original bytes nor the disk schema")
+	check(not store.read_only and profile.version == Store.VERSION, "A complete version-two profile migrates into the current schema")
+	check(FileAccess.get_file_as_string(PATH) == exact and not FileAccess.file_exists(PATH + MIGRATION_PREFIX + ".bak"), "Loading changes neither original bytes nor the disk schema")
 	check(profile.inventory == old.inventory and profile.items == old.items and profile.next_item_id == old.next_item_id, "Migration preserves unique items, rolls, enhancements, condition, flags and counters")
 	check(profile.gold == old.gold and profile.revision == old.revision and profile.character == old.character, "Currency, revision, character XP and talents survive unchanged")
 	check(profile.companions == old.companions and profile.statistics == old.statistics, "Recruited companions and precise expedition history survive unchanged")
@@ -95,10 +98,10 @@ func _version_two() -> void:
 	check(new_slots.all(func(slot: String) -> bool: return profile.equipment.has(slot) and profile.equipment[slot].is_empty()), "New slots start empty without granting or duplicating equipment")
 	check(profile.active_loadout == "main_weapon" and Inventory.active_weapon_entry(profile).item_id == "temple_blade", "Existing main weapon remains the active loadout")
 	check(store.save_profile(profile), "First migrated save completes only after backup and verified write")
-	check(FileAccess.get_file_as_string(PATH + ".pre-v3.bak") == exact and FileAccess.get_file_as_string(PATH + ".bak") == exact, "Both migration snapshot and first rotating backup preserve exact original bytes")
-	check(JSON.parse_string(FileAccess.get_file_as_string(PATH)).version == 3 and Store.new(PATH).load_profile() == profile, "Persisted current schema loads without losing migrated state")
+	check(FileAccess.get_file_as_string(PATH + MIGRATION_PREFIX + ".bak") == exact and FileAccess.get_file_as_string(PATH + ".bak") == exact, "Both migration snapshot and first rotating backup preserve exact original bytes")
+	check(JSON.parse_string(FileAccess.get_file_as_string(PATH)).version == Store.VERSION and Store.new(PATH).load_profile() == profile, "Persisted current schema loads without losing migrated state")
 	profile.gold += 1
-	check(store.save_profile(profile) and FileAccess.get_file_as_string(PATH + ".pre-v3.bak") == exact, "Later saves cannot overwrite the permanent original snapshot")
+	check(store.save_profile(profile) and FileAccess.get_file_as_string(PATH + MIGRATION_PREFIX + ".bak") == exact, "Later saves cannot overwrite the permanent original snapshot")
 	var other := old.duplicate(true)
 	other.gold += 7
 	var other_bytes := JSON.stringify(other, "\t", true, true)
@@ -107,9 +110,9 @@ func _version_two() -> void:
 	check(restored.save_profile(restored.load_profile()), "A separately restored older profile can migrate safely again")
 	var kept_second := false
 	for filename: String in DirAccess.open(PATH.get_base_dir()).get_files():
-		if filename.begins_with(PATH.get_file() + ".pre-v3.") and filename.ends_with(".bak"):
+		if filename.begins_with(PATH.get_file() + MIGRATION_PREFIX + ".") and filename.ends_with(".bak"):
 			kept_second = kept_second or FileAccess.get_file_as_string(PATH.get_base_dir().path_join(filename)) == other_bytes
-	check(kept_second and FileAccess.get_file_as_string(PATH + ".pre-v3.bak") == exact, "Distinct restored originals receive separate verified snapshots without replacing the first")
+	check(kept_second and FileAccess.get_file_as_string(PATH + MIGRATION_PREFIX + ".bak") == exact, "Distinct restored originals receive separate verified snapshots without replacing the first")
 
 func _version_one() -> void:
 	var path := PATH + ".v1"
@@ -119,8 +122,8 @@ func _version_one() -> void:
 	_write(path, exact)
 	var store := Store.new(path)
 	var profile := store.load_profile()
-	check(profile.version == 3 and profile.items == old.items and profile.legacy_reserve.lost_legacy_material == 17, "Version-one ownership migrates through current schema without losing unknown legacy quantities")
-	check(store.save_profile(profile) and FileAccess.get_file_as_string(path + ".pre-v3.bak") == exact, "Version-one original bytes are also retained before replacement")
+	check(profile.version == Store.VERSION and profile.items == old.items and profile.legacy_reserve.lost_legacy_material == 17, "Version-one ownership migrates through current schema without losing unknown legacy quantities")
+	check(store.save_profile(profile) and FileAccess.get_file_as_string(path + MIGRATION_PREFIX + ".bak") == exact, "Version-one original bytes are also retained before replacement")
 
 func _assignments() -> void:
 	var profile := _owned()
@@ -182,14 +185,14 @@ func _backup_recovery() -> void:
 	var store := Store.new(path)
 	var profile := store.load_profile()
 	check(store.recovered_backup and not store.read_only, "A valid legacy backup recovers a corrupt primary")
-	check(store.save_profile(profile) and FileAccess.get_file_as_string(path + ".pre-v3.bak") == exact and FileAccess.get_file_as_string(path + ".bak") == exact, "Recovered migration snapshots the backup without copying corrupt primary bytes")
+	check(store.save_profile(profile) and FileAccess.get_file_as_string(path + MIGRATION_PREFIX + ".bak") == exact and FileAccess.get_file_as_string(path + ".bak") == exact, "Recovered migration snapshots the backup without copying corrupt primary bytes")
 	_clean(path)
 	_write(path, exact)
 	store = Store.new(path)
 	profile = store.load_profile()
-	DirAccess.make_dir_recursive_absolute(path + ".pre-v3.bak.tmp")
+	DirAccess.make_dir_recursive_absolute(path + MIGRATION_PREFIX + ".bak.tmp")
 	check(not store.save_profile(profile) and FileAccess.get_file_as_string(path) == exact, "Failure to create the migration snapshot blocks primary replacement")
-	DirAccess.remove_absolute(path + ".pre-v3.bak.tmp")
+	DirAccess.remove_absolute(path + MIGRATION_PREFIX + ".bak.tmp")
 	_write(path, JSON.stringify({"version": 99, "gold": 987}))
 	check(not store.save_profile(profile) and JSON.parse_string(FileAccess.get_file_as_string(path)).version == 99, "A newer disk replacement blocks a stale in-memory save even after loading")
 	_write(path, "corrupt replacement")

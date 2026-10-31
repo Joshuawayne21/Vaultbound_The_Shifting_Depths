@@ -4,7 +4,7 @@ extends RefCounted
 ## a temporary file, and renamed only after a successful read-back. A previous
 ## valid profile is kept as .bak. This is offline persistence, not remote authority.
 
-const VERSION := 3
+const VERSION := 4
 const MAX_COUNT := 2147483647
 const MAX_COMPANION_LEVEL := 20
 const MAX_COMPANION_EXPERIENCE := 19000
@@ -39,6 +39,11 @@ func load_profile() -> Dictionary:
 	recovered_backup = false
 	if not FileAccess.file_exists(path):
 		if FileAccess.file_exists(path + ".bak"):
+			var unavailable := _unsupported_profile_reason(_read_json(path + ".bak"))
+			if not unavailable.is_empty():
+				read_only = true
+				last_error = unavailable
+				return empty_profile()
 			var backup := _read_valid(path + ".bak")
 			if not backup.is_empty():
 				recovered_backup = true
@@ -50,10 +55,10 @@ func load_profile() -> Dictionary:
 	var raw: Variant = _read_json(path)
 	# Never overwrite a profile produced by a newer version, even if an older
 	# backup happens to exist beside it.
-	var raw_version: Variant = raw.get("version", 0) if raw is Dictionary else 0
-	if (raw_version is int or raw_version is float) and is_finite(float(raw_version)) and float(raw_version) > VERSION:
+	var unsupported := _unsupported_profile_reason(raw)
+	if not unsupported.is_empty():
 		read_only = true
-		last_error = "This profile uses a newer format. Secured data was left unchanged."
+		last_error = unsupported
 		return empty_profile()
 	var profile := normalize(raw)
 	if not profile.is_empty():
@@ -64,7 +69,8 @@ func load_profile() -> Dictionary:
 		last_error = "Recovered the previous secured profile from backup."
 		return backup
 	read_only = true
-	last_error = "The secured profile could not be read. Existing files were preserved; extraction is disabled."
+	var backup_reason := _unsupported_profile_reason(_read_json(path + ".bak"))
+	last_error = backup_reason if not backup_reason.is_empty() else "The secured profile could not be read. Existing files were preserved; extraction is disabled."
 	return empty_profile()
 
 func save_profile(candidate: Dictionary) -> bool:
@@ -76,16 +82,23 @@ func save_profile(candidate: Dictionary) -> bool:
 	# must not be overwritten by a stale in-memory transaction or a fresh store.
 	var disk: Variant = _read_json(path)
 	if FileAccess.file_exists(path):
-		var disk_version: Variant = disk.get("version", 0) if disk is Dictionary else 0
-		if (disk_version is int or disk_version is float) and is_finite(float(disk_version)) and float(disk_version) > VERSION:
-			last_error = "A newer profile appeared on disk. Existing files were preserved."
+		var unsupported := _unsupported_profile_reason(disk)
+		if not unsupported.is_empty():
+			read_only = true
+			last_error = unsupported
 			return false
 		if normalize(disk).is_empty() and (not recovered_backup or _read_valid(path + ".bak").is_empty()):
 			last_error = "The current save needs recovery before it can be replaced."
 			return false
-	elif FileAccess.file_exists(path + ".bak") and not recovered_backup:
-		last_error = "Load the remaining secured backup before saving new progress."
-		return false
+	elif FileAccess.file_exists(path + ".bak"):
+		var unsupported := _unsupported_profile_reason(_read_json(path + ".bak"))
+		if not unsupported.is_empty():
+			read_only = true
+			last_error = unsupported
+			return false
+		if not recovered_backup:
+			last_error = "Load the remaining secured backup before saving new progress."
+			return false
 	var validated := normalize(candidate)
 	if validated.is_empty():
 		last_error = "The proposed profile failed validation. Existing progress was preserved."
@@ -124,10 +137,13 @@ func save_profile(candidate: Dictionary) -> bool:
 	return true
 
 static func normalize(value: Variant) -> Dictionary:
+	return _normalize(value, {})
+
+static func _normalize(value: Variant, unavailable_items: Dictionary) -> Dictionary:
 	if not value is Dictionary or not _integer(value.get("version"), 1, VERSION):
 		return {}
 	if int(value.version) >= 2:
-		# Versions 2 and 3 are complete, not optional patches. Missing sections indicate
+		# Instance-based versions are complete, not optional patches. Missing sections indicate
 		# an invalid save and must trigger backup recovery rather than empty defaults.
 		for key: String in ["revision", "gold", "items", "discoveries", "equipped_item", "companions", "statistics", "character", "monster_discoveries"]:
 			if not value.has(key):
@@ -215,7 +231,7 @@ static func normalize(value: Variant) -> Dictionary:
 		if int(result.statistics.completed) > 0 or result.discoveries.has("rootwarden_heart"):
 			result.monster_discoveries.append("rootwarden")
 	else:
-		var inventory := VaultInventory.normalize_fields(value, int(value.version))
+		var inventory := VaultInventory._normalize_fields(value, int(value.version), unavailable_items)
 		var character := CharacterProgression.normalize_character(value.get("character"))
 		if inventory.is_empty() or character.is_empty():
 			return {}
@@ -231,7 +247,7 @@ static func normalize(value: Variant) -> Dictionary:
 			if uid.is_empty():
 				continue
 			var equipped_entry := VaultInventory.find(result, uid)
-			if VaultLootTable.item_for(equipped_entry.item_id).required_level > int(character.level):
+			if not unavailable_items.has(equipped_entry.item_id) and VaultLootTable.item_for(equipped_entry.item_id).required_level > int(character.level):
 				return {}
 		var monsters: Variant = value.get("monster_discoveries", [])
 		if not monsters is Array:
@@ -243,6 +259,28 @@ static func normalize(value: Variant) -> Dictionary:
 				result.monster_discoveries.append(id)
 		result.monster_discoveries.sort()
 	return result
+
+static func _unsupported_profile_reason(value: Variant) -> String:
+	var version: Variant = value.get("version", 0) if value is Dictionary else 0
+	if (version is int or version is float) and is_finite(float(version)) and float(version) > VERSION:
+		return "This profile uses a newer format. Secured data was left unchanged."
+	if not value is Dictionary or not _integer(version, 2, VERSION) or not value.get("inventory") is Array:
+		return ""
+	var unavailable := {}
+	for entry: Variant in value.inventory:
+		if not entry is Dictionary or not entry.get("item_id") is String:
+			return ""
+		var id: String = entry.item_id
+		if not VaultInventory.definition_available(VaultLootTable.item_for(id)):
+			unavailable[id] = true
+	# A complete structurally valid instance profile can require a later catalog
+	# without a new schema. Distinguish that from corruption before trying a backup.
+	# Disabled definitions and unsupported equipment families are unavailable too:
+	# a later build may enable them without changing the save schema. Classification
+	# never exposes these instances to gameplay or saving.
+	if not unavailable.is_empty() and not _normalize(value, unavailable).is_empty():
+		return "This profile contains owned items unavailable in this build. Use the matching item catalog; secured files were left unchanged."
+	return ""
 
 static func companion_level(experience: int) -> int:
 	var level := 1
@@ -344,7 +382,7 @@ func _preserve_migration_backup(source: String) -> bool:
 	if normalize(raw).is_empty():
 		return true # Invalid sources are never copied over a usable backup.
 	var bytes := FileAccess.get_file_as_bytes(source)
-	var target := path + ".pre-v3.bak"
+	var target := path + ".pre-v%d.bak" % VERSION
 	if FileAccess.file_exists(target):
 		if FileAccess.get_file_as_bytes(target) == bytes:
 			return not _read_valid(target).is_empty()
@@ -353,7 +391,7 @@ func _preserve_migration_backup(source: String) -> bool:
 		var hashing := HashingContext.new()
 		hashing.start(HashingContext.HASH_SHA256)
 		hashing.update(bytes)
-		target = path + ".pre-v3." + hashing.finish().hex_encode().substr(0, 16) + ".bak"
+		target = path + ".pre-v%d." % VERSION + hashing.finish().hex_encode().substr(0, 16) + ".bak"
 		if FileAccess.file_exists(target):
 			return FileAccess.get_file_as_bytes(target) == bytes and not _read_valid(target).is_empty()
 	if not _copy_verified(source, target + ".tmp"):

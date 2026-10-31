@@ -154,6 +154,18 @@ func _earned_sources() -> void:
 	var accepted: bool = session.collect_reward({"chest_id": "future_starter_test", "category": "common", "gold": 5, "items": [{"id": "root_fiber", "quantity": 1}]})
 	definition.obtainable = old_flag
 	check(not accepted and session.run_items == bag and session.loot_records() == records and session.unsecured_gold == 0 and not session.has_claimed("future_starter_test"), "Session rejects unavailable future definitions without reserving sources, rewards or currency")
+	var future := Catalog.item_for("apprentice_staff")
+	var original_family: String = future.weapon_family
+	var original_style: StringName = future.weapon_style
+	future.weapon_family = "bow"
+	future.weapon_style = &"bow"
+	var unsupported_reward := {"chest_id": "unsupported_starter_test", "category": "common", "gold": 7, "items": [{"id": "apprentice_staff", "quantity": 1}]}
+	var collected: bool = session.collect_reward(unsupported_reward)
+	var registered: Dictionary = session.register_loot(unsupported_reward, 0, Vector3.ZERO, "regular")
+	future.weapon_family = original_family
+	future.weapon_style = original_style
+	check(not collected and not bool(registered.get("ok", false)), "Unsupported but marked-obtainable weapon families cannot enter direct rewards or the searchable ledger")
+	check(session.run_items == bag and session.loot_records() == records and session.unsecured_gold == 0 and not session.has_claimed("unsupported_starter_test"), "Rejected unsupported rewards leave source reservations, inventory capacity and currency untouched")
 	var room_id := -1
 	for record: Dictionary in level.layout.rooms:
 		if record.kind == &"combat" and not record.hidden:

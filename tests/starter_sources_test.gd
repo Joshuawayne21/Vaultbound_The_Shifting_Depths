@@ -110,9 +110,10 @@ func _run() -> void:
 		if definition.category == "equipment":
 			check(definition.can_equip(), "Functional equipment uses a supported slot and combat family: " + id)
 			for stat: String in definition.base_stats:
-				check(stat in ["max_health", "max_stamina", "damage_bonus", "armor", "stamina_regen"], "Starter equipment only uses implemented static statistics: " + id + "/" + stat)
+				check(stat in ["max_health", "max_stamina", "damage_bonus", "armor", "stamina_regen", "crit_chance", "lifesteal", "block_strength", "ability_cooldown_reduction"], "Starter equipment only uses implemented statistics and bounded combat effects: " + id + "/" + stat)
 	check(groups == {"weapon": 7, "armor": 10, "accessory": 5, "material": 12, "consumable": 3, "trophy": 3, "currency": 1}, "The starter catalog keeps independent stable category counts")
 	_new_slot_gear(catalog)
+	_authored_effects(catalog)
 	_source_rejections(catalog)
 	finish()
 
@@ -124,6 +125,38 @@ func _new_slot_gear(catalog: Dictionary) -> void:
 		check(not stats.is_empty(), "New equipment contributes its authored static bonuses: " + id)
 	for id: String in ["verdant_oathblade", "vaultheart_staff"]:
 		check(catalog[id].can_equip() and Inventory.slot_accepts(catalog[id], "secondary_weapon"), "High-rarity weapon works in both existing loadouts: " + id)
+
+func _authored_effects(catalog: Dictionary) -> void:
+	var expected := {
+		"heartwood_blade": {"crit_chance": 0.03},
+		"verdant_oathblade": {"lifesteal": 0.015},
+		"warden_shield": {"block_strength": 0.04},
+		"runic_staff": {"ability_cooldown_reduction": 0.03},
+		"vaultheart_staff": {"ability_cooldown_reduction": 0.05},
+	}
+	for id: String in expected:
+		var definition: VaultItemDefinition = catalog[id]
+		var instance := {"item_id": id, "enhancement": 0, "modifiers": {"max_health": 2.0}, "durability": 100, "identified": true}
+		var original := instance.duplicate(true)
+		var base := Progression.item_stats(instance)
+		var enhanced := instance.duplicate(true)
+		enhanced.enhancement = 5
+		var upgraded := Progression.item_stats(enhanced)
+		for stat: String in expected[id]:
+			check(float(definition.base_stats.get(stat, INF)) <= float(Progression.EFFECTS.modifier_limits[stat]), "Authored effect respects the shared per-item base-plus-roll cap: " + id)
+			check(is_equal_approx(float(definition.base_stats.get(stat, -1.0)), expected[id][stat]) and is_equal_approx(float(base.get(stat, -1.0)), expected[id][stat]), "Authored gear supplies the intended modest combat effect: " + id + "/" + stat)
+			check(is_equal_approx(float(upgraded.get(stat, -1.0)), expected[id][stat]), "Enhancement does not multiply combat-effect probabilities or reductions: " + id)
+		check(instance == original, "Resolving authored effects preserves historical instance modifiers: " + id)
+		var snapshot := definition.describe()
+		snapshot.special_effects.clear()
+		check(not definition.special_effects.is_empty(), "Effect explanations remain independent of UI copies: " + id)
+	check("3% chance" in catalog.heartwood_blade.description and "1.5× damage" in catalog.heartwood_blade.description, "Critical-hit description states its probability and damage multiplier")
+	check("actual enemy health lost" in catalog.verdant_oathblade.description and "4 HP per committed attack" in catalog.verdant_oathblade.description, "Lifesteal description states real health loss and the shared attack cap")
+	var no_unimplemented_effects := true
+	for definition: VaultItemDefinition in catalog.values():
+		for unsupported: String in ["fire_resistance", "frost_resistance", "poison_resistance"]:
+			no_unimplemented_effects = no_unimplemented_effects and not definition.base_stats.has(unsupported)
+	check(no_unimplemented_effects, "No obtainable starter advertises unavailable elemental resistance as a functional statistic")
 
 func _source_rejections(catalog: Dictionary) -> void:
 	var unsupported := (catalog.traveler_sword as VaultItemDefinition).duplicate(true) as VaultItemDefinition

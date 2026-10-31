@@ -26,7 +26,8 @@ measurements were performed in the cloud.
   rarity, category, and recent instance acquisition. Recent sorting uses the
   saved monotonic instance ID; adding to an existing stack does not change that
   stack's original ordering. Base value is the definition value; merchant sale
-  quotes still account for enhancement and durability through the existing rules.
+  quotes account for enhancement and durability through the existing rules. In a
+  merchant's Sell tab, the value sort and per-item labels use the actual sale price.
 - **Graphics → Accessibility** offers 100%, 110%, and 120% UI sizes, reduced
   motion, and reduced particles/auras. Select options, then tap **Apply & Save**.
   These preferences are separate from the progression save and survive restart.
@@ -41,6 +42,32 @@ measurements were performed in the cloud.
 The existing family SVG icons and geometric companion portraits are reused.
 This checkpoint does not claim bespoke character artwork, individual item models,
 or a completed 350-item catalog.
+
+## Enhancement and effect presentation
+
+The Blacksmith's **Preview Upgrade** opens a dedicated review showing the current
+and next rank, the item's rarity cap, exact quoted Depthmarks and materials, and
+current → upgraded statistics. Common through Legendary equipment stops at +5;
+Mythic and Ancient Relic equipment stops at +10. Existing eligible accessories
+remain supported. Upgrades are guaranteed. Unaffordable previews retain the next
+stats and exact requirements, with confirmation disabled and the failure reason.
+
+The UI never calculates or submits its own transaction result. A released
+confirmation consumes the existing Session quote; a second held finger, canceled
+gesture, or repeated confirmation cannot repeat the purchase. The one-second
+success cue starts only after a saved, accepted upgrade and displays its actual
+rank. Reduced motion removes spatial animation; reduced effects removes sparks.
+Hidden and idle panels perform no success-animation work.
+
+Equipment tooltips expose every effective stat through an independently clipped
+**Item Stats · Swipe** area. These gestures do not scroll the inventory, select
+items, rotate the preview, or trigger an action. Main-weapon comparisons use the
+active loadout. Critical chance, lifesteal, block strength and ability recovery
+appear as named percentages; the equipment summary shows their active aggregate
+values. The canonical effect policy supplies the cap caption: 20% critical
+chance, 4% lifesteal with at most 4 health per attack, +20% block strength and 15%
+ability cooldown reduction. Rolled bonuses and special effects stay fixed when
+enhancement increases base stats. Resistance types are not claimed as implemented.
 
 ## Cloud validation
 
@@ -61,6 +88,7 @@ godot4 --headless --path . --script res://tests/party_ui_test.gd
 godot4 --headless --path . --script res://tests/expedition_ui_test.gd
 godot4 --headless --path . --script res://tests/visual_settings_test.gd
 godot4 --headless --path . --script res://tests/accessibility_preferences_test.gd
+godot4 --headless --path . --script res://tests/enhancement_ui_test.gd
 ```
 
 ## Android review
@@ -86,6 +114,13 @@ godot4 --headless --path . --script res://tests/accessibility_preferences_test.g
    extract. Verify portals, the secured inventory, and character progression remain
    intact. Measure 30/60 FPS targets on the intended devices with the preview open
    and closed; these targets have not been verified in this environment.
+8. At the Blacksmith, inspect both ordinary and high-rarity gear at all three UI
+   scales. Swipe the stat comparison, preview the upgrade, check exact costs and
+   current/next values, cancel, then confirm. Try two fingers and touch cancellation;
+   only one purchase should occur. Verify insufficient materials disable approval,
+   caps are shown correctly, and restarting retains successful upgrades. Compare
+   success feedback with reduced motion/effects enabled and disabled. Confirm all
+   labels, materials and numerical changes remain readable on the physical device.
 
 Known limitations: icons and portraits remain reusable family artwork; the
 preview is a deliberately static pose that rotates on demand; very long names and

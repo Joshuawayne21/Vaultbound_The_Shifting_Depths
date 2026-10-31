@@ -4,6 +4,8 @@ extends RefCounted
 ## remain with ExpeditionSession; no scene, camera or network state is consulted.
 
 const DATA = preload("res://resources/progression/character_progression.tres")
+const EFFECTS = preload("res://resources/progression/equipment_effects.tres")
+const Enhancement = preload("res://scripts/progression/enhancement_policy.gd")
 const LEVEL_CAP := 30
 const EXPERIENCE_CAP := 46400
 const TALENT_IDS := ["offense", "defense", "utility"]
@@ -89,18 +91,22 @@ static func snapshot(character: Dictionary) -> Dictionary:
 
 static func item_stats(entry: Dictionary) -> Dictionary:
 	var result := {"max_health": 0.0, "max_stamina": 0.0, "damage_bonus": 0.0, "armor": 0.0, "stamina_regen": 0.0}
+	result.merge(EFFECTS.empty_effects())
 	var definition := VaultLootTable.item_for(String(entry.get("item_id", "")))
 	if definition == null or definition.category != "equipment" or not bool(entry.get("identified", true)) or int(entry.get("durability", 100)) <= 0:
 		return result
 	var raw_stats: Variant = definition.get("base_stats")
 	var base: Dictionary = raw_stats if raw_stats is Dictionary else {}
 	var modifiers: Variant = entry.get("modifiers", {})
-	var enhancement := clampi(int(entry.get("enhancement", 0)), 0, 5)
+	var enhancement := clampi(int(entry.get("enhancement", 0)), 0, Enhancement.cap_for(definition))
 	for key: String in STAT_LIMITS:
-		var value := _safe_stat(base.get(key, 0.0), float(STAT_LIMITS[key])) * (1.0 + 0.08 * enhancement)
+		var value := _safe_stat(base.get(key, 0.0), float(STAT_LIMITS[key])) * (1.0 + Enhancement.STAT_INCREMENT * enhancement)
 		if modifiers is Dictionary:
 			value += _safe_stat(modifiers.get(key, 0.0), float(STAT_LIMITS[key]) * 0.25)
 		result[key] = value
+	# Proc stats and rolled modifiers never inherit enhancement multiplication.
+	for key: String in EFFECTS.EFFECT_IDS:
+		result[key] = EFFECTS.item_effect(base, modifiers, key)
 	return result
 
 static func resolve_stats(profile: Dictionary, weapon_style: StringName = &"sword", normalized: bool = false) -> Dictionary:
@@ -114,9 +120,11 @@ static func resolve_stats(profile: Dictionary, weapon_style: StringName = &"swor
 		"max_stamina": float(DATA.stamina_by_level[level - 1]), "damage_multiplier": 1.0,
 		"armor": 0.0, "stamina_regen": 23.0, "appearance": {}, "level": level,
 		"talent_points": unspent_points(character), "normalized": normalized}
+	result.merge(EFFECTS.empty_effects())
 	if normalized:
 		return result
 	var bonus := {"max_health": 0.0, "max_stamina": 0.0, "damage_bonus": 0.0, "armor": 0.0, "stamina_regen": 0.0}
+	bonus.merge(EFFECTS.empty_effects())
 	for branch: String in TALENT_IDS:
 		var data: Dictionary = DATA.talent_branches[branch]
 		for key: String in data.bonuses:
@@ -155,6 +163,7 @@ static func resolve_stats(profile: Dictionary, weapon_style: StringName = &"swor
 	result.damage_multiplier = clampf(1.0 + bonus.damage_bonus, 1.0, 2.0)
 	result.armor = clampf(bonus.armor, 0.0, 0.55)
 	result.stamina_regen = clampf(result.stamina_regen + bonus.stamina_regen, 23.0, 45.0)
+	result.merge(EFFECTS.clamp_effects(bonus), true)
 	return result
 
 static func compare_item(profile: Dictionary, uid: String, weapon_style: StringName = &"sword", target_slot: String = "") -> Dictionary:
@@ -178,7 +187,7 @@ static func compare_item(profile: Dictionary, uid: String, weapon_style: StringN
 	var family: StringName = definition.weapon_style if slot in VaultInventory.LOADOUT_SLOTS else weapon_style
 	var after := resolve_stats(candidate, family)
 	var difference := {}
-	for key: String in ["max_health", "max_stamina", "damage_multiplier", "armor", "stamina_regen"]:
+	for key: String in ["max_health", "max_stamina", "damage_multiplier", "armor", "stamina_regen"] + EFFECTS.EFFECT_IDS:
 		difference[key] = float(after[key]) - float(current[key])
 	return {"current": current, "candidate": after, "difference": difference}
 

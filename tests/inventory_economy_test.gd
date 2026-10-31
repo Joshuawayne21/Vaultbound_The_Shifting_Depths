@@ -22,7 +22,7 @@ func _run() -> void:
 	finish()
 
 func _profile() -> Dictionary:
-	var value := {"version": 3, "revision": 0, "gold": 10000, "items": {}, "equipped_item": "",
+	var value := {"version": 4, "revision": 0, "gold": 10000, "items": {}, "equipped_item": "",
 		"character": {"level": 30, "experience": 46400, "talents": {"offense": 0, "defense": 0, "utility": 0}},
 		"companions": {"guardian": {"recruited": true, "experience": 160}},
 		"discoveries": [], "statistics": {"completed": 0, "deaths": 0}}
@@ -160,11 +160,12 @@ func _merchant_transactions() -> void:
 func _crafting_and_smith() -> void:
 	var profile := _profile()
 	Inventory.add_items(profile, {"root_fiber": 70, "emerald_dust": 40, "tempered_ingot": 8,
-		"temple_blade": 1, "iron_ore": 30, "glow_spore": 20, "aurora_bloom": 10, "ancient_shard": 10})
+		"temple_blade": 1, "iron_ore": 30, "glow_spore": 20, "aurora_bloom": 10, "ancient_shard": 10,
+		"common_enhancement_stone": 12, "elite_monster_fragment": 7, "rootwarden_essence": 2})
 	var sword := _uid(profile, "temple_blade")
 	var upgraded := _plan(profile, &"upgrade", {"uid": sword})
-	check(upgraded.ok and upgraded.cost_gold == 25 and upgraded.materials == {"root_fiber": 2, "emerald_dust": 1}, "First deterministic upgrade quotes the exact gold and material requirements")
-	check(upgraded.profile.gold == profile.gold - 25 and upgraded.profile.items.root_fiber == profile.items.root_fiber - 2 and upgraded.profile.items.emerald_dust == profile.items.emerald_dust - 1, "Upgrade consumes every required resource exactly once")
+	check(upgraded.ok and upgraded.cost_gold == 33 and upgraded.materials == {"common_enhancement_stone": 2, "root_fiber": 2}, "First uncommon upgrade quotes exactly 33 DM, two stones and two root fiber")
+	check(upgraded.profile.gold == profile.gold - 33 and upgraded.profile.items.root_fiber == profile.items.root_fiber - 2 and upgraded.profile.items.common_enhancement_stone == profile.items.common_enhancement_stone - 2 and upgraded.profile.items.emerald_dust == profile.items.emerald_dust, "Upgrade consumes every required resource exactly once and leaves unrelated dust unchanged")
 	profile = upgraded.profile
 	for rank in range(2, 6):
 		var result := _plan(profile, &"upgrade", {"uid": sword})
