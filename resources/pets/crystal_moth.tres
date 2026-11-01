@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="VaultPetDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/pets/pet_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"crystal_moth"
+label = "Crystal Moth"
+description = "A quiet moth with translucent crystal wings."
+lore = "It listens to the soft ringing of crystals beneath the roots."
+rarity = &"uncommon"
+visual_family = &"crystal_moth"
+primary_color = Color(0.21, 0.68, 0.73, 1)
+accent_color = Color(0.55, 0.9, 1, 1)
+hover_height = 0.25
+display_scale = 0.85

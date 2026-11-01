@@ -3,7 +3,7 @@ extends "res://tests/test_harness.gd"
 ## decision making. No movement, floor, room or obstacle implementation is mocked.
 
 const Navigator = preload("res://scripts/party/companion_navigation.gd")
-const Secret = preload("res://scripts/expedition/secret_passage.gd")
+const PROFILE := "/tmp/vaultbound-6e-navigation/profile.json"
 
 class NavigationWorld extends Node3D:
 	var layout: Dictionary = {}
@@ -52,6 +52,10 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 func _run() -> void:
+	var session := root.get_node("ExpeditionSession")
+	for suffix: String in ["", ".bak", ".tmp", ".bak.tmp"]:
+		if FileAccess.file_exists(PROFILE + suffix): DirAccess.remove_absolute(PROFILE + suffix)
+	check(session.configure_storage(PROFILE), "Navigation source cases use an isolated secured profile")
 	for seed_value: int in [7, 23, 81]:
 		await _seed_traversal(seed_value)
 	await _obstacle_and_recovery()
@@ -107,27 +111,58 @@ func _seed_traversal(seed_value: int) -> void:
 	check(actor.travelled > 60.0, "Seed %d route uses movement without relocation" % seed_value)
 	check(actor.navigator.replan_count < 110, "Seed %d path search is throttled below physics frequency" % seed_value)
 	actor.destination = Vector3.INF
+	var hidden_id := -1
 	for room: Dictionary in stage.layout.rooms:
-		if not room.hidden:
-			continue
-		var passage := Secret.new()
-		var parent_id := int(room.neighbors[0])
-		passage.target_room_id = int(room.id)
-		passage.position = (DungeonGenerator.room_position(room) + DungeonGenerator.room_position(stage.layout.rooms[parent_id])) * 0.5
-		if room.cell.x != stage.layout.rooms[parent_id].cell.x:
-			passage.rotation.y = PI / 2.0
-		stage.add_child(passage)
-		actor.global_position = DungeonGenerator.room_position(stage.layout.rooms[parent_id]) + Vector3.UP * 0.1
-		await frames(3)
-		var hidden_destination := DungeonGenerator.room_position(room)
-		var closed_path: PackedVector3Array = actor.navigator.plan_path(hidden_destination)
-		check(closed_path.is_empty() and actor.navigator.path_failed, "Seed %d navigation respects an unopened secret passage" % seed_value)
-		passage.interact(actor)
-		await frames(3)
-		var open_path: PackedVector3Array = actor.navigator.plan_path(hidden_destination)
-		check(not open_path.is_empty() and not actor.navigator.path_failed, "Seed %d revealing a passage invalidates its blocked navigation cache" % seed_value)
-		break
+		if room.hidden:
+			hidden_id = int(room.id)
+			break
 	await _cleanup()
+	if hidden_id >= 0: await _secret_navigation(seed_value, hidden_id)
+
+func _secret_navigation(seed_value: int, hidden_id: int) -> void:
+	# Passage rewards/discovery require the real current-world player. Preserve
+	# the navigator's blocked/open cache assertion using that genuine source,
+	# rather than granting a synthetic movement actor interaction authority.
+	if not await boot_game(): return
+	await game.start_expedition(seed_value)
+	if not await arrive(&"rootbound_abyss"): return
+	var level: Node3D = game.active_world
+	level.awareness.time_rate = 0.0
+	var player: CharacterBody3D = game.player
+	var parent_id := int(level.layout.rooms[hidden_id].neighbors[0])
+	var origin: Vector3 = level.rooms[parent_id].global_position + Vector3.UP * 0.1
+	player.reset_for_spawn(Transform3D(Basis.IDENTITY, origin))
+	player.invulnerable_remaining = 90.0
+	await frames(3)
+	for enemy: Node3D in level.encounters.all_actors(): enemy.set_physics_process(false)
+	var passage: Node3D
+	for candidate: Node3D in get_nodes_in_group("secret_passages"):
+		if level.is_ancestor_of(candidate) and int(candidate.target_room_id) == hidden_id:
+			passage = candidate
+			break
+	if check(passage != null and level.run_source_context_valid(), "Seed %d uses its actual bound generated passage" % seed_value):
+		var navigator := Navigator.new()
+		navigator.bind(player, game.party)
+		var hidden_destination: Vector3 = level.rooms[hidden_id].global_position
+		var closed_path: PackedVector3Array = navigator.plan_path(hidden_destination)
+		check(closed_path.is_empty() and navigator.path_failed, "Seed %d navigation respects an unopened secret passage" % seed_value)
+		var direction: Vector3 = (level.rooms[parent_id].global_position - passage.global_position).normalized()
+		player.reset_for_spawn(Transform3D(Basis.IDENTITY, passage.global_position + direction * 2.0 + Vector3.UP * 0.15))
+		player.invulnerable_remaining = 90.0
+		await frames(3)
+		check(player.interaction_target == passage and passage.can_interact(player), "Seed %d real player reaches passage with valid range and line of sight" % seed_value)
+		input_hub.request_action(&"interact")
+		await frames(3)
+		check(passage.opened and level.discovered.has(hidden_id), "Seed %d player input reveals the actual passage" % seed_value)
+		player.reset_for_spawn(Transform3D(Basis.IDENTITY, origin))
+		player.invulnerable_remaining = 90.0
+		await frames(3)
+		var open_path: PackedVector3Array = navigator.plan_path(hidden_destination)
+		check(not open_path.is_empty() and not navigator.path_failed, "Seed %d revealing a passage invalidates its blocked navigation cache" % seed_value)
+	root.get_node("ExpeditionSession").fail_run("abandoned")
+	game.hud.close_modals()
+	game.queue_free()
+	await frames(3)
 
 func _obstacle_and_recovery() -> void:
 	_setup()

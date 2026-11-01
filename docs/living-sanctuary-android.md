@@ -1,6 +1,6 @@
 # Living Sanctuary — Android review
 
-No physical Android test has been performed for this expansion. Headless Godot checks verify scripts, resources, physics and simulated input; they do not establish touch comfort, keyboard behavior, shader appearance, sound quality, battery use or sustained frame rate. The 6B city, 6C scenery/accessibility and 6D social presentation stages have passed their automated gates. Use the checklist below on a verified checkpoint; those automated results do not replace device testing.
+No physical Android test has been performed for this expansion. Headless Godot checks verify scripts, resources, physics and simulated input; they do not establish touch comfort, keyboard behavior, shader appearance, sound quality, battery use or sustained frame rate. The 6B city, 6C scenery/accessibility, 6D social presentation and 6E Spiritweaving stages have passed their automated gates. Use the checklist below on a verified checkpoint; those automated results do not replace device testing.
 
 ## Import without losing progression
 
@@ -9,7 +9,7 @@ No physical Android test has been performed for this expansion. Headless Godot c
 3. Run the main project (`scenes/main.tscn`). Start at **Medium / 30 FPS**, normal UI scale, with reduced effects if your device needs them. These are targets, not measured performance guarantees.
 4. Verify your previous Depthmarks, item-instance quantities, enhancements, loadouts, talents, companion roster and Collection Hall assignments before making transactions. Do not delete a save or replace it with defaults to resolve a loading error.
 
-The progression profile remains v4 through 6D. The 6C preferences migration affects the separate graphics file only. Opening an old preferences file must preserve its prior choices and must not rewrite it merely because it was loaded. 6D chat display choices use a separate version-one `social_settings.cfg`; no chat transcript or draft is saved there.
+The progression profile remains v4 through 6D; 6E introduces v5 for cosmetic pet ownership. Old profiles migrate in memory on load. Before the first migrated write, exact original bytes are retained in `.pre-v5.bak`; earlier migration backups remain. The 6C preferences migration affects the separate graphics file only. Opening an old preferences file must preserve its prior choices and must not rewrite it merely because it was loaded. 6D chat display choices use a separate version-one `social_settings.cfg`; no chat transcript or draft is saved there.
 
 Running in the Android editor needs no APK export. The ARM64 export preset requires matching templates, SDK/build tools and your own signing configuration for an exported build. No signing keys, APK, account service, live trading or billing are supplied by these stages.
 
@@ -20,7 +20,7 @@ Running in the Android editor needs no APK export. The ARM64 export preset requi
 - At **A, north Portal Promenade**, approach each gate and use the visible **ENTER** control. Review the card, cancel once, then reopen and confirm. Repeated taps or two fingers must produce one transition. The open card pauses movement; joystick input must not move the character behind it. Cancel, walk away and verify that a delayed touch release does not enter. Debug source/range-expiry cases are covered by the automated suite.
 - Visit the **B Coliseum** training target and Proving Grounds gate; test existing sword/shield and staff actions in the arena. Return through its original portal.
 - Use all three vendors at **C, east Merchant Terraces**, the **E Forge**, recruitment at **H**, and the owned-equipment preview at **F, southwest Pavilion**. Check the displayed costs before confirming any real transaction.
-- Enter the Collection Hall through **D, southeast Gallery**, inspect an existing exhibit and return. Verify an assignment continues to reference the same owned item. **G, west Conservatory**, remains a guide in 6B; pet acquisition belongs to a later stage.
+- Enter the Collection Hall through **D, southeast Gallery**, inspect an existing exhibit and return. Verify an assignment continues to reference the same owned item. At **G, west Conservatory**, 6E opens Spiritweaving; older checkpoints show a guide.
 - Switch between third person and isometric while moving beside walls, arches, terrace edges and the central crystal. Inspect the view at each district entrance and from both ends of each ramp. Watch for opaque scenery crossing the near plane, unreadable combat space or visibility through walls.
 
 ## 6C scenery and accessibility review
@@ -35,7 +35,7 @@ Running in the Android editor needs no APK export. The ARM64 export preset requi
 
 ## 6D chat, emotes and inspection review
 
-These checks require the 6D checkpoint. Chat is **DEMO / NOT LIVE**; no message should reach another device, appear from a fictional player, or be described as queued for delivery.
+These checks require 6D or a later checkpoint. Chat is **DEMO / NOT LIVE**; no message should reach another device, appear from a fictional player, or be described as queued for delivery.
 
 - Open CHAT in each camera view. Tap the composer and type ordinary text, emoji and text using an Android IME with composition. Confirm the keyboard leaves the current tab, composer and action readable. LOCAL's **PREVIEW · DEMO** should add one self-preview row. WORLD and PARTY can keep separate drafts but cannot send.
 - Change tabs and return; drafts should survive for this running session. Try rapid double taps and pressing the keyboard's submit action at the same time as Preview. A preview must appear only once; rate-limited text should remain editable.
@@ -47,6 +47,21 @@ These checks require the 6D checkpoint. Chat is **DEMO / NOT LIVE**; no message 
 - Recruit both companions and inspect each from its party entry. The card must say **LOCAL AI COMPANION** and show that member's actual state. Online player actions must explain their unavailable status. Closing inspection must restore gameplay; dismissal/travel must not leave a card referring to an old actor.
 
 Record keyboard vendor/version, IME language, system navigation mode and whether the keyboard overlays or resizes the game when reporting an input problem. Do not include private message contents.
+
+## 6E Spiritweaving and cosmetic follower review
+
+Use the 6E checkpoint for these checks. Follow the [pet guide](living-sanctuary-pets.md); ingredient drops are separate cosmetic findings, not additional ordinary inventory stacks.
+
+- Enter Rootbound, defeat ordinary and elite enemies, approach a mysterious egg and rescue a spirit from a revealed secret room. Confirm the nearby prompt and findings notification. Opening the secret passage alone must not award a rescue. Record the seed and which source you used; findings must remain marked unsecured.
+- Defeat the Rootwarden and extract. Review **PET FINDINGS** in the results screen, then visit **G — Spiritweaving Conservatory**. Check actual recipe ingredients and achievements. Cancel a creation confirmation once, reopen and confirm; only one pet and one set of costs should result.
+- Inspect the journal's owned and undiscovered entries, origin, recipe requirements and the static native-mesh preview. Locked recipes should explain their unmet requirements. These are original procedural placeholders; check silhouettes, proportions and luminous contrast without treating them as finished animal rigs.
+- Select, rest and reselect the pet. Rename it with the actual Android keyboard, including composed text and emoji. Try Back, Cancel, background/resume and a finger held across closure. A late release must not submit an old name or trigger movement/combat. Restart and confirm the selected species, variant and custom name persist.
+- Walk the ring, all radial roads and both terrace ramps. Enter the practice dungeon, arena, Collection Hall and Rootbound; return to Sanctuary. The pet should remain grounded or hover at its intended height, follow through doors, avoid closed walls and disappear safely before recovering from a broken route. It must not reveal a secret room or appear in an undiscovered room ahead of you.
+- Repeat with both AI adventurers and both camera modes during combat. The cosmetic follower must not block movement, receive targeting, steal loot, revive, damage enemies, occupy a party slot or add statistics. Try sit, dance and other emotes, then move; pet reactions should be finite and following should resume.
+- Compare Low/Medium/High, reduced effects and reduced motion. Following must continue when decorative poses are reduced. Check that the pet and its preview remain readable without lights or excessive glow. Inspect native touch targets at every UI scale and phone cutout configuration.
+- Test a failed expedition separately: the results should mark its findings **LOST**, while previously secured ingredients, owned pets, equipment and Depthmarks remain. A successful extraction and restart must retain new findings. Do not force storage failures against your only real save; disposable automated fixtures cover interrupted writes and retry behavior.
+
+Record sustained frame times with the pet selected and rested on the same route. Host mesh counts and simulated decision-rate checks do not establish Android performance or rendered appearance.
 
 ## Preserve the expedition loop
 

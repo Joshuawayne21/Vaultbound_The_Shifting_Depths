@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="VaultPetRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/pets/pet_recipe.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"weave_crystal_moth"
+pet_id = &"crystal_moth"
+ingredient_costs = {"mysterious_egg": 1, "rootbound_essence": 8, "crystal_moth_memory": 1}
+achievement_requirements = Array[StringName]([])

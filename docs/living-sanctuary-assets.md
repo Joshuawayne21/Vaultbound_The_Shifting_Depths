@@ -25,6 +25,14 @@ The nine emotes use finite original procedural poses on the existing avatar's to
 
 The emote wheel and companion card reuse the existing fantasy UI theme. The chat composer uses native Godot Controls and the engine's fallback font, with no downloaded font or icon pack. Text labels identify LOCAL DEMO rows and AI companions; no artwork is presented as evidence of real online players or live message delivery.
 
+## Cosmetic pets — 6E
+
+Eight original native-mesh silhouettes represent the Lantern Fox, Crystal Moth, Mossdrake, Embercap Sprite, Rift Otter, Rootling Guardian, Moonveil Butterfly and Starbound Wisp. Rounded primitives, facets and finite pivot poses provide following, idle, sit/perch, playful and emote reactions. These are procedural placeholders, with no imported animal skeleton, authored animation clips or external texture pack. Natural and luminous variants share geometry and differ only in appearance.
+
+The Conservatory renders the same pet definition and appearance in an isolated, demand-rendered preview. It uses no simulated gameplay actor. The world follower has no collider, target, light or particle emitter. Egg and rescued-spirit discovery props use the existing original material and geometry helpers. No paid acquisition, unfinished-biome rewards or tradable pet entitlement is implied.
+
+Focused native mesh measurements found 7–14 meshes, 312–828 triangles and 1–6 animated pivots per species. These structural counts are not GPU measurements. The full stage report records accepted source and follower checks; Android silhouettes, apparent foot contact, wing motion and luminous intensity still need rendered review.
+
 ## Performance and visual limits
 
 The source defines explicit geometry, actor and effect ceilings. Retained butterfly slots are distinct from visible/active butterflies; room motes and existing item effects have their own budgets. Counts and measurements belong in the stage's validation/performance report, not an inferred FPS claim.

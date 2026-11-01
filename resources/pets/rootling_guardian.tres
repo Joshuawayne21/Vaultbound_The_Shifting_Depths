@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="VaultPetDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/pets/pet_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"rootling_guardian"
+label = "Rootling Guardian"
+description = "A small walking tree with patient emerald eyes."
+lore = "Freed from the Rootwarden, this new growth chooses companionship."
+rarity = &"rare"
+visual_family = &"rootling_guardian"
+primary_color = Color(0.43, 0.31, 0.2, 1)
+accent_color = Color(0.35, 0.83, 0.45, 1)
+hover_height = 0.00
+display_scale = 0.85

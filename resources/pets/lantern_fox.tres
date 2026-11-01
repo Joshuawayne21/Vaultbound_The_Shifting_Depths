@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="VaultPetDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/pets/pet_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"lantern_fox"
+label = "Lantern Fox"
+description = "A curious fox carrying the glow of a lost expedition lantern."
+lore = "Its guiding light follows friends, never treasure."
+rarity = &"uncommon"
+visual_family = &"lantern_fox"
+primary_color = Color(0.68, 0.44, 0.23, 1)
+accent_color = Color(1, 0.74, 0.25, 1)
+hover_height = 0.00
+display_scale = 0.85

@@ -33,6 +33,8 @@ var _inspected_companion_id := ""
 var _city_waypoint: Dictionary = {}
 var _city_portal_source: WeakRef
 var _city_portal_route: Dictionary = {}
+var _pet_selection: Dictionary = {}
+var _pet_presenter: WeakRef
 
 func _ready() -> void:
 	InputHub.controls_enabled = false
@@ -53,6 +55,8 @@ func _ready() -> void:
 	add_child(social_session)
 	hud.bind_social(social_session)
 	ExpeditionSession.changed.connect(_on_progression_changed)
+	ExpeditionSession.pet_changed.connect(_on_pet_changed)
+	_pet_selection = _saved_pet_selection()
 	hud.modal_changed.connect(_on_modal_changed)
 	hud.consumable_requested.connect(_use_consumable)
 	hud.equipment_requested.connect(_equip_item)
@@ -85,6 +89,10 @@ func _process(delta: float) -> void:
 	_snapshot_elapsed = 0.0
 	if hud.expedition_overlay.mode == &"social" and hud.expedition_overlay.social_panel.kind == &"actor":
 		hud.expedition_overlay.social_panel.update_actor_card(_companion_card(_inspected_companion_id))
+	if hud.expedition_overlay.mode == &"pets":
+		hud.expedition_overlay.pet_panel.refresh_snapshot()
+	elif hud.expedition_overlay.mode == &"pet_name":
+		hud.expedition_overlay.pet_name_panel.refresh_source()
 	if current_location == &"rootbound_abyss" and is_instance_valid(active_world) and active_world.has_method("snapshot"):
 		hud.set_dungeon_snapshot(active_world.snapshot())
 	elif current_location == &"sanctuary" and not transitioning:
@@ -116,6 +124,7 @@ func start_expedition(seed_value: int = -1) -> void:
 func change_location(destination: StringName, entry_id: StringName = &"default", expedition_seed: int = -1) -> void:
 	if transitioning:
 		return
+	var request_world := active_world
 	if not LEVELS.has(destination):
 		hud.show_message("That passage is not available in this build.")
 		return
@@ -130,6 +139,8 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 			next_world.free()
 		hud.show_message("Passage is missing a safe arrival point.")
 		return
+	var issued_generation := -1
+	var issued_seed := -1
 	if destination == &"rootbound_abyss":
 		if ExpeditionSession.active:
 			next_world.free()
@@ -147,11 +158,27 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 		if not ExpeditionSession.begin_run(selected_seed):
 			next_world.free()
 			return
-	elif current_location == &"rootbound_abyss" and ExpeditionSession.active:
+		issued_generation = ExpeditionSession.run_generation
+		issued_seed = selected_seed
+		if not next_world.configure_run_context(issued_generation):
+			next_world.free()
+			return
+	elif current_location == &"rootbound_abyss":
 		# Extraction already commits and closes the run. Every other departure
 		# discards only its unsecured bag; the secured profile is untouched.
-		ExpeditionSession.fail_run("abandoned")
+		issued_generation = ExpeditionSession.run_generation
+		if not is_instance_valid(active_world) or active_world.get("run_generation") != issued_generation:
+			next_world.free()
+			return
+		if ExpeditionSession.active: ExpeditionSession.fail_run("abandoned")
+		if ExpeditionSession.active or ExpeditionSession.run_generation != issued_generation:
+			next_world.free()
+			return
+	if transitioning or active_world != request_world:
+		next_world.free()
+		return
 	transitioning = true
+	_set_pet_suspended(true)
 	_city_waypoint.clear()
 	_city_portal_source = null
 	_city_portal_route.clear()
@@ -166,27 +193,49 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	var fade_out := create_tween()
 	fade_out.tween_method(hud.set_transition, 0.0 if active_world != null else 1.0, 1.0, 0.18)
 	await fade_out.finished
-	if is_instance_valid(active_world):
-		world_root.remove_child(active_world)
-		active_world.queue_free()
+	if not _travel_generation_valid(issued_generation, issued_seed):
+		_cancel_candidate_travel(next_world)
+		return
+	# Retain the safe world until candidate _ready callbacks and floor registration
+	# complete. A replacement run must never inherit this request's old dungeon.
+	var previous_world := active_world
+	var previous_location := current_location
+	var candidate_process := next_world.process_mode
+	next_world.process_mode = Node.PROCESS_MODE_DISABLED
 	world_root.add_child(next_world)
+	if not _travel_generation_valid(issued_generation, issued_seed):
+		_cancel_candidate_travel(next_world)
+		return
 	_keep_world_collision(next_world)
 	active_world = next_world
 	current_location = destination
+	ExpeditionSession.bind_game_context(player, destination, active_world)
+	# The same identity is required after binding and the next physics boundary.
+	if _travel_generation_valid(issued_generation, issued_seed): await get_tree().physics_frame
+	if not _travel_generation_valid(issued_generation, issued_seed):
+		active_world = previous_world
+		current_location = previous_location
+		ExpeditionSession.bind_game_context(player, previous_location, previous_world)
+		_cancel_candidate_travel(next_world)
+		return
+	if is_instance_valid(previous_world):
+		_pet_presenter = null
+		world_root.remove_child(previous_world)
+		previous_world.queue_free()
+	next_world.process_mode = candidate_process
 	player.reset_for_spawn(active_world.get_spawn_transform(entry_id))
-	ExpeditionSession.bind_game_context(player, destination)
 	player.apply_progression(ExpeditionSession.profile)
 	party.enter_world(active_world, destination)
 	camera_rig.reset_position()
 	for portal: Node in get_tree().get_nodes_in_group("interactables"):
-		if portal.has_signal("travel_requested") and not portal.travel_requested.is_connected(_on_travel):
-			portal.travel_requested.connect(_on_travel)
+		if portal.has_signal("travel_requested") and active_world.is_ancestor_of(portal):
+			portal.travel_requested.connect(_on_source_travel.bind(active_world, ExpeditionSession.run_generation))
 		if portal.has_signal("portal_info_requested") and not portal.portal_info_requested.is_connected(_on_portal_information):
 			portal.portal_info_requested.connect(_on_portal_information)
 		if portal.has_signal("sanctuary_ui_requested") and not portal.sanctuary_ui_requested.is_connected(_on_city_terminal):
 			portal.sanctuary_ui_requested.connect(_on_city_terminal)
 	if active_world.has_signal("travel_requested"):
-		active_world.connect("travel_requested", _on_travel)
+		active_world.connect("travel_requested", _on_source_travel.bind(active_world, ExpeditionSession.run_generation))
 	if active_world.has_signal("notice"):
 		active_world.connect("notice", hud.show_message)
 	if active_world.has_signal("snapshot_changed"):
@@ -194,13 +243,14 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	hud.set_location(active_world.display_name, active_world.objective)
 	if destination != &"rootbound_abyss":
 		hud.set_dungeon_snapshot({})
-	# Let the physics server register the new floor before releasing the player.
-	await get_tree().physics_frame
+	# The candidate floor was registered before committing the world replacement.
 	party.ensure_safe_arrivals()
+	_sync_pet_presenter()
 	var fade_in := create_tween()
 	fade_in.tween_method(hud.set_transition, 1.0, 0.0, 0.25)
 	await fade_in.finished
 	transitioning = false
+	_set_pet_suspended(_modal_open)
 	party.set_paused(false)
 	player.set_controls_enabled(true)
 	InputHub.controls_enabled = true
@@ -209,6 +259,27 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	if destination == &"sanctuary":
 		_publish_city_snapshot()
 		hud.present_pending_results()
+
+
+func _travel_generation_valid(generation: int, seed_value: int) -> bool:
+	if generation < 0: return true
+	if ExpeditionSession.run_generation != generation: return false
+	return (ExpeditionSession.active and ExpeditionSession.run_seed == seed_value) if seed_value >= 0 else not ExpeditionSession.active
+
+
+func _cancel_candidate_travel(candidate: Node3D) -> void:
+	if is_instance_valid(candidate):
+		if candidate.get_parent() != null: candidate.get_parent().remove_child(candidate)
+		candidate.queue_free()
+	transitioning = false
+	party.set_paused(_modal_open)
+	_set_pet_suspended(_modal_open)
+	player.set_controls_enabled(not _modal_open)
+	InputHub.controls_enabled = not _modal_open
+	hud.set_input_enabled(not _modal_open)
+	hud.set_transition(0.0)
+	hud.show_message("The expedition changed before travel completed. Approach the portal again.")
+	if current_location == &"sanctuary": _publish_city_snapshot()
 
 
 func _publish_city_snapshot() -> void:
@@ -256,10 +327,11 @@ func _on_city_terminal(source: Node3D, kind: StringName, context: Dictionary) ->
 		hud.expedition_overlay.open_equipment()
 	elif kind == &"map":
 		hud.expedition_overlay.open_city_map()
+	elif kind == &"conservatory":
+		ExpeditionSession.open_pet_service(source, player)
 	else:
 		var details := context.duplicate(true)
-		details.lines = ["Spiritweaving Conservatory · collection guide", "Earned cosmetic pets are planned for Milestone 6E; they are not available yet.",
-			"Inspect your existing discoveries and owned exhibits in the Collection Hall.", "Your inventory, Depthmarks and party slots are unchanged.", "Use the city map to find the Trophy Hall or return to the Ring Exchange."]
+		details.lines = [String(context.get("description", "Use the city map to find Sanctuary services."))]
 		hud.expedition_overlay.open_city_information(&"guide", details)
 
 
@@ -330,12 +402,29 @@ func _keep_world_collision(node: Node) -> void:
 		_keep_world_collision(child)
 
 func _on_travel(destination: StringName, entry_id: StringName) -> void:
+	# Existing trusted shell/test request. World signals always use the bound
+	# source callback below; none connect to this current-world convenience path.
+	_on_source_travel(destination, entry_id, active_world, ExpeditionSession.run_generation)
+
+
+func _on_source_travel(destination: StringName, entry_id: StringName, source_world: Node3D, generation: int) -> void:
 	# Interactions can originate in the physics step; tree mutation must be deferred.
-	change_location.call_deferred(destination, entry_id)
+	if not is_instance_valid(source_world) or source_world != active_world or source_world.is_queued_for_deletion() or generation != ExpeditionSession.run_generation: return
+	_travel_if_context_current.call_deferred(destination, entry_id, weakref(source_world), generation, ExpeditionSession.active)
+
+
+func _travel_if_context_current(destination: StringName, entry_id: StringName, reference: WeakRef, generation: int, was_active: bool) -> void:
+	var world := reference.get_ref() as Node3D if reference != null else null
+	if world != active_world or not is_instance_valid(world) or world.is_queued_for_deletion() or generation != ExpeditionSession.run_generation or was_active != ExpeditionSession.active:
+		return
+	change_location(destination, entry_id)
 
 func _on_respawn() -> void:
 	if not transitioning and current_location != &"":
+		var world := active_world
+		var generation := ExpeditionSession.run_generation
 		if current_location == &"rootbound_abyss":
+			if not is_instance_valid(world) or world.get("run_generation") != generation: return
 			if player.health > 0.0:
 				# Recover an accidental fall in this same generated run, never regenerate it.
 				player.reset_for_spawn(active_world.get_spawn_transform(&"default"))
@@ -343,22 +432,30 @@ func _on_respawn() -> void:
 				player.set_controls_enabled(true)
 				return
 			ExpeditionSession.fail_run("defeated")
+			if ExpeditionSession.active or ExpeditionSession.run_generation != generation or active_world != world: return
 		# Death always returns to the safe hub; falling only reloads the current area.
-		change_location.call_deferred(&"sanctuary" if player.health <= 0.0 else current_location, &"default")
+		if is_instance_valid(world):
+			_travel_if_context_current.call_deferred(&"sanctuary" if player.health <= 0.0 else current_location, &"default", weakref(world), generation, ExpeditionSession.active)
 
 func _on_party_wipe() -> void:
 	if transitioning:
 		return
+	if current_location == &"rootbound_abyss" and (not is_instance_valid(active_world) or active_world.get("run_generation") != ExpeditionSession.run_generation): return
 	party.set_paused(true)
 	hud.show_message("The party falls · Returning safely to Sanctuary")
+	var world := active_world
+	var generation := ExpeditionSession.run_generation
 	if current_location == &"rootbound_abyss" and ExpeditionSession.active:
 		ExpeditionSession.fail_run("defeated")
-	change_location.call_deferred(&"sanctuary", &"default")
+		if ExpeditionSession.active or ExpeditionSession.run_generation != generation or active_world != world: return
+	if is_instance_valid(world):
+		_travel_if_context_current.call_deferred(&"sanctuary", &"default", weakref(world), generation, ExpeditionSession.active)
 
 func _on_modal_changed(open: bool) -> void:
 	if _modal_open == open:
 		return
 	_modal_open = open
+	_set_pet_suspended(open or transitioning)
 	party.set_paused(open or transitioning)
 	if open:
 		InputHub.controls_enabled = false
@@ -424,3 +521,57 @@ func _equip_item(item_id: String) -> void:
 
 func _on_progression_changed(_data: Dictionary) -> void:
 	player.apply_progression(ExpeditionSession.profile)
+
+
+func _saved_pet_selection() -> Dictionary:
+	var snapshot: Dictionary = ExpeditionSession.pet_snapshot()
+	var id := String(snapshot.get("active_id", ""))
+	for row: Dictionary in snapshot.get("pets", []):
+		if String(row.get("id", "")) == id and bool(row.get("owned", false)):
+			return {"id": id, "display_name": String(row.get("display_name", row.get("name", ""))), "variant": String(row.get("variant", "natural"))}
+	return {"id": "", "display_name": "", "variant": "natural"}
+
+
+func _on_pet_changed(_data: Dictionary) -> void:
+	# Earlier synchronous listeners may have committed a newer selection already.
+	_pet_selection = _saved_pet_selection()
+	if not transitioning: _sync_pet_presenter()
+
+
+func _sync_pet_presenter() -> void:
+	if not is_instance_valid(active_world) or active_world.is_queued_for_deletion(): return
+	var current := _pet_presenter.get_ref() as Node3D if _pet_presenter != null else null
+	var id := StringName(_pet_selection.get("id", ""))
+	if id == &"":
+		if is_instance_valid(current):
+			current.get_parent().remove_child(current)
+			current.queue_free()
+		_pet_presenter = null
+		return
+	var catalog: Script = load("res://scripts/pets/pet_catalog.gd")
+	var definition: Resource = catalog.definition_for(id)
+	if definition == null: return
+	if is_instance_valid(current) and current.get_parent() == active_world:
+		if StringName(current.get_meta("definition_id", &"")) == id:
+			current.set_appearance(_pet_selection)
+		else:
+			current.set_definition(definition, _pet_selection)
+			current.set_meta("definition_id", id)
+		current.set_suspended(_modal_open or transitioning)
+		return
+	var presenter_script: Script = load("res://scripts/pets/pet_follower.gd")
+	current = presenter_script.new() as Node3D
+	current.name = "CosmeticPet"
+	if not current.configure(player, active_world, definition, _pet_selection):
+		current.free()
+		return
+	active_world.add_child(current)
+	_pet_presenter = weakref(current)
+	current.set_meta("definition_id", id)
+	player.emote_changed.connect(current.on_leader_emote)
+	current.set_suspended(_modal_open or transitioning)
+
+
+func _set_pet_suspended(value: bool) -> void:
+	var current := _pet_presenter.get_ref() as Node3D if _pet_presenter != null else null
+	if is_instance_valid(current): current.set_suspended(value)

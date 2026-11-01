@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="VaultPetAcquisitionPolicy" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/pets/pet_acquisition_policy.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+memory_weights = {"lantern_fox": 20, "crystal_moth": 18, "mossdrake": 15, "embercap_sprite": 15, "rift_otter": 12, "rootling_guardian": 10, "moonveil_butterfly": 6, "starbound_wisp": 4}
+achievement_rules = {"abyss_explorer": {"label": "Complete three expeditions", "stat": "completed", "target": 3}, "spirit_rescuer": {"label": "Secure two secret-room rescues", "stat": "rescues", "target": 2}, "rootwarden_keeper": {"label": "Secure a Rootwarden victory", "stat": "rootwarden_victories", "target": 1}}

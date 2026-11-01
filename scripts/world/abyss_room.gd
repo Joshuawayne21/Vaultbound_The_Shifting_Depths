@@ -14,18 +14,20 @@ extends Node3D
 var openings: Array[StringName] = []
 var cosmetic_seed := 1
 var cosmetic_room_id := 0
+var _capture_geometry_for_validation := false
 var dressing: AbyssDecoration
 var ambient_fauna: VaultAmbientFauna
 
-func configure_visuals(expedition_seed: int, room_id: int) -> void:
+func configure_visuals(expedition_seed: int, room_id: int, capture_inputs: bool = false) -> void:
 	# Separate from topology/encounter/loot seeds and stable across room culling.
 	cosmetic_seed = expedition_seed
 	cosmetic_room_id = room_id
+	_capture_geometry_for_validation = capture_inputs
 
 func _ready() -> void:
 	_apply_openings()
 	dressing = preload("res://scripts/visual/abyss_decoration.gd").new()
-	dressing.configure(module_id, visual_motif, cosmetic_seed, cosmetic_room_id)
+	dressing.configure(module_id, visual_motif, cosmetic_seed, cosmetic_room_id, _capture_geometry_for_validation)
 	add_child(dressing)
 	var ambience := preload("res://scripts/visual/visual_style.gd").add_ambience(self, &"abyss", Vector3(18, 2.6, 18), dressing.cosmetic_seed)
 	ambience.configure_budget(12)

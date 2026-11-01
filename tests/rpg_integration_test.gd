@@ -274,6 +274,8 @@ func _expedition_and_loss() -> void:
 	var bag: Dictionary = session.run_items.duplicate(true)
 	var earned_gold: int = session.unsecured_gold
 	var equipped_before: Dictionary = session.profile.equipment.duplicate(true)
+	_place(level.extraction.global_position + Vector3(0, 0.15, 1.5))
+	await frames(3)
 	level.extraction.interact(player)
 	if not await arrive(&"sanctuary"):
 		return

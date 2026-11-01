@@ -159,8 +159,14 @@ func _pool_and_visibility() -> void:
 	var old_generation := int(old_view.binding_generation)
 	authority.ledger.reset()
 	authority.run_generation += 1
-	manager.register_reward(_reward("pending_floor"), 2, no_floor.global_position + Vector3(4, 1, 4), "regular")
-	var fresh_view: Node3D = manager.view_for("pending_floor")
+	check(manager.register_reward(_reward("pending_floor"), 2, no_floor.global_position + Vector3(4, 1, 4), "regular").is_empty(), "Old manager cannot register against a replacement run")
+	manager.refresh()
+	check(_bound_count(manager) == 0 and authority.ledger.records().is_empty(), "Old manager cannot adopt replacement generation or mutate its ledger")
+	var replacement := preload("res://scripts/treasure/loot_cache_manager.gd").new()
+	replacement.configure(authority, {0: room, 1: hidden_room, 2: no_floor}, player)
+	game.add_child(replacement)
+	replacement.register_reward(_reward("pending_floor"), 2, no_floor.global_position + Vector3(4, 1, 4), "regular")
+	var fresh_view: Node3D = replacement.view_for("pending_floor")
 	check(not old_view.binding_valid("pending_floor", old_generation) and fresh_view != null \
 		and fresh_view.global_position.distance_to(no_floor.global_position + Vector3(4, 0.025, 4)) < 0.1,
 		"New run invalidates old pooled bindings and cached positions even when the source identity repeats")

@@ -8,8 +8,11 @@ var _crystal: MeshInstance3D
 var _label: Label3D
 var _material: StandardMaterial3D
 var _committed := false
+var _committing := false
+var _generation := -1
 
 func _ready() -> void:
+	_generation = int(level.run_generation) if is_instance_valid(level) else -1
 	add_to_group("interactables")
 	add_to_group("extraction_points")
 	var kit := preload("res://scripts/world/architecture.gd").new(self)
@@ -23,20 +26,29 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_crystal.rotation.y += delta * 0.45
-	var ready: bool = ExpeditionSession.active and ExpeditionSession.boss_defeated
+	var ready: bool = _current() and ExpeditionSession.boss_defeated
 	_material.albedo_color = Color("8ee8b9") if ready else Color("405b65")
 	_material.emission = _material.albedo_color
 	_label.text = "EXTRACT & SECURE LOOT" if ready else "DEFEAT THE ROOTWARDEN"
 
 func get_prompt() -> String:
-	return "Extract & secure expedition rewards" if ExpeditionSession.boss_defeated else "Extraction sealed · defeat the Rootwarden"
+	return "Extract & secure expedition rewards" if _current() and ExpeditionSession.boss_defeated else "Extraction sealed · defeat the Rootwarden"
 
-func interact(_player: Node3D) -> void:
-	if _committed or not ExpeditionSession.active:
-		return
+func _current() -> bool:
+	return is_instance_valid(level) and int(level.run_generation) == _generation and level.run_source_context_valid()
+
+func can_interact(player: Node3D) -> bool:
+	return not _committed and not _committing and _current() and level.can_use_run_source(self, player, interaction_radius)
+
+func interact(player: Node3D) -> void:
+	if not can_interact(player): return
 	if not ExpeditionSession.boss_defeated:
 		ExpeditionSession.notice.emit("The Rootwarden binds this exit. Defeat it to extract.")
 		return
-	if ExpeditionSession.extract():
+	_committing = true
+	var accepted: bool = ExpeditionSession.extract()
+	_committing = false
+	if accepted:
 		_committed = true
-		travel_requested.emit(&"sanctuary", &"from_abyss")
+		if is_instance_valid(level) and int(level.run_generation) == _generation and level.completed_context_valid():
+			travel_requested.emit(&"sanctuary", &"from_abyss")

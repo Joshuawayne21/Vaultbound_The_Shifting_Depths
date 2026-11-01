@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="VaultPetDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/pets/pet_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"mossdrake"
+label = "Mossdrake"
+description = "A tiny moss-covered drake sheltering bright flowers."
+lore = "A whole garden can begin on the back of one small friend."
+rarity = &"rare"
+visual_family = &"mossdrake"
+primary_color = Color(0.25, 0.52, 0.29, 1)
+accent_color = Color(0.9, 0.57, 0.78, 1)
+hover_height = 0.00
+display_scale = 0.85

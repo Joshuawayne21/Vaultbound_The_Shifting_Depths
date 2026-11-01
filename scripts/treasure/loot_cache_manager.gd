@@ -16,10 +16,16 @@ var _retry_after: Dictionary = {}
 var _elapsed := 0.0
 var _refresh_elapsed := 0.0
 var _run_generation := -1
+var _world: WeakRef
+var _configured := false
 
-func configure(authority: Node, rooms: Dictionary, player: Node3D) -> void:
+func configure(authority: Node, rooms: Dictionary, player: Node3D, world: Node3D = null, generation: int = -1) -> void:
+	if _configured or is_inside_tree(): return
+	_configured = true
 	_session = weakref(authority) if is_instance_valid(authority) else null
 	_player = weakref(player) if is_instance_valid(player) else null
+	_world = weakref(world) if is_instance_valid(world) else null
+	_run_generation = generation if generation >= 0 else (int(authority.get("run_generation")) if is_instance_valid(authority) else -1)
 	_rooms = rooms.duplicate()
 
 func _ready() -> void:
@@ -43,7 +49,7 @@ func _process(delta: float) -> void:
 
 func register_reward(reward: Dictionary, room_id: int, desired: Vector3, kind: String) -> String:
 	var authority := _authority()
-	if authority == null or not authority.has_method("register_loot") or not _rooms.has(room_id):
+	if not _context_valid() or authority == null or not authority.has_method("register_loot") or not _rooms.has(room_id):
 		return ""
 	# Register even when placement temporarily fails. The ledger retains the source
 	# and manager retries; it never silently drops a completed encounter reward.
@@ -51,6 +57,9 @@ func register_reward(reward: Dictionary, room_id: int, desired: Vector3, kind: S
 	if kind == "regular" and authority.has_method("loot_merge_candidate"):
 		merge_id = String(authority.loot_merge_candidate(room_id, desired, reward))
 	var result: Dictionary = authority.register_loot(reward, room_id, desired, kind, merge_id)
+	if not bool(result.get("ok", false)) or not _context_valid():
+		refresh()
+		return ""
 	var id := String(result.get("id", ""))
 	refresh()
 	return id
@@ -60,22 +69,16 @@ func refresh() -> void:
 		return
 	var authority := _authority()
 	var player := _player.get_ref() as Node3D if _player != null else null
-	if authority == null or not authority.has_method("loot_records") or not is_instance_valid(player):
+	if not _context_valid() or authority == null or not authority.has_method("loot_records") or not is_instance_valid(player):
 		for view: VaultLootCache in views:
 			view.unbind()
 		return
 	var candidates: Array[Dictionary] = []
 	var boss_record := {}
 	var records: Array = authority.loot_records()
-	if not records.is_empty():
-		var generation := int(records[0].get("run_generation", -1))
-		if generation != _run_generation:
-			_run_generation = generation
-			_placements.clear()
-			_retry_after.clear()
-			for view: VaultLootCache in views:
-				view.unbind()
 	for record: Dictionary in records:
+		if int(record.get("run_generation", -1)) != _run_generation:
+			continue
 		if bool(record.get("empty", true)):
 			_placements.erase(String(record.id))
 			_retry_after.erase(String(record.id))
@@ -154,3 +157,16 @@ func _position_for(record: Dictionary) -> Vector3:
 
 func _authority() -> Node:
 	return _session.get_ref() as Node if _session != null else null
+
+func _context_valid() -> bool:
+	var authority := _authority()
+	if not is_inside_tree() or is_queued_for_deletion() or not is_instance_valid(authority) \
+			or int(authority.get("run_generation")) != _run_generation:
+		return false
+	if authority.has_method("run_context_valid"):
+		var world := _world.get_ref() as Node3D if _world != null else null
+		return is_instance_valid(world) and world.is_ancestor_of(self) and world.get_viewport() == get_viewport() \
+			and bool(authority.run_context_valid(world, _run_generation))
+	# Pure ledger adapters have no gameplay context; their original generation is
+	# still immutable. Production Session always requires the exact bound world.
+	return true

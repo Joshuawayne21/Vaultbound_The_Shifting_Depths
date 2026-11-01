@@ -4,7 +4,7 @@ extends RefCounted
 ## a temporary file, and renamed only after a successful read-back. A previous
 ## valid profile is kept as .bak. This is offline persistence, not remote authority.
 
-const VERSION := 4
+const VERSION := 5
 const MAX_COUNT := 2147483647
 const MAX_COMPANION_LEVEL := 20
 const MAX_COMPANION_EXPERIENCE := 19000
@@ -31,6 +31,7 @@ static func empty_profile() -> Dictionary:
 		"statistics": {"completed": 0, "deaths": 0,
 			"total_gold": 0, "total_kills": 0, "best_seconds": 0.0, "last_seed": 0}}
 	profile.merge(VaultInventory.empty_fields(), true)
+	profile["pets"] = VaultPetProgression.empty_fields()
 	return profile
 
 func load_profile() -> Dictionary:
@@ -139,7 +140,7 @@ func save_profile(candidate: Dictionary) -> bool:
 static func normalize(value: Variant) -> Dictionary:
 	return _normalize(value, {})
 
-static func _normalize(value: Variant, unavailable_items: Dictionary) -> Dictionary:
+static func _normalize(value: Variant, unavailable_items: Dictionary, unavailable_pets: bool = false) -> Dictionary:
 	if not value is Dictionary or not _integer(value.get("version"), 1, VERSION):
 		return {}
 	if int(value.version) >= 2:
@@ -163,6 +164,11 @@ static func _normalize(value: Variant, unavailable_items: Dictionary) -> Diction
 	if not value.get("items", {}) is Dictionary or not value.get("discoveries", []) is Array:
 		return {}
 	var result := empty_profile()
+	if int(value.version) >= 5:
+		var pets := VaultPetProgression.normalize(value.get("pets"), unavailable_pets)
+		if pets.is_empty():
+			return {}
+		result.pets = pets
 	result.gold = int(value.gold)
 	result.revision = int(value.get("revision", 0))
 	for id: Variant in value.get("items", {}):
@@ -278,6 +284,9 @@ static func _unsupported_profile_reason(value: Variant) -> String:
 	# Disabled definitions and unsupported equipment families are unavailable too:
 	# a later build may enable them without changing the save schema. Classification
 	# never exposes these instances to gameplay or saving.
+	var missing_pets := int(version) >= 5 and VaultPetProgression.has_unavailable(value.get("pets"))
+	if missing_pets and not _normalize(value, unavailable, true).is_empty():
+		return "This profile contains unavailable companion collection content. Use the matching pet catalog; secured files were left unchanged."
 	if not unavailable.is_empty() and not _normalize(value, unavailable).is_empty():
 		return "This profile contains owned items unavailable in this build. Use the matching item catalog; secured files were left unchanged."
 	return ""

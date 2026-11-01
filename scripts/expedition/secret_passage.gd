@@ -6,8 +6,17 @@ var target_room_id := -1
 var opened := false
 var _barrier: StaticBody3D
 var _visual: Node3D
+var _level: WeakRef
+var _generation := -1
 
 func _ready() -> void:
+	var ancestor := get_parent()
+	while ancestor != null:
+		if ancestor.has_method("can_use_run_source"):
+			_level = weakref(ancestor)
+			_generation = int(ancestor.run_generation)
+			break
+		ancestor = ancestor.get_parent()
 	add_to_group("interactables")
 	add_to_group("secret_passages")
 	_visual = Node3D.new()
@@ -49,9 +58,15 @@ func _ready() -> void:
 func get_prompt() -> String:
 	return "Reveal the hidden passage" if not opened else "Passage revealed"
 
-func interact(_player: Node3D) -> void:
-	if opened:
-		return
+func can_interact(player: Node3D) -> bool:
+	var level := _level.get_ref() as Node3D if _level != null else null
+	var excluded: Array[RID] = []
+	if is_instance_valid(_barrier): excluded.append(_barrier.get_rid())
+	return not opened and is_instance_valid(level) and int(level.run_generation) == _generation \
+		and level.can_use_run_source(self, player, interaction_radius, excluded)
+
+func interact(player: Node3D) -> void:
+	if not can_interact(player): return
 	opened = true
 	_barrier.set_deferred("collision_layer", 0)
 	_visual.visible = false

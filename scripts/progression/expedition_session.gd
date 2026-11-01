@@ -9,6 +9,11 @@ signal treasure_activated(reward: Dictionary)
 signal loot_changed()
 signal results_ready(data: Dictionary)
 signal ui_requested(kind: StringName, context: Dictionary)
+signal pet_changed(active_snapshot: Dictionary)
+
+const PetProgress = preload("res://scripts/pets/pet_progression.gd")
+const PetCatalog = preload("res://scripts/pets/pet_catalog.gd")
+const EncounterRewards = preload("res://resources/loot/monster_rewards.tres")
 
 var store := VaultProfileStore.new()
 var profile: Dictionary = VaultProfileStore.empty_profile()
@@ -38,11 +43,16 @@ var _loot_view: Node3D
 var _loot_id := ""
 var _loot_binding := 0
 var _loot_quotes: Dictionary = {}
+var _world: Node3D
+var _pet_pending := PetProgress.empty_pending()
+var _pet_quotes: Dictionary = {}
+var _encounter_sources: Dictionary = {}
 
 func _ready() -> void:
 	profile = store.load_profile()
 	storage_error = store.last_error
 	_emit_changed()
+	pet_changed.emit(PetProgress.active_appearance(profile))
 
 func _process(delta: float) -> void:
 	if not active:
@@ -66,6 +76,7 @@ func configure_storage(path: String) -> bool:
 	close_service()
 	storage_error = store.last_error
 	_emit_changed()
+	pet_changed.emit(PetProgress.active_appearance(profile))
 	return not store.read_only
 
 func begin_run(seed_value: int) -> bool:
@@ -78,6 +89,7 @@ func begin_run(seed_value: int) -> bool:
 	active = true
 	run_seed = seed_value
 	run_generation += 1
+	var issued_generation := run_generation
 	close_service()
 	_loot_ledger.reset()
 	unsecured_gold = 0
@@ -85,13 +97,15 @@ func begin_run(seed_value: int) -> bool:
 	_claimed.clear()
 	_run_discoveries.clear()
 	_run_monsters.clear()
+	_pet_pending = PetProgress.empty_pending()
+	_encounter_sources.clear()
 	boss_defeated = false
 	kills = 0
 	elapsed = 0.0
 	_emit_elapsed = 0.0
 	last_results.clear()
 	_emit_changed()
-	return true
+	return active and run_generation == issued_generation and run_seed == seed_value
 
 func has_claimed(chest_id: String) -> bool:
 	return _claimed.has(chest_id)
@@ -162,10 +176,83 @@ func register_loot(reward: Dictionary, room_id: int, at: Vector3, kind: String, 
 	var validated := _validate_reward(reward)
 	if validated.is_empty() or _claimed.has(validated.chest_id):
 		return {"ok": false, "id": "", "created": false}
+	var generation := run_generation
 	var result := _loot_ledger.register(validated, room_id, at, kind, merge_id)
 	if bool(result.get("ok", false)):
 		loot_changed.emit()
+	result["generation"] = generation
+	result["still_current"] = active and generation == run_generation
+	if not result.still_current:
+		result["ok"] = false
 	return result
+
+func run_context_valid(world: Node3D, generation: int) -> bool:
+	return active and generation == run_generation and is_instance_valid(world) and world == _world \
+		and world.is_inside_tree() and not world.is_queued_for_deletion() and world.get("run_generation") == generation \
+		and world.get("seed_value") == run_seed and _location == &"rootbound_abyss" \
+		and world.get_script() != null and world.get_script().resource_path == "res://scripts/expedition/abyss_level.gd"
+
+func complete_encounter(world: Node3D, enemy: Node3D, generation: int) -> Dictionary:
+	var rejected := {"ok": false, "cache_id": "", "generation": generation, "still_current": false, "error": "Encounter source unavailable."}
+	if not run_context_valid(world, generation) or not world.has_method("encounter_death_record"):
+		return rejected
+	# Admission and outcome are separate: callers may release a local reservation
+	# after a current-run rejection, but must never touch a replacement run.
+	rejected.still_current = true
+	var record: Dictionary = world.encounter_death_record(enemy)
+	if record.is_empty() or _encounter_sources.has(record.receipt):
+		return rejected
+	var kind := String(record.kind)
+	if kind not in ["regular", "elite", "boss"] or kills >= VaultProfileStore.MAX_COUNT:
+		return rejected
+	var source := "boss" if kind == "boss" else EncounterRewards.source_for(String(record.archetype), bool(record.elite))
+	var reward: Dictionary = EncounterRewards.roll(run_seed, String(record.receipt), source, int(record.depth))
+	var validated := _validate_reward(reward)
+	var findings := PetCatalog.findings_for(run_seed, String(record.receipt), kind)
+	var pending := PetProgress.append_findings(_pet_pending, findings, String(record.receipt))
+	if validated.is_empty() or pending.is_empty() or _claimed.has(String(record.receipt)):
+		return rejected
+	var merge_id := _loot_ledger.merge_candidate(int(record.room_id), record.drop_position, validated) if kind == "regular" else ""
+	var result := _loot_ledger.register(validated, int(record.room_id), record.drop_position, kind, merge_id)
+	if not bool(result.get("ok", false)):
+		return rejected
+	# Every consequence of this exact death is installed before observers run.
+	_encounter_sources[String(record.receipt)] = true
+	_pet_pending = pending
+	if kind == "boss":
+		boss_defeated = true
+		_run_monsters["rootwarden"] = true
+	else:
+		kills += 1
+		_run_monsters[String(record.archetype)] = true
+	loot_changed.emit()
+	if run_context_valid(world, generation):
+		_emit_changed()
+	return {"ok": true, "cache_id": String(result.id), "generation": generation,
+		"still_current": run_context_valid(world, generation), "error": ""}
+
+func claim_pet_discovery(world: Node3D, source: Node3D, actor: Node, generation: int) -> Dictionary:
+	var rejected := {"ok": false, "still_current": false, "generation": generation, "error": "Move closer to this discovery."}
+	if not run_context_valid(world, generation) or actor != _player or not _actor_ready() \
+			or not is_instance_valid(source) or source.is_queued_for_deletion() or not source.is_inside_tree() \
+			or not world.is_ancestor_of(source) or not source.is_visible_in_tree() \
+			or source.get_script() == null or source.get_script().resource_path != "res://scripts/pets/pet_discovery.gd" \
+			or not _player.controls_enabled or not InputHub.controls_enabled or not world.has_method("pet_discovery_record"):
+		return rejected
+	var record: Dictionary = world.pet_discovery_record(source, actor)
+	if record.is_empty() or String(record.kind) not in ["egg", "rescue"]:
+		return rejected
+	var findings := PetCatalog.findings_for(run_seed, String(record.receipt), String(record.kind))
+	var next := PetProgress.append_findings(_pet_pending, findings, String(record.receipt))
+	if next.is_empty():
+		return rejected
+	_pet_pending = next
+	_emit_changed()
+	if run_context_valid(world, generation):
+		var creature_id := String(findings.weave_seeds.keys()[0])
+		var creature_name := PetCatalog.definition_for(StringName(creature_id)).label
+		notice.emit("%s · %s Memory · unsecured · extract to keep" % ["Egg discovered" if record.kind == "egg" else "Spirit rescued", creature_name])
+	return {"ok": true, "still_current": run_context_valid(world, generation), "generation": generation, "error": ""}
 
 func loot_merge_candidate(room_id: int, at: Vector3, reward: Dictionary) -> String:
 	var validated := _validate_reward(reward)
@@ -315,6 +402,7 @@ func mark_boss_defeated() -> void:
 		_emit_changed()
 
 func extract() -> bool:
+	var generation := run_generation
 	if not active or not boss_defeated:
 		notice.emit("Defeat the Rootwarden to awaken the extraction spring.")
 		return false
@@ -331,6 +419,11 @@ func extract() -> bool:
 	next.discoveries.sort()
 	newly_discovered.sort()
 	next.statistics.completed = int(next.statistics.completed) + 1
+	var secured_pets := PetProgress.secure(next, _pet_pending)
+	if secured_pets.is_empty():
+		notice.emit("The cosmetic collection is full. Findings remain unsecured; extraction can be retried.")
+		return false
+	next.pets = secured_pets
 	next.statistics.total_gold = int(next.statistics.total_gold) + unsecured_gold
 	next.statistics.total_kills = int(next.statistics.total_kills) + kills
 	next.statistics.last_seed = run_seed
@@ -350,27 +443,28 @@ func extract() -> bool:
 	if not store.save_profile(next):
 		storage_error = store.last_error
 		notice.emit("Extraction could not save: " + storage_error + " Try the spring again.")
-		_emit_changed()
+		if active and generation == run_generation:
+			_emit_changed()
 		return false
 	profile = next
 	storage_error = ""
-	last_results = _results("extracted")
-	last_results.new_discoveries = newly_discovered
-	last_results.companion_experience = companion_experience
-	last_results.character_experience = int(profile.character.experience) - old_experience
-	last_results.character_level = int(profile.character.level)
+	var result := _results("extracted")
+	result.new_discoveries = newly_discovered
+	result.companion_experience = companion_experience
+	result.character_experience = int(profile.character.experience) - old_experience
+	result.character_level = int(profile.character.level)
+	last_results = result.duplicate(true)
 	_clear_run()
-	_emit_changed()
-	if int(profile.character.level) > old_level:
-		notice.emit("Level %d · New talent points are ready in Character" % int(profile.character.level))
-	results_ready.emit(last_results.duplicate(true))
+	_publish_finished(result, generation, "Level %d · New talent points are ready in Character" % int(result.character_level) if int(result.character_level) > old_level else "")
 	return true
 
 func fail_run(reason: String = "death") -> void:
 	if not active:
 		return
+	var generation := run_generation
 	var outcome := "death" if reason == "death" or reason == "defeated" else "abandoned"
-	last_results = _results(outcome)
+	var result := _results(outcome)
+	var failure := ""
 	if outcome == "death":
 		var next := profile.duplicate(true)
 		next.statistics.deaths = int(next.statistics.deaths) + 1
@@ -381,17 +475,38 @@ func fail_run(reason: String = "death") -> void:
 			storage_error = ""
 		else:
 			storage_error = store.last_error
-			notice.emit("Death statistics could not save. Secured possessions were preserved.")
+			failure = "Death statistics could not save. Secured possessions were preserved."
+	last_results = result.duplicate(true)
+	# Clear every old-run field before any callback can start a replacement run.
 	_clear_run()
+	_publish_finished(result, generation, failure)
+
+func _publish_finished(result: Dictionary, generation: int, message: String = "") -> void:
+	if active or generation != run_generation:
+		return
+	loot_changed.emit()
+	if active or generation != run_generation:
+		return
 	_emit_changed()
-	results_ready.emit(last_results.duplicate(true))
+	if active or generation != run_generation:
+		return
+	if not message.is_empty():
+		notice.emit(message)
+	if active or generation != run_generation:
+		return
+	results_ready.emit(result.duplicate(true))
 
 func _results(outcome: String) -> Dictionary:
-	return {"outcome": outcome, "seed": run_seed, "gold": unsecured_gold,
+	return {"outcome": outcome, "seed": run_seed, "run_generation": run_generation, "gold": unsecured_gold,
 		"items": _describe_items(run_items), "kills": kills, "elapsed_seconds": elapsed,
 		"boss_defeated": boss_defeated, "secured_total": int(profile.gold),
 		"discovered": _run_discoveries.keys(), "new_discoveries": [],
-		"completed": int(profile.statistics.completed)}
+		"completed": int(profile.statistics.completed), "pet_findings": _pet_findings()}
+
+func _pet_findings() -> Dictionary:
+	var result: Dictionary = _pet_pending.statistics.duplicate(true)
+	result["ingredients"] = PetProgress.ingredient_rows(_pet_pending.ingredients)
+	return result
 
 func _clear_run() -> void:
 	active = false
@@ -404,7 +519,8 @@ func _clear_run() -> void:
 	_emit_elapsed = 0.0
 	close_service()
 	_loot_ledger.reset()
-	loot_changed.emit()
+	_pet_pending = PetProgress.empty_pending()
+	_encounter_sources.clear()
 
 func describe_item(item_id: String) -> Dictionary:
 	var definition := VaultLootTable.item_for(item_id)
@@ -564,9 +680,10 @@ func _wear_equipped(candidate: Dictionary, amount: int) -> void:
 		if not entry.is_empty():
 			entry.durability = maxi(0, int(entry.durability) - amount)
 
-func bind_game_context(player: Node, location: StringName) -> void:
+func bind_game_context(player: Node, location: StringName, world: Node3D = null) -> void:
 	_player = player
 	_location = location
+	_world = world
 	close_service()
 
 func close_service() -> void:
@@ -574,10 +691,126 @@ func close_service() -> void:
 	_service_kind = &""
 	_service_context.clear()
 	_quotes.clear()
+	_pet_quotes.clear()
 	_loot_view = null
 	_loot_id = ""
 	_loot_binding = 0
 	_loot_quotes.clear()
+
+func _pet_source_valid(source: Node3D) -> bool:
+	if active or _location != &"sanctuary" or not is_instance_valid(_world) or not _world.is_inside_tree() or _world.is_queued_for_deletion():
+		return false
+	if _world.get_script() == null or _world.get_script().resource_path != "res://scripts/world/sanctuary.gd" or _world.get_node_or_null("ConservatoryCityTerminal") != source:
+		return false
+	if not is_instance_valid(source) or not source.is_inside_tree() or source.is_queued_for_deletion() or not source.is_visible_in_tree() or not _world.is_ancestor_of(source):
+		return false
+	if source.get_script() == null or source.get_script().resource_path != "res://scripts/sanctuary/city_terminal.gd" or source.get("kind") != &"conservatory" or source.get("terminal_id") != &"conservatory":
+		return false
+	if not _player is VaultPlayer or not _player.is_inside_tree() or _player.is_queued_for_deletion() or _player.downed or _player.eliminated or not _actor_ready():
+		return false
+	return _world.get_viewport() == _player.get_viewport() and source.get_world_3d() == _player.get_world_3d() \
+		and _player.global_position.distance_to(source.global_position) <= float(source.interaction_radius) and _service_visible(source)
+
+func open_pet_service(source: Node3D, actor: Node = null) -> bool:
+	if actor == null:
+		actor = _player
+	if actor != _player or not _pet_source_valid(source) or not _player.controls_enabled or not InputHub.controls_enabled:
+		return false
+	close_service()
+	_service = source
+	_service_kind = &"pets"
+	ui_requested.emit(&"pets", pet_snapshot())
+	return true
+
+func _pet_action_error() -> String:
+	if store.read_only:
+		return "The save is read-only. Existing progress is preserved."
+	if _service_kind != &"pets" or not is_instance_valid(_service) or not _pet_source_valid(_service):
+		return "Visit the Spiritweaving Conservatory to manage companions."
+	return ""
+
+func quote_pet_action(action: StringName, arguments: Dictionary) -> Dictionary:
+	var error := _pet_action_error()
+	if not error.is_empty():
+		return {"ok": false, "error": error}
+	var preview := PetProgress.preview(profile, action, arguments)
+	if not bool(preview.get("ok", false)):
+		return preview
+	_quote_sequence += 1
+	var request_id := "pet_%d_%d_%d" % [int(profile.revision), Time.get_ticks_usec(), _quote_sequence]
+	var quote := {"ok": true, "request_id": request_id, "expected_revision": int(profile.revision), "preview": preview.duplicate(true)}
+	_pet_quotes[request_id] = {"action": action, "arguments": arguments.duplicate(true), "revision": int(profile.revision), "source": _service.get_instance_id(), "world": _world.get_instance_id()}
+	if _pet_quotes.size() > 24:
+		_pet_quotes.erase(_pet_quotes.keys()[0])
+	return quote
+
+func cancel_pet_action(confirmation: Dictionary) -> bool:
+	var request_id := String(confirmation.get("request_id", ""))
+	return _pet_quotes.erase(request_id)
+
+func commit_pet_action(confirmation: Dictionary) -> bool:
+	var request_id := String(confirmation.get("request_id", ""))
+	if not _pet_quotes.has(request_id):
+		return false
+	var trusted: Dictionary = _pet_quotes[request_id]
+	_pet_quotes.erase(request_id)
+	var error := _pet_action_error()
+	if not error.is_empty():
+		notice.emit(error)
+		return false
+	if trusted.source != _service.get_instance_id() or trusted.world != _world.get_instance_id():
+		return false
+	var plan := PetProgress.plan(profile, trusted.action, trusted.arguments, request_id, int(trusted.revision))
+	if not bool(plan.get("ok", false)):
+		notice.emit(String(plan.get("error", "Companion action unavailable.")))
+		return false
+	var before := PetProgress.active_appearance(profile)
+	if not store.save_profile(plan.profile):
+		storage_error = store.last_error
+		notice.emit("Could not save companion changes. Ingredients and ownership were preserved. " + storage_error)
+		_emit_changed()
+		return false
+	profile = plan.profile
+	storage_error = ""
+	_quotes.clear()
+	_pet_quotes.clear()
+	var revision := int(profile.revision)
+	var appearance := PetProgress.active_appearance(profile)
+	if appearance != before:
+		pet_changed.emit(appearance.duplicate(true))
+	if int(profile.revision) != revision:
+		return true
+	_emit_changed()
+	if int(profile.revision) == revision:
+		notice.emit(String(plan.message))
+	return true
+
+func pet_snapshot() -> Dictionary:
+	var rows: Array[Dictionary] = []
+	var available := _service_kind == &"pets" and is_instance_valid(_service) and _pet_source_valid(_service) and not store.read_only
+	for id: String in PetCatalog.IDS:
+		var definition := PetCatalog.definition_for(StringName(id))
+		var owned: bool = profile.pets.owned.has(id)
+		var entry: Dictionary = profile.pets.owned.get(id, {})
+		var alias := String(entry.get("alias", ""))
+		var recipe := PetProgress.recipe_snapshot(profile, id)
+		if not available and bool(recipe.can_create):
+			recipe.can_create = false
+			recipe.reason = "Visit the Spiritweaving Conservatory."
+		rows.append({"id": id, "name": definition.label, "display_name": alias if not alias.is_empty() else definition.label,
+			"alias": alias, "description": definition.description, "lore": definition.lore, "rarity": String(definition.rarity), "visual_family": String(definition.visual_family),
+			"owned": owned, "active": profile.pets.active_id == id, "variant": entry.get("variant", "natural"), "origin": entry.get("origin", {}).duplicate(true), "recipe": recipe})
+	var achievements: Array[Dictionary] = []
+	for id: String in PetCatalog.POLICY.achievement_rules:
+		var rule: Dictionary = PetCatalog.POLICY.achievement_rules[id]
+		var count := int(profile.statistics.completed) if rule.stat == "completed" else int(profile.pets.statistics.get(rule.stat, 0))
+		achievements.append({"id": id, "label": rule.label, "current": count, "target": int(rule.target), "unlocked": profile.pets.achievements.has(id)})
+	var pending := _pet_findings()
+	pending.merge({"active": active, "label": "UNSECURED · Extract to keep", "source_count": _pet_pending.sources.size()})
+	return {"revision": int(profile.revision), "service_available": available, "storage_error": storage_error,
+		"active_id": profile.pets.active_id, "owned_count": profile.pets.owned.size(), "total_count": 8, "pets": rows,
+		"ingredients": PetProgress.ingredient_rows(profile.pets.ingredients), "pending": pending,
+		"achievements": achievements, "discovered_combinations": profile.pets.recipe_discoveries.duplicate()}
 
 func open_service(kind: StringName, context: Dictionary = {}) -> bool:
 	if not _actor_ready():

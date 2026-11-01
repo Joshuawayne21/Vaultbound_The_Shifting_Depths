@@ -47,7 +47,7 @@ func _run() -> void:
 	room_id = int(level.layout.entrance_id)
 	room = level.rooms[room_id]
 	manager = Manager.new()
-	manager.configure(session, level.rooms, player)
+	manager.configure(session, level.rooms, player, level, level.run_generation)
 	level.add_child(manager)
 	await frames(3)
 	await _partial_and_atomic()
@@ -102,10 +102,23 @@ func _cache(id: String, gold: int = 8, items: Array = [{"id": "root_fiber", "qua
 
 func _new_run() -> void:
 	game.hud.close_modals()
+	var generation: int = session.run_generation
 	session.fail_run("abandoned")
 	game.hud.close_modals()
+	await game.change_location(&"sanctuary", &"from_abyss")
+	await arrive(&"sanctuary")
 	session.profile = Store.empty_profile()
-	check(session.begin_run(42), "Next loot scenario starts a new generation of the same layout")
+	await game.start_expedition(42)
+	await arrive(&"rootbound_abyss")
+	check(session.active and session.run_seed == 42 and session.run_generation > generation, "Next loot scenario starts a new generation of the same layout")
+	level = game.active_world
+	level.awareness.time_rate = 0.0
+	room_id = int(level.layout.entrance_id)
+	room = level.rooms[room_id]
+	manager = Manager.new()
+	manager.configure(session, level.rooms, player, level, level.run_generation)
+	level.add_child(manager)
+	await frames(3)
 	game.hud.close_modals()
 	player.reset_for_spawn(Transform3D(Basis.IDENTITY, room.global_position + Vector3(0, 0.12, 5)))
 	player.set_controls_enabled(true)
@@ -155,7 +168,7 @@ func _on_loot_changed() -> void:
 	replay_result = session.commit_loot_take(replay_quote)
 
 func _capacity_and_currency() -> void:
-	_new_run()
+	await _new_run()
 	check(Inventory.add_items(session.profile, {"traveler_sword": 39}), "Capacity fixture owns thirty-nine equipment instances")
 	check(session.collect_reward(_reward("pending_stack", 0, [{"id": "root_fiber", "quantity": 3}])), "Pending materials reserve the fortieth future slot")
 	var view := _cache("capacity", 8, [{"id": "temple_blade", "quantity": 1}, {"id": "mooncap_tonic", "quantity": 1}])
@@ -170,7 +183,7 @@ func _capacity_and_currency() -> void:
 	check(Inventory.consume_items(session.profile, {"traveler_sword": 1}), "Fixture frees one secured slot")
 	check(session.commit_loot_take(session.quote_loot_take("mooncap_tonic", 1)), "One free slot accepts the selected consumable")
 	check(not session.quote_loot_take("temple_blade", 1).ok and session.loot_snapshot("capacity").items.temple_blade == 1, "Untaken equipment remains when selected loot fills capacity")
-	_new_run()
+	await _new_run()
 	session.profile.gold = Store.MAX_COUNT
 	view = _cache("saturated", 3, [{"id": "root_fiber", "quantity": 1}])
 	if view == null:
@@ -184,7 +197,7 @@ func _capacity_and_currency() -> void:
 	game.hud.close_modals()
 
 func _access_and_staleness() -> void:
-	_new_run()
+	await _new_run()
 	var view := _cache("guards")
 	if view == null:
 		return
@@ -248,7 +261,7 @@ func _access_and_staleness() -> void:
 	check(session.open_loot(view, player), "Room visibility restores searchable loot")
 	quote = session.quote_loot_take("root_fiber", 1)
 	var generation: int = session.run_generation
-	_new_run()
+	await _new_run()
 	view = _cache("guards")
 	await frames(2)
 	check(session.run_generation > generation and session.open_loot(view, player), "Same-seed next expedition opens its new matching source")

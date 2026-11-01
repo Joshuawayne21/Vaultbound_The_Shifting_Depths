@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="VaultPetDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/pets/pet_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"embercap_sprite"
+label = "Embercap Sprite"
+description = "A mushroom spirit whose warm cap glimmers without burning."
+lore = "Sanctuary gardeners call its gentle glow a promise of spring."
+rarity = &"uncommon"
+visual_family = &"embercap_sprite"
+primary_color = Color(0.68, 0.27, 0.14, 1)
+accent_color = Color(1, 0.65, 0.27, 1)
+hover_height = 0.00
+display_scale = 0.85

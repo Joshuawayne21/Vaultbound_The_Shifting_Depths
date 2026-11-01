@@ -127,12 +127,14 @@ func _terminals() -> void:
 		game.hud.close_modals()
 	await _approach(&"conservatory")
 	var conservatory := _terminal(&"conservatory")
-	check(conservatory != null, "Conservatory guide exists")
+	check(conservatory != null, "Conservatory source exists")
 	if conservatory != null:
 		conservatory.interact(game.player)
-		check(panel.visible and panel.kind == &"guide" and String(panel.context.lines[1]).contains("not available yet"), "Conservatory explicitly identifies pets as future content")
-		_tap(panel.primary_rect().get_center())
-		check(panel.kind == &"map" and overlay.mode == &"sanctuary", "Conservatory guide links to the existing city map owner")
+		check(overlay.mode == &"pets" and overlay.pet_panel.visible and session.pet_snapshot().service_available, "Nearby Conservatory opens its source-bound pet journal")
+		game.hud.close_modals()
+		game.player.global_position += Vector3(9, 0, 0)
+		conservatory.interact(game.player)
+		check(overlay.mode == &"none" and not session.pet_snapshot().service_available, "Remote Conservatory cannot retain or reopen pet service authority")
 		game.hud.close_modals()
 
 func _portal_sources() -> void:

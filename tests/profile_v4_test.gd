@@ -81,23 +81,25 @@ func _migration() -> void:
 	old.version = 3
 	var exact := " \n" + JSON.stringify(old, "  ", false, true) + "\n"
 	var historical := "{historical pre-v3 bytes retained independently}\n"
+	var historical_v4 := "{historical pre-v4 bytes retained independently}\n"
 	_write(PATH, exact)
 	_write(PATH + ".pre-v3.bak", historical)
+	_write(PATH + ".pre-v4.bak", historical_v4)
 	var store := Store.new(PATH)
 	var current := store.load_profile()
-	check(not store.read_only and current.version == 4 and not current.is_empty(), "Complete version-three profile migrates to schema four in memory")
+	check(not store.read_only and current.version == Store.VERSION and not current.is_empty(), "Complete version-three profile migrates to the current schema in memory")
 	if current.is_empty() or store.read_only:
 		return
 	var expected := old.duplicate(true)
-	expected.version = 4
+	expected.version = Store.VERSION
 	check(current == expected and current.inventory == old.inventory, "Migration changes only schema version, preserving every UID, roll, enhancement and progression field")
-	check(FileAccess.get_file_as_string(PATH) == exact and not FileAccess.file_exists(PATH + ".pre-v4.bak"), "Loading alone neither rewrites nor backs up the original save")
-	check(store.save_profile(current), "First schema-four write succeeds after preservation")
-	check(FileAccess.get_file_as_string(PATH + ".pre-v4.bak") == exact and FileAccess.get_file_as_string(PATH + ".bak") == exact, "Permanent pre-v4 and rotating backup preserve exact version-three bytes")
-	check(FileAccess.get_file_as_string(PATH + ".pre-v3.bak") == historical, "Existing pre-v3 migration snapshot is never overwritten")
+	check(FileAccess.get_file_as_string(PATH) == exact and not FileAccess.file_exists(PATH + ".pre-v%d.bak" % Store.VERSION), "Loading alone neither rewrites nor backs up the original save")
+	check(store.save_profile(current), "First current-schema write succeeds after preservation")
+	check(FileAccess.get_file_as_string(PATH + ".pre-v%d.bak" % Store.VERSION) == exact and FileAccess.get_file_as_string(PATH + ".bak") == exact, "Permanent pre-current and rotating backup preserve exact version-three bytes")
+	check(FileAccess.get_file_as_string(PATH + ".pre-v3.bak") == historical and FileAccess.get_file_as_string(PATH + ".pre-v4.bak") == historical_v4, "Existing pre-v3 migration snapshot is never overwritten")
 	current.gold += 1
 	check(store.save_profile(current) and Store.new(PATH).load_profile() == current, "Current schema roundtrip preserves progression and loadouts")
-	check(FileAccess.get_file_as_string(PATH + ".pre-v4.bak") == exact and FileAccess.get_file_as_string(PATH + ".pre-v3.bak") == historical, "Later current saves leave both historical migration snapshots unchanged")
+	check(FileAccess.get_file_as_string(PATH + ".pre-v%d.bak" % Store.VERSION) == exact and FileAccess.get_file_as_string(PATH + ".pre-v3.bak") == historical, "Later current saves leave both historical migration snapshots unchanged")
 
 func _versioned_limits() -> void:
 	var base := _owned()

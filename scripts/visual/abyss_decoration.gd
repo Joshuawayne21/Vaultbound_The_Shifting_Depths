@@ -17,7 +17,7 @@ const MAX_BATCHES := 8
 const MAX_INSTANCES := 512
 const MAX_STORY_INSTANCES := 64
 ## Explicit test/inspection opt-in; production retains no transform snapshots.
-static var capture_geometry_for_validation := false
+var capture_geometry_for_validation := false
 const STORY_TITLES := {
 	&"pilgrim_grove": "The seed keepers", &"pilgrim_gate": "The pilgrims' procession",
 	&"root_walk": "Roots reclaim the bindings", &"lost_aqueduct": "The silent sluice",
@@ -49,9 +49,10 @@ var _foliage: Array[MultiMeshInstance3D] = []
 var _rng := RandomNumberGenerator.new()
 var _fingerprint := 0
 
-func configure(id: StringName, authored_motif: StringName, expedition_seed: int, room_id: int) -> void:
+func configure(id: StringName, authored_motif: StringName, expedition_seed: int, room_id: int, capture_inputs: bool = false) -> void:
 	module_id = id
 	motif = authored_motif
+	capture_geometry_for_validation = capture_inputs
 	cosmetic_seed = expedition_seed * 104729 + room_id * 8191 + String(module_id).hash()
 	_rng.seed = cosmetic_seed
 

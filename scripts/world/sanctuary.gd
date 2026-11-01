@@ -106,7 +106,7 @@ func _build_terminals() -> void:
 	var descriptions := {
 		&"map": "The Ring Exchange connects eight Sanctuary districts. Choose a destination and follow its waypoint. Services are available when you reach them. The city is an offline local sanctuary; player trading is not available here.",
 		&"equipment": "Preview your owned equipment and appearance using the existing equipment viewer. Cosmetic purchases and a separate cosmetic catalog are not available in this build.",
-		&"conservatory": "Explore your secured collection and discoveries. The conservatory is a local guide; pet acquisition and an active pet companion are not available in this build.",
+		&"conservatory": "Weave earned cosmetic pets, explore their journal, and choose one companion to follow you. Expedition ingredients remain unsecured until extraction.",
 	}
 	for id: StringName in [&"map", &"equipment", &"conservatory"]:
 		var data: Dictionary = CITY_LAYOUT.get_poi(id)

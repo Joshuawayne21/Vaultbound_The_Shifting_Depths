@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="VaultPetDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/pets/pet_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"moonveil_butterfly"
+label = "Moonveil Butterfly"
+description = "A silver-winged butterfly with violet luminous patterns."
+lore = "It visits those who return rescued spirits safely to the daylight."
+rarity = &"epic"
+visual_family = &"moonveil_butterfly"
+primary_color = Color(0.58, 0.48, 0.83, 1)
+accent_color = Color(0.82, 0.82, 1, 1)
+hover_height = 0.25
+display_scale = 0.85

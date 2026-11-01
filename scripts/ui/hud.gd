@@ -160,6 +160,7 @@ func _on_expedition_notice(message: String) -> void:
 
 
 func _on_results_ready(data: Dictionary) -> void:
+	if not expedition_overlay.results_are_current(data): return
 	# Extraction emits before scene travel; root presents these only after arriving.
 	pending_results = data.duplicate(true)
 

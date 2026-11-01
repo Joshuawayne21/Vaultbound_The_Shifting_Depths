@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="VaultPetRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/pets/pet_recipe.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"weave_rootling_guardian"
+pet_id = &"rootling_guardian"
+ingredient_costs = {"pet_vessel": 1, "rootbound_essence": 12, "rootling_guardian_memory": 1}
+achievement_requirements = Array[StringName]([&"rootwarden_keeper"])

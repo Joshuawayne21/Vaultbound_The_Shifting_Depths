@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="VaultPetDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/pets/pet_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"rift_otter"
+label = "Rift Otter"
+description = "A playful otter traced with turquoise spectral markings."
+lore = "It remembers the streams that once crossed the buried temple."
+rarity = &"rare"
+visual_family = &"rift_otter"
+primary_color = Color(0.27, 0.39, 0.55, 1)
+accent_color = Color(0.26, 0.94, 0.89, 1)
+hover_height = 0.00
+display_scale = 0.85

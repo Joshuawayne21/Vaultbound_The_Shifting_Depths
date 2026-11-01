@@ -72,6 +72,10 @@ var social_session: Node
 var social_snapshot: Dictionary = {}
 var chat_panel: Control
 var social_panel: Control
+var pet_panel: Control
+var pet_name_panel: Control
+var pet_preview: Control
+var results_tab := &"expedition"
 var _social_pointers: Dictionary = {}
 var _social_epoch := 0
 var _native_touches: Dictionary = {}
@@ -122,6 +126,18 @@ func _ready() -> void:
 	add_child(chat_panel)
 	chat_panel.close_requested.connect(close_modal)
 	chat_panel.emotes_requested.connect(open_emotes)
+	pet_panel = preload("res://scripts/ui/pet_panel.gd").new()
+	pet_panel.name = "PetPanel"
+	add_child(pet_panel)
+	pet_panel.close_requested.connect(close_modal)
+	pet_panel.rename_requested.connect(open_pet_name)
+	pet_preview = preload("res://scripts/ui/pet_preview.gd").new()
+	pet_panel.set_preview(pet_preview)
+	pet_name_panel = preload("res://scripts/ui/pet_name_panel.gd").new()
+	pet_name_panel.name = "PetNamePanel"
+	pet_name_panel.input_owner = self
+	add_child(pet_name_panel)
+	pet_name_panel.back_requested.connect(_return_from_pet_name)
 
 
 func bind_social(value: Node) -> void:
@@ -166,6 +182,31 @@ func is_native_chat_active() -> bool:
 	return mode == &"chat" and is_instance_valid(chat_panel) and chat_panel.visible and _application_focused
 
 
+func _native_panel() -> Control:
+	if mode == &"chat": return chat_panel
+	if mode == &"pet_name": return pet_name_panel
+	return null
+
+
+func is_native_panel_active(panel: Control) -> bool:
+	return panel == _native_panel() and is_instance_valid(panel) and panel.visible and _application_focused
+
+
+func open_pet_name(id: StringName, alias: String) -> void:
+	if mode != &"pets" or not is_instance_valid(progression_session): return
+	if not _open_modal(&"pet_name"): return
+	InputHub.begin_text_capture()
+	if is_instance_valid(source_surface): source_surface.native_gui_passthrough = true
+	pet_name_panel.open_panel(id, alias)
+
+
+func _return_from_pet_name() -> void:
+	if mode != &"pet_name": return
+	var id: StringName = pet_name_panel.pet_id
+	if not _open_modal(&"pets"): return
+	pet_panel.open_panel(id)
+
+
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
 		_handle_back()
@@ -175,9 +216,10 @@ func _notification(what: int) -> void:
 		_application_focused = false
 		_social_epoch += 1
 		_social_pointers.clear()
-		if mode == &"chat":
+		if is_instance_valid(_native_panel()):
+			var receiver := _native_panel()
 			_cancel_native_pointers()
-			chat_panel.cancel_for_focus_loss()
+			receiver.cancel_for_focus_loss()
 	elif what in [NOTIFICATION_APPLICATION_FOCUS_IN, NOTIFICATION_APPLICATION_RESUMED]:
 		_application_focused = true
 
@@ -186,8 +228,12 @@ func _handle_back() -> void:
 	if mode == &"none" or _last_back_frame == Engine.get_process_frames(): return
 	_last_back_frame = Engine.get_process_frames()
 	var generation := _modal_epoch
-	if mode == &"chat" and chat_panel.dismiss_keyboard():
+	var receiver := _native_panel()
+	if is_instance_valid(receiver) and receiver.dismiss_keyboard():
 		if generation == _modal_epoch: _cancel_native_pointers()
+		return
+	if mode == &"pet_name":
+		_return_from_pet_name()
 		return
 	close_modal()
 
@@ -215,6 +261,8 @@ func open_city_information(kind: StringName, context: Dictionary) -> void:
 
 func bind_progression_session(session: Node) -> void:
 	progression_session = session
+	if is_instance_valid(pet_panel): pet_panel.bind_session(session)
+	if is_instance_valid(pet_name_panel): pet_name_panel.bind_session(session)
 	if is_instance_valid(rpg_panel):
 		rpg_panel.bind_session(session)
 	if is_instance_valid(loot_panel):
@@ -224,6 +272,10 @@ func bind_progression_session(session: Node) -> void:
 
 
 func open_service(kind: StringName, context: Dictionary = {}) -> void:
+	if kind == &"pets":
+		if mode not in [&"none", &"pets"] or not is_instance_valid(progression_session): return
+		if _open_modal(&"pets"): pet_panel.open_panel()
+		return
 	if kind == &"loot":
 		if mode not in [&"none", &"loot"] or not is_instance_valid(loot_panel) or not is_instance_valid(progression_session):
 			return
@@ -263,9 +315,12 @@ func apply_visual_settings(settings: Dictionary) -> void:
 	_owned_mouse = false
 	_social_epoch += 1
 	_social_pointers.clear()
-	if mode == &"chat":
+	if is_instance_valid(_native_panel()):
+		var receiver := _native_panel()
 		_cancel_native_pointers()
-		chat_panel.cancel_for_focus_loss()
+		receiver.cancel_for_focus_loss()
+	for panel: Control in [pet_panel, pet_name_panel, pet_preview]:
+		if is_instance_valid(panel): panel.apply_visual_settings(settings)
 	queue_redraw()
 
 
@@ -452,8 +507,17 @@ func _draw_discovery() -> void:
 
 
 func show_results(data: Dictionary) -> void:
+	if not results_are_current(data): return
 	results_snapshot = data.duplicate(true)
+	results_tab = &"expedition"
 	_open_modal(&"results")
+
+
+func results_are_current(data: Dictionary) -> bool:
+	# Legacy presentation fixtures omit the token; production Session results
+	# always include it and cannot pause a callback-created replacement run.
+	if not data.has("run_generation"): return true
+	return is_instance_valid(progression_session) and not progression_session.active and int(data.run_generation) == int(progression_session.run_generation)
 
 
 func open_pack() -> void:
@@ -487,8 +551,17 @@ func _open_modal(value: StringName) -> bool:
 	var generation := _modal_epoch
 	_social_epoch += 1
 	_social_pointers.clear()
-	if mode == &"chat" and value != &"chat":
-		_stop_native_chat()
+	if is_instance_valid(_native_panel()) and value != mode:
+		_stop_native_panel()
+		if generation != _modal_epoch: return false
+	if mode in [&"pets", &"pet_name"] and value not in [&"pets", &"pet_name"] and is_instance_valid(progression_session):
+		progression_session.close_service()
+		if generation != _modal_epoch: return false
+	if value != &"pets" and is_instance_valid(pet_panel) and pet_panel.visible:
+		pet_panel.hide_panel()
+		if generation != _modal_epoch: return false
+	if value != &"pet_name" and is_instance_valid(pet_name_panel) and pet_name_panel.visible:
+		pet_name_panel.hide_panel()
 		if generation != _modal_epoch: return false
 	if value != &"chat" and is_instance_valid(chat_panel):
 		chat_panel.hide_panel()
@@ -520,12 +593,19 @@ func close_modal() -> void:
 	_modal_epoch += 1
 	var generation := _modal_epoch
 	var was_results := mode == &"results"
-	if mode == &"chat":
-		_stop_native_chat()
+	var was_pet := mode in [&"pets", &"pet_name"]
+	if is_instance_valid(_native_panel()):
+		_stop_native_panel()
 		if generation != _modal_epoch: return
 	_social_epoch += 1
 	_social_pointers.clear()
 	mode = &"none"
+	if is_instance_valid(pet_panel): pet_panel.hide_panel()
+	if generation != _modal_epoch: return
+	if is_instance_valid(pet_name_panel) and pet_name_panel.visible: pet_name_panel.hide_panel()
+	if generation != _modal_epoch: return
+	if was_pet and is_instance_valid(progression_session): progression_session.close_service()
+	if generation != _modal_epoch: return
 	if is_instance_valid(chat_panel): chat_panel.hide_panel()
 	if is_instance_valid(social_panel): social_panel.hide_panel()
 	if is_instance_valid(sanctuary_panel):
@@ -569,12 +649,15 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and _owned_mouse:
 		_drag_social_pointer(-1, _local_point(event.position))
 	if mode != &"none":
-		if mode == &"chat":
+		if is_instance_valid(_native_panel()):
 			_native_chat_event(event)
 			return
 		# Consume the complete event stream while open, including releases/drags;
 		# a finger that opened/closed a panel must never become a world attack.
 		get_viewport().set_input_as_handled()
+		if is_instance_valid(pet_panel) and pet_panel.visible:
+			pet_panel.handle_event(event)
+			return
 		if is_instance_valid(social_panel) and social_panel.visible:
 			social_panel.handle_event(event)
 			return
@@ -736,10 +819,11 @@ func _forward_native_touch(event: InputEvent) -> void:
 			_native_touches.erase(event.index)
 			if event.index != _native_touch_id: return
 			var canceled: bool = event.canceled or (_native_touch_button and _native_touch_dragged)
-			if canceled: chat_panel.cancel_native_activation()
+			var receiver := _native_panel()
+			if canceled and is_instance_valid(receiver): receiver.cancel_native_activation()
 			_push_native_mouse(Vector2(-8192, -8192) if canceled else event.position, false)
 			_native_touch_id = -1
-			if is_instance_valid(chat_panel): chat_panel.resume_native_activation()
+			if is_instance_valid(receiver): receiver.resume_native_activation()
 	elif event is InputEventScreenDrag and event.index == _native_touch_id:
 		_native_touch_dragged = _native_touch_dragged or event.position.distance_to(_native_touch_start) > 12.0
 		_push_native_motion(event.position, event.relative)
@@ -770,8 +854,9 @@ func _push_native_motion(point: Vector2, relative: Vector2) -> void:
 
 
 func _cancel_native_pointers() -> void:
-	if not is_instance_valid(chat_panel): return
-	chat_panel.cancel_native_activation()
+	var receiver := _native_panel()
+	if not is_instance_valid(receiver): return
+	receiver.cancel_native_activation()
 	if _native_touch_id >= 0 or _native_mouse_down:
 		_push_native_mouse(Vector2(-8192, -8192), false)
 	for id: int in _native_touches: _owned_touches[id] = true
@@ -779,24 +864,29 @@ func _cancel_native_pointers() -> void:
 	_native_touch_id = -1
 	if _native_mouse_down: _owned_mouse = true
 	_native_mouse_down = false
-	chat_panel.resume_native_activation()
+	receiver.resume_native_activation()
 
 
 func _stop_native_chat() -> void:
+	_stop_native_panel()
+
+
+func _stop_native_panel() -> void:
+	var receiver := _native_panel()
 	_cancel_native_pointers()
 	InputHub.end_text_capture()
 	if is_instance_valid(source_surface): source_surface.native_gui_passthrough = false
 	# No old-modal mutations follow storage callbacks; nested close/open owns
 	# the new capture, generation and native pass-through flags.
-	chat_panel.hide_panel()
+	if is_instance_valid(receiver): receiver.hide_panel()
 
 
 func _unhandled_input(_event: InputEvent) -> void:
-	if mode == &"chat": get_viewport().set_input_as_handled()
+	if is_instance_valid(_native_panel()): get_viewport().set_input_as_handled()
 
 
 func _exit_tree() -> void:
-	if mode == &"chat":
+	if is_instance_valid(_native_panel()):
 		InputHub.end_text_capture()
 		if is_instance_valid(source_surface): source_surface.native_gui_passthrough = false
 
@@ -824,6 +914,12 @@ func _modal_press(point: Vector2) -> void:
 	if _continue_rect().has_point(point):
 		close_modal()
 		return
+	if mode == &"results" and _has_pet_findings():
+		for index in range(2):
+			if _results_tab_rect(index).has_point(point):
+				results_tab = &"expedition" if index == 0 else &"pets"
+				queue_redraw()
+				return
 	if mode == &"party":
 		for index in range(PARTY_COMMANDS.size()):
 			if _command_rect(index).has_point(point):
@@ -962,6 +1058,17 @@ func _modal_rect() -> Rect2:
 func _continue_rect() -> Rect2:
 	var rect := _modal_rect()
 	return Rect2(rect.end - Vector2(252, 82), Vector2(220, 60))
+
+
+func _has_pet_findings() -> bool:
+	var findings: Dictionary = results_snapshot.get("pet_findings", {})
+	return not findings.get("ingredients", []).is_empty() or int(findings.get("eggs_found", 0)) > 0 or int(findings.get("rescues", 0)) > 0 or int(findings.get("rootwarden_victories", 0)) > 0
+
+
+func _results_tab_rect(index: int) -> Rect2:
+	var bounds := _modal_rect()
+	var width := (bounds.size.x - 72) * 0.5
+	return Rect2(bounds.position + Vector2(30 + index * (width + 12), 201), Vector2(width, 60))
 
 
 func _modal_tonic_rect() -> Rect2:
@@ -1416,11 +1523,20 @@ func _draw_results() -> void:
 		_panel(Rect2(at, Vector2(245, 65)), Color(0.045, 0.12, 0.13, 1))
 		_text(summaries[index][0], at + Vector2(12, 21), 10, MUTED)
 		_text(summaries[index][1], at + Vector2(12, 49), 19, GOLD if index == 0 else IVORY)
-	_text("COLLECTED & SECURED" if success else "UNSECURED ITEMS LOST", rect.position + Vector2(30, 222), 12, GOLD)
+	var pet_results := _has_pet_findings()
+	if pet_results:
+		_button(_results_tab_rect(0), "ITEMS · " + ("SECURED" if success else "LOST"), results_tab == &"expedition")
+		_button(_results_tab_rect(1), "PET FINDINGS · " + ("SECURED" if success else "LOST"), results_tab == &"pets")
+		if results_tab == &"pets":
+			_draw_pet_findings(rect)
+			_button(_continue_rect(), "CONTINUE", true)
+			return
+	else:
+		_text("COLLECTED & SECURED" if success else "UNSECURED ITEMS LOST", rect.position + Vector2(30, 222), 12, GOLD)
 	var items: Array = results_snapshot.get("items", []) if results_snapshot.get("items", []) is Array else []
 	for index in range(mini(items.size(), 7)):
 		var item: Dictionary = items[index]
-		var at := rect.position + Vector2(32, 253 + index * 27)
+		var at := rect.position + Vector2(32, (283 if pet_results else 253) + index * (24 if pet_results else 27))
 		var color: Color = RARITY_COLORS.get(String(item.get("rarity", "common")).to_lower(), IVORY)
 		_text(String(item.get("label", item.get("name", item.get("id", "Item")))), at, 14, color)
 		_text("× %d" % int(item.get("quantity", 1)), Vector2(rect.end.x - 34, at.y), 13, MUTED, false, true)
@@ -1432,6 +1548,19 @@ func _draw_results() -> void:
 	_text("NEW COLLECTION DISCOVERIES  %d" % discoveries.size(), rect.position + Vector2(32, rect.size.y - 76), 11, MUTED)
 	_text("SECURED DM TOTAL  %d" % int(results_snapshot.get("secured_total", session_snapshot.get("secured_gold", 0))), rect.position + Vector2(32, rect.size.y - 49), 13, GOLD)
 	_button(_continue_rect(), "CONTINUE", true)
+
+
+func _draw_pet_findings(rect: Rect2) -> void:
+	var findings: Dictionary = results_snapshot.get("pet_findings", {})
+	var rows: Array = findings.get("ingredients", [])
+	# Eleven fixed ingredient identities fit in two bounded six-row columns.
+	for index in range(mini(12, rows.size())):
+		var row: Dictionary = rows[index]
+		var column := index / 6
+		var at := rect.position + Vector2(32 + column * (rect.size.x - 64) * 0.5, 287 + (index % 6) * 26)
+		_text("%s × %d" % [String(row.get("label", row.get("id", "Ingredient"))), int(row.get("quantity", 0))], at, 13, IVORY)
+	_text("EGGS %d  ·  RESCUES %d  ·  ROOTWARDEN MEMORIES %d" % [int(findings.get("eggs_found", 0)), int(findings.get("rescues", 0)), int(findings.get("rootwarden_victories", 0))], rect.position + Vector2(32, 452), 12, GOLD)
+	_text("COSMETIC COLLECTION · No inventory or party slots used", rect.position + Vector2(32, rect.size.y - 49), 11, MUTED)
 
 
 func _button(rect: Rect2, caption: String, enabled: bool) -> void:

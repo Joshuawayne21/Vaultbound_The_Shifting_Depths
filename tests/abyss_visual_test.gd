@@ -11,8 +11,9 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 func _run() -> void:
-	check(not Dressing.capture_geometry_for_validation, "Production defaults to no retained authoring-transform snapshots")
-	Dressing.capture_geometry_for_validation = true
+	var defaults := Dressing.new()
+	check(not defaults.capture_geometry_for_validation, "Production defaults to no retained authoring-transform snapshots")
+	defaults.free()
 	var stage := Node3D.new()
 	root.add_child(stage)
 	current_scene = stage
@@ -27,7 +28,7 @@ func _run() -> void:
 		for id: StringName in modules:
 			var packed := load("res://scenes/rooms/%s.tscn" % id) as PackedScene
 			var a: AbyssRoom = packed.instantiate()
-			a.configure_visuals(23, 3)
+			a.configure_visuals(23, 3, true)
 			var physics_before := _physics_snapshot(a)
 			var anchors_before := [a.get_player_spawn(), a.get_spawn_points(), a.get_chest_anchor()]
 			stage.add_child(a)
@@ -61,7 +62,7 @@ func _run() -> void:
 			check(reference == b.dressing.fingerprint(), "%s cosmetic seed reproduces exactly" % id)
 			check(a.ambient_fauna.fingerprint() == b.ambient_fauna.fingerprint(), "%s fauna cosmetic seed reproduces exactly" % id)
 			var c: AbyssRoom = packed.instantiate()
-			c.configure_visuals(24, 3)
+			c.configure_visuals(24, 3, true)
 			stage.add_child(c)
 			await process_frame
 			check(reference != c.dressing.fingerprint() and a.openings == c.openings and a.spawn_points == c.spawn_points and a.chest_anchor == c.chest_anchor, "%s variation changes dressing while preserving gameplay anchors" % id)
@@ -79,7 +80,7 @@ func _run() -> void:
 	var expected := randf()
 	seed(175)
 	var sample := Dressing.new()
-	sample.configure(&"combat_grove", &"fern_court", 3, 2)
+	sample.configure(&"combat_grove", &"fern_court", 3, 2, true)
 	stage.add_child(sample)
 	check(is_equal_approx(randf(), expected), "Cosmetic construction does not consume the gameplay/global RNG")
 	var room: AbyssRoom = (load("res://scenes/rooms/entrance_grove.tscn") as PackedScene).instantiate()
@@ -90,7 +91,6 @@ func _run() -> void:
 	await process_frame
 	_test_seed_envelopes(stage, room, module_motifs)
 	await _test_world_ownership(stage)
-	Dressing.capture_geometry_for_validation = false
 	var production := Dressing.new()
 	production.configure(&"combat_grove", &"fern_court", 3, 2)
 	stage.add_child(production)
@@ -224,7 +224,7 @@ func _physics_snapshot(node: Node, inherited := Transform3D.IDENTITY) -> Array:
 
 func _test_rotated_mesh_scale(stage: Node3D) -> void:
 	var sample := Dressing.new()
-	sample.configure(&"entrance_grove", &"pilgrim_grove", 23, 3)
+	sample.configure(&"entrance_grove", &"pilgrim_grove", 23, 3, true)
 	stage.add_child(sample)
 	var rock := sample.get_node("RockBatch") as MultiMeshInstance3D
 	var quarter_turn := _instance_bounds(rock, 8)
@@ -278,7 +278,7 @@ func _test_seed_envelopes(stage: Node3D, room: AbyssRoom, modules: Dictionary) -
 		var safe := true
 		for id: StringName in modules:
 			var visual := Dressing.new()
-			visual.configure(id, modules[id], visual_seed, visual_seed % 12)
+			visual.configure(id, modules[id], visual_seed, visual_seed % 12, true)
 			stage.add_child(visual)
 			safe = safe and _safe_geometry(visual) and _safe_story(visual, room) and visual.instance_total <= Dressing.MAX_INSTANCES and visual.story_instance_total <= Dressing.MAX_STORY_INSTANCES
 			visual.free()
