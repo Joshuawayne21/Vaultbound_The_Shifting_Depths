@@ -1,0 +1,86 @@
+{
+  "milestone": "7A",
+  "checked_at_utc": "2026-11-01T01:41:20.614870+00:00",
+  "status": "passed",
+  "engine": "Godot4.6.3.stable.official.7d41c59c4",
+  "renderer": "gl_compatibility",
+  "base_commit": "7018f685f9bad3b7f00dc95bd4f8880a1c814a9a",
+  "source_snapshot": "/tmp/vaultbound-7a-baseline-2m3us7d4/source",
+  "source_sha256": "5687d40205e9b32f875d2e492f0933b11c17221fddf1b35f5a727c2de32ec478",
+  "semantic_file_count": 775,
+  "source_opening_equals_closing": true,
+  "matches_6f_accepted_source": true,
+  "baseline_capture_working_tree_clean": true,
+  "export_presets_sha256": "e7f792890b13be521636814d85393437d8f123f48074505cd51b9297704fb83f",
+  "resource_counts": {
+    ".gd": 219,
+    ".tscn": 59,
+    ".tres": 466,
+    ".gdshader": 7,
+    ".svg": 19
+  },
+  "available_suites": 89,
+  "previous_complete_gate": {
+    "assertions": 17741,
+    "suites": 89,
+    "invocations": 108,
+    "independent_readers": 15
+  },
+  "new_baseline_gate": {
+    "import": true,
+    "startup_frames": 120,
+    "smoke_assertions": 760,
+    "engine_processes": 3,
+    "full_89_suite_gate_repeated": false
+  },
+  "storage_isolation": "Copied git archive; per-process XDG_DATA_HOME/XDG_CONFIG_HOME/XDG_CACHE_HOME under /tmp/vaultbound-7a-baseline-2m3us7d4/logs/xdg; no normal play storage used.",
+  "invocations": [
+    {
+      "suite": "import",
+      "exit_code": 0,
+      "passed": 0,
+      "errors": [],
+      "environment_notices": [
+        "ERROR: Condition \"_sock == -1\" is true. Returning: FAILED",
+        "ERROR: Condition \"err != OK\" is true. Returning: ERR_CANT_CREATE",
+        "ERROR: Condition \"_sock == -1\" is true. Returning: FAILED",
+        "ERROR: Condition \"err != OK\" is true. Returning: ERR_CANT_CREATE",
+        "Unable to open Android 'build-tools' directory."
+      ],
+      "seconds": 6.381,
+      "log": "/tmp/vaultbound-7a-baseline-2m3us7d4/logs/import.log",
+      "ok": true,
+      "log_sha256": "ffcbc614ab08f5997742349874eae4d91137f13d31e1d2982fba66e05f0c97cf"
+    },
+    {
+      "suite": "startup",
+      "exit_code": 0,
+      "passed": 0,
+      "errors": [],
+      "environment_notices": [],
+      "seconds": 5.677,
+      "log": "/tmp/vaultbound-7a-baseline-2m3us7d4/logs/startup.log",
+      "ok": true,
+      "log_sha256": "a9912b85473f126d3f4f63ec824170c828df3473a292f866dde86cafda5b66da"
+    },
+    {
+      "suite": "smoke_test",
+      "exit_code": 0,
+      "passed": 760,
+      "errors": [],
+      "environment_notices": [],
+      "seconds": 7.935,
+      "log": "/tmp/vaultbound-7a-baseline-2m3us7d4/logs/smoke_test.log",
+      "ok": true,
+      "log_sha256": "23ec964cdffd2a6298b87aaa8c15dda2566b43641ee2280cc968cf9144871405"
+    }
+  ],
+  "commands": [
+    "python /tmp/vaultbound-living-6f-validation-gate.py /tmp/vaultbound-7a-baseline-2m3us7d4/source /tmp/vaultbound-7a-baseline-2m3us7d4/logs smoke_test --reference /tmp/vaultbound-7a-baseline-2m3us7d4/source-reference.json --import-project --startup"
+  ],
+  "limits": [
+    "No physical Android, APK export, GPU, rendered visual or live backend validation.",
+    "Editor import permits only the documented sandbox local-socket and absent Android build-tools notices. Runtime startup and smoke logs have no errors, warnings or leaks.",
+    "Initial unisolated --version lookup emitted a Fontconfig cache notice; no project was launched in that command. Actual validation processes use isolated writable XDG paths."
+  ]
+}
