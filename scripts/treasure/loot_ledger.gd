@@ -11,6 +11,11 @@ const MERGE_DISTANCE := 3.0
 const CURRENCY_ROW := "__depthmarks"
 const KINDS := ["regular", "elite", "boss"]
 const LABELS := {"regular": "Fallen Foe Cache", "elite": "Reinforced Loot Cache", "boss": "Rootwarden Reliquary"}
+const SOURCE_PRESENTATIONS := {
+	"thornmarshal": {"kind": "boss", "label": "Thornmarshal Reliquary"},
+	"mycelial_cantor": {"kind": "boss", "label": "Mycelial Cantor Reliquary"},
+	"root_bark_champion": {"kind": "elite", "label": "Root Bark Champion Cache"},
+}
 
 var _records: Dictionary = {}
 var _sources: Dictionary = {}
@@ -54,8 +59,10 @@ func merge_candidate(room_id: int, at: Vector3, reward: Dictionary) -> String:
 	return best
 
 func register(reward: Dictionary, room_id: int, at: Vector3, kind: String,
-		merge_id: String = "") -> Dictionary:
+		merge_id: String = "", presentation_id: String = "") -> Dictionary:
 	if not _valid_reward(reward) or room_id < 0 or not at.is_finite() or not KINDS.has(kind):
+		return {"ok": false, "id": "", "created": false}
+	if not presentation_id.is_empty() and (not SOURCE_PRESENTATIONS.has(presentation_id) or SOURCE_PRESENTATIONS[presentation_id].kind != kind):
 		return {"ok": false, "id": "", "created": false}
 	var receipt: String = reward.chest_id
 	if has_source(receipt):
@@ -75,7 +82,7 @@ func register(reward: Dictionary, room_id: int, at: Vector3, kind: String,
 	for item: Dictionary in reward.items:
 		totals[item.id] = int(totals.get(item.id, 0)) + int(item.quantity)
 	_sequence += 1
-	_records[receipt] = {"id": receipt, "kind": kind, "label": LABELS[kind],
+	_records[receipt] = {"id": receipt, "kind": kind, "label": LABELS[kind] if presentation_id.is_empty() else SOURCE_PRESENTATIONS[presentation_id].label,
 		"owner_id": "local_player", "room_id": room_id, "position": at,
 		"revision": 0, "gold": int(reward.gold), "items": totals,
 		"source_ids": [receipt], "source_values": {receipt: int(reward.get("value", reward.gold))},

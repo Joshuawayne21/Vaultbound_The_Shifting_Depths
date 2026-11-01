@@ -153,7 +153,14 @@ func _actual_scaled_actors() -> void:
 	session.profile.depth_progression = {"version": 1, "highest_unlocked_depth": 50, "highest_cleared_depth": 49}
 	var base_health := BASE_BOSS.max_health
 	var base_damage := BASE_BOSS.slam_damage
-	await game.start_expedition(71234, 50)
+	var root_seed := 71234
+	for candidate in range(71234, 71434):
+		if Generator.Content.resolve_run_plan(candidate, 50).get("required_boss_id") == "rootwarden":
+			root_seed = candidate
+			break
+	if not check(Generator.Content.resolve_run_plan(root_seed, 50).get("required_boss_id") == "rootwarden", "Legacy actor scaling fixture selects an issued Rootwarden candidate"):
+		return
+	await game.start_expedition(root_seed, 50)
 	if not await arrive(&"rootbound_abyss"):
 		return
 	var world: Node3D = game.active_world
@@ -222,7 +229,7 @@ func _actual_scaled_actors() -> void:
 		actor.take_hit(100000.0, player.global_position)
 		var record: Dictionary = world.encounter_death_record(actor)
 		var source: String = Rewards.source_for(String(record.archetype), bool(record.elite))
-		var expected: Dictionary = Rewards.roll_for_depth(71234, String(record.receipt), source, int(record.depth), 50, frozen)
+		var expected: Dictionary = Rewards.roll_for_depth(root_seed, String(record.receipt), source, int(record.depth), 50, frozen)
 		var cache: Dictionary = session.loot_snapshot(String(record.receipt))
 		check(not cache.is_empty() and int(cache.gold) == int(expected.gold), "Real dead actor installs a floor-scaled cache using frozen Session reward policy")
 		var before_kills := int(session.kills)

@@ -22,6 +22,8 @@ const DepthPolicy = preload("res://resources/expedition/depth_policy.tres")
 const Content = preload("res://scripts/expedition/dungeon_content.gd")
 const Scheduler = preload("res://scripts/expedition/encounter_event_scheduler.gd")
 const Presentation = preload("res://scripts/visual/dungeon_presentation.gd")
+const RoomContent = preload("res://scripts/expedition/room_content_planner.gd")
+const SpawnPlanner = preload("res://scripts/expedition/encounter_spawn_planner.gd")
 
 var display_name := "THE ROOTBOUND ABYSS"
 var objective := "Find the Rootwarden • Defeat the guardian • Extract your treasure"
@@ -65,6 +67,10 @@ var _boss_seed := 1
 var _content_plan: Dictionary = {}
 var _boss_record: Dictionary = {}
 var _hazard_sequence := 0
+var _room_slots: Array[Dictionary] = []
+var _admitted_slots: Array[Dictionary] = []
+var _optional_records: Dictionary = {}
+var _combat_admission_ready := false
 
 func configure_run_context(generation: int) -> bool:
 	# The shell binds the issued run before its fade awaits and before _ready.
@@ -124,7 +130,68 @@ func configure_content(expedition_seed: int, expedition_depth: int) -> void:
 		return
 	layout = Generator.generate_for_run(expedition_seed, expedition_depth)
 	_configured_layout = layout.duplicate(true)
+	_room_slots = RoomContent.plan(layout, _content_plan)
 	validation_errors = Generator.validate(layout, _depth_policy, _content_plan)
+
+func optional_encounter_slots() -> Array[Dictionary]:
+	return _room_slots.duplicate(true)
+
+func registered_optional_encounters() -> Array[Node3D]:
+	var result: Array[Node3D] = []
+	for record: Dictionary in _optional_records.values():
+		var actor := record.actor.get_ref() as Node3D
+		if is_instance_valid(actor): result.append(actor)
+	return result
+
+func optional_room_reserved(id: int) -> bool:
+	for slot: Dictionary in _room_slots:
+		if int(slot.room_id) == id: return true
+	return false
+
+func prepare_combat_admission() -> bool:
+	if _content_plan.is_empty(): return true
+	if _combat_admission_ready: return combat_admission_valid()
+	if not run_source_context_valid() or not validation_errors.is_empty() or _room_slots != RoomContent.plan(layout, _content_plan): return false
+	if _content_plan.required_boss_id != "rootwarden" \
+			and not SpawnPlanner.clear_anchor(self, rooms[int(layout.boss_id)], Vector3(0, 0.15, 0), 0.7, 2.8):
+		validation_errors.append("Required boss arena has no safe grounded entry and escape route")
+		return false
+	var admitted: Array[Dictionary] = []
+	for slot: Dictionary in _room_slots:
+		if not SpawnPlanner.clear_anchor(self, rooms[int(slot.room_id)], slot.local_position, 0.4, 1.9): continue
+		var profile: Dictionary = _content_plan.optional_profile
+		var descriptor := Content.source_descriptor(_content_plan, "root_bark_champion", "none")
+		var receipt := "optional_room_%d_root_bark_champion" % int(slot.room_id)
+		var actor := _configured_actor(profile, descriptor, int(slot.room_id), receipt, 0)
+		if actor == null:
+			validation_errors.append("Optional encounter could not prepare its registered controller")
+			return false
+		actor.position = slot.local_position
+		_optional_records[actor.get_instance_id()] = {"actor": weakref(actor), "room_id": int(slot.room_id),
+			"receipt": receipt, "generation": run_generation, "descriptor": descriptor.duplicate(true)}
+		rooms[int(slot.room_id)].add_child(actor)
+		actor.died.connect(_on_optional_defeated)
+		admitted.append(slot.duplicate(true))
+	_room_slots = admitted
+	_admitted_slots = admitted.duplicate(true)
+	_combat_admission_ready = true
+	return combat_admission_valid()
+
+func combat_admission_valid() -> bool:
+	if _content_plan.is_empty(): return true
+	if not _combat_admission_ready or _room_slots != _admitted_slots or not RoomContent.valid_slots(_room_slots, layout, _content_plan) \
+			or _optional_records.size() != _room_slots.size() or not is_instance_valid(boss) \
+			or _boss_record.is_empty() or _boss_record.actor.get_ref() != boss or boss.get_parent() != rooms.get(int(layout.boss_id)): return false
+	var required_receipt := "rootwarden_reward" if _content_plan.required_boss_id == "rootwarden" else "boss_room_%d_%s" % [int(layout.boss_id), String(_content_plan.required_boss_id)]
+	if int(_boss_record.generation) != run_generation or _boss_record.receipt != required_receipt \
+			or _boss_record.descriptor != Content.source_descriptor(_content_plan, String(_content_plan.required_boss_id), String(_content_plan.variant_id)): return false
+	for record: Dictionary in _optional_records.values():
+		var actor := record.actor.get_ref() as Node3D
+		if not is_instance_valid(actor) or actor.get_parent() != rooms.get(int(record.room_id)) \
+				or int(record.generation) != run_generation or not optional_room_reserved(int(record.room_id)) \
+				or record.receipt != "optional_room_%d_root_bark_champion" % int(record.room_id) \
+				or record.descriptor != Content.source_descriptor(_content_plan, "root_bark_champion", "none"): return false
+	return true
 
 func issued_run_plan() -> Dictionary:
 	return _content_plan.duplicate(true)
@@ -253,6 +320,7 @@ func _exit_tree() -> void:
 func _process(delta: float) -> void:
 	if validation_errors.size() > 0 or awareness == null:
 		return
+	if not _content_plan.is_empty() and not _combat_admission_ready: return
 	if not run_source_context_valid():
 		if scheduler != null: scheduler.cancel_all(&"run_closed")
 		return
@@ -277,16 +345,28 @@ func _process(delta: float) -> void:
 			break
 	var kind: StringName = layout.rooms[current_room_id].kind
 	var boss_near := false
+	var active_boss: Node3D
 	if is_instance_valid(boss) and not _boss_dead:
-		boss_near = current_room_id == int(layout.boss_id) or boss.global_position.distance_to(_player.global_position) < 15.0
+		var legacy_proximity: bool = _content_plan.is_empty() or _content_plan.required_boss_id == "rootwarden"
+		boss_near = current_room_id == int(layout.boss_id) or (legacy_proximity and boss.global_position.distance_to(_player.global_position) < 15.0)
+		if boss_near: active_boss = boss
+	if active_boss == null:
+		for actor: Node3D in registered_optional_encounters():
+			var record: Dictionary = _optional_records[actor.get_instance_id()]
+			if float(actor.health) > 0.0 and int(record.room_id) == current_room_id:
+				active_boss = actor
+				break
+	boss_near = active_boss != null
 	encounters.set_boss_active(boss_near or kind in [&"boss", &"extraction", &"entrance"])
 	if scheduler != null:
 		if boss_near:
-			boss_near = scheduler.set_boss_owner(boss)
+			boss_near = scheduler.set_boss_owner(active_boss)
 		else:
 			scheduler.set_boss_owner(null)
-	if is_instance_valid(boss) and not _boss_dead and boss.combat_active != boss_near:
-		boss.combat_active = boss_near
+	if is_instance_valid(boss) and not _boss_dead and boss.combat_active != (boss_near and active_boss == boss):
+		boss.combat_active = boss_near and active_boss == boss
+	for actor: Node3D in registered_optional_encounters():
+		_set_optional_active(actor, boss_near and actor == active_boss and float(actor.health) > 0.0)
 	if boss_near:
 		for hazard: AbyssHazard in _hazards:
 			if hazard.active:
@@ -301,6 +381,10 @@ func _process(delta: float) -> void:
 func _enter_room(id: int) -> void:
 	if scheduler != null and current_room_id != id and awareness != null:
 		awareness.cancel_warning()
+	if not _content_plan.is_empty() and _content_plan.required_boss_id != "rootwarden" and id != int(layout.boss_id) \
+			and is_instance_valid(boss) and bool(boss.combat_active): boss.combat_active = false
+	for actor: Node3D in registered_optional_encounters():
+		if int(_optional_records[actor.get_instance_id()].room_id) != id: _set_optional_active(actor, false)
 	current_room_id = id
 	if not discovered.has(id):
 		discovered.append(id)
@@ -319,6 +403,12 @@ func _enter_room(id: int) -> void:
 		notice.emit("Restless roots mark the floor — avoid the amber ring")
 	_refresh_rooms()
 	snapshot_changed.emit(snapshot())
+
+func _set_optional_active(actor: Node3D, enabled: bool) -> void:
+	if bool(actor.combat_active) and not enabled and actor.has_method("cancel_pending"):
+		# Culling may disable the room before the actor receives another tick.
+		actor.cancel_pending(&"room_inactive")
+	actor.combat_active = enabled
 
 func _refresh_rooms() -> void:
 	var current_cell: Vector2i = layout.rooms[current_room_id].cell
@@ -393,6 +483,19 @@ func _reveal_secret(id: int) -> void:
 	snapshot_changed.emit(snapshot())
 
 func _create_boss() -> void:
+	if not _content_plan.is_empty() and _content_plan.required_boss_id != "rootwarden":
+		var descriptor := Content.source_descriptor(_content_plan, String(_content_plan.required_boss_id), String(_content_plan.variant_id))
+		var receipt := "boss_room_%d_%s" % [int(layout.boss_id), String(_content_plan.required_boss_id)]
+		boss = _configured_actor(_content_plan.boss, descriptor, int(layout.boss_id), receipt, 0)
+		if boss == null:
+			validation_errors.append("Required boss controller rejected issued configuration")
+			return
+		boss.position = Vector3(0, 0.15, 0)
+		_boss_record = {"actor": weakref(boss), "room_id": int(layout.boss_id), "receipt": receipt,
+			"generation": run_generation, "descriptor": descriptor.duplicate(true)}
+		rooms[int(layout.boss_id)].add_child(boss)
+		boss.died.connect(_on_boss_died)
+		return
 	var packed := load("res://scenes/enemies/rootwarden.tscn") as PackedScene
 	if packed == null:
 		return
@@ -420,6 +523,26 @@ func _create_boss() -> void:
 		validation_errors.append("Rootwarden modifier does not match issued content")
 	boss.died.connect(_on_boss_died)
 
+func _configured_actor(profile: Dictionary, descriptor: Dictionary, room_id: int, receipt: String, ordinal: int) -> Node3D:
+	var packed := load(String(profile.scene_path)) as PackedScene
+	if packed == null or descriptor.is_empty(): return null
+	var actor := packed.instantiate() as Node3D
+	var payload := {"run_generation": run_generation, "run_seed": _issued_seed, "boss_seed": _boss_seed,
+		"theme_id": String(_content_plan.theme_id), "content_version": int(_content_plan.content_version),
+		"encounter_version": int(descriptor.encounter_version), "encounter_definition_id": String(descriptor.encounter_definition_id),
+		"boss_id": String(descriptor.boss_id), "encounter_receipt": receipt, "objective_role": String(descriptor.objective_role),
+		"variant_id": String(descriptor.variant_id), "room_id": room_id, "spawn_ordinal": ordinal,
+		"arena_profile_id": String(profile.arena_profile_id), "depth_policy": _depth_policy.duplicate(true), "profile": profile.duplicate(true)}
+	if not actor.has_method("configure") or not bool(actor.configure(payload, self)):
+		actor.free()
+		return null
+	actor.combat_active = false
+	return actor
+
+func _on_optional_defeated(actor: Node3D) -> void:
+	if scheduler != null: scheduler.cancel_owner(actor, &"owner_dead")
+	_on_enemy_defeated(actor)
+
 func _create_extraction() -> void:
 	var script := load("res://scripts/expedition/extraction_point.gd") as Script
 	if script == null:
@@ -444,6 +567,7 @@ func _on_enemy_defeated(enemy: Node3D) -> void:
 	var record := encounter_death_record(enemy)
 	if record.is_empty() or _rewarded_deaths.has(record.receipt):
 		return
+	if record.get("objective_role", "") == "support": return
 	_rewarded_deaths[record.receipt] = true
 	# The authority reserves loot, source receipt, kill state and cosmetic
 	# findings together before notifying any listener.
@@ -462,6 +586,7 @@ func _on_boss_died(enemy: Node3D) -> void:
 			or not run_source_context_valid() or loot_caches == null:
 		return
 	_boss_dead = true
+	if scheduler != null: scheduler.cancel_owner(enemy, &"owner_dead")
 	var result: Dictionary = _session.complete_encounter(self, enemy, run_generation)
 	if not run_source_context_valid() or not bool(result.get("still_current", false)):
 		return
@@ -474,7 +599,8 @@ func _on_boss_died(enemy: Node3D) -> void:
 	boss_reward_chest = loot_caches.views[0]
 	# The shell initially wires travel signals once. Dynamically spawned loot has
 	# no travel signal; the extraction point already exists and is now unlocked.
-	notice.emit("The Rootwarden falls · Search its reliquary, then follow the extraction spring")
+	var name := String(_content_plan.boss.display_name) if not _content_plan.is_empty() else "Rootwarden"
+	notice.emit("The %s falls · Search its treasure, then follow the extraction spring" % name)
 	if not run_source_context_valid(): return
 	boss_defeated.emit()
 	if not run_source_context_valid(): return
@@ -484,16 +610,17 @@ func encounter_death_record(enemy: Node3D) -> Dictionary:
 	if not run_source_context_valid() or not is_instance_valid(enemy) or enemy.is_queued_for_deletion() \
 			or not enemy.is_inside_tree() or not is_ancestor_of(enemy) or enemy.get_viewport() != get_viewport():
 		return {}
-	if enemy == boss:
-		if enemy.get_parent() != rooms[int(layout.boss_id)] or float(enemy.health) != 0.0 or enemy.state != &"dead":
+	if enemy == boss or _optional_records.has(enemy.get_instance_id()):
+		var source: Dictionary = _boss_record if enemy == boss else _optional_records[enemy.get_instance_id()]
+		if enemy.get_parent() != rooms.get(int(source.get("room_id", -1))) or float(enemy.health) != 0.0 or enemy.state != &"dead":
 			return {}
-		if _boss_record.is_empty() or _boss_record.actor.get_ref() != enemy or int(_boss_record.generation) != run_generation:
+		if source.is_empty() or source.actor.get_ref() != enemy or int(source.generation) != run_generation:
 			return {}
-		var result := {"receipt": "rootwarden_reward", "archetype": "rootwarden", "elite": true,
-			"room_id": int(layout.boss_id), "depth": int(layout.rooms[int(layout.boss_id)].depth),
-			"kind": "boss", "drop_position": _loot_drop_point(enemy, 2.6)}
+		var result := {"receipt": String(source.receipt), "archetype": "rootwarden", "elite": true,
+			"room_id": int(source.room_id), "depth": int(layout.rooms[int(source.room_id)].depth),
+			"kind": "boss" if enemy == boss else "elite", "drop_position": _loot_drop_point(enemy, 2.6 if enemy == boss else 1.1)}
 		if not _content_plan.is_empty():
-			result.merge(_boss_record.descriptor.duplicate(true))
+			result.merge(source.descriptor.duplicate(true), true)
 			result["owner_encounter_receipt"] = ""
 		return result
 	var record := encounters.death_record(enemy)
@@ -512,10 +639,17 @@ func registered_combat_source_valid(actor: Node3D, generation: int, receipt: Str
 	if not run_source_context_valid() or generation != run_generation or not is_instance_valid(actor) \
 			or not actor.is_inside_tree() or actor.is_queued_for_deletion() or float(actor.get("health")) <= 0.0:
 		return false
-	if actor == boss:
-		return not _boss_record.is_empty() and _boss_record.actor.get_ref() == actor \
-			and receipt == String(_boss_record.receipt) and actor.get_parent() == rooms.get(int(_boss_record.room_id))
+	if actor == boss or _optional_records.has(actor.get_instance_id()):
+		var record: Dictionary = _boss_record if actor == boss else _optional_records[actor.get_instance_id()]
+		return not record.is_empty() and record.actor.get_ref() == actor and int(record.generation) == generation \
+			and receipt == String(record.receipt) and actor.get_parent() == rooms.get(int(record.room_id))
 	return encounters != null and encounters.live_receipt(actor) == receipt and not receipt.is_empty()
+
+func registered_boss_source(actor: Node3D) -> Dictionary:
+	if not is_instance_valid(actor): return {}
+	var record: Dictionary = _boss_record if actor == boss else _optional_records.get(actor.get_instance_id(), {})
+	if record.is_empty() or not registered_combat_source_valid(actor, run_generation, String(record.receipt)): return {}
+	return {"receipt": String(record.receipt), "room_id": int(record.room_id), "descriptor": record.descriptor.duplicate(true)}
 
 func owns_environment_hazard(hazard: Node3D) -> bool:
 	return is_instance_valid(hazard) and _hazards.has(hazard) and hazard.get_parent() == self
@@ -684,25 +818,46 @@ func _arm_roots(id: int, local_point: Vector3, warning_time: float, event_receip
 func get_spawn_transform(_entry_id: StringName) -> Transform3D:
 	return Transform3D(Basis.IDENTITY, Generator.room_position(layout.rooms[int(layout.entrance_id)]) + Vector3(0, 0.15, 6))
 
+func required_boss_label() -> String:
+	return String(_content_plan.boss.display_name) if not _content_plan.is_empty() else "Rootwarden"
+
 func snapshot() -> Dictionary:
 	var map_rooms: Array[Dictionary] = []
 	for room: Dictionary in layout.get("rooms", []):
 		map_rooms.append({"id": room.id, "x": room.cell.x, "y": room.cell.y, "cell": room.cell,
 			"kind": String(room.kind), "discovered": discovered.has(room.id),
 			"hidden": room.hidden and not _revealed.has(room.id), "neighbors": room.neighbors.duplicate()})
-	var boss_state := {"visible": false, "health": 0.0, "max_health": 1.0, "name": "Rootwarden", "phase": 1, "modifier": ""}
-	if not _content_plan.is_empty(): boss_state.name = String(_content_plan.boss.display_name)
-	if is_instance_valid(boss):
-		boss_state.visible = bool(boss.combat_active) and not _boss_dead
-		boss_state.health = float(boss.health)
-		boss_state.max_health = float(boss.max_health)
-		boss_state.phase = int(boss.get("phase")) if boss.get("phase") != null else 1
-		boss_state.modifier = String(boss.get("modifier_name")) if boss.get("modifier_name") != null else ""
+	var displayed := boss
+	var role := "required"
+	var displayed_id := String(_content_plan.get("required_boss_id", "rootwarden"))
+	for actor: Node3D in registered_optional_encounters():
+		if bool(actor.combat_active) and float(actor.health) > 0.0:
+			displayed = actor
+			role = "optional"
+			displayed_id = "root_bark_champion"
+			break
+	var boss_state := {"visible": false, "health": 0.0, "max_health": 1.0, "name": required_boss_label(),
+		"phase": 1, "phase_label": "PHASE I", "modifier": "", "id": displayed_id, "role": role}
+	if is_instance_valid(displayed):
+		boss_state.visible = bool(displayed.combat_active) and float(displayed.health) > 0.0
+		boss_state.health = float(displayed.health)
+		boss_state.max_health = float(displayed.max_health)
+		if displayed_id == "rootwarden":
+			boss_state.phase = int(displayed.phase)
+			boss_state.phase_label = "GUARDIAN'S FURY" if int(displayed.phase) >= 2 else "PHASE I"
+			boss_state.modifier = String(displayed.modifier_name)
+		elif displayed.has_method("snapshot"):
+			var appearance: Dictionary = displayed.snapshot()
+			boss_state.name = String(appearance.get("name", appearance.get("display_name", "Root Bark Champion")))
+			boss_state.phase = int(appearance.get("phase", 1))
+			boss_state.phase_label = String(appearance.get("phase_label", "OPTIONAL ENCOUNTER" if role == "optional" else "PHASE I"))
+			boss_state.modifier = String(appearance.get("modifier", ""))
 	var active_count := (encounters.active_enemy_count() if encounters != null else 0) + (1 if boss_state.visible else 0)
 	return {"active": true, "biome": "Rootbound Abyss", "floor": int(_depth_context.get("expedition_depth", 1)), "seed": _issued_seed,
 		"theme_id": String(_content_plan.get("theme_id", "rootbound_abyss")),
 		"theme_label": String(_content_plan.get("theme", {}).get("display_name", "Rootbound Abyss")),
-		"required_boss_name": String(boss_state.name), "boss_phase_label": "GUARDIAN'S FURY" if int(boss_state.phase) >= 2 else "PHASE I",
+		"required_boss_id": String(_content_plan.get("required_boss_id", "rootwarden")), "required_boss_name": required_boss_label(),
+		"boss_id": displayed_id, "boss_role": role, "boss_phase_label": String(boss_state.phase_label),
 		"event_budget": scheduler.budget_snapshot() if scheduler != null else {},
 		"expedition_depth": int(_depth_context.get("expedition_depth", 1)),
 		"tier_id": String(_depth_policy.get("tier_id", "beginner")), "tier_label": String(_depth_policy.get("tier_label", "Beginner")),

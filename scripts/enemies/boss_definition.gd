@@ -134,9 +134,18 @@ static func snapshot_errors(value: Variant) -> PackedStringArray:
 			errors.append("Legacy Rootwarden keeps its own patterns and visuals")
 		errors.append_array(rootwarden_data_errors(value.rootwarden_data))
 		return errors
-	# Future family schemas are authorable, but no new actor is executable in 7D.1.
+	# Availability admits only these concrete first-batch implementations. Other
+	# authorable family data cannot enable an arbitrary scene through this flag.
 	if value.available:
-		errors.append("New boss families remain unavailable until their runtime content gate")
+		var executable := {"thornmarshal": ["sentinel", "rootbound_sentinel_arena"],
+			"mycelial_cantor": ["brood_keeper", "rootbound_brood_arena"]}
+		if not executable.has(value.id):
+			errors.append("Boss has no executable controller profile")
+		elif value.controller_family != executable[value.id][0] or value.arena_profile_id != executable[value.id][1] \
+				or value.scene_path != "res://scenes/enemies/bosses/" + String(value.controller_family) + ".tscn" \
+				or value.visual_profile_id != value.id or value.reward_profile_id != value.id or value.discovery_id != value.id \
+				or value.pet_profile_id != "none" or value.trophy_item_id != "" or not value.objective_eligible:
+			errors.append("Executable boss profile does not match its actual scene/source")
 	if value.id == "rootwarden" or value.scene_path == ROOT_SCENE or not value.rootwarden_data.is_empty() \
 			or value.reward_profile_id == "rootwarden_legacy" or value.pet_profile_id == "rootwarden_legacy" \
 			or value.discovery_id == "rootwarden" or value.trophy_item_id == "rootwarden_heart":

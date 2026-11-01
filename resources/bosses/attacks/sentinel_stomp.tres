@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="VaultBossAttackDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/enemies/boss_attack_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"sentinel_stomp"
+controller_family = &"sentinel"
+shape = &"circle"
+damage_kind = &"enemy_melee"
+warning_time = 1.5
+active_time = 0.18
+recovery_time = 1.4
+damage = 18.0
+stagger = 0.25
+parameters = {"radius": 3.0, "count": 1}

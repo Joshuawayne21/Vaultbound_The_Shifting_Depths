@@ -1,10 +1,14 @@
-[gd_resource type="Resource" script_class="VaultMonsterRewards" load_steps=6 format=3]
+[gd_resource type="Resource" script_class="VaultMonsterRewards" load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/treasure/monster_rewards.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/loot/common.tres" id="2"]
 [ext_resource type="Resource" path="res://resources/loot/reinforced.tres" id="3"]
 [ext_resource type="Resource" path="res://resources/loot/monster_elite.tres" id="4"]
 [ext_resource type="Resource" path="res://resources/loot/boss.tres" id="5"]
+
+[ext_resource type="Resource" path="res://resources/loot/encounter_thornmarshal.tres" id="6"]
+[ext_resource type="Resource" path="res://resources/loot/encounter_mycelial_cantor.tres" id="7"]
+[ext_resource type="Resource" path="res://resources/loot/encounter_root_bark_champion.tres" id="8"]
 
 [resource]
 script = ExtResource("1")
@@ -13,3 +17,4 @@ stronger_table = ExtResource("3")
 elite_table = ExtResource("4")
 boss_table = ExtResource("5")
 source_restrictions = {"rootwarden_heart": ["boss"], "elite_monster_fragment": ["elite"], "rootwarden_essence": ["boss"], "verdant_oathblade": ["boss"], "vaultheart_staff": ["boss"]}
+encounter_tables = {"thornmarshal": ExtResource("6"), "mycelial_cantor": ExtResource("7"), "root_bark_champion": ExtResource("8")}

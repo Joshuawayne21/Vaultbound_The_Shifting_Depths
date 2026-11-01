@@ -1,5 +1,5 @@
 extends "res://tests/test_harness.gd"
-## 7D.1 is a data/identity seam: no new controller or playable boss is enabled.
+## Definition and legacy preservation checks; availability requires a real scene.
 
 const Definition = preload("res://scripts/enemies/boss_definition.gd")
 const Attack = preload("res://scripts/enemies/boss_attack_definition.gd")
@@ -38,7 +38,7 @@ func _root_adapter() -> void:
 	var issued: Dictionary = adapter.snapshot()
 	check(Definition.valid_snapshot(issued) and _plain(issued), "Issued boss snapshot contains detached plain values and no Resources")
 	check(issued.id == "rootwarden" and issued.scene_path == "res://scenes/enemies/rootwarden.tscn" \
-		and issued.controller_family == "rootwarden_legacy" and issued.available, "Only the actual legacy Rootwarden is available")
+		and issued.controller_family == "rootwarden_legacy" and issued.available, "Actual legacy Rootwarden remains available through its original controller")
 	check(issued.reward_profile_id == "rootwarden_legacy" and issued.pet_profile_id == "rootwarden_legacy" \
 		and issued.discovery_id == "rootwarden" and issued.trophy_item_id == "rootwarden_heart", "Rootwarden keeps its exact reward, pet, discovery and trophy identity")
 	check(issued.allowed_variant_ids == ["none", "thick_bark", "blooming_thorns"], "Legacy modifier order matches Rootwarden's unchanged seeded choice")
@@ -201,7 +201,7 @@ func _unavailable_family() -> void:
 		"leash_radius": 12.0, "movement_radius": 7.5, "phase_threshold": 0.4, "phase_transition_time": 1.6}
 	check(future.is_valid() and not future.snapshot().available, "Future schema remains unavailable and is not new implemented content")
 	future.available = true
-	check(not future.is_valid() and future.snapshot().is_empty(), "7D.1 cannot enable an unimplemented boss through an availability flag")
+	check(not future.is_valid() and future.snapshot().is_empty(), "An unimplemented substitute scene cannot enable a boss through an availability flag")
 	future.available = false
 	future.reward_profile_id = &"rootwarden_legacy"
 	check(not future.is_valid(), "A future boss cannot fall through to Rootwarden's reward source")

@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="VaultLootTable" load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/loot_table.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="2"]
+[ext_resource type="Resource" path="res://resources/items/root_fiber.tres" id="3"]
+[ext_resource type="Resource" path="res://resources/items/iron_ore.tres" id="4"]
+[ext_resource type="Resource" path="res://resources/items/common_enhancement_stone.tres" id="5"]
+[ext_resource type="Resource" path="res://resources/items/temple_blade.tres" id="6"]
+[ext_resource type="Resource" path="res://resources/items/mooncap_tonic.tres" id="7"]
+[ext_resource type="Resource" path="res://resources/items/warden_shield.tres" id="8"]
+[ext_resource type="Resource" path="res://resources/items/heartwood_splinter.tres" id="9"]
+[ext_resource type="Resource" path="res://resources/items/elite_monster_fragment.tres" id="10"]
+
+[resource]
+script = ExtResource("1")
+category = &"reinforced"
+label = "Root Bark Champion Cache"
+gold_min = 25
+gold_max = 50
+minimum_rolls = 2
+maximum_rolls = 3
+entries = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9")])
+weights = PackedFloat32Array(20, 20, 20, 10, 10, 12, 8)
+guaranteed_item = ExtResource("10")
+reward_source = "encounter:root_bark_champion"

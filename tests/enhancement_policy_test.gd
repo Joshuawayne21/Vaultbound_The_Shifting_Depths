@@ -30,7 +30,7 @@ func _authored_policy() -> void:
 			materials_valid = materials_valid and definition != null and definition.obtainable \
 				and definition.category == "material" and not definition.acquisition_sources.is_empty()
 	check(materials_valid, "Every required enhancement component is an obtainable material in the current catalog")
-	check(Catalog.item_for("elite_monster_fragment").acquisition_sources == ["monster:elite"] \
+	check(Catalog.item_for("elite_monster_fragment").acquisition_sources == ["monster:elite", "encounter:root_bark_champion"] \
 		and Catalog.item_for("rootwarden_essence").acquisition_sources == ["chest:boss", "monster:boss"], "Late-rank encounter materials remain restricted to completed existing elites and Rootwarden")
 	var fiber := Policy.DATA.materials_by_rank[0].duplicate(true)
 	check(fiber == {"common_enhancement_stone": 2, "root_fiber": 2} \

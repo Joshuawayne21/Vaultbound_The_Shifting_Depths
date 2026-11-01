@@ -511,8 +511,9 @@ func _clear_discoveries() -> void:
 
 func _discovery_can_show() -> bool:
 	# Keep accepted finds until the player closes Search/Inventory/other modals.
-	# Existing DM and text notices retain their own original timing and position.
-	if mode != &"none" or not _notifications.is_empty() or _leader_downed() or not bool(session_snapshot.get("active", false)):
+	# Preserve pending finds during combat instead of obscuring the boss/phase
+	# or moving the card into the scaled revive-control lane.
+	if mode != &"none" or not _notifications.is_empty() or _leader_downed() or bool(dungeon_snapshot.get("boss_active", false)) or not bool(session_snapshot.get("active", false)):
 		return false
 	if is_instance_valid(source_surface) and source_surface.transition_alpha > 0.01:
 		return false
@@ -1489,21 +1490,45 @@ func _draw_expedition_status() -> void:
 		_text("EXTRACTION AWAKENED · Follow the spring", Vector2(size.x * 0.5, 214 + _safe().y), 12, TEAL, true)
 
 
+func boss_display_lines() -> Dictionary:
+	# Presentation reads the actual registered encounter. It cannot change the
+	# required objective, complete a floor, or select a pre-entry boss.
+	var boss_name := String(dungeon_snapshot.get("boss_name", session_snapshot.get("required_boss_name", "Rootwarden")))
+	var phase := int(dungeon_snapshot.get("boss_phase", 1))
+	var boss_id := String(dungeon_snapshot.get("boss_id", ""))
+	var fallback := "GUARDIAN'S FURY" if boss_id == "rootwarden" and phase > 1 else "PHASE %d" % maxi(1, phase)
+	var phase_label := String(dungeon_snapshot.get("boss_phase_label", fallback))
+	if phase_label.is_empty(): phase_label = fallback
+	var role := String(dungeon_snapshot.get("boss_role", ""))
+	var detail := "OPTIONAL ENCOUNTER" if role == "optional" else "REQUIRED OBJECTIVE" if role == "required" else "ENCOUNTER"
+	detail += " · " + phase_label
+	var actual_boss: Dictionary = dungeon_snapshot.get("boss", {})
+	var modifier := String(actual_boss.get("modifier", "")).strip_edges()
+	if not modifier.is_empty() and modifier.to_upper() != phase_label.to_upper():
+		detail += " · " + modifier.to_upper()
+	return {"name": boss_name.to_upper(), "detail": detail,
+		"health": "%d / %d" % [int(dungeon_snapshot.get("boss_health", 0)), int(maxf(1, float(dungeon_snapshot.get("boss_max_health", 1))))]}
+
+
+func boss_bar_rect() -> Rect2:
+	return Rect2(Vector2(size.x * 0.5 - 230, 224 + _safe().y), Vector2(460, 73))
+
+
 func _draw_boss() -> void:
 	if not bool(dungeon_snapshot.get("boss_active", false)):
 		return
-	var rect := Rect2(Vector2(size.x * 0.5 - 230, 224 + _safe().y), Vector2(460, 51))
+	var rect := boss_bar_rect()
+	var labels := boss_display_lines()
 	_panel(rect, PANEL)
-	var boss_name := String(dungeon_snapshot.get("boss_name", session_snapshot.get("required_boss_name", "Rootwarden")))
-	var phase := int(dungeon_snapshot.get("boss_phase", 1))
-	var phase_label := String(dungeon_snapshot.get("boss_phase_label", "GUARDIAN'S FURY" if boss_name == "Rootwarden" else "PHASE %d" % phase))
-	_text(boss_name.to_upper() + (" · " + phase_label if phase > 1 else ""), rect.position + Vector2(14, 21), 12, GOLD)
+	var health_width := _font.get_string_size(String(labels.health), HORIZONTAL_ALIGNMENT_LEFT, -1, roundi(11 * ui_scale)).x
+	_text(_fit_text(String(labels.name), 418 - health_width, 12), rect.position + Vector2(14, 21), 12, GOLD)
+	_text(String(labels.health), rect.position + Vector2(446, 21), 11, IVORY, false, true)
+	_text(_fit_text(String(labels.detail), 432, 10), rect.position + Vector2(14, 43), 10, MUTED)
 	var current := float(dungeon_snapshot.get("boss_health", 0))
 	var maximum := maxf(1, float(dungeon_snapshot.get("boss_max_health", 1)))
-	_text("%d / %d" % [int(current), int(maximum)], rect.position + Vector2(446, 21), 11, IVORY, false, true)
-	var track := Rect2(rect.position + Vector2(14, 32), Vector2(432, 7))
+	var track := Rect2(rect.position + Vector2(14, 54), Vector2(432, 7))
 	draw_rect(track, Color(0.01, 0.03, 0.04))
-	draw_rect(Rect2(track.position, Vector2(track.size.x * clampf(current / maximum, 0, 1), 7)), TEAL if phase == 1 else WARNING)
+	draw_rect(Rect2(track.position, Vector2(track.size.x * clampf(current / maximum, 0, 1), 7)), TEAL if int(dungeon_snapshot.get("boss_phase", 1)) == 1 else WARNING)
 
 
 func _draw_dungeon_map() -> void:
@@ -1549,14 +1574,25 @@ func _draw_dungeon_map() -> void:
 	_text("%d ROOMS DISCOVERED" % positions.size(), rect.position + Vector2(rect.size.x * 0.5, rect.size.y - 11), 8, MUTED, true)
 
 
+func notification_rect(index: int, width: float) -> Rect2:
+	var height := 25.0 * ui_scale
+	var top := boss_bar_rect().end.y + 8.0 if bool(dungeon_snapshot.get("boss_active", false)) else 290.0 + _safe().y
+	return Rect2(size.x * 0.5 - width * 0.5, top + index * (height + 4), width, height)
+
+
+func notification_fits(index: int, width: float) -> bool:
+	var rect := notification_rect(index, width)
+	return not ((_can_revive() or _leader_downed()) and rect.intersects(_revive_rect()))
+
+
 func _draw_notices() -> void:
 	for index in range(_notifications.size()):
 		var notice: Dictionary = _notifications[index]
 		var message := _fit_text(String(notice.message), 510, 13)
 		var opacity := 1.0 if reduced_motion else minf(1.0, float(notice.remaining))
 		var width := minf(540, _font.get_string_size(message, HORIZONTAL_ALIGNMENT_LEFT, -1, roundi(13 * ui_scale)).x + 36)
-		var height := 25.0 * ui_scale
-		var rect := Rect2(size.x * 0.5 - width * 0.5, 290 + index * (height + 4) + _safe().y, width, height)
+		var rect := notification_rect(index, width)
+		if not notification_fits(index, width): continue
 		var currency := bool(notice.get("currency", false))
 		var tint := GOLD if currency else TEAL
 		VaultUITheme.frame(self, rect, Color(PANEL, opacity * 0.94), tint)

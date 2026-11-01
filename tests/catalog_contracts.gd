@@ -15,6 +15,12 @@ static func sources_for(id: String) -> Array:
 	for source: String in VaultMonsterRewards.SOURCES:
 		if _contains(encounters._table(source), id) and encounters._allows(id, source):
 			result.append("monster:" + source)
+	for encounter_id: String in VaultMonsterRewards.ENCOUNTER_SOURCES:
+		var source: String = VaultMonsterRewards.ENCOUNTER_SOURCES[encounter_id]
+		var profile := {"id": encounter_id, "version": 1, "source": source}
+		if encounters.registered_profile_valid(profile) \
+				and _contains(encounters.encounter_tables[encounter_id], id):
+			result.append(source)
 	for vendor: String in VaultMerchantCatalog.VENDORS:
 		for completed in range(3):
 			for offer: Dictionary in VaultMerchantCatalog.stock(vendor, completed):

@@ -60,7 +60,15 @@ func _run() -> void:
 		check(table.is_valid(), "Chest source validates: " + category)
 		_record_table(table, "chest:" + category)
 	var encounters := load("res://resources/loot/monster_rewards.tres") as VaultMonsterRewards
-	check(encounters.is_valid(), "Configured encounter source tables remain valid")
+	var encounter_tables_valid := encounters.is_valid()
+	for encounter_id: String in VaultMonsterRewards.ENCOUNTER_SOURCES:
+		var profile := {"id": encounter_id, "version": 1,
+			"source": VaultMonsterRewards.ENCOUNTER_SOURCES[encounter_id]}
+		var table := encounters.encounter_tables.get(encounter_id) as VaultLootTable
+		encounter_tables_valid = encounter_tables_valid and encounters.registered_profile_valid(profile)
+		if table != null:
+			_record_table(table, table.source_tag())
+	check(encounter_tables_valid, "Configured encounter source tables remain valid")
 	for source: String in VaultMonsterRewards.SOURCES:
 		_record_table(encounters._table(source), "monster:" + source, encounters)
 		var valid := true

@@ -12,6 +12,7 @@ const LEVELS := {
 	&"collection_hall": "res://scenes/world/collection_hall.tscn",
 }
 const DEPTH_POLICY = preload("res://resources/expedition/depth_policy.tres")
+const DUNGEON_CONTENT = preload("res://scripts/expedition/dungeon_content.gd")
 
 ## Set to a nonnegative value in the inspector to reproduce an expedition on Android.
 @export var debug_expedition_seed: int = -1
@@ -259,7 +260,14 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	demo_exchange.bind_game_context(player, destination, active_world)
 	# The same identity is required after binding and the next physics boundary.
 	if _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan): await get_tree().physics_frame
-	if not _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan) or not _candidate_ready_valid(next_world, issued_context, issued_plan):
+	var combat_admitted := true
+	if not issued_plan.is_empty() and _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan) \
+			and _candidate_ready_valid(next_world, issued_context, issued_plan):
+		# Native candidate floor/capsules exist now. Only its private issued
+		# registry may admit combat; callbacks still face all identity checks.
+		combat_admitted = next_world.has_method("prepare_combat_admission") and next_world.prepare_combat_admission() \
+			and next_world.has_method("combat_admission_valid") and next_world.combat_admission_valid()
+	if not combat_admitted or not _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan) or not _candidate_ready_valid(next_world, issued_context, issued_plan):
 		active_world = previous_world
 		current_location = previous_location
 		ExpeditionSession.bind_game_context(player, previous_location, previous_world)
@@ -287,7 +295,8 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	fade_in.tween_method(hud.set_transition, 1.0, 0.0, 0.25)
 	await fade_in.finished
 	if not issued_plan.is_empty() and (not _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan) \
-			or active_world != next_world or not _candidate_ready_valid(next_world, issued_context, issued_plan)):
+			or active_world != next_world or not _candidate_ready_valid(next_world, issued_context, issued_plan) \
+			or not next_world.has_method("combat_admission_valid") or not next_world.combat_admission_valid()):
 		await _restore_after_content_fade(next_world, previous_world, previous_location, previous_player_transform,
 			previous_pet, issued_generation, issued_seed, issued_context, issued_plan)
 		return
@@ -538,6 +547,8 @@ func _city_portal_admission(source: Node3D) -> Dictionary:
 				or _city_portal_route.get("depth_policy_version") != DEPTH_POLICY.policy_version:
 			return {"ok": false, "reason": "Depth rules changed. Reopen this portal to review them."}
 		var status: Dictionary = ExpeditionSession.depth_entry_status(int(_city_portal_route.expedition_depth))
+		if bool(status.ok) and not bool(DUNGEON_CONTENT.boss_pool_preview(int(status.depth)).get("available", false)):
+			return {"ok": false, "reason": "This depth's encounters are unavailable. Review the portal again."}
 		return {"ok": bool(status.ok), "reason": String(status.reason)}
 	return {"ok": true, "reason": ""}
 
@@ -577,6 +588,9 @@ func _travel_from_city_portal(reference: WeakRef, destination: StringName, entry
 		if policy_version != DEPTH_POLICY.policy_version or not bool(status.ok):
 			hud.show_message(String(status.reason) if not bool(status.ok) else "Depth rules changed. Reopen the portal.")
 			return
+		if not bool(DUNGEON_CONTENT.boss_pool_preview(depth).get("available", false)):
+			hud.show_message("This depth's encounters are unavailable. Review the portal again.")
+			return
 	change_location(destination, entry_id, -1, depth)
 
 
@@ -587,11 +601,23 @@ func _portal_information_lines(destination: StringName, depth_status: Dictionary
 		if depth_status.is_empty(): depth_status = ExpeditionSession.depth_entry_status(1)
 		var depth := int(depth_status.depth)
 		var policy: Dictionary = depth_status.policy
-		lines = ["ROOTBOUND ABYSS · Depth %d · %s" % [depth, String(policy.get("tier_label", "Not available in this build"))],
-			"%d–%d rooms · Rootwarden guards extraction · optional branches." % [int(policy.get("minimum_rooms", 0)), int(policy.get("maximum_rooms", 0))] if not policy.is_empty() else "Your saved unlock is preserved. No dungeon is configured for this depth.",
+		# This is an eligible pool, never a fabricated selected run or seed.
+		var preview: Dictionary = DUNGEON_CONTENT.boss_pool_preview(depth)
+		var possible: PackedStringArray = []
+		for entry: Dictionary in preview.get("required", []): possible.append(String(entry.label))
+		var boss_line := "Possible bosses: " + " · ".join(possible)
+		if not bool(preview.get("available", false)):
+			boss_line = "Your saved unlock is preserved. Encounters are unavailable for this depth."
+		var extras: PackedStringArray = []
+		if bool(preview.get("available", false)):
+			if bool(preview.get("stronger_eligible", false)): extras.append("Ascendant variant possible")
+			if bool(preview.get("optional_eligible", false)): extras.append("optional champion possible")
+		var eligibility := " · ".join(extras) if not extras.is_empty() else "Existing item drop tables"
+		lines = ["ROOTBOUND ABYSS · Depth %d · %s · %d–%d rooms" % [depth, String(policy.get("tier_label", "Not available in this build")), int(policy.get("minimum_rooms", 0)), int(policy.get("maximum_rooms", 0))],
+			boss_line,
 			"Health ×%.2f · Damage ×%.2f · Encounter DM / extraction XP ×%.2f" % [float(policy.get("health_multiplier", 1)), float(policy.get("damage_multiplier", 1)), float(policy.get("reward_multiplier", 1))],
 			"Defeat the boss and extract to unlock the next depth. Loss forfeits unsecured finds.",
-			"Highest unlocked: %d · This build: 1–%d · Existing item drop tables." % [int(depth_status.highest_unlocked_depth), DEPTH_POLICY.supported_maximum_depth],
+			"Highest unlocked: %d · Build: 1–%d · %s." % [int(depth_status.highest_unlocked_depth), DEPTH_POLICY.supported_maximum_depth, eligibility],
 			"Seed on entry · Modifiers not known before generation · Root hazards, awareness, mixed foes."]
 		if debug_expedition_seed >= 0: lines[5] = "Developer seed: %d · layout and modifiers are generated on entry." % debug_expedition_seed
 	elif destination == &"combat_arena":

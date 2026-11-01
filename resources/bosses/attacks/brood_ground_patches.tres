@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="VaultBossAttackDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/enemies/boss_attack_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"brood_ground_patches"
+controller_family = &"brood_keeper"
+shape = &"circle"
+damage_kind = &"magic"
+warning_time = 1.8
+active_time = 0.65
+recovery_time = 1.5
+damage = 14.0
+stagger = 0.0
+parameters = {"radius": 1.35, "count": 2}

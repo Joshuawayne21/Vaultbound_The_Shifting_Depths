@@ -47,7 +47,7 @@ func activate_room(id: int) -> void:
 	if not spawned.has(id):
 		spawned[id] = true
 		var room: Dictionary = layout.rooms[id]
-		if room.kind in [&"combat", &"trap"]:
+		if room.kind in [&"combat", &"trap"] and (not _level.has_method("optional_room_reserved") or not _level.optional_room_reserved(id)):
 			_spawn_initial(id)
 	_refresh_activity()
 
@@ -75,19 +75,25 @@ func _spawn_initial(id: int) -> void:
 		_spawn(id, archetype, points[index], elite, 1.0 + minf(0.2, room.depth * 0.025))
 	encounter_started.emit(id)
 
-func _spawn(room_id: int, archetype: StringName, local_point: Vector3, elite: bool, strength: float = 1.0) -> Node3D:
+func _spawn(room_id: int, archetype: StringName, local_point: Vector3, elite: bool, strength: float = 1.0,
+		support_receipt: String = "", owner_receipt: String = "") -> Node3D:
 	if _depth_policy.is_empty() or not rooms.has(room_id) or not ENEMIES.has(archetype):
 		return null
+	if not support_receipt.is_empty() and (_level.scheduler == null \
+			or not _level.scheduler.support_spawn_authorized(owner_receipt, support_receipt, room_id, local_point)): return null
+	for record: Dictionary in _registered_actors.values():
+		if not support_receipt.is_empty() and record.receipt == support_receipt: return null
 	var enemy := ENEMIES[archetype].instantiate() as Node3D
 	var data: Resource = enemy.data.duplicate(true)
 	var descriptor: Dictionary = {}
 	if not _content_plan.is_empty():
-		descriptor = Content.source_descriptor(_content_plan, String(archetype), "elite" if elite else "none")
+		var definition_id := String(archetype) if support_receipt.is_empty() else "rootbound_boss_defender"
+		descriptor = Content.source_descriptor(_content_plan, definition_id, "elite" if elite else "none")
 		if descriptor.is_empty():
 			enemy.free()
 			return null
-		for key: String in _content_plan.encounters[String(archetype)].data:
-			data.set(key, _content_plan.encounters[String(archetype)].data[key])
+		for key: String in _content_plan.encounters[definition_id].data:
+			data.set(key, _content_plan.encounters[definition_id].data[key])
 	data.max_health *= float(_depth_policy.health_multiplier) * strength * (1.3 if elite else 1.0)
 	data.damage *= float(_depth_policy.damage_multiplier) * strength * (1.15 if elite else 1.0)
 	data.leash_radius = 8.5
@@ -103,12 +109,13 @@ func _spawn(room_id: int, archetype: StringName, local_point: Vector3, elite: bo
 	enemy.set_meta("elite", elite)
 	var ordinal := int(_spawn_ordinals.get(room_id, 0))
 	_spawn_ordinals[room_id] = ordinal + 1
-	var receipt := "enemy_room_%d_spawn_%d" % [room_id, ordinal]
+	var receipt := "enemy_room_%d_spawn_%d" % [room_id, ordinal] if support_receipt.is_empty() else support_receipt
 	enemy.set_meta("loot_receipt", receipt)
 	# Metadata is a presentation/debug hint. Identity and reward source come from
 	# this spawn registry, so a foreign actor or repeated died signal grants nothing.
 	_registered_actors[enemy.get_instance_id()] = {"actor": weakref(enemy), "receipt": receipt,
-		"room_id": room_id, "archetype": String(archetype), "elite": elite, "descriptor": descriptor.duplicate(true)}
+		"room_id": room_id, "archetype": String(archetype), "elite": elite, "descriptor": descriptor.duplicate(true),
+		"owner_encounter_receipt": owner_receipt}
 	enemy.position = local_point + Vector3.UP * 0.15
 	if not _content_plan.is_empty(): enemy.combat_active = false
 	rooms[room_id].add_child(enemy)
@@ -118,6 +125,22 @@ func _spawn(room_id: int, archetype: StringName, local_point: Vector3, elite: bo
 	enemy.died.connect(_on_enemy_died)
 	if not _content_plan.is_empty(): _refresh_activity()
 	return enemy
+
+func spawn_boss_support(room_id: int, point: Vector3, receipt: String, owner_receipt: String) -> Node3D:
+	return _spawn(room_id, &"skeleton", point, false, 1.0, receipt, owner_receipt)
+
+func discard_boss_support(actor: Node3D, owner_receipt: String) -> void:
+	var record := _actor_record(actor)
+	if record.is_empty() or record.get("owner_encounter_receipt", "") != owner_receipt or owner_receipt.is_empty(): return
+	_set_active(actor, false)
+	actor.velocity = Vector3.ZERO
+	if actor.died.is_connected(_on_enemy_died): actor.died.disconnect(_on_enemy_died)
+	_registered_actors.erase(actor.get_instance_id())
+	actors_by_room[int(record.room_id)].erase(actor)
+	actor.queue_free()
+
+func support_owner_receipt(actor: Node3D) -> String:
+	return String(_actor_record(actor).get("owner_encounter_receipt", ""))
 
 func spawn_patrol(room_id: int, elite: bool = false) -> bool:
 	if active_enemy_count() >= MAX_ACTIVE_ENEMIES or not rooms.has(room_id):
@@ -175,6 +198,9 @@ func _refresh_activity() -> void:
 		for enemy: Node3D in actors_by_room[id]:
 			if not is_instance_valid(enemy) or enemy.health <= 0.0:
 				continue
+			if not support_owner_receipt(enemy).is_empty():
+				_set_active(enemy, _level.scheduler != null and _level.scheduler.support_active(enemy))
+				continue
 			var near_room: bool = not suspended_for_boss and (id == current_room_id or layout.rooms[current_room_id].neighbors.has(id))
 			if near_room and enemy.global_position.distance_to(player.global_position) < 25.0:
 				candidates.append(enemy)
@@ -207,6 +233,9 @@ func _on_enemy_died(enemy: Node3D) -> void:
 	if record.is_empty() or _defeated_receipts.has(record.receipt):
 		return
 	_defeated_receipts[record.receipt] = true
+	if not String(record.get("owner_encounter_receipt", "")).is_empty():
+		# Boss defenders are actual enemies, but not independent reward sources.
+		return
 	var id := int(record.room_id)
 	var alive := false
 	for actor: Node3D in actors_by_room.get(id, []):
@@ -224,7 +253,7 @@ func death_record(enemy: Node3D) -> Dictionary:
 		"archetype": record.archetype, "elite": record.elite}
 	if not record.get("descriptor", {}).is_empty():
 		result.merge(record.descriptor.duplicate(true))
-		result["owner_encounter_receipt"] = ""
+		result["owner_encounter_receipt"] = String(record.get("owner_encounter_receipt", ""))
 	return result
 
 func owns_live_actor(enemy: Node3D) -> bool:
@@ -257,6 +286,12 @@ func active_enemy_count() -> int:
 		for actor: Node3D in actors:
 			if is_instance_valid(actor) and actor.health > 0.0 and actor.combat_active:
 				count += 1
+	return count
+
+func active_ordinary_count() -> int:
+	var count := 0
+	for actor: Node3D in all_actors():
+		if float(actor.health) > 0.0 and bool(actor.combat_active) and support_owner_receipt(actor).is_empty(): count += 1
 	return count
 
 func all_actors() -> Array[Node3D]:

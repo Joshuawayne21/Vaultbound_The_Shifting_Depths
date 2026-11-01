@@ -29,10 +29,13 @@ func _process(delta: float) -> void:
 	var ready: bool = _current() and ExpeditionSession.boss_defeated
 	_material.albedo_color = Color("8ee8b9") if ready else Color("405b65")
 	_material.emission = _material.albedo_color
-	_label.text = "EXTRACT & SECURE LOOT" if ready else "DEFEAT THE ROOTWARDEN"
+	_label.text = "EXTRACT & SECURE LOOT" if ready else "DEFEAT " + _required_name().to_upper()
 
 func get_prompt() -> String:
-	return "Extract & secure expedition rewards" if _current() and ExpeditionSession.boss_defeated else "Extraction sealed · defeat the Rootwarden"
+	return "Extract & secure expedition rewards" if _current() and ExpeditionSession.boss_defeated else "Extraction sealed · defeat " + _required_name()
+
+func _required_name() -> String:
+	return level.required_boss_label() if is_instance_valid(level) and level.has_method("required_boss_label") else "the Rootwarden"
 
 func _current() -> bool:
 	return is_instance_valid(level) and int(level.run_generation) == _generation and level.run_source_context_valid()
@@ -43,7 +46,7 @@ func can_interact(player: Node3D) -> bool:
 func interact(player: Node3D) -> void:
 	if not can_interact(player): return
 	if not ExpeditionSession.boss_defeated:
-		ExpeditionSession.notice.emit("The Rootwarden binds this exit. Defeat it to extract.")
+		ExpeditionSession.notice.emit(_required_name() + " binds this exit. Defeat it to extract.")
 		return
 	_committing = true
 	var accepted: bool = ExpeditionSession.extract()

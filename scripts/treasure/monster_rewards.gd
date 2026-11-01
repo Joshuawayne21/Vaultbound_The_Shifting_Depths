@@ -6,10 +6,14 @@ extends Resource
 const SOURCES := ["basic", "stronger", "elite", "boss"]
 const DEPTH_POLICY = preload("res://resources/expedition/depth_policy.tres")
 const REGISTERED_SOURCES := {"enemy_basic": "basic", "enemy_stronger": "stronger", "enemy_elite": "elite", "rootwarden_legacy": "boss"}
+const ENCOUNTER_SOURCES := {"thornmarshal": "encounter:thornmarshal", "mycelial_cantor": "encounter:mycelial_cantor", "root_bark_champion": "encounter:root_bark_champion"}
+const ROOTWARDEN_EXCLUSIVE := ["rootwarden_heart", "rootwarden_essence", "verdant_oathblade", "vaultheart_staff"]
 @export var basic_table: VaultLootTable
 @export var stronger_table: VaultLootTable
 @export var elite_table: VaultLootTable
 @export var boss_table: VaultLootTable
+## Explicit actual encounter sources; never fall back to the Rootwarden table.
+@export var encounter_tables: Dictionary = {}
 @export var currency_ranges: Dictionary = {
 	"basic": Vector2i(4, 8), "stronger": Vector2i(8, 18),
 	"elite": Vector2i(25, 50), "boss": Vector2i(120, 250),
@@ -112,14 +116,47 @@ func roll_registered(seed_value: int, receipt: String, source_profile: Dictionar
 		room_distance: int, issued_depth_policy: Dictionary) -> Dictionary:
 	# Session supplies an identity resolved from its admitted content registry.
 	# This adapter cannot redirect a generic boss to the Rootwarden table.
-	if source_profile.size() != 3 or not source_profile.get("id") is String \
-			or not source_profile.get("version") is int or source_profile.version != 1 \
-			or not REGISTERED_SOURCES.has(source_profile.id) or source_profile.get("source") != REGISTERED_SOURCES[source_profile.id]:
+	if not registered_profile_valid(source_profile):
 		return {}
 	var depth: Variant = issued_depth_policy.get("expedition_depth")
 	if not depth is int:
 		return {}
-	return roll_for_depth(seed_value, receipt, String(source_profile.source), room_distance, int(depth), issued_depth_policy)
+	if REGISTERED_SOURCES.has(source_profile.id):
+		return roll_for_depth(seed_value, receipt, String(source_profile.source), room_distance, int(depth), issued_depth_policy)
+	if receipt.is_empty() or receipt.length() > 160 or room_distance < 0 or not VaultDepthPolicy.valid_snapshot(issued_depth_policy, int(depth)):
+		return {}
+	var table: VaultLootTable = encounter_tables[source_profile.id]
+	var reward := table.roll(seed_value ^ int(String(source_profile.source).hash()), receipt)
+	if reward.is_empty():
+		return {}
+	var previous := int(reward.gold)
+	reward.gold = roundi(previous * float(issued_depth_policy.reward_multiplier))
+	reward.value = int(reward.value) + int(reward.gold) - previous
+	return reward
+
+func registered_profile_valid(source_profile: Dictionary) -> bool:
+	if source_profile.size() != 3 or not source_profile.get("id") is String \
+			or not source_profile.get("version") is int or source_profile.version != 1:
+		return false
+	var id: String = source_profile.id
+	if REGISTERED_SOURCES.has(id):
+		return source_profile.get("source") == REGISTERED_SOURCES[id] and is_valid()
+	if not ENCOUNTER_SOURCES.has(id) or source_profile.get("source") != ENCOUNTER_SOURCES[id] \
+			or not encounter_tables.get(id) is VaultLootTable:
+		return false
+	var table: VaultLootTable = encounter_tables[id]
+	if table.source_tag() != ENCOUNTER_SOURCES[id] or not table.is_valid() or table.gold_max > 1000000 \
+			or String(table.category) != ("reinforced" if id == "root_bark_champion" else "boss"):
+		return false
+	var all_items: Array[VaultItemDefinition] = table.entries.duplicate()
+	all_items.append_array(table.guaranteed_items)
+	if table.guaranteed_item != null:
+		all_items.append(table.guaranteed_item)
+	for item: VaultItemDefinition in all_items:
+		if item.category == "gold" or String(item.id) in ROOTWARDEN_EXCLUSIVE \
+				or not VaultInventory.definition_available(item):
+			return false
+	return true
 
 func _allows(item_id: String, source: String) -> bool:
 	var definition := VaultLootTable.item_for(item_id)

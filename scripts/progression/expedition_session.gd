@@ -278,18 +278,21 @@ func complete_encounter(world: Node3D, enemy: Node3D, generation: int) -> Dictio
 	var next_encounters := _pending_encounters.duplicate(true)
 	var required_objective := kind == "boss"
 	var discovery := "rootwarden" if kind == "boss" else String(record.archetype)
+	var presentation_id := ""
 	if not _issued_content_plan.is_empty():
 		var descriptor := _content_source(record)
 		if descriptor.is_empty():
 			return rejected
 		required_objective = descriptor.objective_role == "required"
 		discovery = String(descriptor.discovery_id)
+		if EncounterRewards.ENCOUNTER_SOURCES.has(descriptor.encounter_definition_id):
+			presentation_id = String(descriptor.encounter_definition_id)
 		var reward_profile: Dictionary = _issued_content_plan.reward_profiles.get(descriptor.reward_profile_id, {})
 		var pet_profile: Dictionary = _issued_content_plan.pet_profiles.get(descriptor.pet_profile_id, {})
 		reward = EncounterRewards.roll_registered(run_seed, String(record.receipt), reward_profile, int(record.depth), _issued_depth.policy)
 		findings = PetCatalog.findings_for_encounter(run_seed, String(record.receipt), pet_profile)
 		if String(descriptor.encounter_definition_id) in EncounterProgress.Ids.JOURNAL_IDS:
-			next_encounters = EncounterProgress.append_pending(_pending_encounters, String(record.receipt), String(descriptor.encounter_definition_id), String(_issued_content_plan.theme_id), int(_issued_depth.expedition_depth))
+			next_encounters = EncounterProgress.append_source_pending(_pending_encounters, String(record.receipt), String(descriptor.encounter_definition_id), String(descriptor.variant_id), String(_issued_content_plan.theme_id), int(_issued_depth.expedition_depth))
 			if next_encounters.is_empty():
 				return rejected
 	else:
@@ -300,7 +303,7 @@ func complete_encounter(world: Node3D, enemy: Node3D, generation: int) -> Dictio
 	if validated.is_empty() or pending.is_empty() or _claimed.has(String(record.receipt)):
 		return rejected
 	var merge_id := _loot_ledger.merge_candidate(int(record.room_id), record.drop_position, validated) if kind == "regular" else ""
-	var result := _loot_ledger.register(validated, int(record.room_id), record.drop_position, kind, merge_id)
+	var result := _loot_ledger.register(validated, int(record.room_id), record.drop_position, kind, merge_id, presentation_id)
 	if not bool(result.get("ok", false)):
 		return rejected
 	# Every consequence of this exact death is installed before observers run.
@@ -313,6 +316,9 @@ func complete_encounter(world: Node3D, enemy: Node3D, generation: int) -> Dictio
 		kills += 1
 	if discovery in ["skeleton", "archer", "golem", "rootwarden"]:
 		_run_monsters[discovery] = true
+	elif kind != "boss" and String(record.archetype) in ["skeleton", "archer", "golem"]:
+		# A named optional elite still discovers its actual existing species.
+		_run_monsters[String(record.archetype)] = true
 	loot_changed.emit()
 	if run_context_valid(world, generation):
 		_emit_changed()
@@ -515,7 +521,7 @@ func mark_boss_defeated() -> void:
 func extract() -> bool:
 	var generation := run_generation
 	if not active or not boss_defeated:
-		notice.emit("Defeat the Rootwarden to awaken the extraction spring.")
+		notice.emit("Defeat %s to awaken the extraction spring." % _issued_boss_label())
 		return false
 	var next := profile.duplicate(true)
 	var completed_depth := DepthProgress.complete(next.depth_progression, int(_issued_depth.get("expedition_depth", 0)), _issued_depth.get("policy", {}))

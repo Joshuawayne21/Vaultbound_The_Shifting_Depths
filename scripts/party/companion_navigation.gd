@@ -647,7 +647,7 @@ func select_danger_escape() -> Vector3:
 	for point: Vector3 in candidates.slice(0, 12):
 		var grounded := _sample_floor(point)
 		if not grounded.is_finite() or not _body_clear(grounded) or _danger_cost(grounded) > 0.0: continue
-		if _segment_clear(start, grounded) and not _crosses_danger(start, grounded):
+		if _segment_clear(start, grounded) and not _crosses_danger(start, grounded) and danger_body_path_clear(start, grounded):
 			# The normal 0.65s route budget still owns subsequent replans. Replace
 			# this stale leg immediately only at the brain's paid decision edge.
 			path = PackedVector3Array([grounded])
@@ -666,7 +666,37 @@ func danger_roll_safe(direction: Vector3, distance: float) -> bool:
 	var destination := start + Vector3(direction.x, 0, direction.z).normalized() * distance
 	var grounded := _sample_floor(destination)
 	return grounded.is_finite() and _body_clear(grounded) and _danger_cost(grounded) <= 0.0 \
-		and _segment_clear(start, grounded) and not _crosses_danger(start, grounded)
+		and _segment_clear(start, grounded) and not _crosses_danger(start, grounded) and danger_body_path_clear(start, grounded)
+
+func danger_body_path_clear(from: Vector3, to: Vector3) -> bool:
+	# Static floor/prop queries remain shared and cached. Typed danger exits also
+	# need a current physical sweep: an otherwise safe point can be behind the
+	# boss's body. Only the paid decision/full-roll probes query moving bodies.
+	if not _valid_context() or not from.is_finite() or not to.is_finite(): return false
+	var mask := actor.collision_mask & ~1
+	if mask == 0: return true
+	var body := actor.get_node_or_null("CollisionShape3D") as CollisionShape3D
+	if body == null or body.disabled or body.shape == null: return false
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = body.shape
+	query.collision_mask = mask
+	query.collide_with_areas = false
+	query.margin = 0.0
+	query.exclude = [actor.get_rid()]
+	var start_transform := body.global_transform
+	start_transform.origin += from - actor.global_position
+	query.transform = start_transform
+	var space := actor.get_world_3d().direct_space_state
+	geometry_probe_count += 1
+	if not space.intersect_shape(query, 1).is_empty(): return false
+	query.transform.origin += to - from
+	geometry_probe_count += 1
+	if not space.intersect_shape(query, 1).is_empty(): return false
+	query.transform = start_transform
+	query.motion = to - from
+	geometry_probe_count += 1
+	var swept := space.cast_motion(query)
+	return swept.size() == 2 and swept[0] >= 1.0
 
 func _track_progress(destination: Vector3, delta: float) -> void:
 	_progress_elapsed += delta

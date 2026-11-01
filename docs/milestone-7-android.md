@@ -44,6 +44,49 @@ Apply these checks only to a validated 7D.1 checkpoint. This integration batch s
 
 The [content integration guide](dungeon-content.md) describes source-bound rewards, save compatibility and the shared event budget. New explicit hazard shapes and guarded boss projectiles require their later encounter producers before players can exercise those new mechanics in ordinary play.
 
+## 7D.2 first playable boss batch
+
+The [7D.2 headless gate](milestone-7d2-validation.md) passed; these physical-device
+checks remain required. See the [encounter guide](rootbound-encounters.md) for
+the implemented scope and initial selection
+rules; other themes, hives, hordes, Ancient encounters and early extraction remain
+later work.
+
+1. Preserve a backed-up profile and confirm Depth 1 still selects Rootwarden.
+   At Depth 2 or higher, compare the portal's possible-boss list with the actual
+   dungeon objective. Record seed, depth, boss and variant when reporting issues.
+2. Fight Thornmarshal in both camera modes. Check the cleave's frontal sector,
+   the locked charge lane and the stomp ring. Walk near arena scenery and verify
+   that the charge stops safely and does not damage outside its marked path.
+   Switch cameras during warnings, active attacks and phase transitions.
+3. Fight Cantor with Guardian and Mystic. Confirm its two patches remain readable
+   above floor trim, leave escape space, and do not retarget after warning.
+   Watch the full defender channel. Defenders must appear away from every party
+   member; blocked sockets may yield fewer or no defenders. The boss should
+   pause damaging casts while its defenders are alive.
+4. At Depth 6 or higher, check an Ascendant Thornmarshal and an optional Champion
+   when selected. Each extra stomp needs its own warning. The Champion's bar must
+   say optional, and defeating it must not unlock final extraction. Verify the
+   required objective remains visible and accurate afterward.
+5. Search each new encounter's cache, take its rewards and extract. Check its own
+   cache label, one currency transfer and no repeated reward on reopening. Close
+   the application fully and check equipment, DM and depth unlocks. New encounter
+   records currently require read-only inspection of the local
+   `user://vaultbound/profile.json`; their Hall/journal interface is pending 7G.
+   A failed run must leave previously secured possessions intact.
+6. With both companions recruited, watch actual dodge/path reactions, healing
+   and attack continuity. Cross room boundaries during a warning and return;
+   canceled attacks must not hit immediately on reentry. Check that disappearing
+   support actors do not award a second reward.
+7. At 100%, 110% and 120% UI scale, trigger treasure notices and a downed teammate
+   during a boss fight. Boss bars, revive prompts, notices and touch controls
+   must remain readable without overlapping. Queued rare-item discovery cards
+   should appear after the active boss bar clears.
+8. Repeat a complete encounter on Low, Medium and High, with reduced effects on
+   and off. Check warning visibility, native prototype silhouettes, animation
+   attachments, frame-time spikes, warmth and battery use. No headless result
+   substitutes for these physical-device observations.
+
 ## Capture performance and visual evidence
 
 Record at least ten minutes covering plaza/perimeter traversal, crowded district views, portals, combat and a representative dungeon. Compare cold start and warmed-up play; note frame-time spikes, thermal throttling, touch comfort and battery drain. Use the metrics display/profiler where available. Native mesh counts and cloud CPU timings cannot establish device FPS.
@@ -54,4 +97,4 @@ Record at least ten minutes covering plaza/perimeter traversal, crowded district
 
 Attach actual screenshots or a short recording for visual issues. Label any desktop software-rendered capture accurately; it is not Android evidence. **30 FPS** and optional **60 FPS** remain device goals until verified.
 
-Run only the checks applicable to the downloaded checkpoint. New biomes/bosses/recruits, genetics, Veilgarden and Frontier require their own stage-specific tests when implemented. Their presence in the [plan](milestone-7-plan.md) does not make them available in 7B, 7C or 7D.1.
+Run only the checks applicable to the downloaded checkpoint. Further biomes/bosses/recruits, genetics, Veilgarden and Frontier require their own stage-specific tests when implemented. Their presence in the [plan](milestone-7-plan.md) does not make them available in 7B, 7C or 7D.1.

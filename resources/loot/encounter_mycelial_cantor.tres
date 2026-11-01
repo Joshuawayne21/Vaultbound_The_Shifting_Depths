@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="VaultLootTable" load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/loot_table.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="2"]
+[ext_resource type="Resource" path="res://resources/items/glow_spore.tres" id="3"]
+[ext_resource type="Resource" path="res://resources/items/emerald_dust.tres" id="4"]
+[ext_resource type="Resource" path="res://resources/items/mooncap_tonic.tres" id="5"]
+[ext_resource type="Resource" path="res://resources/items/sunfruit_elixir.tres" id="6"]
+[ext_resource type="Resource" path="res://resources/items/runic_staff.tres" id="7"]
+[ext_resource type="Resource" path="res://resources/items/emerald_pendant.tres" id="8"]
+[ext_resource type="Resource" path="res://resources/items/rootstep_boots.tres" id="9"]
+[ext_resource type="Resource" path="res://resources/items/common_enhancement_stone.tres" id="10"]
+[ext_resource type="Resource" path="res://resources/items/resonant_root_sap.tres" id="11"]
+[ext_resource type="Resource" path="res://resources/items/ancient_shard.tres" id="12"]
+
+[resource]
+script = ExtResource("1")
+category = &"boss"
+label = "Mycelial Cantor Reliquary"
+gold_min = 120
+gold_max = 250
+minimum_rolls = 3
+maximum_rolls = 4
+entries = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12")])
+weights = PackedFloat32Array(18, 18, 14, 8, 14, 4, 8, 12, 3, 1)
+guaranteed_item = ExtResource("10")
+reward_source = "encounter:mycelial_cantor"

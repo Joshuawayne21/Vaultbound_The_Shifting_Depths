@@ -76,7 +76,7 @@ func _run() -> void:
 
 func _candidate_entered(candidate: Node) -> void:
 	if candidate.get_script() == null or candidate.get_script().resource_path != "res://scripts/expedition/abyss_level.gd": return
-	if fault in ["late_plan", "late_replacement", "late_extract"]:
+	if fault in ["late_plan", "late_registry", "late_replacement", "late_extract"]:
 		var late_mode := fault
 		fault = ""
 		_inject_final_fade.call_deferred(weakref(candidate), late_mode)
@@ -124,6 +124,7 @@ func _inject_final_fade(reference: WeakRef, selected: String) -> void:
 		"Fault injection reaches the actual final fade after world/player/party installation"): return
 	fault_count += 1
 	if selected == "late_plan": candidate._content_plan.theme.display_name = "Late candidate identity fault"
+	elif selected == "late_registry": candidate._combat_admission_ready = false
 	elif selected == "late_replacement":
 		session.fail_run("abandoned")
 		check(session.begin_content_run(SEED, 1), "Final-fade callback issues a newer same-seed Session")
@@ -162,6 +163,12 @@ func _late_final_failures() -> void:
 		and safe_world.find_children("CosmeticPet", "Node3D", true, false).size() == 1, "Final-fade recovery reuses the original cosmetic pet without duplication")
 	await _open_gate()
 	game.hud.close_modals()
+	fault = "late_registry"
+	count_before = fault_count
+	await game.start_expedition(SEED, 1)
+	check(fault_count == count_before + 1, "Final-fade fixture invalidates the actual prepared combat registry")
+	_safe_failure("Final-fade physical-admission mutation")
+	check(game._pet_presenter == original_pet and game.party.world == safe_world, "Registry rollback retains existing cosmetic pet and actual party world")
 	fault = "late_replacement"
 	await game.start_expedition(SEED, 1)
 	check(game.active_world == safe_world and game.current_location == &"sanctuary" and not game.transitioning, "Final-fade Session replacement restores the retained Sanctuary")

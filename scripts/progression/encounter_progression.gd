@@ -41,6 +41,21 @@ static func normalize(value: Variant, revision: int) -> Dictionary:
 		result.entries[id] = {"discovered_before_tracking": bool(entry.discovered_before_tracking),
 			"secured_defeats": int(entry.secured_defeats), "highest_recorded_depth": int(entry.highest_recorded_depth),
 			"first_recorded_revision": int(entry.first_recorded_revision), "first_recorded_utc": int(entry.first_recorded_utc)}
+	# Variant observations are subsets, not additional boss identities or kills.
+	# Validate after the whole map so dictionary order cannot change acceptance.
+	for id: String in Ids.VARIANT_JOURNAL:
+		if not result.entries.has(id):
+			continue
+		var observation: Dictionary = result.entries[id]
+		var base_id: String = Ids.VARIANT_JOURNAL[id].encounter_definition_id
+		if not result.entries.has(base_id):
+			return {}
+		var base: Dictionary = result.entries[base_id]
+		if observation.discovered_before_tracking or observation.secured_defeats < 1 \
+				or observation.secured_defeats > base.secured_defeats \
+				or observation.highest_recorded_depth > base.highest_recorded_depth \
+				or observation.first_recorded_revision < base.first_recorded_revision:
+			return {}
 	result.themes.sort()
 	return result
 
@@ -88,6 +103,26 @@ static func preservation_error(raw: Dictionary) -> String:
 	return ""
 
 static func append_pending(pending: Dictionary, receipt: String, definition_id: String, theme_id: String, depth: int) -> Dictionary:
+	if Ids.VARIANT_JOURNAL.has(definition_id):
+		return {}
+	return _append_record(pending, receipt, definition_id, theme_id, depth)
+
+static func append_source_pending(pending: Dictionary, receipt: String, definition_id: String,
+		variant_id: String, theme_id: String, depth: int) -> Dictionary:
+	# Session calls this only after actual registered death admission. Planning
+	# both observations here neither grants a second reward nor installs state.
+	var next := append_pending(pending, receipt, definition_id, theme_id, depth)
+	if next.is_empty():
+		return {}
+	for journal_id: String in Ids.VARIANT_JOURNAL:
+		var variant: Dictionary = Ids.VARIANT_JOURNAL[journal_id]
+		if variant.encounter_definition_id == definition_id and variant.variant_id == variant_id:
+			next = _append_record(next, receipt + ":variant:" + variant_id, journal_id, theme_id, depth)
+			if next.is_empty():
+				return {}
+	return next
+
+static func _append_record(pending: Dictionary, receipt: String, definition_id: String, theme_id: String, depth: int) -> Dictionary:
 	if receipt.is_empty() or receipt.length() > 160 or pending.has(receipt) or definition_id not in Ids.JOURNAL_IDS \
 			or theme_id not in Ids.THEME_IDS or depth < 1 or depth > MAX_DEPTH:
 		return {}
@@ -98,7 +133,7 @@ static func append_pending(pending: Dictionary, receipt: String, definition_id: 
 static func secure(profile: Dictionary, pending: Dictionary, recorded_utc: int) -> Dictionary:
 	var current_revision := int(profile.get("revision", 0))
 	var result := normalize(profile.get("encounter_records"), current_revision)
-	if result.is_empty() or current_revision >= MAX_COUNT:
+	if result.is_empty() or current_revision >= MAX_COUNT or not _variant_pairs_valid(pending):
 		return {}
 	var next_revision := current_revision + 1
 	var timestamp := recorded_utc if recorded_utc >= 0 and recorded_utc <= MAX_UTC else 0
@@ -124,6 +159,24 @@ static func secure(profile: Dictionary, pending: Dictionary, recorded_utc: int) 
 			result.themes.append(source.theme_id)
 	result.themes.sort()
 	return normalize(result, next_revision)
+
+static func _variant_pairs_valid(pending: Dictionary) -> bool:
+	for receipt: Variant in pending:
+		var source: Variant = pending[receipt]
+		if not receipt is String or not source is Dictionary:
+			return false
+		var id: Variant = source.get("encounter_definition_id")
+		if not id is String or not Ids.VARIANT_JOURNAL.has(id):
+			continue
+		var variant: Dictionary = Ids.VARIANT_JOURNAL[id]
+		var suffix := ":variant:" + String(variant.variant_id)
+		if not receipt.ends_with(suffix):
+			return false
+		var base: Variant = pending.get(receipt.trim_suffix(suffix))
+		if not base is Dictionary or base.get("encounter_definition_id") != variant.encounter_definition_id \
+				or base.get("theme_id") != source.get("theme_id") or base.get("depth") != source.get("depth"):
+			return false
+	return true
 
 static func _integer(value: Variant, minimum: int, maximum: int) -> bool:
 	return (value is int or value is float) and is_finite(float(value)) and float(value) == floor(float(value)) and float(value) >= minimum and float(value) <= maximum

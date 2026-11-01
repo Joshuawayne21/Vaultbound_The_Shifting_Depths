@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="VaultBossDefinition" load_steps=8 format=3]
+[ext_resource type="Script" path="res://scripts/enemies/boss_definition.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/bosses/sentinel.tscn" id="2"]
+[ext_resource type="Resource" path="res://resources/bosses/attacks/sentinel_cleave.tres" id="a0"]
+[ext_resource type="Resource" path="res://resources/bosses/attacks/sentinel_charge.tres" id="a1"]
+[ext_resource type="Resource" path="res://resources/bosses/attacks/sentinel_stomp.tres" id="a2"]
+[ext_resource type="Script" path="res://scripts/enemies/boss_attack_definition.gd" id="attack_script"]
+[sub_resource type="Resource" id="ascendant_stomp"]
+script = ExtResource("attack_script")
+id = &"sentinel_stomp"
+controller_family = &"sentinel"
+shape = &"circle"
+warning_time = 1.7
+active_time = 0.18
+recovery_time = 1.6
+damage = 18.0
+stagger = 0.25
+parameters = {"radius": 3.0, "count": 1}
+[resource]
+script = ExtResource("1")
+id = &"thornmarshal"
+display_name = "Thornmarshal"
+controller_family = &"sentinel"
+scene = ExtResource("2")
+available = true
+content_version = 2
+arena_profile_id = &"rootbound_sentinel_arena"
+reward_profile_id = &"thornmarshal"
+discovery_id = &"thornmarshal"
+visual_profile_id = &"thornmarshal"
+allowed_variant_ids = Array[StringName]([&"none", &"ascendant_pattern"])
+stats = {"max_health": 492.80000000000007, "armor": 0.08, "move_speed": 1.8, "detection_range": 11.0, "leash_radius": 12.0, "movement_radius": 4.5, "phase_threshold": 0.4, "phase_transition_time": 1.6}
+phase_one_patterns = Array[StringName]([&"sentinel_cleave", &"sentinel_charge", &"sentinel_stomp"])
+phase_two_patterns = Array[StringName]([&"sentinel_charge", &"sentinel_cleave", &"sentinel_stomp", &"sentinel_cleave", &"sentinel_stomp"])
+attacks = Array[ExtResource("attack_script")]([ExtResource("a0"), ExtResource("a1"), SubResource("ascendant_stomp")])
