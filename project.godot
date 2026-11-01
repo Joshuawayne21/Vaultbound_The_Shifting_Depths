@@ -1,10 +1,10 @@
-; Vaultbound: The Shifting Depths — milestone 7C dungeon depth progression.
+; Vaultbound: The Shifting Depths — milestone 7D.1 registered dungeon encounters.
 ; Import this file with Godot 4.6.3 (Compatibility renderer).
 config_version=5
 
 [application]
 config/name="Vaultbound: The Shifting Depths"
-config/version="0.7.0-7c"
+config/version="0.7.0-7d1"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://assets/icon.svg"

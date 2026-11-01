@@ -15,6 +15,8 @@ const PetProgress = preload("res://scripts/pets/pet_progression.gd")
 const PetCatalog = preload("res://scripts/pets/pet_catalog.gd")
 const EncounterRewards = preload("res://resources/loot/monster_rewards.tres")
 const DepthProgress = preload("res://scripts/progression/depth_progression.gd")
+const EncounterProgress = preload("res://scripts/progression/encounter_progression.gd")
+const Content = preload("res://scripts/expedition/dungeon_content.gd")
 
 var store := VaultProfileStore.new()
 var profile: Dictionary = VaultProfileStore.empty_profile()
@@ -50,6 +52,8 @@ var _pet_quotes: Dictionary = {}
 var _encounter_sources: Dictionary = {}
 var _issued_depth: Dictionary = {}
 var _configured_depth_run := false
+var _issued_content_plan: Dictionary = {}
+var _pending_encounters: Dictionary = {}
 
 func _ready() -> void:
 	profile = store.load_profile()
@@ -102,7 +106,13 @@ func issued_run_context() -> Dictionary:
 func begin_depth_run(seed_value: int, depth: int) -> bool:
 	return _begin_depth_run(seed_value, depth, true)
 
-func _begin_depth_run(seed_value: int, depth: int, configured: bool) -> bool:
+func begin_content_run(seed_value: int, depth: int) -> bool:
+	return _begin_depth_run(seed_value, depth, true, true)
+
+func issued_run_plan() -> Dictionary:
+	return _issued_content_plan.duplicate(true) if active else {}
+
+func _begin_depth_run(seed_value: int, depth: int, configured: bool, content_mode: bool = false) -> bool:
 	if active:
 		notice.emit("An expedition is already in progress.")
 		return false
@@ -114,8 +124,14 @@ func _begin_depth_run(seed_value: int, depth: int, configured: bool) -> bool:
 		notice.emit(String(admission.reason))
 		return false
 	var policy: Dictionary = admission.policy.duplicate(true)
-	_issued_depth = {"expedition_depth": depth, "biome_id": String(policy.biome_id),
-		"depth_policy_version": int(policy.policy_version), "policy": policy}
+	var plan: Dictionary = Content.resolve_run_plan(seed_value, depth) if content_mode else {}
+	if content_mode and (plan.is_empty() or not Content.valid_run_plan(plan, policy)):
+		notice.emit("This expedition content is unavailable. Your secured progress was preserved.")
+		return false
+	_issued_content_plan = plan.duplicate(true)
+	var expected_depth := {"expedition_depth": depth, "biome_id": String(policy.biome_id),
+		"depth_policy_version": int(policy.policy_version), "policy": policy.duplicate(true)}
+	_issued_depth = expected_depth.duplicate(true)
 	_configured_depth_run = configured
 	active = true
 	run_seed = seed_value
@@ -130,14 +146,22 @@ func _begin_depth_run(seed_value: int, depth: int, configured: bool) -> bool:
 	_run_monsters.clear()
 	_pet_pending = PetProgress.empty_pending()
 	_encounter_sources.clear()
+	_pending_encounters.clear()
 	boss_defeated = false
 	kills = 0
 	elapsed = 0.0
 	_emit_elapsed = 0.0
 	last_results.clear()
 	_emit_changed()
-	return active and run_generation == issued_generation and run_seed == seed_value \
-		and int(_issued_depth.get("expedition_depth", 0)) == depth and _configured_depth_run == configured
+	var admitted := active and run_generation == issued_generation and run_seed == seed_value \
+		and _issued_depth == expected_depth and _configured_depth_run == configured \
+		and _issued_content_plan == plan
+	if not admitted and active and run_generation == issued_generation:
+		# Admission has not returned to Game. Retire only this corrupted attempt;
+		# a callback-created replacement has its own generation and survives.
+		_clear_run()
+		_emit_changed()
+	return admitted
 
 func has_claimed(chest_id: String) -> bool:
 	return _claimed.has(chest_id)
@@ -227,6 +251,8 @@ func run_context_valid(world: Node3D, generation: int) -> bool:
 	if not world.has_method("issued_depth_context") or not world.has_method("issued_depth_policy") or _issued_depth.is_empty():
 		return false
 	var issued: Dictionary = world.issued_depth_context()
+	if not world.has_method("issued_run_plan_matches") or not world.issued_run_plan_matches(_issued_content_plan):
+		return false
 	return int(issued.get("expedition_depth", 0)) == int(_issued_depth.expedition_depth) \
 		and String(issued.get("biome_id", "")) == String(_issued_depth.biome_id) \
 		and int(issued.get("depth_policy_version", 0)) == int(_issued_depth.depth_policy_version) \
@@ -247,9 +273,29 @@ func complete_encounter(world: Node3D, enemy: Node3D, generation: int) -> Dictio
 	if kind not in ["regular", "elite", "boss"] or kills >= VaultProfileStore.MAX_COUNT:
 		return rejected
 	var source := "boss" if kind == "boss" else EncounterRewards.source_for(String(record.archetype), bool(record.elite))
-	var reward: Dictionary = EncounterRewards.roll_for_depth(run_seed, String(record.receipt), source, int(record.depth), int(_issued_depth.expedition_depth), _issued_depth.policy)
+	var reward: Dictionary
+	var findings: Dictionary
+	var next_encounters := _pending_encounters.duplicate(true)
+	var required_objective := kind == "boss"
+	var discovery := "rootwarden" if kind == "boss" else String(record.archetype)
+	if not _issued_content_plan.is_empty():
+		var descriptor := _content_source(record)
+		if descriptor.is_empty():
+			return rejected
+		required_objective = descriptor.objective_role == "required"
+		discovery = String(descriptor.discovery_id)
+		var reward_profile: Dictionary = _issued_content_plan.reward_profiles.get(descriptor.reward_profile_id, {})
+		var pet_profile: Dictionary = _issued_content_plan.pet_profiles.get(descriptor.pet_profile_id, {})
+		reward = EncounterRewards.roll_registered(run_seed, String(record.receipt), reward_profile, int(record.depth), _issued_depth.policy)
+		findings = PetCatalog.findings_for_encounter(run_seed, String(record.receipt), pet_profile)
+		if String(descriptor.encounter_definition_id) in EncounterProgress.Ids.JOURNAL_IDS:
+			next_encounters = EncounterProgress.append_pending(_pending_encounters, String(record.receipt), String(descriptor.encounter_definition_id), String(_issued_content_plan.theme_id), int(_issued_depth.expedition_depth))
+			if next_encounters.is_empty():
+				return rejected
+	else:
+		reward = EncounterRewards.roll_for_depth(run_seed, String(record.receipt), source, int(record.depth), int(_issued_depth.expedition_depth), _issued_depth.policy)
+		findings = PetCatalog.findings_for(run_seed, String(record.receipt), kind)
 	var validated := _validate_reward(reward)
-	var findings := PetCatalog.findings_for(run_seed, String(record.receipt), kind)
 	var pending := PetProgress.append_findings(_pet_pending, findings, String(record.receipt))
 	if validated.is_empty() or pending.is_empty() or _claimed.has(String(record.receipt)):
 		return rejected
@@ -260,17 +306,35 @@ func complete_encounter(world: Node3D, enemy: Node3D, generation: int) -> Dictio
 	# Every consequence of this exact death is installed before observers run.
 	_encounter_sources[String(record.receipt)] = true
 	_pet_pending = pending
-	if kind == "boss":
+	_pending_encounters = next_encounters
+	if required_objective:
 		boss_defeated = true
-		_run_monsters["rootwarden"] = true
-	else:
+	if kind != "boss":
 		kills += 1
-		_run_monsters[String(record.archetype)] = true
+	if discovery in ["skeleton", "archer", "golem", "rootwarden"]:
+		_run_monsters[discovery] = true
 	loot_changed.emit()
 	if run_context_valid(world, generation):
 		_emit_changed()
 	return {"ok": true, "cache_id": String(result.id), "generation": generation,
 		"still_current": run_context_valid(world, generation), "error": ""}
+
+func _content_source(record: Dictionary) -> Dictionary:
+	# Only the admitted registry decides objective and grant identities. The
+	# world's actual-dead-actor check is required before this descriptor match.
+	if not record.get("encounter_definition_id") is String or not record.get("variant_id") is String:
+		return {}
+	var expected: Dictionary = Content.source_descriptor(_issued_content_plan, record.encounter_definition_id, record.variant_id)
+	if expected.is_empty() or expected.get("objective_role") == "support" or String(record.get("owner_encounter_receipt", "")) != "":
+		return {}
+	for key: String in expected:
+		if not record.has(key) or record[key] != expected[key]:
+			return {}
+	if expected.objective_role == "required" and (expected.boss_id != _issued_content_plan.required_boss_id or expected.variant_id != _issued_content_plan.variant_id):
+		return {}
+	if not _issued_content_plan.reward_profiles.has(expected.reward_profile_id) or not _issued_content_plan.pet_profiles.has(expected.pet_profile_id):
+		return {}
+	return expected
 
 func claim_pet_discovery(world: Node3D, source: Node3D, actor: Node, generation: int) -> Dictionary:
 	var rejected := {"ok": false, "still_current": false, "generation": generation, "error": "Move closer to this discovery."}
@@ -429,6 +493,8 @@ func _validate_reward(reward: Dictionary) -> Dictionary:
 		"items": normalized, "value": value, "cursed": String(category) == "cursed"}
 
 func add_kill(archetype: String = "") -> void:
+	if not _issued_content_plan.is_empty():
+		return
 	if active:
 		kills += 1
 		if archetype in ["skeleton", "archer", "golem"]:
@@ -436,6 +502,10 @@ func add_kill(archetype: String = "") -> void:
 		_emit_changed()
 
 func mark_boss_defeated() -> void:
+	# Compatibility helper for deliberate pure/legacy fixtures. Production must
+	# admit the actual registered required boss through complete_encounter.
+	if not _issued_content_plan.is_empty():
+		return
 	if active and not boss_defeated:
 		boss_defeated = true
 		_run_monsters["rootwarden"] = true
@@ -470,6 +540,11 @@ func extract() -> bool:
 		notice.emit("The cosmetic collection is full. Findings remain unsecured; extraction can be retried.")
 		return false
 	next.pets = secured_pets
+	var secured_encounters := EncounterProgress.secure(next, _pending_encounters, int(Time.get_unix_time_from_system()))
+	if secured_encounters.is_empty():
+		notice.emit("Encounter records could not be secured. Your rewards remain available for retry.")
+		return false
+	next.encounter_records = secured_encounters
 	next.statistics.total_gold = int(next.statistics.total_gold) + unsecured_gold
 	next.statistics.total_kills = int(next.statistics.total_kills) + kills
 	next.statistics.last_seed = run_seed
@@ -549,6 +624,10 @@ func _results(outcome: String) -> Dictionary:
 		"depth_policy_version": int(_issued_depth.get("depth_policy_version", 1)),
 		"tier_label": String(_issued_depth.get("policy", {}).get("tier_label", "Beginner")),
 		"highest_unlocked_depth": int(profile.depth_progression.highest_unlocked_depth),
+		"theme_id": String(_issued_content_plan.get("theme_id", "rootbound_abyss")),
+		"theme_label": _issued_theme_label(), "required_boss_id": String(_issued_content_plan.get("required_boss_id", "rootwarden")),
+		"required_boss_name": _issued_boss_label(),
+		"encounter_records": profile.encounter_records.duplicate(true),
 		"items": _describe_items(run_items), "kills": kills, "elapsed_seconds": elapsed,
 		"boss_defeated": boss_defeated, "secured_total": int(profile.gold),
 		"discovered": _run_discoveries.keys(), "new_discoveries": [],
@@ -563,6 +642,8 @@ func _clear_run() -> void:
 	active = false
 	_issued_depth.clear()
 	_configured_depth_run = false
+	_issued_content_plan.clear()
+	_pending_encounters.clear()
 	unsecured_gold = 0
 	run_items.clear()
 	_claimed.clear()
@@ -600,6 +681,9 @@ func snapshot() -> Dictionary:
 		"tier_label": String(_issued_depth.get("policy", {}).get("tier_label", "Beginner")),
 		"highest_unlocked_depth": int(profile.depth_progression.highest_unlocked_depth),
 		"depth_progression": profile.depth_progression.duplicate(true),
+		"theme_id": String(_issued_content_plan.get("theme_id", "rootbound_abyss")),
+		"theme_label": _issued_theme_label(), "required_boss_id": String(_issued_content_plan.get("required_boss_id", "rootwarden")),
+		"required_boss_name": _issued_boss_label(), "encounter_records": profile.encounter_records.duplicate(true),
 		"secured_gold": int(profile.gold), "bag": bag, "run_items": bag,
 		"inventory": inventory, "secured_items": inventory, "discoveries": profile.discoveries.duplicate(),
 		"boss_defeated": boss_defeated, "kills": kills, "elapsed": elapsed, "elapsed_seconds": elapsed,
@@ -608,6 +692,14 @@ func snapshot() -> Dictionary:
 		"companions": companion_roster(), "revision": int(profile.revision),
 		"character": CharacterProgression.snapshot(profile.character),
 		"inventory_slots": VaultInventory.used_slots(profile), "inventory_capacity": VaultInventory.CAPACITY}
+
+func _issued_theme_label() -> String:
+	var theme: Dictionary = _issued_content_plan.get("theme", {})
+	return String(theme.get("display_name", "Rootbound Abyss"))
+
+func _issued_boss_label() -> String:
+	var boss: Dictionary = _issued_content_plan.get("boss", {})
+	return String(boss.get("display_name", "The Rootwarden"))
 
 func companion_roster() -> Array[Dictionary]:
 	var roster: Array[Dictionary] = []

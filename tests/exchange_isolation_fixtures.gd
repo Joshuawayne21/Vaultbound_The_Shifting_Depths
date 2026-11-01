@@ -50,6 +50,7 @@ static func prepare_profile(path: String) -> bool:
 	legacy.version = 4
 	legacy.erase("pets")
 	legacy.erase("depth_progression")
+	legacy.erase("encounter_records")
 	if Store.normalize(legacy).is_empty(): return false
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null: return false

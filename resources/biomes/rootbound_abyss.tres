@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="VaultBiomeDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/expedition/biome_definition.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/visual/rootbound_presentation.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = "rootbound_abyss"
+display_name = "Rootbound Abyss"
+available = true
+content_version = 1
+theme_version = 1
+minimum_depth = 1
+selection_weight = 1
+boss_ids = Array[String](["rootwarden"])
+encounter_profile_id = "rootbound_legacy"
+event_profile_id = "rootbound_legacy"
+presentation = ExtResource("2")

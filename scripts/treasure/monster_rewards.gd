@@ -5,6 +5,7 @@ extends Resource
 
 const SOURCES := ["basic", "stronger", "elite", "boss"]
 const DEPTH_POLICY = preload("res://resources/expedition/depth_policy.tres")
+const REGISTERED_SOURCES := {"enemy_basic": "basic", "enemy_stronger": "stronger", "enemy_elite": "elite", "rootwarden_legacy": "boss"}
 @export var basic_table: VaultLootTable
 @export var stronger_table: VaultLootTable
 @export var elite_table: VaultLootTable
@@ -106,6 +107,19 @@ func roll_for_depth(seed_value: int, receipt: String, source: String, room_dista
 	reward.gold = roundi(previous * float(factor))
 	reward.value = int(reward.value) + int(reward.gold) - previous
 	return reward
+
+func roll_registered(seed_value: int, receipt: String, source_profile: Dictionary,
+		room_distance: int, issued_depth_policy: Dictionary) -> Dictionary:
+	# Session supplies an identity resolved from its admitted content registry.
+	# This adapter cannot redirect a generic boss to the Rootwarden table.
+	if source_profile.size() != 3 or not source_profile.get("id") is String \
+			or not source_profile.get("version") is int or source_profile.version != 1 \
+			or not REGISTERED_SOURCES.has(source_profile.id) or source_profile.get("source") != REGISTERED_SOURCES[source_profile.id]:
+		return {}
+	var depth: Variant = issued_depth_policy.get("expedition_depth")
+	if not depth is int:
+		return {}
+	return roll_for_depth(seed_value, receipt, String(source_profile.source), room_distance, int(depth), issued_depth_policy)
 
 func _allows(item_id: String, source: String) -> bool:
 	var definition := VaultLootTable.item_for(item_id)

@@ -39,6 +39,8 @@ var _city_review_epoch := 0
 var _application_focused := true
 var _pet_selection: Dictionary = {}
 var _pet_presenter: WeakRef
+# Off-tree recovery ownership lasts only through the final content fade.
+var _travel_retained_world: Node3D
 
 func _ready() -> void:
 	InputHub.controls_enabled = false
@@ -162,6 +164,7 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	var issued_generation := -1
 	var issued_seed := -1
 	var issued_context: Dictionary = {}
+	var issued_plan: Dictionary = {}
 	if destination == &"rootbound_abyss":
 		if ExpeditionSession.active:
 			next_world.free()
@@ -177,27 +180,29 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 		if selected_seed < 0:
 			selected_seed = int(Time.get_unix_time_from_system()) ^ Time.get_ticks_usec()
 		selected_seed = absi(selected_seed) % 2147483647
-		next_world.configure_depth(selected_seed, expedition_depth)
+		next_world.configure_content(selected_seed, expedition_depth)
+		var reviewed_plan: Dictionary = next_world.issued_run_plan()
 		var reviewed_context := {"expedition_depth": expedition_depth, "biome_id": reviewed_policy.biome_id, "depth_policy_version": reviewed_policy.policy_version}
-		if not next_world.validate_generation() or not _candidate_depth_matches(next_world, reviewed_context):
+		if not next_world.validate_generation() or not _candidate_depth_matches(next_world, reviewed_context, reviewed_plan) or reviewed_plan.is_empty():
 			hud.show_message("Layout validation failed · seed %d. You remain in Sanctuary." % selected_seed)
 			next_world.free()
 			return
-		if not ExpeditionSession.begin_depth_run(selected_seed, expedition_depth):
+		if not ExpeditionSession.begin_content_run(selected_seed, expedition_depth):
 			next_world.free()
 			return
 		issued_generation = ExpeditionSession.run_generation
 		issued_seed = selected_seed
 		issued_context = ExpeditionSession.issued_run_context()
+		issued_plan = ExpeditionSession.issued_run_plan()
 		if issued_context.get("policy", {}) != reviewed_policy or int(issued_context.get("expedition_depth", 0)) != expedition_depth \
-				or not _candidate_depth_matches(next_world, issued_context):
+				or issued_plan != reviewed_plan or not _candidate_depth_matches(next_world, issued_context, issued_plan):
 			next_world.free()
-			_abort_unentered_run(issued_generation, issued_seed, issued_context)
+			_abort_unentered_run(issued_generation, issued_seed, issued_context, issued_plan)
 			hud.show_message("Depth configuration changed before entry. Review the portal again.")
 			return
 		if not next_world.configure_run_context(issued_generation):
 			next_world.free()
-			_abort_unentered_run(issued_generation, issued_seed, issued_context)
+			_abort_unentered_run(issued_generation, issued_seed, issued_context, issued_plan)
 			return
 	elif current_location == &"rootbound_abyss":
 		# Extraction already commits and closes the run. Every other departure
@@ -212,7 +217,7 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 			return
 	if transitioning or active_world != request_world:
 		next_world.free()
-		_abort_unentered_run(issued_generation, issued_seed, issued_context)
+		_abort_unentered_run(issued_generation, issued_seed, issued_context, issued_plan)
 		return
 	transitioning = true
 	_city_review_epoch += 1
@@ -232,18 +237,20 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	var fade_out := create_tween()
 	fade_out.tween_method(hud.set_transition, 0.0 if active_world != null else 1.0, 1.0, 0.18)
 	await fade_out.finished
-	if not _travel_generation_valid(issued_generation, issued_seed, issued_context):
-		_cancel_candidate_travel(next_world, issued_generation, issued_seed, issued_context)
+	if not _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan):
+		_cancel_candidate_travel(next_world, issued_generation, issued_seed, issued_context, issued_plan)
 		return
 	# Retain the safe world until candidate _ready callbacks and floor registration
 	# complete. A replacement run must never inherit this request's old dungeon.
 	var previous_world := active_world
 	var previous_location := current_location
+	var previous_pet := _pet_presenter
+	var previous_player_transform := player.global_transform
 	var candidate_process := next_world.process_mode
 	next_world.process_mode = Node.PROCESS_MODE_DISABLED
 	world_root.add_child(next_world)
-	if not _travel_generation_valid(issued_generation, issued_seed, issued_context) or not _candidate_ready_valid(next_world, issued_context):
-		_cancel_candidate_travel(next_world, issued_generation, issued_seed, issued_context)
+	if not _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan) or not _candidate_ready_valid(next_world, issued_context, issued_plan):
+		_cancel_candidate_travel(next_world, issued_generation, issued_seed, issued_context, issued_plan)
 		return
 	_keep_world_collision(next_world)
 	active_world = next_world
@@ -251,36 +258,25 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	ExpeditionSession.bind_game_context(player, destination, active_world)
 	demo_exchange.bind_game_context(player, destination, active_world)
 	# The same identity is required after binding and the next physics boundary.
-	if _travel_generation_valid(issued_generation, issued_seed, issued_context): await get_tree().physics_frame
-	if not _travel_generation_valid(issued_generation, issued_seed, issued_context) or not _candidate_ready_valid(next_world, issued_context):
+	if _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan): await get_tree().physics_frame
+	if not _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan) or not _candidate_ready_valid(next_world, issued_context, issued_plan):
 		active_world = previous_world
 		current_location = previous_location
 		ExpeditionSession.bind_game_context(player, previous_location, previous_world)
 		demo_exchange.bind_game_context(player, previous_location, previous_world)
-		_cancel_candidate_travel(next_world, issued_generation, issued_seed, issued_context)
+		_cancel_candidate_travel(next_world, issued_generation, issued_seed, issued_context, issued_plan)
 		return
 	if is_instance_valid(previous_world):
 		_pet_presenter = null
 		world_root.remove_child(previous_world)
-		previous_world.queue_free()
+		if issued_plan.is_empty(): previous_world.queue_free()
+		else: _travel_retained_world = previous_world
 	next_world.process_mode = candidate_process
 	player.reset_for_spawn(active_world.get_spawn_transform(entry_id))
 	player.apply_progression(ExpeditionSession.profile)
 	party.enter_world(active_world, destination)
 	camera_rig.reset_position()
-	for portal: Node in get_tree().get_nodes_in_group("interactables"):
-		if portal.has_signal("travel_requested") and active_world.is_ancestor_of(portal):
-			portal.travel_requested.connect(_on_source_travel.bind(active_world, ExpeditionSession.run_generation))
-		if portal.has_signal("portal_info_requested") and not portal.portal_info_requested.is_connected(_on_portal_information):
-			portal.portal_info_requested.connect(_on_portal_information)
-		if portal.has_signal("sanctuary_ui_requested") and not portal.sanctuary_ui_requested.is_connected(_on_city_terminal):
-			portal.sanctuary_ui_requested.connect(_on_city_terminal)
-	if active_world.has_signal("travel_requested"):
-		active_world.connect("travel_requested", _on_source_travel.bind(active_world, ExpeditionSession.run_generation))
-	if active_world.has_signal("notice"):
-		active_world.connect("notice", hud.show_message)
-	if active_world.has_signal("snapshot_changed"):
-		active_world.connect("snapshot_changed", hud.set_dungeon_snapshot)
+	_wire_world_travel(active_world)
 	hud.set_location(active_world.display_name, active_world.objective)
 	if destination != &"rootbound_abyss":
 		hud.set_dungeon_snapshot({})
@@ -290,6 +286,13 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	var fade_in := create_tween()
 	fade_in.tween_method(hud.set_transition, 1.0, 0.0, 0.25)
 	await fade_in.finished
+	if not issued_plan.is_empty() and (not _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan) \
+			or active_world != next_world or not _candidate_ready_valid(next_world, issued_context, issued_plan)):
+		await _restore_after_content_fade(next_world, previous_world, previous_location, previous_player_transform,
+			previous_pet, issued_generation, issued_seed, issued_context, issued_plan)
+		return
+	if is_instance_valid(_travel_retained_world): _travel_retained_world.queue_free()
+	_travel_retained_world = null
 	transitioning = false
 	_set_pet_suspended(_modal_open)
 	party.set_paused(false)
@@ -302,15 +305,88 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 		hud.present_pending_results()
 
 
-func _travel_generation_valid(generation: int, seed_value: int, issued_context: Dictionary = {}) -> bool:
+func _exit_tree() -> void:
+	# A shutdown during a fade must not orphan the intentionally detached world.
+	if is_instance_valid(_travel_retained_world) and _travel_retained_world.get_parent() == null:
+		_travel_retained_world.free()
+	_travel_retained_world = null
+
+
+func _wire_world_travel(world: Node3D) -> void:
+	for portal: Node in get_tree().get_nodes_in_group("interactables"):
+		if not world.is_ancestor_of(portal): continue
+		if portal.has_signal("travel_requested"): _bind_world_travel_signal(portal, world)
+		if portal.has_signal("portal_info_requested") and not portal.portal_info_requested.is_connected(_on_portal_information):
+			portal.portal_info_requested.connect(_on_portal_information)
+		if portal.has_signal("sanctuary_ui_requested") and not portal.sanctuary_ui_requested.is_connected(_on_city_terminal):
+			portal.sanctuary_ui_requested.connect(_on_city_terminal)
+	if world.has_signal("travel_requested"): _bind_world_travel_signal(world, world)
+	if world.has_signal("notice") and not world.is_connected("notice", hud.show_message): world.connect("notice", hud.show_message)
+	if world.has_signal("snapshot_changed") and not world.is_connected("snapshot_changed", hud.set_dungeon_snapshot):
+		world.connect("snapshot_changed", hud.set_dungeon_snapshot)
+
+
+func _bind_world_travel_signal(source: Node, world: Node3D) -> void:
+	# A recovered practice/Sanctuary world still owns its original signals, but
+	# their previous generation is stale. Replace only this shell's travel edge.
+	for connection: Dictionary in source.get_signal_connection_list("travel_requested"):
+		var callback: Callable = connection.callable
+		if callback.get_object() == self and callback.get_method() == &"_on_source_travel":
+			source.disconnect("travel_requested", callback)
+	source.connect("travel_requested", _on_source_travel.bind(world, ExpeditionSession.run_generation))
+
+
+func _restore_after_content_fade(candidate: Node3D, previous: Node3D, location: StringName,
+		player_transform: Transform3D, previous_pet: WeakRef, generation: int, seed_value: int,
+		context: Dictionary, plan: Dictionary) -> void:
+	# Never restore a closed expedition: extraction may already have committed.
+	# Its secured profile/results stay intact; a fresh Sanctuary is the safe route.
+	var restore := previous
+	var restore_location := location
+	var restore_transform := player_transform
+	var fresh_sanctuary := not is_instance_valid(restore) or location == &"rootbound_abyss"
+	if fresh_sanctuary:
+		if is_instance_valid(restore): restore.queue_free()
+		restore = (load(LEVELS[&"sanctuary"]) as PackedScene).instantiate() as Node3D
+		restore_location = &"sanctuary"
+		previous_pet = null
+	if is_instance_valid(candidate) and candidate.get_parent() != null: candidate.get_parent().remove_child(candidate)
+	_travel_retained_world = null
+	world_root.add_child(restore)
+	if fresh_sanctuary: restore_transform = restore.get_spawn_transform(&"from_abyss")
+	active_world = restore
+	current_location = restore_location
+	_pet_presenter = previous_pet
+	ExpeditionSession.bind_game_context(player, restore_location, restore)
+	demo_exchange.bind_game_context(player, restore_location, restore)
+	_wire_world_travel(restore)
+	player.reset_for_spawn(restore_transform)
+	player.apply_progression(ExpeditionSession.profile)
+	party.enter_world(restore, restore_location)
+	camera_rig.reset_position()
+	hud.set_location(restore.display_name, restore.objective)
+	hud.set_dungeon_snapshot({})
+	# Floor registration, not a timed sleep. Party and input stay paused until it
+	# exists. Session replacement is deliberately preserved throughout recovery.
+	await get_tree().physics_frame
+	party.ensure_safe_arrivals()
+	_sync_pet_presenter()
+	_cancel_candidate_travel(candidate, generation, seed_value, context, plan)
+	if current_location == &"sanctuary" and not ExpeditionSession.active: hud.present_pending_results()
+
+
+func _travel_generation_valid(generation: int, seed_value: int, issued_context: Dictionary = {}, issued_plan: Dictionary = {}) -> bool:
 	if generation < 0: return true
 	if ExpeditionSession.run_generation != generation: return false
 	if seed_value < 0: return not ExpeditionSession.active
 	return ExpeditionSession.active and ExpeditionSession.run_seed == seed_value \
-		and (issued_context.is_empty() or ExpeditionSession.issued_run_context() == issued_context)
+		and (issued_context.is_empty() or ExpeditionSession.issued_run_context() == issued_context) \
+		and (issued_plan.is_empty() or ExpeditionSession.issued_run_plan() == issued_plan)
 
 
-func _candidate_depth_matches(candidate: Node3D, issued_context: Dictionary) -> bool:
+func _candidate_depth_matches(candidate: Node3D, issued_context: Dictionary, issued_plan: Dictionary = {}) -> bool:
+	if not issued_plan.is_empty():
+		if not is_instance_valid(candidate) or not candidate.has_method("issued_run_plan") or candidate.issued_run_plan() != issued_plan: return false
 	if issued_context.is_empty(): return true
 	if not is_instance_valid(candidate) or not candidate.has_method("issued_depth_context"): return false
 	var configured: Dictionary = candidate.issued_depth_context()
@@ -322,17 +398,17 @@ func _candidate_depth_matches(candidate: Node3D, issued_context: Dictionary) -> 
 	return true
 
 
-func _candidate_ready_valid(candidate: Node3D, issued_context: Dictionary) -> bool:
+func _candidate_ready_valid(candidate: Node3D, issued_context: Dictionary, issued_plan: Dictionary = {}) -> bool:
 	if issued_context.is_empty(): return true
-	return _candidate_depth_matches(candidate, issued_context) and candidate.get("validation_errors").is_empty() \
+	return _candidate_depth_matches(candidate, issued_context, issued_plan) and candidate.get("validation_errors").is_empty() \
 		and not candidate.get("rooms").is_empty() and candidate.validate_generation() and candidate.get("validation_errors").is_empty()
 
 
-func _abort_unentered_run(generation: int, seed_value: int, issued_context: Dictionary) -> void:
+func _abort_unentered_run(generation: int, seed_value: int, issued_context: Dictionary, issued_plan: Dictionary = {}) -> void:
 	# Only this call's newly issued run may be abandoned. A reentrant callback can
 	# create a replacement with the same seed/depth and a different generation.
 	if generation < 0 or seed_value < 0 or issued_context.is_empty(): return
-	if not _travel_generation_valid(generation, seed_value, issued_context): return
+	if not _travel_generation_valid(generation, seed_value, issued_context, issued_plan): return
 	ExpeditionSession.fail_run("abandoned")
 	# No expedition was entered, so do not queue an empty expedition-results card.
 	if not ExpeditionSession.active and ExpeditionSession.run_generation == generation \
@@ -340,11 +416,11 @@ func _abort_unentered_run(generation: int, seed_value: int, issued_context: Dict
 		hud.pending_results.clear()
 
 
-func _cancel_candidate_travel(candidate: Node3D, generation: int = -1, seed_value: int = -1, issued_context: Dictionary = {}) -> void:
+func _cancel_candidate_travel(candidate: Node3D, generation: int = -1, seed_value: int = -1, issued_context: Dictionary = {}, issued_plan: Dictionary = {}) -> void:
 	if is_instance_valid(candidate):
 		if candidate.get_parent() != null: candidate.get_parent().remove_child(candidate)
 		candidate.queue_free()
-	_abort_unentered_run(generation, seed_value, issued_context)
+	_abort_unentered_run(generation, seed_value, issued_context, issued_plan)
 	transitioning = false
 	party.set_paused(_modal_open)
 	_set_pet_suspended(_modal_open)

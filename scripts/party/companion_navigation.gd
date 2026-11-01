@@ -5,6 +5,8 @@ extends RefCounted
 ## handle authored props. Companions share geometry samples on the current world.
 ## No navmesh baking, path search every frame, or automatic combat teleporting.
 
+const Danger = preload("res://scripts/combat/danger_geometry.gd")
+
 const GRID_STEP := 1.2
 const REPLAN_INTERVAL := 0.65
 const MAX_SEARCH_NODES := 720
@@ -41,6 +43,7 @@ var _city_graph: Dictionary = {}
 var _city_route := PackedVector3Array()
 var _city_route_index := 0
 var _city_route_destination := Vector3.INF
+var _danger_escape_active := false
 
 func _init() -> void:
 	_capsule.radius = 0.38
@@ -61,6 +64,7 @@ func clear() -> void:
 	stuck_seconds = 0.0
 	_progress_elapsed = 0.0
 	_zone_remaining = 0.0
+	_danger_escape_active = false
 	_clear_city_route()
 
 func direction_to(destination: Vector3, delta: float) -> Vector3:
@@ -79,12 +83,17 @@ func direction_to(destination: Vector3, delta: float) -> Vector3:
 		_path_index = 0
 		_destination = destination
 		_replan_remaining = REPLAN_INTERVAL
-	while _path_index < path.size() and _flat_distance(actor.global_position, path[_path_index]) < 0.42:
+	if _danger_escape_active and _danger_cost(actor.global_position) <= 0.0: _danger_escape_active = false
+	while _path_index < path.size() and _flat_distance(actor.global_position, path[_path_index]) < (0.015 if _danger_escape_active else 0.42):
 		_path_index += 1
 	if _path_index >= path.size():
 		return Vector3.ZERO
 	var direction := path[_path_index] - actor.global_position
 	direction.y = 0.0
+	if direction.length_squared() <= 0.000001: return Vector3.ZERO
+	# A small safe inner hole needs a precise stop, not the ordinary 0.42m
+	# formation arrival radius. Slow only this paid typed-danger intention.
+	if _danger_escape_active: return direction.normalized() * minf(1.0, direction.length())
 	return direction.normalized() if direction.length_squared() > 0.001 else Vector3.ZERO
 
 ## Exposed for deterministic navigation checks. Called automatically at most
@@ -431,7 +440,7 @@ func _search(start: Vector3, goal: Vector3) -> PackedVector3Array:
 			var next := current + offset
 			if visited.has(next) or next.x < low.x or next.x > high.x or next.y < low.y or next.y > high.y:
 				continue
-			if not _walkable(next) or not _edge_clear(current, next):
+			if not _walkable(next) or not _edge_clear(current, next) or _crosses_danger(_point(current), _point(next), true):
 				continue
 			var candidate: float = float(costs[current]) + Vector2(offset).length() + _danger_cost(_point(next))
 			if not costs.has(next) or candidate < float(costs[next]):
@@ -458,7 +467,7 @@ func _reconstruct(came_from: Dictionary, current: Vector2i, start: Vector3, goal
 				selected = lookahead
 		# The starting snapped grid node may be behind the actor. Only discard it
 		# when a later swept segment is clear; never smooth through a prop corner.
-		if not _segment_clear(anchor, raw[selected]):
+		if not _segment_clear(anchor, raw[selected]) or _crosses_danger(anchor, raw[selected], true):
 			return PackedVector3Array()
 		result.append(raw[selected])
 		anchor = raw[selected]
@@ -581,6 +590,10 @@ func _refresh_zones() -> void:
 func _danger_cost(position: Vector3) -> float:
 	var cost := 0.0
 	for zone: Dictionary in _zones:
+		if zone.has("shape"):
+			if Danger.is_live(zone) and Danger.contains(zone, position, 0.65):
+				cost += 12.0 + minf(8.0, maxf(0.0, 0.65 - Danger.signed_distance(zone, position)))
+			continue
 		var center: Vector3 = zone.get("position", Vector3.INF)
 		var radius := float(zone.get("radius", 0.0)) + 0.65
 		var distance := _flat_distance(position, center)
@@ -588,8 +601,18 @@ func _danger_cost(position: Vector3) -> float:
 			cost += 12.0 + 8.0 * (1.0 - distance / maxf(radius, 0.1))
 	return cost
 
-func _crosses_danger(from: Vector3, to: Vector3) -> bool:
+func _crosses_danger(from: Vector3, to: Vector3, explicit_only: bool = false) -> bool:
 	for zone: Dictionary in _zones:
+		if zone.has("shape"):
+			if not Danger.is_live(zone): continue
+			var intervals: Array[Vector2] = Danger.segment_intervals(zone, from, to, 0.65)
+			if intervals.is_empty(): continue
+			# Leaving the initial interval is legal; crossing a second band or
+			# taking a short step farther into danger is not an escape.
+			if not Danger.contains(zone, from, 0.65) or intervals.size() > 1: return true
+			if Danger.contains(zone, to, 0.65) and Danger.signed_distance(zone, to) <= Danger.signed_distance(zone, from) + Danger.EPSILON: return true
+			continue
+		if explicit_only: continue
 		var center: Vector3 = zone.get("position", Vector3.INF)
 		center.y = 0.0
 		var start := Vector3(from.x, 0, from.z)
@@ -601,6 +624,49 @@ func _crosses_danger(from: Vector3, to: Vector3) -> bool:
 		if Geometry3D.get_closest_point_to_segment(center, start, end).distance_to(center) < radius:
 			return true
 	return false
+
+## Geometry-only exits become intentions only after real floor/body/path checks.
+## At most four typed warnings contribute candidates and twelve get physics probes.
+func select_danger_escape() -> Vector3:
+	if not _valid_context(): return Vector3.INF
+	_refresh_context()
+	_refresh_zones()
+	var start := actor.global_position
+	var candidates: Array[Vector3] = []
+	var used := 0
+	for zone: Dictionary in _zones:
+		if not zone.has("shape") or not Danger.is_live(zone) or not Danger.contains(zone, start, 0.65): continue
+		for point: Vector3 in Danger.escape_candidates(zone, start, 0.65):
+			if _danger_cost(point) <= 0.0 and not candidates.has(point): candidates.append(point)
+		used += 1
+		if used >= 4: break
+	candidates.sort_custom(func(a: Vector3, b: Vector3) -> bool:
+		var da := a.distance_squared_to(start)
+		var db := b.distance_squared_to(start)
+		return da < db if absf(da - db) > Danger.EPSILON else (a.x < b.x if not is_equal_approx(a.x, b.x) else a.z < b.z))
+	for point: Vector3 in candidates.slice(0, 12):
+		var grounded := _sample_floor(point)
+		if not grounded.is_finite() or not _body_clear(grounded) or _danger_cost(grounded) > 0.0: continue
+		if _segment_clear(start, grounded) and not _crosses_danger(start, grounded):
+			# The normal 0.65s route budget still owns subsequent replans. Replace
+			# this stale leg immediately only at the brain's paid decision edge.
+			path = PackedVector3Array([grounded])
+			_path_index = 0
+			_destination = grounded
+			_replan_remaining = REPLAN_INTERVAL
+			_danger_escape_active = true
+			return grounded
+	return Vector3.INF
+
+func danger_roll_safe(direction: Vector3, distance: float) -> bool:
+	if not _valid_context() or not direction.is_finite() or not is_finite(distance) or distance <= 0.0: return false
+	_refresh_context()
+	_refresh_zones()
+	var start := actor.global_position
+	var destination := start + Vector3(direction.x, 0, direction.z).normalized() * distance
+	var grounded := _sample_floor(destination)
+	return grounded.is_finite() and _body_clear(grounded) and _danger_cost(grounded) <= 0.0 \
+		and _segment_clear(start, grounded) and not _crosses_danger(start, grounded)
 
 func _track_progress(destination: Vector3, delta: float) -> void:
 	_progress_elapsed += delta

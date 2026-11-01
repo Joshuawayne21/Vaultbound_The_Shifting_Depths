@@ -5,6 +5,7 @@ const IDS := ["lantern_fox", "crystal_moth", "mossdrake", "embercap_sprite", "ri
 const VARIANTS := ["natural", "luminous"]
 const POLICY = preload("res://resources/pets/acquisition.tres")
 const MAX_COUNT := 2147483647
+const REGISTERED_KINDS := {"rootbound_regular": "regular", "rootbound_elite": "elite", "rootwarden_legacy": "boss", "none": "none"}
 
 static func definition_for(id: StringName) -> VaultPetDefinition:
 	if not IDS.has(String(id)):
@@ -61,3 +62,12 @@ static func findings_for(seed_value: int, receipt: String, kind: String) -> Dict
 	else:
 		return {}
 	return result
+
+static func findings_for_encounter(seed_value: int, receipt: String, profile: Dictionary) -> Dictionary:
+	if receipt.is_empty() or profile.size() != 3 or not profile.get("id") is String \
+			or not profile.get("version") is int or profile.version != 1 \
+			or not REGISTERED_KINDS.has(profile.id) or profile.get("kind") != REGISTERED_KINDS[profile.id]:
+		return {}
+	if profile.kind == "none":
+		return {"ingredients": {}, "weave_seeds": {}, "statistics": {"eggs_found": 0, "rescues": 0, "rootwarden_victories": 0}}
+	return findings_for(seed_value, receipt, String(profile.kind))

@@ -5,6 +5,7 @@ extends RefCounted
 ## IDs are local only. No transport, remote trust, or multiplayer is implemented.
 
 const EFFECTS = preload("res://resources/progression/equipment_effects.tres")
+const PROJECTILE_CAST_KEYS := ["run_generation", "source_instance_id", "cast_serial", "stage_id", "attack_id"]
 
 static func _runtime_state() -> Dictionary:
 	# The SceneTree owns session state so freeing the last combat actor also frees
@@ -140,7 +141,10 @@ static func apply_hit(source: Node3D, target: Node3D, amount: float, attack_id: 
 			if is_finite(health_after):
 				_confirm_damage(source, attack_id, clampf(health_before - health_after, 0.0, health_before))
 		var tint := Color("9bdfe0") if kind == &"magic" or kind == &"frost" else Color("edbe7c")
-		effect(target.global_position + Vector3.UP * 1.0, tint, 0.42, 0.2, _effect_parent(target))
+		# Damage callbacks can synchronously remove a target or its world. The
+		# delivered hit remains accepted, but a departed actor has no VFX owner.
+		if is_instance_valid(target) and target.is_inside_tree():
+			effect(target.global_position + Vector3.UP * 1.0, tint, 0.42, 0.2, _effect_parent(target))
 	return accepted
 
 static func _confirm_damage(source: Node3D, attack_id: int, actual: float) -> void:
@@ -162,10 +166,32 @@ static func _confirm_damage(source: Node3D, attack_id: int, actual: float) -> vo
 	source.on_combat_damage_confirmed({"attack_id": attack_id, "actual_damage": actual,
 		"lifesteal_amount": healing, "first_critical": first_critical})
 
+static func projectile_cast_token_valid(source: Node3D, attack_id: int, token: Dictionary) -> bool:
+	# Only new encounter-owned projectiles opt in. The token identifies a cast;
+	# its controller still owns current encounter/phase/arena authorization.
+	if token.size() != PROJECTILE_CAST_KEYS.size(): return false
+	for key: String in PROJECTILE_CAST_KEYS:
+		if not token.get(key) is int: return false
+		if int(token[key]) < (0 if key in ["run_generation", "stage_id"] else 1): return false
+	if not is_instance_valid(source) or not source.is_inside_tree() or source.is_queued_for_deletion(): return false
+	if token.source_instance_id != source.get_instance_id() or token.attack_id != attack_id: return false
+	if not source.has_method("cast_token_valid") or not source.has_method("cast_impact_valid"): return false
+	# A query receives its own copy, never the projectile's private identity.
+	var allowed: Variant = source.cast_token_valid(token.duplicate(true))
+	return allowed is bool and allowed and is_instance_valid(source) \
+		and source.is_inside_tree() and not source.is_queued_for_deletion()
+
 static func spawn_projectile(source: Node3D, origin: Vector3, direction: Vector3,
 		damage: float, speed: float, lifetime: float, attack_id: int,
 		target_group: StringName, color: Color, splash_radius: float = 0.0,
-		stagger: float = 0.0) -> Node3D:
+		stagger: float = 0.0, cast_token: Dictionary = {}) -> Node3D:
+	if not cast_token.is_empty():
+		if not projectile_cast_token_valid(source, attack_id, cast_token): return null
+		if not origin.is_finite() or not direction.is_finite() or direction.length_squared() < 0.000001: return null
+		for value: float in [damage, speed, lifetime]:
+			if not is_finite(value) or value <= 0.0: return null
+		for value: float in [splash_radius, stagger]:
+			if not is_finite(value) or value < 0.0: return null
 	# An offset muzzle cannot start on the far side of a wall next to its owner.
 	var safe_origin := origin
 	var ray := PhysicsRayQueryParameters3D.create(source.global_position + Vector3.UP, origin, 1)
@@ -176,7 +202,11 @@ static func spawn_projectile(source: Node3D, origin: Vector3, direction: Vector3
 		safe_origin = Vector3(obstruction.position) + normal * 0.03 if normal.length_squared() > 0.0 else source.global_position + Vector3.UP
 	var script := load("res://scripts/combat/projectile.gd") as Script
 	var projectile: Node3D = script.new()
-	projectile.configure(source, direction, damage, speed, lifetime, attack_id, target_group, color, splash_radius, stagger)
+	var configured: bool = projectile.configure(source, direction, damage, speed, lifetime, attack_id, target_group, color, splash_radius, stagger, cast_token)
+	if not is_instance_valid(projectile): return null
+	if not configured:
+		projectile.free()
+		return null
 	_effect_parent(source).add_child(projectile)
 	projectile.global_position = safe_origin
 	return projectile

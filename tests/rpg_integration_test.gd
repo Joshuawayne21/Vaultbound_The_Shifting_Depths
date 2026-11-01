@@ -5,6 +5,7 @@ extends "res://tests/test_harness.gd"
 const Store = preload("res://scripts/progression/profile_store.gd")
 const Inventory = preload("res://scripts/progression/inventory_model.gd")
 const Progression = preload("res://scripts/progression/character_progression.gd")
+const Rules = preload("res://scripts/combat/combat_rules.gd")
 const PROFILE := "/tmp/vaultbound-m5-rpg/profile.json"
 var session: Node
 var player: CharacterBody3D
@@ -269,8 +270,31 @@ func _expedition_and_loss() -> void:
 		chest.interact(player)
 		check(chest.is_open and not session.run_items.is_empty() and session.profile.items == previous.items, "Dungeon treasure reserves capacity and remains unsecured before extraction")
 	check(not bool(_quote(&"buy", {"vendor": "general", "stock_id": "none"}).get("ok", false)), "A dungeon cannot authorize a remote Sanctuary purchase")
-	session.add_kill("skeleton")
-	session.mark_boss_defeated()
+	# Production content runs require their actual registered sources. Keep the
+	# RPG assertions below while exercising the same death admission as combat.
+	var combat_room := -1
+	for room: Dictionary in level.layout.rooms:
+		if room.kind == &"combat" and not room.hidden:
+			combat_room = int(room.id)
+			break
+	if not check(combat_room >= 0, "RPG expedition provides a real ordinary encounter room"):
+		return
+	_place(level.rooms[combat_room].global_position + Vector3(0, 0.15, 2))
+	await frames(3)
+	var skeleton: Node3D = level.encounters._spawn(combat_room, &"skeleton", level.rooms[combat_room].get_spawn_points().back(), false)
+	if not check(skeleton != null, "The current content world registers the controlled skeleton source"):
+		return
+	skeleton.set_physics_process(false)
+	var receipt := String(skeleton.get_meta("loot_receipt"))
+	Rules.apply_hit(player, skeleton, 10000.0, Rules.next_attack_id(), &"test")
+	await frames(3)
+	check(skeleton.health == 0.0 and not session.loot_snapshot(receipt).is_empty(), "Actual registered skeleton defeat admits its journal and searchable reward once")
+	_place(level.boss.global_position + Vector3(0, 0.15, 2.8))
+	await frames(3)
+	level.boss.set_physics_process(false)
+	Rules.apply_hit(player, level.boss, 10000.0, Rules.next_attack_id(), &"test")
+	await frames(3)
+	check(level.boss.health == 0.0 and session.boss_defeated, "Actual required Rootwarden defeat authorizes RPG extraction")
 	var bag: Dictionary = session.run_items.duplicate(true)
 	var earned_gold: int = session.unsecured_gold
 	var equipped_before: Dictionary = session.profile.equipment.duplicate(true)

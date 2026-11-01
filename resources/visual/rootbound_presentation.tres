@@ -1,0 +1,213 @@
+[gd_resource type="Resource" script_class="VaultDungeonPresentation" load_steps=21 format=3]
+[ext_resource type="Script" path="res://scripts/visual/dungeon_presentation.gd" id="1"]
+[ext_resource type="Environment" path="res://resources/environments/abyss.tres" id="2"]
+[ext_resource type="Material" path="res://resources/materials/abyss_soil.tres" id="3"]
+[ext_resource type="Material" path="res://resources/materials/abyss_paving.tres" id="4"]
+[ext_resource type="Material" path="res://resources/materials/abyss_stone.tres" id="5"]
+[ext_resource type="Material" path="res://resources/materials/abyss_stone_light.tres" id="6"]
+[ext_resource type="Material" path="res://resources/materials/abyss_bark.tres" id="7"]
+[ext_resource type="Material" path="res://resources/materials/abyss_bark_light.tres" id="8"]
+[ext_resource type="Material" path="res://resources/materials/abyss_gold.tres" id="9"]
+[ext_resource type="Material" path="res://resources/materials/abyss_leaf.tres" id="10"]
+[ext_resource type="Material" path="res://resources/materials/abyss_moss.tres" id="11"]
+[ext_resource type="Material" path="res://resources/materials/abyss_crystal.tres" id="12"]
+[ext_resource type="Material" path="res://resources/materials/abyss_glow.tres" id="13"]
+[ext_resource type="Material" path="res://resources/materials/abyss_flower.tres" id="14"]
+[ext_resource type="Material" path="res://resources/materials/abyss_ember.tres" id="15"]
+[ext_resource type="Material" path="res://resources/materials/abyss_mushroom.tres" id="16"]
+[ext_resource type="Material" path="res://resources/materials/abyss_water.tres" id="17"]
+[ext_resource type="Material" path="res://resources/materials/abyss_dark_water.tres" id="18"]
+[ext_resource type="Material" path="res://resources/materials/abyss_falling_water.tres" id="19"]
+[ext_resource type="Material" path="res://resources/materials/abyss_foam.tres" id="20"]
+[resource]
+script = ExtResource("1")
+id = "rootbound_native_v1"
+version = 1
+environment = ExtResource("2")
+material_roles = {
+"soil": ExtResource("3"),
+"paving": ExtResource("4"),
+"stone": ExtResource("5"),
+"stone_light": ExtResource("6"),
+"root_shell": ExtResource("7"),
+"root_detail": ExtResource("8"),
+"metal_trim": ExtResource("9"),
+"foliage": ExtResource("10"),
+"moss": ExtResource("11"),
+"crystal": ExtResource("12"),
+"emissive": ExtResource("13"),
+"flower": ExtResource("14"),
+"flower_bud": ExtResource("15"),
+"fungal_cap": ExtResource("16"),
+"water": ExtResource("17"),
+"water_deep": ExtResource("18"),
+"falling_water": ExtResource("19"),
+"foam": ExtResource("20"),
+}
+modules = {
+	"boss_heart": {
+		"scene": "res://scenes/rooms/boss_heart.tscn",
+		"motif": "warden_oath",
+		"native_slots": {
+			"Decor00": "root",
+			"Decor01": "root",
+			"Decor02": "root",
+			"Decor03": "root",
+			"Decor04": "crystals",
+			"Decor05": "crystals"
+		}
+	},
+	"combat_crystal": {
+		"scene": "res://scenes/rooms/combat_crystal.tscn",
+		"motif": "prism_grotto",
+		"native_slots": {
+			"Decor00": "crystals",
+			"Decor01": "crystals",
+			"Decor02": "crystals",
+			"Decor03": "column",
+			"Decor04": "root",
+			"Decor05": "flowers"
+		}
+	},
+	"combat_falls": {
+		"scene": "res://scenes/rooms/combat_falls.tscn",
+		"motif": "cascade_court",
+		"native_slots": {
+			"Decor00": "falls",
+			"Decor01": "stream",
+			"Decor02": "root",
+			"Decor03": "crystals",
+			"Decor04": "mushrooms"
+		}
+	},
+	"combat_grove": {
+		"scene": "res://scenes/rooms/combat_grove.tscn",
+		"motif": "fern_court",
+		"native_slots": {
+			"Decor00": "root",
+			"Decor01": "root",
+			"Decor02": "mushrooms",
+			"Decor03": "flowers",
+			"Decor04": "sprawl"
+		}
+	},
+	"combat_temple": {
+		"scene": "res://scenes/rooms/combat_temple.tscn",
+		"motif": "fallen_court",
+		"native_slots": {
+			"Decor00": "arch",
+			"Decor01": "column",
+			"Decor02": "column",
+			"Decor03": "rubble",
+			"Decor04": "crystals",
+			"Decor05": "flowers"
+		}
+	},
+	"corridor_roots": {
+		"scene": "res://scenes/rooms/corridor_roots.tscn",
+		"motif": "root_walk",
+		"native_slots": {
+			"Decor00": "root",
+			"Decor01": "root",
+			"Decor02": "sprawl",
+			"Decor03": "mushrooms",
+			"Decor04": "mushrooms"
+		}
+	},
+	"corridor_stream": {
+		"scene": "res://scenes/rooms/corridor_stream.tscn",
+		"motif": "lost_aqueduct",
+		"native_slots": {
+			"Decor00": "stream",
+			"Decor01": "stream",
+			"Decor02": "root",
+			"Decor03": "mushrooms",
+			"Decor04": "flowers",
+			"Decor05": "rubble"
+		}
+	},
+	"entrance_grove": {
+		"scene": "res://scenes/rooms/entrance_grove.tscn",
+		"motif": "pilgrim_grove",
+		"native_slots": {
+			"Decor00": "root",
+			"Decor01": "root",
+			"Decor02": "mushrooms",
+			"Decor03": "mushrooms",
+			"Decor04": "flowers",
+			"Decor05": "arch"
+		}
+	},
+	"entrance_temple": {
+		"scene": "res://scenes/rooms/entrance_temple.tscn",
+		"motif": "pilgrim_gate",
+		"native_slots": {
+			"Decor00": "arch",
+			"Decor01": "column",
+			"Decor02": "column",
+			"Decor03": "sprawl",
+			"Decor04": "flowers",
+			"Decor05": "crystals"
+		}
+	},
+	"extraction_spring": {
+		"scene": "res://scenes/rooms/extraction_spring.tscn",
+		"motif": "spring_seal",
+		"native_slots": {
+			"Decor00": "falls",
+			"Decor01": "stream",
+			"Decor02": "arch",
+			"Decor03": "flowers",
+			"Decor04": "mushrooms",
+			"Decor05": "crystals"
+		}
+	},
+	"secret_hollow": {
+		"scene": "res://scenes/rooms/secret_hollow.tscn",
+		"motif": "secret_orchid",
+		"native_slots": {
+			"Decor00": "root",
+			"Decor01": "root",
+			"Decor02": "mushrooms",
+			"Decor03": "mushrooms",
+			"Decor04": "flowers",
+			"Decor05": "crystals"
+		}
+	},
+	"trap_thorns": {
+		"scene": "res://scenes/rooms/trap_thorns.tscn",
+		"motif": "thorn_seal",
+		"native_slots": {
+			"Decor00": "thorns",
+			"Decor01": "thorns",
+			"Decor02": "thorns",
+			"Decor03": "root",
+			"Decor04": "crystals",
+			"Decor05": "rubble"
+		}
+	},
+	"treasure_garden": {
+		"scene": "res://scenes/rooms/treasure_garden.tscn",
+		"motif": "moon_garden",
+		"native_slots": {
+			"Decor00": "root",
+			"Decor01": "stream",
+			"Decor02": "mushrooms",
+			"Decor03": "flowers",
+			"Decor04": "flowers",
+			"Decor05": "crystals"
+		}
+	},
+	"treasure_vault": {
+		"scene": "res://scenes/rooms/treasure_vault.tscn",
+		"motif": "gilded_vault",
+		"native_slots": {
+			"Decor00": "arch",
+			"Decor01": "column",
+			"Decor02": "column",
+			"Decor03": "crystals",
+			"Decor04": "rubble",
+			"Decor05": "flowers"
+		}
+	}
+}

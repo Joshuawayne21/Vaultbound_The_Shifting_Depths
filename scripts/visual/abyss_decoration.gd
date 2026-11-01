@@ -48,6 +48,14 @@ var _story_center := Vector3.ZERO
 var _foliage: Array[MultiMeshInstance3D] = []
 var _rng := RandomNumberGenerator.new()
 var _fingerprint := 0
+var _resolved_materials: Dictionary = {}
+
+func configure_materials(roles: Dictionary, shared_materials: Dictionary) -> void:
+	# Only AbyssRoom's validated presentation path supplies this before ready.
+	if is_inside_tree(): return
+	_resolved_materials.clear()
+	for key: String in roles:
+		_resolved_materials[key] = shared_materials[roles[key]]
 
 func configure(id: StringName, authored_motif: StringName, expedition_seed: int, room_id: int, capture_inputs: bool = false) -> void:
 	module_id = id
@@ -375,7 +383,7 @@ func _flush_batches() -> void:
 		var visual := MultiMeshInstance3D.new()
 		visual.name = key.capitalize() + "Batch"
 		visual.multimesh = mm
-		visual.material_override = MATERIALS[data.material]
+		visual.material_override = _resolved_materials.get(data.material, MATERIALS[data.material])
 		visual.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		visual.set_meta("story_start", int(_story_starts.get(key, mm.instance_count)))
 		# Dummy rendering has no real instance readback. Inspection can retain

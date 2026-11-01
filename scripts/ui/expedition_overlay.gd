@@ -1494,9 +1494,10 @@ func _draw_boss() -> void:
 		return
 	var rect := Rect2(Vector2(size.x * 0.5 - 230, 224 + _safe().y), Vector2(460, 51))
 	_panel(rect, PANEL)
-	var boss_name := String(dungeon_snapshot.get("boss_name", "Rootwarden"))
+	var boss_name := String(dungeon_snapshot.get("boss_name", session_snapshot.get("required_boss_name", "Rootwarden")))
 	var phase := int(dungeon_snapshot.get("boss_phase", 1))
-	_text(boss_name.to_upper() + (" · GUARDIAN'S FURY" if phase > 1 else ""), rect.position + Vector2(14, 21), 12, GOLD)
+	var phase_label := String(dungeon_snapshot.get("boss_phase_label", "GUARDIAN'S FURY" if boss_name == "Rootwarden" else "PHASE %d" % phase))
+	_text(boss_name.to_upper() + (" · " + phase_label if phase > 1 else ""), rect.position + Vector2(14, 21), 12, GOLD)
 	var current := float(dungeon_snapshot.get("boss_health", 0))
 	var maximum := maxf(1, float(dungeon_snapshot.get("boss_max_health", 1)))
 	_text("%d / %d" % [int(current), int(maximum)], rect.position + Vector2(446, 21), 11, IVORY, false, true)
@@ -1508,7 +1509,7 @@ func _draw_boss() -> void:
 func _draw_dungeon_map() -> void:
 	var rect := Rect2(size.x - 190 - _safe().x, 29 + _safe().y, 157, 157)
 	_panel(rect, PANEL)
-	_text("ROOTBOUND ABYSS", rect.position + Vector2(rect.size.x * 0.5, 18), 9, GOLD, true)
+	_text(String(dungeon_snapshot.get("theme_label", session_snapshot.get("theme_label", "Rootbound Abyss"))).to_upper(), rect.position + Vector2(rect.size.x * 0.5, 18), 9, GOLD, true)
 	var positions := minimap_room_positions()
 	if positions.is_empty():
 		return
@@ -1620,11 +1621,11 @@ func _draw_results() -> void:
 	var seconds := int(results_snapshot.get("elapsed_seconds", 0))
 	var seed_value := int(results_snapshot.get("seed", 0))
 	var completed_depth := int(results_snapshot.get("expedition_depth", 1))
-	_text("ROOTBOUND · DEPTH %d · SEED %d · %02d:%02d" % [completed_depth, seed_value, seconds / 60, seconds % 60], rect.position + Vector2(30, 105), 12, MUTED)
+	_text("%s · DEPTH %d · SEED %d · %02d:%02d" % [String(results_snapshot.get("theme_label", "Rootbound Abyss")).to_upper(), completed_depth, seed_value, seconds / 60, seconds % 60], rect.position + Vector2(30, 105), 12, MUTED)
 	var summaries := [
 		["DM SECURED" if success else "DM LOST", str(results_snapshot.get("gold", 0))],
 		["ENEMIES DEFEATED", str(results_snapshot.get("kills", 0))],
-		["ROOTWARDEN", "DEFEATED" if bool(results_snapshot.get("boss_defeated", false)) else "STILL WATCHING"],
+		[String(results_snapshot.get("required_boss_name", "Rootwarden")).to_upper(), "DEFEATED" if bool(results_snapshot.get("boss_defeated", false)) else "STILL WATCHING"],
 	]
 	for index in range(summaries.size()):
 		var at := rect.position + Vector2(30 + index * 263, 127)

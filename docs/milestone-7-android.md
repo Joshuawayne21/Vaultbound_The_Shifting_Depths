@@ -32,6 +32,18 @@ Use a validated 7C checkpoint for these checks. Keep a separate disposable profi
 
 See [depth rules and save compatibility](dungeon-depths.md). Source/logic validation does not establish difficulty balance or a comfortable mobile session length; those need real play-throughs.
 
+## 7D.1 registered encounter integration
+
+Apply these checks only to a validated 7D.1 checkpoint. This integration batch still enables the existing Rootbound theme and Rootwarden; reserved content interfaces do not add new playable biomes or bosses.
+
+1. Back up a pre-v7 profile, enter Rootbound, defeat ordinary enemies and the Rootwarden, search their caches and extract. Compare owned equipment, exact enhancements, DM, companions, pets, Hall selections and depth unlocks with the backup. Verify the new encounter records survive a complete restart. Historical discoveries must not acquire invented old dates or kill totals.
+2. Repeat with Guardian, Mystic and an active pet. Switch cameras while enemies attack, while avoiding root warnings and while entering the boss arena. Check readable warnings, reliable companion reactions, uninterrupted attacks and the existing active-enemy limits.
+3. Cross room boundaries during awareness warnings. Canceled events must warn again before becoming dangerous. A safe room or boss arena must not inherit an almost-finished environmental attack.
+4. Enter and return repeatedly from the blue portal, including Android pause/resume during each fade. Watch for duplicate pets, stranded companions, controls remaining disabled, a dark transition overlay or an extra results screen. Verify every service and practice portal still works after returning.
+5. Measure peak memory and frame-time spikes during travel on Low, Medium and High. The previous world is briefly retained until final content admission; headless tests cannot establish this overlap's device memory cost.
+
+The [content integration guide](dungeon-content.md) describes source-bound rewards, save compatibility and the shared event budget. New explicit hazard shapes and guarded boss projectiles require their later encounter producers before players can exercise those new mechanics in ordinary play.
+
 ## Capture performance and visual evidence
 
 Record at least ten minutes covering plaza/perimeter traversal, crowded district views, portals, combat and a representative dungeon. Compare cold start and warmed-up play; note frame-time spikes, thermal throttling, touch comfort and battery drain. Use the metrics display/profiler where available. Native mesh counts and cloud CPU timings cannot establish device FPS.
@@ -42,4 +54,4 @@ Record at least ten minutes covering plaza/perimeter traversal, crowded district
 
 Attach actual screenshots or a short recording for visual issues. Label any desktop software-rendered capture accurately; it is not Android evidence. **30 FPS** and optional **60 FPS** remain device goals until verified.
 
-Run only the checks applicable to the downloaded checkpoint. New biomes/bosses/recruits, genetics, Veilgarden and Frontier require their own stage-specific tests when implemented. Their presence in the [plan](milestone-7-plan.md) does not make them available in 7B or 7C.
+Run only the checks applicable to the downloaded checkpoint. New biomes/bosses/recruits, genetics, Veilgarden and Frontier require their own stage-specific tests when implemented. Their presence in the [plan](milestone-7-plan.md) does not make them available in 7B, 7C or 7D.1.

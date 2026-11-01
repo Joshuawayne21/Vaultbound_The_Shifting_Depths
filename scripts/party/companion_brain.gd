@@ -3,6 +3,8 @@ extends RefCounted
 ## Throttled local intentions, never damage authority or a language-model client.
 ## Direct orders constrain selection and pursuit; safety/revive refusal is explicit.
 
+const Danger = preload("res://scripts/combat/danger_geometry.gd")
+
 var actor: VaultCompanion
 var state: StringName = &"idle"
 var destination := Vector3.ZERO
@@ -391,6 +393,24 @@ func _avoid_telegraphs() -> bool:
 			continue
 		var zones: Array = source.get_danger_zones()
 		for zone: Dictionary in zones:
+			if zone.has("shape"):
+				if not Danger.is_live(zone) or not Danger.contains(zone, actor.global_position, 0.65): continue
+				var escape := actor.navigator.select_danger_escape()
+				if not escape.is_finite(): continue
+				destination = escape
+				wants_movement = true
+				var heading := escape - actor.global_position
+				heading.y = 0.0
+				heading = heading.normalized()
+				actor._dodge_direction = heading
+				var imminent: bool = StringName(zone.get("phase", &"warning")) == &"active" or float(zone.get("remaining", 0.0)) < 0.75
+				if imminent and actor.combat.dodge_cooldown <= 0.0 and actor.stamina >= actor.combat.dodge_cost \
+						and actor.navigator.danger_roll_safe(heading, actor.combat.dodge_speed * actor.combat.dodge_duration):
+					var previous: StringName = actor.combat.state
+					actor.combat.start_dodge()
+					if actor.combat.state == &"dodge" and previous != &"dodge": actor.dodge_count += 1
+				set_state(&"dodge")
+				return true
 			var center: Vector3 = zone.get("position", Vector3.ZERO)
 			var radius: float = float(zone.get("radius", 0.0)) + 0.65
 			var remaining: float = float(zone.get("remaining", 0.0))
@@ -426,6 +446,9 @@ func _position_dangerous(point: Vector3) -> bool:
 			continue
 		var zones: Array = source.get_danger_zones()
 		for zone: Dictionary in zones:
+			if zone.has("shape"):
+				if Danger.is_live(zone) and Danger.contains(zone, point, 0.7): return true
+				continue
 			var center: Vector3 = zone.get("position", Vector3.ZERO)
 			if point.distance_to(center) <= float(zone.get("radius", 0.0)) + 0.7 and float(zone.get("remaining", 0.0)) > 0.0:
 				return true

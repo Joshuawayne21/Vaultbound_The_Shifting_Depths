@@ -10,6 +10,7 @@ const ENEMIES := {
 }
 const MAX_ACTIVE_ENEMIES := 6
 const DEPTH_POLICY = preload("res://resources/expedition/depth_policy.tres")
+const Content = preload("res://scripts/expedition/dungeon_content.gd")
 var layout: Dictionary
 var rooms: Dictionary
 var seed_value := 0
@@ -24,6 +25,7 @@ var _spawn_ordinals: Dictionary = {}
 var _registered_actors: Dictionary = {}
 var _defeated_receipts: Dictionary = {}
 var _depth_policy: Dictionary = {}
+var _content_plan: Dictionary = {}
 
 func configure(value: Dictionary, instances: Dictionary, level: Node3D, expedition_seed: int, expedition_depth: int = 1) -> void:
 	if is_inside_tree() or not _depth_policy.is_empty():
@@ -34,6 +36,7 @@ func configure(value: Dictionary, instances: Dictionary, level: Node3D, expediti
 	if not VaultDepthPolicy.valid_snapshot(policy, expedition_depth):
 		return
 	_depth_policy = policy.duplicate(true)
+	_content_plan = level.issued_run_plan() if is_instance_valid(level) and level.has_method("issued_run_plan") else {}
 	layout = value.duplicate(true)
 	rooms = instances
 	_level = level
@@ -77,6 +80,14 @@ func _spawn(room_id: int, archetype: StringName, local_point: Vector3, elite: bo
 		return null
 	var enemy := ENEMIES[archetype].instantiate() as Node3D
 	var data: Resource = enemy.data.duplicate(true)
+	var descriptor: Dictionary = {}
+	if not _content_plan.is_empty():
+		descriptor = Content.source_descriptor(_content_plan, String(archetype), "elite" if elite else "none")
+		if descriptor.is_empty():
+			enemy.free()
+			return null
+		for key: String in _content_plan.encounters[String(archetype)].data:
+			data.set(key, _content_plan.encounters[String(archetype)].data[key])
 	data.max_health *= float(_depth_policy.health_multiplier) * strength * (1.3 if elite else 1.0)
 	data.damage *= float(_depth_policy.damage_multiplier) * strength * (1.15 if elite else 1.0)
 	data.leash_radius = 8.5
@@ -97,13 +108,15 @@ func _spawn(room_id: int, archetype: StringName, local_point: Vector3, elite: bo
 	# Metadata is a presentation/debug hint. Identity and reward source come from
 	# this spawn registry, so a foreign actor or repeated died signal grants nothing.
 	_registered_actors[enemy.get_instance_id()] = {"actor": weakref(enemy), "receipt": receipt,
-		"room_id": room_id, "archetype": String(archetype), "elite": elite}
+		"room_id": room_id, "archetype": String(archetype), "elite": elite, "descriptor": descriptor.duplicate(true)}
 	enemy.position = local_point + Vector3.UP * 0.15
+	if not _content_plan.is_empty(): enemy.combat_active = false
 	rooms[room_id].add_child(enemy)
 	if not actors_by_room.has(room_id):
 		actors_by_room[room_id] = []
 	actors_by_room[room_id].append(enemy)
 	enemy.died.connect(_on_enemy_died)
+	if not _content_plan.is_empty(): _refresh_activity()
 	return enemy
 
 func spawn_patrol(room_id: int, elite: bool = false) -> bool:
@@ -169,8 +182,13 @@ func _refresh_activity() -> void:
 				_set_active(enemy, false)
 	candidates.sort_custom(func(a: Node3D, b: Node3D) -> bool:
 		return a.global_position.distance_squared_to(player.global_position) < b.global_position.distance_squared_to(player.global_position))
+	var selected: Array[Node3D] = []
+	if is_instance_valid(_level) and _level.get("scheduler") != null:
+		selected = _level.scheduler.select_active_ordinary(candidates)
+	else:
+		for index in range(mini(MAX_ACTIVE_ENEMIES, candidates.size())): selected.append(candidates[index])
 	for index in range(candidates.size()):
-		_set_active(candidates[index], index < MAX_ACTIVE_ENEMIES)
+		_set_active(candidates[index], selected.has(candidates[index]))
 
 func _set_active(enemy: Node3D, enabled: bool) -> void:
 	if enemy.combat_active == enabled:
@@ -202,8 +220,18 @@ func death_record(enemy: Node3D) -> Dictionary:
 	var record := _dead_actor_record(enemy)
 	if record.is_empty() or not _defeated_receipts.has(record.receipt):
 		return {}
-	return {"receipt": record.receipt, "room_id": record.room_id,
+	var result := {"receipt": record.receipt, "room_id": record.room_id,
 		"archetype": record.archetype, "elite": record.elite}
+	if not record.get("descriptor", {}).is_empty():
+		result.merge(record.descriptor.duplicate(true))
+		result["owner_encounter_receipt"] = ""
+	return result
+
+func owns_live_actor(enemy: Node3D) -> bool:
+	return not _actor_record(enemy).is_empty() and float(enemy.get("health")) > 0.0 and enemy.get("state") != &"dead"
+
+func live_receipt(enemy: Node3D) -> String:
+	return String(_actor_record(enemy).get("receipt", "")) if owns_live_actor(enemy) else ""
 
 func death_receipt(enemy: Node3D) -> String:
 	return String(death_record(enemy).get("receipt", ""))
@@ -211,6 +239,10 @@ func death_receipt(enemy: Node3D) -> String:
 func _dead_actor_record(enemy: Node3D) -> Dictionary:
 	if not is_instance_valid(enemy) or not enemy.is_inside_tree() or float(enemy.get("health")) != 0.0 or enemy.get("state") != &"dead":
 		return {}
+	return _actor_record(enemy)
+
+func _actor_record(enemy: Node3D) -> Dictionary:
+	if not is_instance_valid(enemy) or not enemy.is_inside_tree() or enemy.is_queued_for_deletion(): return {}
 	var record: Dictionary = _registered_actors.get(enemy.get_instance_id(), {})
 	if record.is_empty() or record.actor.get_ref() != enemy:
 		return {}

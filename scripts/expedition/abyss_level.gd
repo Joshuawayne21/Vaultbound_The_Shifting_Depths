@@ -19,6 +19,9 @@ const PetDiscovery = preload("res://scripts/pets/pet_discovery.gd")
 const PetDiscoveryLayout = preload("res://resources/pets/discovery_layout.tres")
 const Placement = preload("res://scripts/treasure/loot_placement.gd")
 const DepthPolicy = preload("res://resources/expedition/depth_policy.tres")
+const Content = preload("res://scripts/expedition/dungeon_content.gd")
+const Scheduler = preload("res://scripts/expedition/encounter_event_scheduler.gd")
+const Presentation = preload("res://scripts/visual/dungeon_presentation.gd")
 
 var display_name := "THE ROOTBOUND ABYSS"
 var objective := "Find the Rootwarden • Defeat the guardian • Extract your treasure"
@@ -31,6 +34,7 @@ var rooms: Dictionary = {}
 var boss: Node3D
 var encounters: EncounterManager
 var awareness: AwarenessDirector
+var scheduler: EncounterEventScheduler
 var extraction: Node3D
 var boss_reward_chest: Node3D
 var loot_caches: VaultLootCacheManager
@@ -58,6 +62,9 @@ var _configured_layout: Dictionary = {}
 var _encounter_seed := 1
 var _decoration_seed := 1
 var _boss_seed := 1
+var _content_plan: Dictionary = {}
+var _boss_record: Dictionary = {}
+var _hazard_sequence := 0
 
 func configure_run_context(generation: int) -> bool:
 	# The shell binds the issued run before its fade awaits and before _ready.
@@ -71,6 +78,7 @@ func configure_run_context(generation: int) -> bool:
 func configure(expedition_seed: int) -> void:
 	if _run_context_configured or (is_inside_tree() and not layout.is_empty()): return
 	_depth_configured = false
+	_content_plan = {}
 	seed_value = expedition_seed
 	_issued_seed = expedition_seed
 	_encounter_seed = expedition_seed
@@ -86,6 +94,7 @@ func configure(expedition_seed: int) -> void:
 func configure_depth(expedition_seed: int, expedition_depth: int) -> void:
 	if _run_context_configured or (is_inside_tree() and not layout.is_empty()): return
 	_depth_configured = true
+	_content_plan = {}
 	seed_value = expedition_seed
 	_issued_seed = expedition_seed
 	_depth_policy = DepthPolicy.describe_depth(expedition_depth).duplicate(true)
@@ -104,6 +113,26 @@ func configure_depth(expedition_seed: int, expedition_depth: int) -> void:
 	_configured_layout = layout.duplicate(true)
 	validation_errors = Generator.validate(layout)
 
+func configure_content(expedition_seed: int, expedition_depth: int) -> void:
+	if _run_context_configured or (is_inside_tree() and not layout.is_empty()): return
+	configure_depth(expedition_seed, expedition_depth)
+	_content_plan = Content.resolve_run_plan(expedition_seed, expedition_depth)
+	if _content_plan.is_empty():
+		layout = {}
+		_configured_layout = {}
+		validation_errors.assign(["Executable dungeon content is unavailable"])
+		return
+	layout = Generator.generate_for_run(expedition_seed, expedition_depth)
+	_configured_layout = layout.duplicate(true)
+	validation_errors = Generator.validate(layout, _depth_policy, _content_plan)
+
+func issued_run_plan() -> Dictionary:
+	return _content_plan.duplicate(true)
+
+func issued_run_plan_matches(expected: Dictionary) -> bool:
+	# Hot source guards compare without allocating the presentation snapshot.
+	return _content_plan == expected
+
 func issued_depth_context() -> Dictionary:
 	# Detached identity comes from the pre-spawn configuration, not current UI or
 	# a mutable public layout field. Session compares it with its own issued plan.
@@ -118,7 +147,7 @@ func validate_generation() -> bool:
 			validation_errors.assign(["Unsupported or missing configured expedition layout"])
 			return false
 		configure(seed_value)
-	validation_errors = Generator.validate(layout, _depth_policy if _depth_configured else {})
+	validation_errors = Generator.validate(layout, _depth_policy if _depth_configured else {}, _content_plan)
 	if seed_value != _issued_seed or layout != _configured_layout:
 		validation_errors.append("Expedition layout changed after configuration")
 	for room: Dictionary in layout.get("rooms", []):
@@ -149,6 +178,21 @@ func _ready() -> void:
 		ancestor = ancestor.get_parent()
 	var kit := Architecture.new(self)
 	kit.environment(true)
+	var issued_presentation: Dictionary = {}
+	var shared_materials: Dictionary = {}
+	if not _content_plan.is_empty():
+		issued_presentation = _content_plan.theme.presentation
+		shared_materials = Presentation.build_materials(issued_presentation)
+		var environment := Presentation.build_environment(issued_presentation)
+		if shared_materials.is_empty() or environment == null:
+			validation_errors.append("Issued dungeon presentation could not be prepared")
+			return
+		for child: Node in get_children():
+			if child is WorldEnvironment: child.environment = environment
+		scheduler = Scheduler.new()
+		if not scheduler.configure(self, _content_plan, run_generation):
+			validation_errors.append("Issued encounter scheduler could not be prepared")
+			return
 	var geometry := Node3D.new()
 	geometry.name = "RoomModules"
 	add_child(geometry)
@@ -162,6 +206,10 @@ func _ready() -> void:
 			openings.append(direction)
 		instance.configure_openings(openings)
 		instance.configure_visuals(_decoration_seed, int(room.id))
+		if not issued_presentation.is_empty() and not instance.configure_presentation(issued_presentation, shared_materials):
+			instance.free()
+			validation_errors.append("Issued room presentation does not match its native module")
+			return
 		geometry.add_child(instance)
 		_keep_static_collisions(instance)
 		rooms[int(room.id)] = instance
@@ -175,6 +223,9 @@ func _ready() -> void:
 	encounters.enemy_defeated.connect(_on_enemy_defeated)
 	add_child(encounters)
 	awareness = Awareness.new()
+	if scheduler != null:
+		awareness.warning_admission = _reserve_awareness_warning
+		awareness.warning_cancelled.connect(_cancel_awareness_warning)
 	awareness.warning_changed.connect(_on_warning)
 	awareness.event_requested.connect(_on_awareness_event)
 	if _session != null and _session.has_signal("treasure_activated"):
@@ -194,6 +245,7 @@ func _ready() -> void:
 	_refresh_rooms()
 
 func _exit_tree() -> void:
+	if scheduler != null: scheduler.cancel_all(&"world_exit")
 	if is_instance_valid(_session) and awareness != null and _session.has_signal("treasure_activated"):
 		if _session.treasure_activated.is_connected(_on_treasure_activated):
 			_session.treasure_activated.disconnect(_on_treasure_activated)
@@ -202,7 +254,9 @@ func _process(delta: float) -> void:
 	if validation_errors.size() > 0 or awareness == null:
 		return
 	if not run_source_context_valid():
+		if scheduler != null: scheduler.cancel_all(&"run_closed")
 		return
+	if scheduler != null: scheduler.tick(delta)
 	if not is_instance_valid(_player):
 		_player = get_tree().get_first_node_in_group("player") as Node3D
 	# The leader's body remains the room/discovery anchor while companions revive
@@ -225,9 +279,14 @@ func _process(delta: float) -> void:
 	var boss_near := false
 	if is_instance_valid(boss) and not _boss_dead:
 		boss_near = current_room_id == int(layout.boss_id) or boss.global_position.distance_to(_player.global_position) < 15.0
-		if boss.combat_active != boss_near:
-			boss.combat_active = boss_near
 	encounters.set_boss_active(boss_near or kind in [&"boss", &"extraction", &"entrance"])
+	if scheduler != null:
+		if boss_near:
+			boss_near = scheduler.set_boss_owner(boss)
+		else:
+			scheduler.set_boss_owner(null)
+	if is_instance_valid(boss) and not _boss_dead and boss.combat_active != boss_near:
+		boss.combat_active = boss_near
 	if boss_near:
 		for hazard: AbyssHazard in _hazards:
 			if hazard.active:
@@ -240,6 +299,8 @@ func _process(delta: float) -> void:
 		snapshot_changed.emit(snapshot())
 
 func _enter_room(id: int) -> void:
+	if scheduler != null and current_room_id != id and awareness != null:
+		awareness.cancel_warning()
 	current_room_id = id
 	if not discovered.has(id):
 		discovered.append(id)
@@ -339,6 +400,9 @@ func _create_boss() -> void:
 	# Scale a private resource before _ready applies its preserved seeded modifier.
 	# Activation/camera switches never revisit this operation or refill health.
 	var boss_data := boss.data.duplicate(true) as RootwardenData
+	if not _content_plan.is_empty():
+		for key: String in _content_plan.boss.rootwarden_data:
+			boss_data.set(key, _content_plan.boss.rootwarden_data[key])
 	boss_data.max_health *= float(_depth_policy.health_multiplier)
 	boss_data.slam_damage *= float(_depth_policy.damage_multiplier)
 	boss_data.thorn_damage *= float(_depth_policy.damage_multiplier)
@@ -349,7 +413,11 @@ func _create_boss() -> void:
 	boss.combat_active = false
 	boss.position = Vector3(0, 0.15, 0)
 	boss.set_meta("loot_receipt", "rootwarden_reward")
+	_boss_record = {"actor": weakref(boss), "room_id": int(layout.boss_id), "receipt": "rootwarden_reward",
+		"generation": run_generation, "descriptor": Content.source_descriptor(_content_plan, "rootwarden", String(_content_plan.get("variant_id", "none"))) if not _content_plan.is_empty() else {}}
 	rooms[int(layout.boss_id)].add_child(boss)
+	if not _content_plan.is_empty() and String(boss.modifier_id) != String(_content_plan.variant_id):
+		validation_errors.append("Rootwarden modifier does not match issued content")
 	boss.died.connect(_on_boss_died)
 
 func _create_extraction() -> void:
@@ -419,9 +487,15 @@ func encounter_death_record(enemy: Node3D) -> Dictionary:
 	if enemy == boss:
 		if enemy.get_parent() != rooms[int(layout.boss_id)] or float(enemy.health) != 0.0 or enemy.state != &"dead":
 			return {}
-		return {"receipt": "rootwarden_reward", "archetype": "rootwarden", "elite": true,
+		if _boss_record.is_empty() or _boss_record.actor.get_ref() != enemy or int(_boss_record.generation) != run_generation:
+			return {}
+		var result := {"receipt": "rootwarden_reward", "archetype": "rootwarden", "elite": true,
 			"room_id": int(layout.boss_id), "depth": int(layout.rooms[int(layout.boss_id)].depth),
 			"kind": "boss", "drop_position": _loot_drop_point(enemy, 2.6)}
+		if not _content_plan.is_empty():
+			result.merge(_boss_record.descriptor.duplicate(true))
+			result["owner_encounter_receipt"] = ""
+		return result
 	var record := encounters.death_record(enemy)
 	if record.is_empty(): return {}
 	record["depth"] = int(layout.rooms[int(record.room_id)].depth)
@@ -433,6 +507,21 @@ func run_source_context_valid() -> bool:
 	return is_inside_tree() and not is_queued_for_deletion() and run_generation >= 0 \
 		and is_instance_valid(_session) and _session.has_method("run_context_valid") \
 		and bool(_session.run_context_valid(self, run_generation))
+
+func registered_combat_source_valid(actor: Node3D, generation: int, receipt: String) -> bool:
+	if not run_source_context_valid() or generation != run_generation or not is_instance_valid(actor) \
+			or not actor.is_inside_tree() or actor.is_queued_for_deletion() or float(actor.get("health")) <= 0.0:
+		return false
+	if actor == boss:
+		return not _boss_record.is_empty() and _boss_record.actor.get_ref() == actor \
+			and receipt == String(_boss_record.receipt) and actor.get_parent() == rooms.get(int(_boss_record.room_id))
+	return encounters != null and encounters.live_receipt(actor) == receipt and not receipt.is_empty()
+
+func owns_environment_hazard(hazard: Node3D) -> bool:
+	return is_instance_valid(hazard) and _hazards.has(hazard) and hazard.get_parent() == self
+
+func pending_environment_events() -> int:
+	return awareness._queued.size() + (1 if awareness.pending_kind != &"" else 0) if awareness != null else 0
 
 func completed_context_valid() -> bool:
 	# Extraction already closed its run. A callback may have begun another run or
@@ -546,24 +635,50 @@ func _on_warning(message: String) -> void:
 	if run_source_context_valid() and not message.is_empty():
 		notice.emit(message)
 
+func _reserve_awareness_warning(kind: StringName) -> bool:
+	return scheduler != null and run_source_context_valid() \
+		and scheduler.request_event(current_room_id, String(kind), "awareness_" + String(kind))
+
+func _cancel_awareness_warning(kind: StringName) -> void:
+	if scheduler != null: scheduler.cancel_event("awareness_" + String(kind))
+
 func _on_awareness_event(kind: StringName) -> void:
 	if not run_source_context_valid(): return
+	var event_receipt := "awareness_" + String(kind)
+	if scheduler != null and not scheduler.commit_event(current_room_id, String(kind), event_receipt):
+		scheduler.cancel_event(event_receipt)
+		notice.emit("The distant hunt passes — the chamber is already occupied")
+		return
 	if kind == &"roots":
 		var local_player: Vector3 = rooms[current_room_id].to_local(_player.global_position)
 		local_player.x = clampf(local_player.x, -7.0, 7.0)
 		local_player.z = clampf(local_player.z, -7.0, 7.0)
 		local_player.y = 0.0
-		_arm_roots(current_room_id, local_player, 2.0)
+		_arm_roots(current_room_id, local_player, 2.0, event_receipt)
 	else:
 		if encounters.spawn_patrol(current_room_id, kind == &"elite"):
 			notice.emit("An elder sentinel joins the hunt" if kind == &"elite" else "A patrol enters the chamber")
 		else:
 			notice.emit("The distant hunt passes — the chamber is already occupied")
+	if not run_source_context_valid(): return
+	if scheduler != null:
+		scheduler.finish_event(event_receipt)
+		encounters._refresh_activity()
 
-func _arm_roots(id: int, local_point: Vector3, warning_time: float) -> bool:
+func _arm_roots(id: int, local_point: Vector3, warning_time: float, event_receipt: String = "") -> bool:
 	for hazard: AbyssHazard in _hazards:
 		if not hazard.active:
-			return hazard.trigger(rooms[id].to_global(local_point), id, warning_time, 2.0, 12.0 * float(_depth_policy.damage_multiplier))
+			_hazard_sequence += 1
+			var source_receipt := event_receipt if not event_receipt.is_empty() else "roots_%d" % _hazard_sequence
+			var reservation := scheduler.reserve_hazard(id, source_receipt) if scheduler != null else -1
+			if scheduler != null and reservation < 0: return false
+			var started := hazard.trigger(rooms[id].to_global(local_point), id, warning_time, 2.0, 12.0 * float(_depth_policy.damage_multiplier))
+			if scheduler != null:
+				if not started or not scheduler.bind_hazard(reservation, hazard):
+					scheduler.release_reservation(reservation)
+					hazard.cancel()
+					return false
+			return started
 	return false
 
 func get_spawn_transform(_entry_id: StringName) -> Transform3D:
@@ -576,6 +691,7 @@ func snapshot() -> Dictionary:
 			"kind": String(room.kind), "discovered": discovered.has(room.id),
 			"hidden": room.hidden and not _revealed.has(room.id), "neighbors": room.neighbors.duplicate()})
 	var boss_state := {"visible": false, "health": 0.0, "max_health": 1.0, "name": "Rootwarden", "phase": 1, "modifier": ""}
+	if not _content_plan.is_empty(): boss_state.name = String(_content_plan.boss.display_name)
 	if is_instance_valid(boss):
 		boss_state.visible = bool(boss.combat_active) and not _boss_dead
 		boss_state.health = float(boss.health)
@@ -584,6 +700,10 @@ func snapshot() -> Dictionary:
 		boss_state.modifier = String(boss.get("modifier_name")) if boss.get("modifier_name") != null else ""
 	var active_count := (encounters.active_enemy_count() if encounters != null else 0) + (1 if boss_state.visible else 0)
 	return {"active": true, "biome": "Rootbound Abyss", "floor": int(_depth_context.get("expedition_depth", 1)), "seed": _issued_seed,
+		"theme_id": String(_content_plan.get("theme_id", "rootbound_abyss")),
+		"theme_label": String(_content_plan.get("theme", {}).get("display_name", "Rootbound Abyss")),
+		"required_boss_name": String(boss_state.name), "boss_phase_label": "GUARDIAN'S FURY" if int(boss_state.phase) >= 2 else "PHASE I",
+		"event_budget": scheduler.budget_snapshot() if scheduler != null else {},
 		"expedition_depth": int(_depth_context.get("expedition_depth", 1)),
 		"tier_id": String(_depth_policy.get("tier_id", "beginner")), "tier_label": String(_depth_policy.get("tier_label", "Beginner")),
 		"depth_policy_version": int(_depth_context.get("depth_policy_version", 1)),

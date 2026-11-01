@@ -21,6 +21,7 @@ func _run() -> void:
 		legacy.gold = 61
 		legacy.erase("pets")
 		legacy.erase("depth_progression")
+		legacy.erase("encounter_records")
 		if version == 4:
 			legacy.character = CharacterProgression.award_xp(legacy.character, CharacterProgression.EXPERIENCE_CAP)
 			VaultInventory.add_items(legacy, {"vaultheart_staff": 1, "rootwarden_heart": 1, "root_fiber": 17}, 601)
@@ -52,6 +53,7 @@ func _run() -> void:
 			var restored := migrated.duplicate(true)
 			restored.erase("pets")
 			restored.erase("depth_progression")
+			restored.erase("encounter_records")
 			restored.version = 4
 			check(restored == legacy, "Complete v4 +10 equipment, rolls, loadout, display, receipts, stock, recruited roster and progression are unchanged")
 		check(FileAccess.get_file_as_string(PATH) == exact and not FileAccess.file_exists(PATH + ".pre-v%d.bak" % Store.VERSION), "Version %d load never writes" % version)

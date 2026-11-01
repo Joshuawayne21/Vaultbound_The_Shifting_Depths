@@ -22,6 +22,7 @@ func _legacy(version: int) -> Dictionary:
 	var result := Fixtures.owned() if version == 5 else Store.empty_profile()
 	result.version = version
 	result.erase("depth_progression")
+	result.erase("encounter_records")
 	result.gold = 813
 	result.statistics.completed = 17
 	result.statistics.best_seconds = 0.21666666666666701
@@ -57,16 +58,16 @@ func _run() -> void:
 		_write(PATH + ".pre-v5.bak", "historical pre-v5 bytes")
 		var store := Store.new(PATH)
 		var loaded := store.load_profile()
-		check(not store.read_only and loaded.version == Store.VERSION, "Old version %d loads into v6 without writing" % version)
+		check(not store.read_only and loaded.version == Store.VERSION, "Old version %d loads into the current schema without writing" % version)
 		check(loaded.depth_progression == {"version": 1, "highest_unlocked_depth": 2, "highest_cleared_depth": 1}, "Version %d repeated old completions prove only Floor one" % version)
 		check(loaded.gold == legacy.gold and loaded.items == legacy.items and loaded.companions == legacy.companions, "Version %d preserves secured currency, inventory totals and recruited progression" % version)
 		if version >= 3:
 			check(loaded.inventory == legacy.inventory and loaded.equipment == legacy.equipment and loaded.displays == legacy.displays, "Version %d retains exact instances, enhancement, protections, equipped UIDs and displays" % version)
 		if version == 5:
 			check(loaded.pets == legacy.pets, "All existing pet aliases, appearances, seed records and collection ownership survive migration")
-		check(FileAccess.get_file_as_string(PATH) == exact and not FileAccess.file_exists(PATH + ".pre-v6.bak"), "Version %d migration is read-only until a verified save" % version)
+		check(FileAccess.get_file_as_string(PATH) == exact and not FileAccess.file_exists(PATH + ".pre-v%d.bak" % Store.VERSION), "Version %d migration is read-only until a verified save" % version)
 		check(store.save_profile(loaded), "Version %d migrated profile saves through the existing verified writer" % version)
-		check(FileAccess.get_file_as_string(PATH + ".pre-v6.bak") == exact and FileAccess.get_file_as_string(PATH + ".pre-v4.bak") == "historical pre-v4 bytes" and FileAccess.get_file_as_string(PATH + ".pre-v5.bak") == "historical pre-v5 bytes", "Version %d retains exact source and all older immutable backup bytes" % version)
+		check(FileAccess.get_file_as_string(PATH + ".pre-v%d.bak" % Store.VERSION) == exact and FileAccess.get_file_as_string(PATH + ".pre-v4.bak") == "historical pre-v4 bytes" and FileAccess.get_file_as_string(PATH + ".pre-v5.bak") == "historical pre-v5 bytes", "Version %d retains exact source and all older immutable backup bytes" % version)
 		var encoded := Store.normalize(JSON.parse_string(JSON.stringify(loaded, "", true, true)))
 		check(Store.new(PATH).load_profile() == encoded, "Version %d reload retains encoded float intent and every discrete field" % version)
 	var legacy := _legacy(5)
@@ -130,13 +131,13 @@ func _run() -> void:
 	var before := _legacy(5)
 	var source := JSON.stringify(before)
 	_write(PATH, source)
-	_write(PATH + ".pre-v6.bak", "first immutable migration")
+	_write(PATH + ".pre-v%d.bak" % Store.VERSION, "first immutable migration")
 	var store := Store.new(PATH)
 	var migrated := store.load_profile()
-	check(store.save_profile(migrated) and FileAccess.get_file_as_string(PATH + ".pre-v6.bak") == "first immutable migration", "Restoring another legacy profile never overwrites the first migration backup")
+	check(store.save_profile(migrated) and FileAccess.get_file_as_string(PATH + ".pre-v%d.bak" % Store.VERSION) == "first immutable migration", "Restoring another legacy profile never overwrites the first migration backup")
 	var found := false
 	for file: String in DirAccess.open(PATH.get_base_dir()).get_files():
-		if file.begins_with("profile.json.pre-v6.") and file.ends_with(".bak") and FileAccess.get_file_as_string(PATH.get_base_dir().path_join(file)) == source:
+		if file.begins_with("profile.json.pre-v%d." % Store.VERSION) and file.ends_with(".bak") and FileAccess.get_file_as_string(PATH.get_base_dir().path_join(file)) == source:
 			found = true
 	check(found, "Separately restored legacy source receives its own exact content-addressed backup")
 	finish()

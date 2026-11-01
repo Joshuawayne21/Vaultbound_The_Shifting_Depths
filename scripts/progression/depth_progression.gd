@@ -5,6 +5,7 @@ extends RefCounted
 
 const Policy = preload("res://resources/expedition/depth_policy.tres")
 const VERSION := 1
+const FIRST_PROFILE_VERSION := 6
 const MAX_UNLOCKED := 1000000
 const KEYS := ["version", "highest_unlocked_depth", "highest_cleared_depth"]
 const AMBIGUOUS_LEGACY_KEYS := ["dungeon_progression", "depth_unlocks", "floor_unlocks", "unlocked_floors",
@@ -61,7 +62,7 @@ static func preservation_error(raw: Dictionary) -> String:
 	# restoration of an older backup. Current damaged v6 sections use normal
 	# recovery; unsupported namespace versions/keys are always protected.
 	var version: Variant = raw.get("version")
-	if not _integer(version, 1, 6):
+	if not _integer(version, 1, 2147483647):
 		return ""
 	for key: String in AMBIGUOUS_LEGACY_KEYS:
 		if raw.has(key):
@@ -70,9 +71,9 @@ static func preservation_error(raw: Dictionary) -> String:
 		var fields: Dictionary = raw.depth_progression
 		if (fields.has("version") and not _integer(fields.version, VERSION, VERSION)) or fields.keys().any(func(key: Variant) -> bool: return key not in KEYS):
 			return "This profile contains an unsupported depth progression format. Secured primary and backup were left unchanged."
-	if int(version) < 6 and migrate_legacy(raw, 0).is_empty():
+	if int(version) < FIRST_PROFILE_VERSION and migrate_legacy(raw, 0).is_empty():
 		return "This profile contains malformed legacy depth progress. Secured primary and backup were left unchanged."
-	if int(version) >= 6:
+	if int(version) >= FIRST_PROFILE_VERSION:
 		for key: String in ["highest_unlocked_depth", "highest_cleared_depth", "unlocked_depths"]:
 			if raw.has(key):
 				return "This profile mixes depth progression formats. Secured primary and backup were left unchanged."

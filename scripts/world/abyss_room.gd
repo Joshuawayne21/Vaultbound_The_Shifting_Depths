@@ -17,6 +17,26 @@ var cosmetic_room_id := 0
 var _capture_geometry_for_validation := false
 var dressing: AbyssDecoration
 var ambient_fauna: VaultAmbientFauna
+var _presentation: Dictionary = {}
+var _presentation_materials: Dictionary = {}
+
+func configure_presentation(issued: Dictionary, shared_materials: Dictionary) -> bool:
+	# Content worlds provide one reconstructed material set before attachment.
+	# Existing standalone/depth fixtures retain their authored native resources.
+	var schema := preload("res://scripts/visual/dungeon_presentation.gd")
+	if is_inside_tree() or not _presentation.is_empty() or not schema.valid_snapshot(issued):
+		return false
+	if not issued.modules.has(String(module_id)) or not schema._keys(shared_materials, schema.ROLE_PATHS.keys()):
+		return false
+	for role: String in schema.ROLE_PATHS:
+		if not shared_materials[role] is Material: return false
+	var module: Dictionary = issued.modules[String(module_id)]
+	if scene_file_path != module.scene or String(visual_motif) != module.motif:
+		return false
+	_presentation = issued.duplicate(true)
+	_presentation_materials = shared_materials.duplicate()
+	schema.apply_materials(self, _presentation_materials)
+	return true
 
 func configure_visuals(expedition_seed: int, room_id: int, capture_inputs: bool = false) -> void:
 	# Separate from topology/encounter/loot seeds and stable across room culling.
@@ -28,6 +48,8 @@ func _ready() -> void:
 	_apply_openings()
 	dressing = preload("res://scripts/visual/abyss_decoration.gd").new()
 	dressing.configure(module_id, visual_motif, cosmetic_seed, cosmetic_room_id, _capture_geometry_for_validation)
+	if not _presentation.is_empty():
+		dressing.configure_materials(_presentation.dressing, _presentation_materials)
 	add_child(dressing)
 	var ambience := preload("res://scripts/visual/visual_style.gd").add_ambience(self, &"abyss", Vector3(18, 2.6, 18), dressing.cosmetic_seed)
 	ambience.configure_budget(12)

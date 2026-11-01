@@ -3,6 +3,8 @@ extends RefCounted
 ## Pure seeded grid assembly. Native room scenes own geometry; this owns only topology.
 const CELL_SIZE := 24.0
 const DEPTH_POLICY = preload("res://resources/expedition/depth_policy.tres")
+const DepthStreams = preload("res://scripts/expedition/depth_streams.gd")
+const Content = preload("res://scripts/expedition/dungeon_content.gd")
 const DIRECTIONS := {
 	&"north": Vector2i(0, -1), &"east": Vector2i(1, 0),
 	&"south": Vector2i(0, 1), &"west": Vector2i(-1, 0),
@@ -95,10 +97,9 @@ static func _fallback(seed_value: int, count: int) -> Dictionary:
 static func depth_seed(seed_value: int, expedition_depth: int, stream: StringName) -> int:
 	# Separate deterministic streams avoid coupling topology to decoration/combat
 	# calls. The visible seed, floor and policy version reproduce a configured run.
-	var key := "vaultbound_depth_v%d|%d|%d|%s" % [DEPTH_POLICY.policy_version, seed_value, expedition_depth, String(stream)]
 	# Forty bits leave ample headroom for the existing per-room multipliers
 	# (104729 decoration / 7919 encounters) on every signed 64-bit platform.
-	return int(key.sha256_text().substr(0, 10).hex_to_int())
+	return DepthStreams.seed_for(seed_value, expedition_depth, int(DEPTH_POLICY.policy_version), stream)
 
 static func generate_for_depth(seed_value: int, expedition_depth: int) -> Dictionary:
 	var policy: Dictionary = DEPTH_POLICY.describe_depth(expedition_depth)
@@ -154,6 +155,14 @@ static func generate_for_depth(seed_value: int, expedition_depth: int) -> Dictio
 		occupied[choice.cell] = index
 		_link(rooms, choice.parent, index)
 	return _finish_for_depth(seed_value, rooms, route, policy)
+
+static func generate_for_run(seed_value: int, expedition_depth: int) -> Dictionary:
+	var plan: Dictionary = Content.resolve_run_plan(seed_value, expedition_depth)
+	if plan.is_empty(): return {}
+	var result := generate_for_depth(seed_value, expedition_depth)
+	for key: String in ["content_version", "theme_id", "theme_version", "required_boss_id", "required_boss_version"]:
+		result[key] = plan[key]
+	return result
 
 static func _fallback_for_depth(seed_value: int, expedition_depth: int, count: int) -> Dictionary:
 	var policy: Dictionary = DEPTH_POLICY.describe_depth(expedition_depth)
@@ -231,9 +240,15 @@ static func _finish(seed_value: int, rooms: Array[Dictionary], route: Array[int]
 	return {"seed": seed_value, "rooms": rooms, "main_route": route,
 		"entrance_id": route[0], "boss_id": route[-2], "extraction_id": route[-1], "cell_size": CELL_SIZE}
 
-static func validate(layout: Dictionary, issued_policy: Dictionary = {}) -> Array[String]:
+static func validate(layout: Dictionary, issued_policy: Dictionary = {}, issued_content: Dictionary = {}) -> Array[String]:
 	var errors: Array[String] = []
 	var rooms: Array = layout.get("rooms", [])
+	var has_content := false
+	for key: String in ["content_version", "theme_id", "theme_version", "required_boss_id", "required_boss_version"]:
+		has_content = has_content or layout.has(key)
+	if has_content and not layout.has("generator_version"):
+		errors.append("Content metadata requires the configured generator")
+		return errors
 	var minimum_rooms := 8
 	var maximum_rooms := 12
 	if layout.has("generator_version"):
@@ -250,6 +265,21 @@ static func validate(layout: Dictionary, issued_policy: Dictionary = {}) -> Arra
 			return errors
 		minimum_rooms = int(policy.minimum_rooms)
 		maximum_rooms = int(policy.maximum_rooms)
+		if layout.has("content_version"):
+			if not layout.get("seed") is int:
+				errors.append("Content layout has no valid seed")
+				return errors
+			var content: Dictionary = Content.resolve_run_plan(int(layout.seed), int(layout.expedition_depth)) if issued_content.is_empty() else issued_content
+			if not Content.valid_run_plan(content, policy) or content.seed != layout.seed or content.expedition_depth != layout.expedition_depth:
+				errors.append("Content layout does not match the issued run")
+				return errors
+			for key: String in ["content_version", "theme_id", "theme_version", "required_boss_id", "required_boss_version"]:
+				if layout.get(key) != content[key]:
+					errors.append("Content layout identity changed: " + key)
+					return errors
+		elif not issued_content.is_empty() or has_content:
+			errors.append("Content identity requires its version")
+			return errors
 	elif layout.has("expedition_depth") or layout.has("biome_id") or layout.has("depth_policy_version"):
 		errors.append("Configured depth metadata requires its generator version")
 		return errors

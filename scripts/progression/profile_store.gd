@@ -4,8 +4,9 @@ extends RefCounted
 ## a temporary file, and renamed only after a successful read-back. A previous
 ## valid profile is kept as .bak. This is offline persistence, not remote authority.
 
-const VERSION := 6
+const VERSION := 7
 const DepthProgress = preload("res://scripts/progression/depth_progression.gd")
+const EncounterProgress = preload("res://scripts/progression/encounter_progression.gd")
 const MAX_COUNT := 2147483647
 const MAX_COMPANION_LEVEL := 20
 const MAX_COMPANION_EXPERIENCE := 19000
@@ -34,6 +35,7 @@ static func empty_profile() -> Dictionary:
 	profile.merge(VaultInventory.empty_fields(), true)
 	profile["pets"] = VaultPetProgression.empty_fields()
 	profile["depth_progression"] = DepthProgress.empty_fields()
+	profile["encounter_records"] = EncounterProgress.empty_fields()
 	return profile
 
 func load_profile() -> Dictionary:
@@ -146,6 +148,8 @@ static func _normalize(value: Variant, unavailable_items: Dictionary, unavailabl
 	if not value is Dictionary or not _integer(value.get("version"), 1, VERSION):
 		return {}
 	if not DepthProgress.preservation_error(value).is_empty():
+		return {}
+	if not EncounterProgress.preservation_error(value).is_empty():
 		return {}
 	if int(value.version) >= 2:
 		# Instance-based versions are complete, not optional patches. Missing sections indicate
@@ -272,6 +276,10 @@ static func _normalize(value: Variant, unavailable_items: Dictionary, unavailabl
 			if not result.monster_discoveries.has(id):
 				result.monster_discoveries.append(id)
 		result.monster_discoveries.sort()
+	var records := EncounterProgress.normalize(value.get("encounter_records"), int(result.revision)) if int(value.version) >= 7 else EncounterProgress.migrate_legacy(value, int(result.statistics.completed), result.monster_discoveries, int(result.revision))
+	if records.is_empty():
+		return {}
+	result.encounter_records = records
 	return result
 
 static func _unsupported_profile_reason(value: Variant) -> String:
@@ -282,6 +290,9 @@ static func _unsupported_profile_reason(value: Variant) -> String:
 		var depth_error := DepthProgress.preservation_error(value)
 		if not depth_error.is_empty():
 			return depth_error
+		var encounter_error := EncounterProgress.preservation_error(value)
+		if not encounter_error.is_empty():
+			return encounter_error
 	if not value is Dictionary or not _integer(version, 2, VERSION) or not value.get("inventory") is Array:
 		return ""
 	var unavailable := {}
