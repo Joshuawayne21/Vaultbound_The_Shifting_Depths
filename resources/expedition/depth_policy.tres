@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="VaultDepthPolicy" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/expedition/depth_policy.gd" id="1_policy"]
+
+[resource]
+script = ExtResource("1_policy")
+bands = Array[Dictionary]([{
+"first": 1, "last": 5, "id": "beginner", "label": "Beginner", "minimum_rooms": 6, "maximum_rooms": 9, "encounter_profile_id": "beginner", "hazard_profile_id": "beginner"
+}, {
+"first": 6, "last": 10, "id": "adventurer", "label": "Adventurer", "minimum_rooms": 8, "maximum_rooms": 12, "encounter_profile_id": "adventurer", "hazard_profile_id": "adventurer"
+}, {
+"first": 11, "last": 15, "id": "veteran", "label": "Veteran", "minimum_rooms": 10, "maximum_rooms": 16, "encounter_profile_id": "veteran", "hazard_profile_id": "veteran"
+}, {
+"first": 16, "last": 20, "id": "elite", "label": "Elite", "minimum_rooms": 10, "maximum_rooms": 16, "encounter_profile_id": "elite", "hazard_profile_id": "elite"
+}, {
+"first": 21, "last": 30, "id": "master", "label": "Master", "minimum_rooms": 12, "maximum_rooms": 20, "encounter_profile_id": "master", "hazard_profile_id": "master"
+}, {
+"first": 31, "last": 50, "id": "abyssal", "label": "Abyssal", "minimum_rooms": 15, "maximum_rooms": 24, "encounter_profile_id": "abyssal", "hazard_profile_id": "abyssal"
+}])

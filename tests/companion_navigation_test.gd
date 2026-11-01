@@ -117,12 +117,25 @@ func _seed_traversal(seed_value: int) -> void:
 			hidden_id = int(room.id)
 			break
 	await _cleanup()
-	if hidden_id >= 0: await _secret_navigation(seed_value, hidden_id)
+	if hidden_id >= 0: await _secret_navigation(seed_value)
 
-func _secret_navigation(seed_value: int, hidden_id: int) -> void:
+func _secret_navigation(seed_value: int) -> void:
 	# Passage rewards/discovery require the real current-world player. Preserve
 	# the navigator's blocked/open cache assertion using that genuine source,
 	# rather than granting a synthetic movement actor interaction authority.
+	# Legacy physical traversal above keeps its original layouts. Game now uses
+	# configured Depth1, so select a real secret from that generator explicitly.
+	var configured_seed := -1
+	var hidden_id := -1
+	for candidate in range(seed_value, seed_value + 100):
+		for room: Dictionary in DungeonGenerator.generate_for_depth(candidate, 1).rooms:
+			if room.hidden:
+				configured_seed = candidate
+				hidden_id = int(room.id)
+				break
+		if configured_seed >= 0: break
+	if not check(configured_seed >= 0 and hidden_id >= 0, "Actual-world navigation fixture finds a configured Depth1 secret near seed %d" % seed_value): return
+	seed_value = configured_seed
 	if not await boot_game(): return
 	await game.start_expedition(seed_value)
 	if not await arrive(&"rootbound_abyss"): return

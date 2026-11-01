@@ -11,6 +11,7 @@ const LEVELS := {
 	&"rootbound_abyss": "res://scenes/world/rootbound_abyss.tscn",
 	&"collection_hall": "res://scenes/world/collection_hall.tscn",
 }
+const DEPTH_POLICY = preload("res://resources/expedition/depth_policy.tres")
 
 ## Set to a nonnegative value in the inspector to reproduce an expedition on Android.
 @export var debug_expedition_seed: int = -1
@@ -34,6 +35,8 @@ var _inspected_companion_id := ""
 var _city_waypoint: Dictionary = {}
 var _city_portal_source: WeakRef
 var _city_portal_route: Dictionary = {}
+var _city_review_epoch := 0
+var _application_focused := true
 var _pet_selection: Dictionary = {}
 var _pet_presenter: WeakRef
 
@@ -67,6 +70,7 @@ func _ready() -> void:
 	hud.equipment_requested.connect(_equip_item)
 	hud.city_waypoint_requested.connect(_on_city_waypoint)
 	hud.portal_entry_requested.connect(_on_portal_enter)
+	hud.portal_depth_selected.connect(_on_portal_depth_selected)
 	hud.emote_requested.connect(_on_emote_requested)
 	hud.actor_inspection_requested.connect(_on_actor_inspection)
 	camera_rig.mode_changed.connect(hud.set_camera_mode)
@@ -104,8 +108,19 @@ func _process(delta: float) -> void:
 		_publish_city_snapshot()
 		if _city_portal_source != null and hud.expedition_overlay.mode == &"sanctuary":
 			var source := _city_portal_source.get_ref() as Node3D
-			var valid := _city_source_valid(source) and _city_portal_route_matches(source)
-			hud.expedition_overlay.sanctuary_panel.set_entry_available(valid, "" if valid else "Move back within sight and reach of this portal.")
+			var admission := _city_portal_admission(source)
+			hud.expedition_overlay.sanctuary_panel.set_entry_available(bool(admission.ok), String(admission.reason))
+
+func _notification(what: int) -> void:
+	if what in [NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED]:
+		_application_focused = false
+		_city_review_epoch += 1
+		_city_portal_source = null
+		_city_portal_route.clear()
+		if is_node_ready() and is_instance_valid(hud):
+			hud.expedition_overlay.sanctuary_panel.set_entry_available(false, "Entry canceled when focus changed. Reopen this portal to review it.")
+	elif what in [NOTIFICATION_APPLICATION_FOCUS_IN, NOTIFICATION_APPLICATION_RESUMED]:
+		_application_focused = true
 
 func _on_action(action: StringName) -> void:
 	if action == &"camera_toggle" and not transitioning:
@@ -123,10 +138,10 @@ func _on_action(action: StringName) -> void:
 	elif action == &"revive_teammate" and not transitioning:
 		party.request_player_revive()
 
-func start_expedition(seed_value: int = -1) -> void:
-	await change_location(&"rootbound_abyss", &"default", seed_value)
+func start_expedition(seed_value: int = -1, expedition_depth: int = 1) -> void:
+	await change_location(&"rootbound_abyss", &"default", seed_value, expedition_depth)
 
-func change_location(destination: StringName, entry_id: StringName = &"default", expedition_seed: int = -1) -> void:
+func change_location(destination: StringName, entry_id: StringName = &"default", expedition_seed: int = -1, expedition_depth: int = 1) -> void:
 	if transitioning:
 		return
 	var request_world := active_world
@@ -146,27 +161,43 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 		return
 	var issued_generation := -1
 	var issued_seed := -1
+	var issued_context: Dictionary = {}
 	if destination == &"rootbound_abyss":
 		if ExpeditionSession.active:
 			next_world.free()
 			hud.show_message("Finish or abandon the current expedition before starting another.")
 			return
+		var admission: Dictionary = ExpeditionSession.depth_entry_status(expedition_depth)
+		if not bool(admission.get("ok", false)):
+			next_world.free()
+			hud.show_message(String(admission.get("reason", "This depth is unavailable.")))
+			return
+		var reviewed_policy: Dictionary = admission.policy.duplicate(true)
 		var selected_seed := expedition_seed if expedition_seed >= 0 else debug_expedition_seed
 		if selected_seed < 0:
 			selected_seed = int(Time.get_unix_time_from_system()) ^ Time.get_ticks_usec()
 		selected_seed = absi(selected_seed) % 2147483647
-		next_world.configure(selected_seed)
-		if not next_world.validate_generation():
+		next_world.configure_depth(selected_seed, expedition_depth)
+		var reviewed_context := {"expedition_depth": expedition_depth, "biome_id": reviewed_policy.biome_id, "depth_policy_version": reviewed_policy.policy_version}
+		if not next_world.validate_generation() or not _candidate_depth_matches(next_world, reviewed_context):
 			hud.show_message("Layout validation failed · seed %d. You remain in Sanctuary." % selected_seed)
 			next_world.free()
 			return
-		if not ExpeditionSession.begin_run(selected_seed):
+		if not ExpeditionSession.begin_depth_run(selected_seed, expedition_depth):
 			next_world.free()
 			return
 		issued_generation = ExpeditionSession.run_generation
 		issued_seed = selected_seed
+		issued_context = ExpeditionSession.issued_run_context()
+		if issued_context.get("policy", {}) != reviewed_policy or int(issued_context.get("expedition_depth", 0)) != expedition_depth \
+				or not _candidate_depth_matches(next_world, issued_context):
+			next_world.free()
+			_abort_unentered_run(issued_generation, issued_seed, issued_context)
+			hud.show_message("Depth configuration changed before entry. Review the portal again.")
+			return
 		if not next_world.configure_run_context(issued_generation):
 			next_world.free()
+			_abort_unentered_run(issued_generation, issued_seed, issued_context)
 			return
 	elif current_location == &"rootbound_abyss":
 		# Extraction already commits and closes the run. Every other departure
@@ -181,8 +212,10 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 			return
 	if transitioning or active_world != request_world:
 		next_world.free()
+		_abort_unentered_run(issued_generation, issued_seed, issued_context)
 		return
 	transitioning = true
+	_city_review_epoch += 1
 	_set_pet_suspended(true)
 	_city_waypoint.clear()
 	_city_portal_source = null
@@ -199,8 +232,8 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	var fade_out := create_tween()
 	fade_out.tween_method(hud.set_transition, 0.0 if active_world != null else 1.0, 1.0, 0.18)
 	await fade_out.finished
-	if not _travel_generation_valid(issued_generation, issued_seed):
-		_cancel_candidate_travel(next_world)
+	if not _travel_generation_valid(issued_generation, issued_seed, issued_context):
+		_cancel_candidate_travel(next_world, issued_generation, issued_seed, issued_context)
 		return
 	# Retain the safe world until candidate _ready callbacks and floor registration
 	# complete. A replacement run must never inherit this request's old dungeon.
@@ -209,8 +242,8 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	var candidate_process := next_world.process_mode
 	next_world.process_mode = Node.PROCESS_MODE_DISABLED
 	world_root.add_child(next_world)
-	if not _travel_generation_valid(issued_generation, issued_seed):
-		_cancel_candidate_travel(next_world)
+	if not _travel_generation_valid(issued_generation, issued_seed, issued_context) or not _candidate_ready_valid(next_world, issued_context):
+		_cancel_candidate_travel(next_world, issued_generation, issued_seed, issued_context)
 		return
 	_keep_world_collision(next_world)
 	active_world = next_world
@@ -218,13 +251,13 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	ExpeditionSession.bind_game_context(player, destination, active_world)
 	demo_exchange.bind_game_context(player, destination, active_world)
 	# The same identity is required after binding and the next physics boundary.
-	if _travel_generation_valid(issued_generation, issued_seed): await get_tree().physics_frame
-	if not _travel_generation_valid(issued_generation, issued_seed):
+	if _travel_generation_valid(issued_generation, issued_seed, issued_context): await get_tree().physics_frame
+	if not _travel_generation_valid(issued_generation, issued_seed, issued_context) or not _candidate_ready_valid(next_world, issued_context):
 		active_world = previous_world
 		current_location = previous_location
 		ExpeditionSession.bind_game_context(player, previous_location, previous_world)
 		demo_exchange.bind_game_context(player, previous_location, previous_world)
-		_cancel_candidate_travel(next_world)
+		_cancel_candidate_travel(next_world, issued_generation, issued_seed, issued_context)
 		return
 	if is_instance_valid(previous_world):
 		_pet_presenter = null
@@ -269,16 +302,49 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 		hud.present_pending_results()
 
 
-func _travel_generation_valid(generation: int, seed_value: int) -> bool:
+func _travel_generation_valid(generation: int, seed_value: int, issued_context: Dictionary = {}) -> bool:
 	if generation < 0: return true
 	if ExpeditionSession.run_generation != generation: return false
-	return (ExpeditionSession.active and ExpeditionSession.run_seed == seed_value) if seed_value >= 0 else not ExpeditionSession.active
+	if seed_value < 0: return not ExpeditionSession.active
+	return ExpeditionSession.active and ExpeditionSession.run_seed == seed_value \
+		and (issued_context.is_empty() or ExpeditionSession.issued_run_context() == issued_context)
 
 
-func _cancel_candidate_travel(candidate: Node3D) -> void:
+func _candidate_depth_matches(candidate: Node3D, issued_context: Dictionary) -> bool:
+	if issued_context.is_empty(): return true
+	if not is_instance_valid(candidate) or not candidate.has_method("issued_depth_context"): return false
+	var configured: Dictionary = candidate.issued_depth_context()
+	if int(configured.get("generator_version", 0)) != 2: return false
+	for key: String in ["expedition_depth", "biome_id", "depth_policy_version"]:
+		if configured.get(key) != issued_context.get(key): return false
+	if issued_context.has("policy"):
+		if not candidate.has_method("issued_depth_policy") or candidate.issued_depth_policy() != issued_context.policy: return false
+	return true
+
+
+func _candidate_ready_valid(candidate: Node3D, issued_context: Dictionary) -> bool:
+	if issued_context.is_empty(): return true
+	return _candidate_depth_matches(candidate, issued_context) and candidate.get("validation_errors").is_empty() \
+		and not candidate.get("rooms").is_empty() and candidate.validate_generation() and candidate.get("validation_errors").is_empty()
+
+
+func _abort_unentered_run(generation: int, seed_value: int, issued_context: Dictionary) -> void:
+	# Only this call's newly issued run may be abandoned. A reentrant callback can
+	# create a replacement with the same seed/depth and a different generation.
+	if generation < 0 or seed_value < 0 or issued_context.is_empty(): return
+	if not _travel_generation_valid(generation, seed_value, issued_context): return
+	ExpeditionSession.fail_run("abandoned")
+	# No expedition was entered, so do not queue an empty expedition-results card.
+	if not ExpeditionSession.active and ExpeditionSession.run_generation == generation \
+			and int(hud.pending_results.get("run_generation", -1)) == generation:
+		hud.pending_results.clear()
+
+
+func _cancel_candidate_travel(candidate: Node3D, generation: int = -1, seed_value: int = -1, issued_context: Dictionary = {}) -> void:
 	if is_instance_valid(candidate):
 		if candidate.get_parent() != null: candidate.get_parent().remove_child(candidate)
 		candidate.queue_free()
+	_abort_unentered_run(generation, seed_value, issued_context)
 	transitioning = false
 	party.set_paused(_modal_open)
 	_set_pet_suspended(_modal_open)
@@ -319,7 +385,7 @@ func _on_city_waypoint(id: StringName) -> void:
 
 
 func _city_source_valid(source: Node3D) -> bool:
-	if transitioning or current_location != &"sanctuary" or not is_instance_valid(active_world) \
+	if transitioning or not _application_focused or current_location != &"sanctuary" or not is_instance_valid(active_world) \
 			or not is_instance_valid(source) or not source.is_inside_tree() or not active_world.is_ancestor_of(source):
 		return false
 	if player.health <= 0.0 or player.downed or player.combat.state != &"idle": return false
@@ -348,11 +414,56 @@ func _on_portal_information(source: Node3D) -> void:
 		return
 	var destination := StringName(source.get("destination"))
 	if not LEVELS.has(destination): return
+	_city_review_epoch += 1
 	_city_portal_source = weakref(source)
 	_city_portal_route = {"destination": destination, "entry_id": StringName(source.get("entry_id"))}
+	if destination == &"rootbound_abyss":
+		_city_portal_route.expedition_depth = 1
+		_city_portal_route.depth_policy_version = DEPTH_POLICY.policy_version
 	_publish_city_snapshot()
-	var details := {"title": String(source.get("title")), "entry_enabled": true, "lines": _portal_information_lines(destination)}
-	hud.expedition_overlay.open_city_information(&"portal", details)
+	hud.expedition_overlay.open_city_information(&"portal", _portal_details(source))
+
+
+func _on_portal_depth_selected(depth: int) -> void:
+	var source := _city_portal_source.get_ref() as Node3D if _city_portal_source != null else null
+	if hud.expedition_overlay.mode != &"sanctuary" or hud.expedition_overlay.sanctuary_panel.kind != &"portal" \
+			or not _city_source_valid(source) or not _city_portal_route_matches(source) \
+			or _city_portal_route.destination != &"rootbound_abyss": return
+	var baseline: Dictionary = ExpeditionSession.depth_entry_status(1)
+	var maximum: int = maxi(DEPTH_POLICY.supported_maximum_depth, mini(int(baseline.highest_unlocked_depth), DEPTH_POLICY.supported_maximum_depth + 1))
+	if depth < 1 or depth > maximum: return
+	_city_review_epoch += 1
+	_city_portal_route.expedition_depth = depth
+	_city_portal_route.depth_policy_version = DEPTH_POLICY.policy_version
+	hud.expedition_overlay.sanctuary_panel.update_portal_details(_portal_details(source))
+
+
+func _portal_details(source: Node3D) -> Dictionary:
+	var destination := StringName(_city_portal_route.destination)
+	var admission := _city_portal_admission(source)
+	var details := {"title": String(source.get("title")), "entry_enabled": bool(admission.ok), "entry_reason": String(admission.reason)}
+	if destination == &"rootbound_abyss":
+		var depth := int(_city_portal_route.expedition_depth)
+		var status: Dictionary = ExpeditionSession.depth_entry_status(depth)
+		details.selected_depth = depth
+		# An earned future unlock is shown as unavailable, never erased or offered as content.
+		details.maximum_depth = maxi(DEPTH_POLICY.supported_maximum_depth, mini(int(status.highest_unlocked_depth), DEPTH_POLICY.supported_maximum_depth + 1))
+		details.lines = _portal_information_lines(destination, status)
+	else:
+		details.lines = _portal_information_lines(destination)
+	return details
+
+
+func _city_portal_admission(source: Node3D) -> Dictionary:
+	if not _city_source_valid(source) or not _city_portal_route_matches(source):
+		return {"ok": false, "reason": "Move back within sight and reach of this portal."}
+	if _city_portal_route.destination == &"rootbound_abyss":
+		if typeof(_city_portal_route.get("expedition_depth")) != TYPE_INT \
+				or _city_portal_route.get("depth_policy_version") != DEPTH_POLICY.policy_version:
+			return {"ok": false, "reason": "Depth rules changed. Reopen this portal to review them."}
+		var status: Dictionary = ExpeditionSession.depth_entry_status(int(_city_portal_route.expedition_depth))
+		return {"ok": bool(status.ok), "reason": String(status.reason)}
+	return {"ok": true, "reason": ""}
 
 
 func _city_portal_route_matches(source: Node3D) -> bool:
@@ -363,33 +474,49 @@ func _city_portal_route_matches(source: Node3D) -> bool:
 func _on_portal_enter() -> void:
 	var source := _city_portal_source.get_ref() as Node3D if _city_portal_source != null else null
 	if hud.expedition_overlay.mode != &"sanctuary" or hud.expedition_overlay.sanctuary_panel.kind != &"portal": return
-	if not _city_source_valid(source) or not _city_portal_route_matches(source):
-		hud.expedition_overlay.sanctuary_panel.set_entry_available(false, "This portal is no longer in reach. Close the card and approach it again.")
+	var admission := _city_portal_admission(source)
+	if not bool(admission.ok):
+		hud.expedition_overlay.sanctuary_panel.set_entry_available(false, String(admission.reason))
 		return
 	var destination := StringName(_city_portal_route.destination)
 	var entry_id := StringName(_city_portal_route.entry_id)
+	var depth := int(_city_portal_route.get("expedition_depth", 1))
+	var policy_version := int(_city_portal_route.get("depth_policy_version", 0))
+	var reviewed_epoch := _city_review_epoch
 	_city_portal_source = null
 	_city_portal_route.clear()
 	hud.close_modals()
-	_travel_from_city_portal.call_deferred(weakref(source), destination, entry_id)
+	_travel_from_city_portal.call_deferred(weakref(source), destination, entry_id, depth, policy_version, reviewed_epoch)
 
 
-func _travel_from_city_portal(reference: WeakRef, destination: StringName, entry_id: StringName) -> void:
+func _travel_from_city_portal(reference: WeakRef, destination: StringName, entry_id: StringName, depth: int, policy_version: int, reviewed_epoch: int) -> void:
 	# Recheck after the input/physics callback, immediately before existing travel guards.
 	var source := reference.get_ref() as Node3D
-	if not _city_source_valid(source) or source.get("destination") != destination or source.get("entry_id") != entry_id:
+	if reviewed_epoch != _city_review_epoch or hud.expedition_overlay.mode != &"none" \
+			or not _city_source_valid(source) or source.get("destination") != destination or source.get("entry_id") != entry_id:
 		hud.show_message("Portal entry expired. Approach the gate and review it again.")
 		return
-	change_location(destination, entry_id)
+	if destination == &"rootbound_abyss":
+		var status: Dictionary = ExpeditionSession.depth_entry_status(depth)
+		if policy_version != DEPTH_POLICY.policy_version or not bool(status.ok):
+			hud.show_message(String(status.reason) if not bool(status.ok) else "Depth rules changed. Reopen the portal.")
+			return
+	change_location(destination, entry_id, -1, depth)
 
 
-func _portal_information_lines(destination: StringName) -> Array[String]:
+func _portal_information_lines(destination: StringName, depth_status: Dictionary = {}) -> Array[String]:
 	var ai_count := maxi(0, party.snapshot().get("members", []).size() - 1)
 	var lines: Array[String] = []
 	if destination == &"rootbound_abyss":
-		lines = ["ROOTBOUND ABYSS · Floor 1 · Fixed local challenge; no difficulty selection", "8–12 connected rooms · hidden branches may appear · Rootwarden guards extraction.",
-			"Hazards: root eruptions, rising awareness, melee enemies and ranged attacks.", "Finds: Depthmarks, equipment, materials and relics from existing loot tables.",
-			"Extract to secure finds; defeat or abandonment loses unsecured loot.", "Seed: chosen on entry · layout and modifiers are not known before generation."]
+		if depth_status.is_empty(): depth_status = ExpeditionSession.depth_entry_status(1)
+		var depth := int(depth_status.depth)
+		var policy: Dictionary = depth_status.policy
+		lines = ["ROOTBOUND ABYSS · Depth %d · %s" % [depth, String(policy.get("tier_label", "Not available in this build"))],
+			"%d–%d rooms · Rootwarden guards extraction · optional branches." % [int(policy.get("minimum_rooms", 0)), int(policy.get("maximum_rooms", 0))] if not policy.is_empty() else "Your saved unlock is preserved. No dungeon is configured for this depth.",
+			"Health ×%.2f · Damage ×%.2f · Encounter DM / extraction XP ×%.2f" % [float(policy.get("health_multiplier", 1)), float(policy.get("damage_multiplier", 1)), float(policy.get("reward_multiplier", 1))],
+			"Defeat the boss and extract to unlock the next depth. Loss forfeits unsecured finds.",
+			"Highest unlocked: %d · This build: 1–%d · Existing item drop tables." % [int(depth_status.highest_unlocked_depth), DEPTH_POLICY.supported_maximum_depth],
+			"Seed on entry · Modifiers not known before generation · Root hazards, awareness, mixed foes."]
 		if debug_expedition_seed >= 0: lines[5] = "Developer seed: %d · layout and modifiers are generated on entry." % debug_expedition_seed
 	elif destination == &"combat_arena":
 		lines = ["PROVING GROUNDS · Existing combat practice area", "Practice Sword/Shield and Staff combat with the current enemies and targets.", "This is a local training destination, not a player-versus-player match."]
@@ -466,6 +593,7 @@ func _on_modal_changed(open: bool) -> void:
 	_set_pet_suspended(open or transitioning)
 	party.set_paused(open or transitioning)
 	if open:
+		_city_review_epoch += 1
 		InputHub.controls_enabled = false
 		player.set_controls_enabled(false)
 		_player_process_mode = player.process_mode

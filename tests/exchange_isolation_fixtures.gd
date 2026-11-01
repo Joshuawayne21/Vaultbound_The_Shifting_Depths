@@ -44,16 +44,21 @@ static func prepare_profile(path: String) -> bool:
 	rich.discoveries = ["temple_blade", "runic_staff", "rootwarden_heart", "iron_ore"]
 	rich.monster_discoveries = ["rootwarden", "skeleton", "golem"]
 	Inventory.sync_mirrors(rich)
-	# Produce a genuine preserved pre-v5 migration snapshot, then a current v5
-	# backup. Both contain real progression and must remain byte-exact in tests.
+	# Retain an explicitly authored historical pre-v5 snapshot, then migrate
+	# through the current writer. Every real progression file is fingerprinted.
 	var legacy := rich.duplicate(true)
 	legacy.version = 4
 	legacy.erase("pets")
+	legacy.erase("depth_progression")
 	if Store.normalize(legacy).is_empty(): return false
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null: return false
 	file.store_string(JSON.stringify(legacy))
 	file.close()
+	var historical := FileAccess.open(path + ".pre-v5.bak", FileAccess.WRITE)
+	if historical == null: return false
+	historical.store_string(JSON.stringify(legacy))
+	historical.close()
 	var store := Store.new(path)
 	var loaded := store.load_profile()
 	if store.read_only: return false
@@ -61,7 +66,7 @@ static func prepare_profile(path: String) -> bool:
 	loaded.revision = int(loaded.revision) + 1
 	if not store.save_profile(loaded): return false
 	loaded.revision = int(loaded.revision) + 1
-	return store.save_profile(loaded) and FileAccess.file_exists(path + ".bak") and FileAccess.file_exists(path + ".pre-v5.bak")
+	return store.save_profile(loaded) and FileAccess.file_exists(path + ".bak") and FileAccess.file_exists(path + ".pre-v5.bak") and FileAccess.file_exists(path + ".pre-v%d.bak" % Store.VERSION)
 
 static func files_snapshot(root_path: String) -> Dictionary:
 	var result := {}

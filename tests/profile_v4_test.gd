@@ -79,6 +79,7 @@ func _migration() -> void:
 	_clean()
 	var old := _owned()
 	old.version = 3
+	old.erase("depth_progression")
 	var exact := " \n" + JSON.stringify(old, "  ", false, true) + "\n"
 	var historical := "{historical pre-v3 bytes retained independently}\n"
 	var historical_v4 := "{historical pre-v4 bytes retained independently}\n"
@@ -92,7 +93,8 @@ func _migration() -> void:
 		return
 	var expected := old.duplicate(true)
 	expected.version = Store.VERSION
-	check(current == expected and current.inventory == old.inventory, "Migration changes only schema version, preserving every UID, roll, enhancement and progression field")
+	expected.depth_progression = {"version": 1, "highest_unlocked_depth": 2, "highest_cleared_depth": 1}
+	check(current == expected and current.inventory == old.inventory, "Migration adds only schema/depth fields from proven Floor1 completions, preserving every UID, roll, enhancement and prior progression field")
 	check(FileAccess.get_file_as_string(PATH) == exact and not FileAccess.file_exists(PATH + ".pre-v%d.bak" % Store.VERSION), "Loading alone neither rewrites nor backs up the original save")
 	check(store.save_profile(current), "First current-schema write succeeds after preservation")
 	check(FileAccess.get_file_as_string(PATH + ".pre-v%d.bak" % Store.VERSION) == exact and FileAccess.get_file_as_string(PATH + ".bak") == exact, "Permanent pre-current and rotating backup preserve exact version-three bytes")

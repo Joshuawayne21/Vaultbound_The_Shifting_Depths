@@ -18,6 +18,7 @@ const LootCaches = preload("res://scripts/treasure/loot_cache_manager.gd")
 const PetDiscovery = preload("res://scripts/pets/pet_discovery.gd")
 const PetDiscoveryLayout = preload("res://resources/pets/discovery_layout.tres")
 const Placement = preload("res://scripts/treasure/loot_placement.gd")
+const DepthPolicy = preload("res://resources/expedition/depth_policy.tres")
 
 var display_name := "THE ROOTBOUND ABYSS"
 var objective := "Find the Rootwarden • Defeat the guardian • Extract your treasure"
@@ -49,6 +50,14 @@ var _pet_discoveries: Dictionary = {}
 var _pet_placement_pending: Array[Dictionary] = []
 var _pet_placement_attempts := 0
 var _pet_placement_elapsed := 0.0
+var _depth_configured := false
+var _depth_context: Dictionary = {}
+var _depth_policy: Dictionary = {}
+var _issued_seed := 1
+var _configured_layout: Dictionary = {}
+var _encounter_seed := 1
+var _decoration_seed := 1
+var _boss_seed := 1
 
 func configure_run_context(generation: int) -> bool:
 	# The shell binds the issued run before its fade awaits and before _ready.
@@ -61,14 +70,57 @@ func configure_run_context(generation: int) -> bool:
 
 func configure(expedition_seed: int) -> void:
 	if _run_context_configured or (is_inside_tree() and not layout.is_empty()): return
+	_depth_configured = false
 	seed_value = expedition_seed
+	_issued_seed = expedition_seed
+	_encounter_seed = expedition_seed
+	_decoration_seed = expedition_seed
+	_boss_seed = expedition_seed
+	_depth_policy = DepthPolicy.describe_depth(1).duplicate(true)
+	_depth_context = {"expedition_depth": 1, "biome_id": "rootbound_abyss",
+		"depth_policy_version": 1, "generator_version": 1}
 	layout = Generator.generate(seed_value)
+	_configured_layout = layout.duplicate(true)
 	validation_errors = Generator.validate(layout)
+
+func configure_depth(expedition_seed: int, expedition_depth: int) -> void:
+	if _run_context_configured or (is_inside_tree() and not layout.is_empty()): return
+	_depth_configured = true
+	seed_value = expedition_seed
+	_issued_seed = expedition_seed
+	_depth_policy = DepthPolicy.describe_depth(expedition_depth).duplicate(true)
+	_depth_context = {}
+	layout = {}
+	_configured_layout = {}
+	if _depth_policy.is_empty():
+		validation_errors.assign(["Unsupported expedition depth"])
+		return
+	_depth_context = {"expedition_depth": expedition_depth, "biome_id": String(_depth_policy.biome_id),
+		"depth_policy_version": int(_depth_policy.policy_version), "generator_version": 2}
+	_encounter_seed = Generator.depth_seed(expedition_seed, expedition_depth, &"encounters")
+	_decoration_seed = Generator.depth_seed(expedition_seed, expedition_depth, &"decoration")
+	_boss_seed = Generator.depth_seed(expedition_seed, expedition_depth, &"boss")
+	layout = Generator.generate_for_depth(expedition_seed, expedition_depth)
+	_configured_layout = layout.duplicate(true)
+	validation_errors = Generator.validate(layout)
+
+func issued_depth_context() -> Dictionary:
+	# Detached identity comes from the pre-spawn configuration, not current UI or
+	# a mutable public layout field. Session compares it with its own issued plan.
+	return _depth_context.duplicate(true)
+
+func issued_depth_policy() -> Dictionary:
+	return _depth_policy.duplicate(true)
 
 func validate_generation() -> bool:
 	if layout.is_empty():
+		if _depth_configured:
+			validation_errors.assign(["Unsupported or missing configured expedition layout"])
+			return false
 		configure(seed_value)
-	validation_errors = Generator.validate(layout)
+	validation_errors = Generator.validate(layout, _depth_policy if _depth_configured else {})
+	if seed_value != _issued_seed or layout != _configured_layout:
+		validation_errors.append("Expedition layout changed after configuration")
 	for room: Dictionary in layout.get("rooms", []):
 		var path := "res://scenes/rooms/%s.tscn" % String(room.module)
 		if not ResourceLoader.exists(path):
@@ -76,7 +128,7 @@ func validate_generation() -> bool:
 	return validation_errors.is_empty()
 
 func _ready() -> void:
-	if layout.is_empty():
+	if layout.is_empty() and not _depth_configured:
 		configure(seed_value)
 	if not validate_generation():
 		push_error("Abyss generation was rejected: " + str(validation_errors))
@@ -109,7 +161,7 @@ func _ready() -> void:
 		for direction: StringName in room.openings:
 			openings.append(direction)
 		instance.configure_openings(openings)
-		instance.configure_visuals(seed_value, int(room.id))
+		instance.configure_visuals(_decoration_seed, int(room.id))
 		geometry.add_child(instance)
 		_keep_static_collisions(instance)
 		rooms[int(room.id)] = instance
@@ -119,7 +171,7 @@ func _ready() -> void:
 	add_child(loot_caches)
 	encounters = Encounters.new()
 	encounters.name = "EncounterManager"
-	encounters.configure(layout, rooms, self, seed_value)
+	encounters.configure(layout, rooms, self, _encounter_seed, int(_depth_context.expedition_depth))
 	encounters.enemy_defeated.connect(_on_enemy_defeated)
 	add_child(encounters)
 	awareness = Awareness.new()
@@ -284,7 +336,16 @@ func _create_boss() -> void:
 	if packed == null:
 		return
 	boss = packed.instantiate() as Node3D
-	boss.configure(seed_value)
+	# Scale a private resource before _ready applies its preserved seeded modifier.
+	# Activation/camera switches never revisit this operation or refill health.
+	var boss_data := boss.data.duplicate(true) as RootwardenData
+	boss_data.max_health *= float(_depth_policy.health_multiplier)
+	boss_data.slam_damage *= float(_depth_policy.damage_multiplier)
+	boss_data.thorn_damage *= float(_depth_policy.damage_multiplier)
+	boss_data.grasp_damage *= float(_depth_policy.damage_multiplier)
+	boss_data.fury_damage *= float(_depth_policy.damage_multiplier)
+	boss.data = boss_data
+	boss.configure(_boss_seed)
 	boss.combat_active = false
 	boss.position = Vector3(0, 0.15, 0)
 	boss.set_meta("loot_receipt", "rootwarden_reward")
@@ -502,7 +563,7 @@ func _on_awareness_event(kind: StringName) -> void:
 func _arm_roots(id: int, local_point: Vector3, warning_time: float) -> bool:
 	for hazard: AbyssHazard in _hazards:
 		if not hazard.active:
-			return hazard.trigger(rooms[id].to_global(local_point), id, warning_time, 2.0, 12.0)
+			return hazard.trigger(rooms[id].to_global(local_point), id, warning_time, 2.0, 12.0 * float(_depth_policy.damage_multiplier))
 	return false
 
 func get_spawn_transform(_entry_id: StringName) -> Transform3D:
@@ -522,7 +583,11 @@ func snapshot() -> Dictionary:
 		boss_state.phase = int(boss.get("phase")) if boss.get("phase") != null else 1
 		boss_state.modifier = String(boss.get("modifier_name")) if boss.get("modifier_name") != null else ""
 	var active_count := (encounters.active_enemy_count() if encounters != null else 0) + (1 if boss_state.visible else 0)
-	return {"active": true, "biome": "Rootbound Abyss", "floor": 1, "seed": seed_value,
+	return {"active": true, "biome": "Rootbound Abyss", "floor": int(_depth_context.get("expedition_depth", 1)), "seed": _issued_seed,
+		"expedition_depth": int(_depth_context.get("expedition_depth", 1)),
+		"tier_id": String(_depth_policy.get("tier_id", "beginner")), "tier_label": String(_depth_policy.get("tier_label", "Beginner")),
+		"depth_policy_version": int(_depth_context.get("depth_policy_version", 1)),
+		"generator_version": int(_depth_context.get("generator_version", 1)),
 		"current_room": current_room_id, "current_room_id": current_room_id, "discovered": discovered.duplicate(),
 		"awareness_value": awareness.value if awareness != null else 0.0,
 		"awareness_warning": awareness.warning if awareness != null else "",

@@ -19,6 +19,19 @@ Use a committed, validated stage checkpoint. No physical Android, GPU or sustain
 - Compare Low/Medium/High, reduced motion, reduced effects, ambient density zero and high-contrast prompts. Essential walls/portal obstructions must remain consistent across quality; reduced decoration must not hide enemies, loot or interactables. Observe daytime and the darker phase of the existing local daylight cycle.
 - Enter/return from Rootbound, practice dungeon, Proving Grounds and Collection Hall in both camera views. Record a dungeon seed and verify that the visual pass has not altered its route, pickups or gameplay.
 
+## 7C dungeon depth progression
+
+Use a validated 7C checkpoint for these checks. Keep a separate disposable profile for fresh-player tests; do not reset a real profile.
+
+1. On a new profile, approach the blue gate and inspect Depth 2: it must explain that Depth 1 needs to be completed. Changing the selection must not start travel. Cancel and verify movement, camera and combat touches resume correctly.
+2. At every supported UI scale, select Depth 1 and confirm ENTER. Check that the card, dungeon HUD and results show the same floor. Switch cameras during movement, attacks and companion combat; no state or rewards should reset.
+3. Defeat the boss and extract. Verify Depth 2 unlocks, then fully close/reopen the game and confirm the unlock remains. Replaying Depth 1 must not remove it. On a separate failed run, confirm secured equipment, DM, pets and unlocks remain.
+4. With an existing pre-depth save, verify all owned records before and after migration. A previous successful Rootbound extraction should unlock Depth 2, irrespective of the number of earlier repeats. Keep the migration backup. Report an unsupported-format message without deleting data.
+5. Check portal selection with simultaneous joystick/camera touches, a held ENTER press, selector changes, Android pause/resume and Back. An old press must not enter a newly selected floor, and a closed card must not change an active expedition.
+6. As depths become available, record seed, depth and build. Check room bands, longer-route companion following, loot visibility, boss/extraction reachability and readable warnings. Test the longest available floors for memory use, sustained frame time and acceptable session length. The early-extraction feature is a later stage.
+
+See [depth rules and save compatibility](dungeon-depths.md). Source/logic validation does not establish difficulty balance or a comfortable mobile session length; those need real play-throughs.
+
 ## Capture performance and visual evidence
 
 Record at least ten minutes covering plaza/perimeter traversal, crowded district views, portals, combat and a representative dungeon. Compare cold start and warmed-up play; note frame-time spikes, thermal throttling, touch comfort and battery drain. Use the metrics display/profiler where available. Native mesh counts and cloud CPU timings cannot establish device FPS.
@@ -29,4 +42,4 @@ Record at least ten minutes covering plaza/perimeter traversal, crowded district
 
 Attach actual screenshots or a short recording for visual issues. Label any desktop software-rendered capture accurately; it is not Android evidence. **30 FPS** and optional **60 FPS** remain device goals until verified.
 
-Depth progression, new biomes/bosses/recruits, genetics, Veilgarden and Frontier require their own stage-specific tests when implemented. Their presence in the [plan](milestone-7-plan.md) does not make them available in 7B.
+Run only the checks applicable to the downloaded checkpoint. New biomes/bosses/recruits, genetics, Veilgarden and Frontier require their own stage-specific tests when implemented. Their presence in the [plan](milestone-7-plan.md) does not make them available in 7B or 7C.

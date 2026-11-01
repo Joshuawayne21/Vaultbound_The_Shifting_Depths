@@ -2,6 +2,7 @@ class_name DungeonGenerator
 extends RefCounted
 ## Pure seeded grid assembly. Native room scenes own geometry; this owns only topology.
 const CELL_SIZE := 24.0
+const DEPTH_POLICY = preload("res://resources/expedition/depth_policy.tres")
 const DIRECTIONS := {
 	&"north": Vector2i(0, -1), &"east": Vector2i(1, 0),
 	&"south": Vector2i(0, 1), &"west": Vector2i(-1, 0),
@@ -91,6 +92,102 @@ static func _fallback(seed_value: int, count: int) -> Dictionary:
 		_link(rooms, parent_id if branch_index < 2 else index - 2, index)
 	return _finish(seed_value, rooms, route)
 
+static func depth_seed(seed_value: int, expedition_depth: int, stream: StringName) -> int:
+	# Separate deterministic streams avoid coupling topology to decoration/combat
+	# calls. The visible seed, floor and policy version reproduce a configured run.
+	var key := "vaultbound_depth_v%d|%d|%d|%s" % [DEPTH_POLICY.policy_version, seed_value, expedition_depth, String(stream)]
+	# Forty bits leave ample headroom for the existing per-room multipliers
+	# (104729 decoration / 7919 encounters) on every signed 64-bit platform.
+	return int(key.sha256_text().substr(0, 10).hex_to_int())
+
+static func generate_for_depth(seed_value: int, expedition_depth: int) -> Dictionary:
+	var policy: Dictionary = DEPTH_POLICY.describe_depth(expedition_depth)
+	if policy.is_empty():
+		return {}
+	var rng := RandomNumberGenerator.new()
+	rng.seed = depth_seed(seed_value, expedition_depth, &"layout")
+	var count := rng.randi_range(int(policy.minimum_rooms), int(policy.maximum_rooms))
+	var route_length := clampi(roundi(count * 0.65) + rng.randi_range(-1, 1), 5, count - 1)
+	var rooms: Array[Dictionary] = []
+	var route: Array[int] = []
+	var occupied: Dictionary = {}
+	var cell := Vector2i.ZERO
+	for index in range(route_length):
+		if index > 0:
+			var choices := _free_neighbors(cell, occupied)
+			if choices.is_empty():
+				return _fallback_for_depth(seed_value, expedition_depth, count)
+			cell = choices[rng.randi_range(0, choices.size() - 1)]
+		var kind: StringName = &"combat"
+		if index == 0:
+			kind = &"entrance"
+		elif index == route_length - 2:
+			kind = &"boss"
+		elif index == route_length - 1:
+			kind = &"extraction"
+		elif index == 1:
+			kind = &"corridor"
+		elif index > 2 and rng.randf() < 0.22:
+			kind = &"trap"
+		rooms.append(_room(index, cell, kind, true, false, rng))
+		occupied[cell] = index
+		route.append(index)
+		if index > 0:
+			_link(rooms, index - 1, index)
+	for index in range(route_length, count):
+		var options: Array[Dictionary] = []
+		for room: Dictionary in rooms:
+			if room.kind in [&"boss", &"extraction", &"entrance"] or room.hidden:
+				continue
+			for adjacent: Vector2i in _free_neighbors(room.cell, occupied):
+				options.append({"cell": adjacent, "parent": room.id})
+		if options.is_empty():
+			return _fallback_for_depth(seed_value, expedition_depth, count)
+		var choice: Dictionary = options[rng.randi_range(0, options.size() - 1)]
+		var kind: StringName = &"treasure" if index == route_length else &"combat"
+		var hidden := index == route_length + 1 and rng.randf() < 0.55
+		if hidden:
+			kind = &"secret"
+		elif index > route_length:
+			kind = [&"treasure", &"trap", &"combat"][rng.randi_range(0, 2)]
+		rooms.append(_room(index, choice.cell, kind, false, hidden, rng))
+		occupied[choice.cell] = index
+		_link(rooms, choice.parent, index)
+	return _finish_for_depth(seed_value, rooms, route, policy)
+
+static func _fallback_for_depth(seed_value: int, expedition_depth: int, count: int) -> Dictionary:
+	var policy: Dictionary = DEPTH_POLICY.describe_depth(expedition_depth)
+	if policy.is_empty() or count < int(policy.minimum_rooms) or count > int(policy.maximum_rooms):
+		return {}
+	var rng := RandomNumberGenerator.new()
+	rng.seed = depth_seed(seed_value, expedition_depth, &"fallback")
+	var rooms: Array[Dictionary] = []
+	var route: Array[int] = []
+	# Five required rooms leave a treasure branch even at the six-room minimum.
+	for index in range(5):
+		var kind: StringName = [&"entrance", &"corridor", &"combat", &"boss", &"extraction"][index]
+		rooms.append(_room(index, Vector2i(0, -index), kind, true, false, rng))
+		route.append(index)
+		if index > 0:
+			_link(rooms, index - 1, index)
+	for index in range(5, count):
+		var branch := index - 5
+		var parent_id := 1 if branch % 2 == 0 else 2
+		var sign_x := -1 if branch % 2 == 0 else 1
+		var distance_x := 1 + floori(float(branch) / 2.0)
+		var kind: StringName = &"treasure" if index == 5 else &"combat"
+		rooms.append(_room(index, Vector2i(sign_x * distance_x, -parent_id), kind, false, false, rng))
+		_link(rooms, parent_id if branch < 2 else index - 2, index)
+	return _finish_for_depth(seed_value, rooms, route, policy)
+
+static func _finish_for_depth(seed_value: int, rooms: Array[Dictionary], route: Array[int], policy: Dictionary) -> Dictionary:
+	var result := _finish(seed_value, rooms, route)
+	result["generator_version"] = 2
+	result["expedition_depth"] = int(policy.expedition_depth)
+	result["biome_id"] = String(policy.biome_id)
+	result["depth_policy_version"] = int(policy.policy_version)
+	return result
+
 static func _room(id: int, cell: Vector2i, kind: StringName, main: bool, hidden: bool, rng: RandomNumberGenerator) -> Dictionary:
 	var choices: Array = MODULES[kind]
 	return {"id": id, "cell": cell, "kind": kind, "module": choices[rng.randi_range(0, choices.size() - 1)],
@@ -134,11 +231,30 @@ static func _finish(seed_value: int, rooms: Array[Dictionary], route: Array[int]
 	return {"seed": seed_value, "rooms": rooms, "main_route": route,
 		"entrance_id": route[0], "boss_id": route[-2], "extraction_id": route[-1], "cell_size": CELL_SIZE}
 
-static func validate(layout: Dictionary) -> Array[String]:
+static func validate(layout: Dictionary, issued_policy: Dictionary = {}) -> Array[String]:
 	var errors: Array[String] = []
 	var rooms: Array = layout.get("rooms", [])
-	if rooms.size() < 8 or rooms.size() > 12:
-		errors.append("Expedition must contain 8–12 rooms")
+	var minimum_rooms := 8
+	var maximum_rooms := 12
+	if layout.has("generator_version"):
+		if not layout.generator_version is int or int(layout.generator_version) != 2 \
+				or not layout.get("expedition_depth") is int:
+			errors.append("Unknown configured generator or invalid expedition depth")
+			return errors
+		var policy: Dictionary = DEPTH_POLICY.describe_depth(int(layout.expedition_depth)) if issued_policy.is_empty() else issued_policy.duplicate(true)
+		if not VaultDepthPolicy.valid_snapshot(policy, int(layout.expedition_depth)) \
+				or layout.get("biome_id") != policy.biome_id \
+				or not layout.get("depth_policy_version") is int \
+				or layout.get("depth_policy_version") != policy.policy_version:
+			errors.append("Configured layout does not match a supported depth policy")
+			return errors
+		minimum_rooms = int(policy.minimum_rooms)
+		maximum_rooms = int(policy.maximum_rooms)
+	elif layout.has("expedition_depth") or layout.has("biome_id") or layout.has("depth_policy_version"):
+		errors.append("Configured depth metadata requires its generator version")
+		return errors
+	if rooms.size() < minimum_rooms or rooms.size() > maximum_rooms:
+		errors.append("Expedition must contain %d–%d rooms" % [minimum_rooms, maximum_rooms])
 		return errors
 	var occupied: Dictionary = {}
 	var roles := {&"entrance": 0, &"boss": 0, &"extraction": 0, &"treasure": 0}

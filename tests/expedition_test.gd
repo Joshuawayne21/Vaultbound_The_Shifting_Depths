@@ -2,9 +2,11 @@ extends "res://tests/test_harness.gd"
 ## Real shell/rooms/chests/awareness/boss/extraction integration, isolated local save.
 
 const Generator = preload("res://scripts/expedition/dungeon_generator.gd")
+const DepthPolicy = preload("res://resources/expedition/depth_policy.tres")
 const Awareness = preload("res://scripts/expedition/awareness_director.gd")
 const Chest = preload("res://scenes/treasure/chest.tscn")
 const Rules = preload("res://scripts/combat/combat_rules.gd")
+const Store = preload("res://scripts/progression/profile_store.gd")
 const PROFILE := "/tmp/vaultbound-m3-expedition/profile.json"
 var session: Node
 var player: CharacterBody3D
@@ -28,6 +30,7 @@ func _run() -> void:
 		return
 	player = game.player
 	check(portal_to(&"dungeon") != null and portal_to(&"rootbound_abyss") != null, "Sanctuary preserves the original route and adds an expedition portal")
+	check(session.depth_entry_status(1).ok and not session.depth_entry_status(2).ok and session.profile.depth_progression.highest_unlocked_depth == 1, "Fresh actual expedition starts with depth one available and depth two locked")
 	var seed_value := _feature_seed()
 	var identity := player.get_instance_id()
 	await game.start_expedition(seed_value)
@@ -39,7 +42,8 @@ func _run() -> void:
 	check(session.active and session.run_seed == seed_value, "Validated expedition begins with its visible reproducible seed")
 	check(level.validate_generation() and level.validation_errors.is_empty(), "Runtime accepts only a structurally validated layout")
 	check(player.get_instance_id() == identity and player.is_on_floor(), "Expedition retains the same player on a valid entrance floor")
-	check(level.rooms.size() >= 8 and level.rooms.size() <= 12, "Runtime assembles eight through twelve native room modules")
+	var floor_policy: Dictionary = DepthPolicy.describe_depth(1)
+	check(level.layout.generator_version == 2 and level.layout.expedition_depth == 1 and level.rooms.size() >= int(floor_policy.minimum_rooms) and level.rooms.size() <= int(floor_policy.maximum_rooms), "Runtime assembles native room modules within its issued Depth1 policy range")
 	check(level.discovered == [int(level.layout.entrance_id)], "Only the entrance is discovered on arrival")
 	check(level.encounters.active_enemy_count() == 0 and get_nodes_in_group("abyss_hazards").size() == 2, "Safe entrance has no attackers and the hazard pool is bounded at two")
 	var seed_before: int = level.seed_value
@@ -64,7 +68,7 @@ func _run() -> void:
 
 func _feature_seed() -> int:
 	for value in range(100):
-		var layout: Dictionary = Generator.generate(value)
+		var layout: Dictionary = Generator.generate_for_depth(value, 1)
 		if layout.rooms.any(func(room: Dictionary) -> bool: return room.hidden) and layout.rooms.any(func(room: Dictionary) -> bool: return room.kind == &"trap"):
 			return value
 	return 42
@@ -240,6 +244,7 @@ func _boss_and_extraction(identity: int) -> void:
 	Rules.apply_hit(player, boss, 10000.0, Rules.next_attack_id(), &"test_melee")
 	await frames(3)
 	check(boss.health == 0.0 and session.boss_defeated and level.snapshot().extraction_ready, "Defeating the real boss unlocks extraction exactly once")
+	check(session.profile.depth_progression.highest_unlocked_depth == 1 and session.profile.depth_progression.highest_cleared_depth == 0, "Actual Rootwarden death alone does not unlock Depth two")
 	var chest: Node3D = level.boss_reward_chest
 	if check(chest != null and chest.cache_snapshot().kind == "boss", "Rootwarden defeat creates its searchable boss reward chest"):
 		player.reset_for_spawn(Transform3D(Basis.IDENTITY, chest.global_position + Vector3(0, 0.15, 2)))
@@ -260,6 +265,7 @@ func _boss_and_extraction(identity: int) -> void:
 	level.extraction.interact(player)
 	check(session.active and session.unsecured_gold == bag_gold and session.run_items == bag_items and session.profile.gold == bank_before, "Failed save keeps the run and its entire bag retryable")
 	check(game.current_location == &"rootbound_abyss" and not game.transitioning, "Failed extraction does not leave the dungeon")
+	check(session.profile.depth_progression.highest_unlocked_depth == 1, "Failed actual extraction also keeps the next depth locked")
 	session.store.read_only = false
 	check(player.interaction_target == level.extraction, "Player targets the extraction spring before retrying")
 	check(input_hub.controls_enabled and player.controls_enabled and player.combat.state == &"idle", "Extraction retry has normal enabled interaction controls")
@@ -270,7 +276,11 @@ func _boss_and_extraction(identity: int) -> void:
 		return
 	check(not session.active and session.profile.gold == bank_before + bag_gold, "Successful extraction secures exactly the collected gold")
 	check(session.profile.items == bag_items and session.profile.statistics.completed == 1, "Extraction saves collected items and one completed expedition")
+	check(session.depth_entry_status(2).ok and session.profile.depth_progression == {"version": 1, "highest_unlocked_depth": 2, "highest_cleared_depth": 1}, "Actual source-bound extraction unlocks exactly Depth two")
 	check(session.profile.discoveries.has("rootwarden_heart"), "Extraction saves the boss collection discovery")
+	var reader := Store.new(PROFILE)
+	var persisted: Dictionary = reader.load_profile()
+	check(not reader.read_only and persisted.depth_progression == session.profile.depth_progression and persisted.gold == session.profile.gold and persisted.items == session.profile.items, "A fresh store reader retains actual expedition depth unlocks with secured rewards")
 	check(player.get_instance_id() == identity and game.world_root.get_child_count() == 1, "Extraction returns the persistent player to one Sanctuary instance")
 	check(game.hud.expedition_overlay.mode == &"results" and not input_hub.controls_enabled, "Expedition results open after safe arrival and block gameplay input")
 	game.hud.close_results()

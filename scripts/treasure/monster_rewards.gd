@@ -4,6 +4,7 @@ extends Resource
 ## chooses a source and registers a receipt; this resource never grants currency.
 
 const SOURCES := ["basic", "stronger", "elite", "boss"]
+const DEPTH_POLICY = preload("res://resources/expedition/depth_policy.tres")
 @export var basic_table: VaultLootTable
 @export var stronger_table: VaultLootTable
 @export var elite_table: VaultLootTable
@@ -89,6 +90,22 @@ func roll(seed_value: int, receipt: String, source: String, depth: int = 0) -> D
 		if _allows(String(item.id), source):
 			table.guaranteed_items.append(item)
 	return table.roll(seed_value ^ int(source.hash()), receipt)
+
+func roll_for_depth(seed_value: int, receipt: String, source: String, room_distance: int,
+		expedition_depth: int, issued_policy: Dictionary = {}) -> Dictionary:
+	# Keep the old fourth argument's BFS semantics. Session supplies its frozen
+	# issued policy; pure callers can resolve the current authored floor rules.
+	var policy: Dictionary = DEPTH_POLICY.describe_depth(expedition_depth) if issued_policy.is_empty() else issued_policy.duplicate(true)
+	if not VaultDepthPolicy.valid_snapshot(policy, expedition_depth):
+		return {}
+	var factor := float(policy.reward_multiplier)
+	var reward := roll(seed_value, receipt, source, room_distance)
+	if reward.is_empty():
+		return {}
+	var previous := int(reward.gold)
+	reward.gold = roundi(previous * float(factor))
+	reward.value = int(reward.value) + int(reward.gold) - previous
+	return reward
 
 func _allows(item_id: String, source: String) -> bool:
 	var definition := VaultLootTable.item_for(item_id)

@@ -54,9 +54,33 @@ func _run() -> void:
 	check(settings.snapshot() == visual_snapshot and FileAccess.get_file_as_bytes(PREFS) == visual_bytes, "Social screens and separate display preferences preserve all eight visual choices and exact file bytes")
 	check(session.profile == secured_snapshot and FileAccess.get_file_as_bytes(PROFILE) == profile_bytes, "Social interactions and stale-card handling preserve the secured roster, inventory and exact profile bytes")
 	game.hud.close_modals()
+	var audio_references: Array[WeakRef] = _capture_wind_audio()
 	game.queue_free()
-	await frames(3)
+	# Physics catch-up can consume three ticks in one idle update. The world
+	# already stops/releases its audio on exit, but AudioServer retires playback
+	# asynchronously. Observe that actual ownership boundary before terminating
+	# the entire test process; retain no strong stream/playback references here.
+	for attempt in range(120):
+		if not is_instance_valid(game) and _audio_retired(audio_references): break
+		await process_frame
+	check(not is_instance_valid(game) and _audio_retired(audio_references), "Game teardown releases its optional native audio playback and stream before process exit")
 	finish()
+
+func _capture_wind_audio() -> Array[WeakRef]:
+	# Keep native Resource temporaries outside the awaiting function's frame.
+	var wind := game.active_world.find_child("OptionalGardenWind", true, false) as AudioStreamPlayer
+	var references: Array[WeakRef] = []
+	check(wind != null and wind.stream != null and wind.has_stream_playback(), "Enabled Sanctuary ambience owns a real stream and playback before teardown")
+	if wind != null and wind.stream != null:
+		references.append(weakref(wind.stream))
+		if wind.has_stream_playback():
+			references.append(weakref(wind.get_stream_playback()))
+	return references
+
+func _audio_retired(references: Array[WeakRef]) -> bool:
+	for reference: WeakRef in references:
+		if is_instance_valid(reference.get_ref()): return false
+	return true
 
 func _prepare() -> void:
 	DirAccess.make_dir_recursive_absolute(PROFILE.get_base_dir())

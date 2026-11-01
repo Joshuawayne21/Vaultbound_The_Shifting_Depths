@@ -49,9 +49,10 @@ func _run() -> void:
 		check(game.current_location == &"rootbound_abyss" and Generator.validate(game.active_world.layout).is_empty(), "Decorated generated expedition validates for seed %d" % expedition_seed)
 		var level: Node3D = game.active_world
 		var correctly_seeded := true
+		var cosmetic_seed := Generator.depth_seed(expedition_seed, 1, &"decoration")
 		for id: int in level.rooms:
 			var room: Node3D = level.rooms[id]
-			correctly_seeded = correctly_seeded and room.cosmetic_seed == expedition_seed and room.cosmetic_room_id == id
+			correctly_seeded = correctly_seeded and room.cosmetic_seed == cosmetic_seed and room.cosmetic_room_id == id
 		check(correctly_seeded, "Actual expedition supplies a separate stable cosmetic seed to every room")
 		var original_layout: Dictionary = level.layout.duplicate(true)
 		var visible_before: Array[int] = []

@@ -77,7 +77,7 @@ func _run() -> void:
 	original_globals = Fixtures.files_snapshot(ProjectSettings.globalize_path("user://vaultbound"))
 	combat_before = CombatRules._runtime_state().duplicate(true)
 	_fixture_totals(Model.initial_state(NAMESPACE))
-	check(files_before.has("profile.json.bak") and files_before.has("profile.json.pre-v5.bak") and files_before.has("visual.cfg") and files_before.has("social.cfg"), "Isolation guard covers current save, rotating backup, immutable migration backup and both preference files")
+	check(files_before.has("profile.json.bak") and files_before.has("profile.json.pre-v5.bak") and files_before.has("profile.json.pre-v%d.bak" % VaultProfileStore.VERSION) and files_before.has("visual.cfg") and files_before.has("social.cfg"), "Isolation guard covers current save, rotating backup, immutable migration backup and both preference files")
 	await _open()
 	if reading:
 		_reader(marker)

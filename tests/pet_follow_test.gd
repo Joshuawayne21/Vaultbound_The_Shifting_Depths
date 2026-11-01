@@ -131,8 +131,42 @@ func _frame_rates_and_budget() -> void:
 	var rejected := Follower.new()
 	check(not rejected.configure(leader, foreign, Catalog.definition_for(&"lantern_fox")), "Cross-viewport or cross-World3D binding is rejected")
 	rejected.free()
+	_long_frame_presentation(stage, leader)
 	stage.queue_free()
 	await frames(3)
+
+func _long_frame_presentation(stage: Node3D, leader: Node3D) -> void:
+	leader.position = Vector3(0, 0, 6)
+	var follower := Follower.new()
+	if not check(follower.configure(leader, stage, Catalog.definition_for(&"lantern_fox")), "Long-frame fixture binds the same native cosmetic presenter"):
+		follower.free()
+		return
+	stage.add_child(follower)
+	follower.set_process(false)
+	for frame in range(60): follower._process(1.0 / 60.0)
+	var found := false
+	for frame in range(360):
+		leader.position.z -= 0.1
+		follower._process(1.0 / 60.0)
+		if follower.visible and follower._from.distance_to(follower._to) >= 0.55 and follower._blend <= 0.18:
+			found = true
+			break
+	if not check(found, "A real validated follow segment is active before the deterministic 70ms update"):
+		follower.free()
+		return
+	var before := follower.global_position
+	var state_before: Dictionary = follower.presentation_snapshot()
+	follower._process(0.07)
+	var step := before.distance_to(follower.global_position)
+	var state_after: Dictionary = follower.presentation_snapshot()
+	check(follower.visible and step > 0.0 and step <= 0.28001 and state_after.recovery_count == state_before.recovery_count and state_after.placement_count == state_before.placement_count, "A slow visible update advances at most 0.28m without hiding or relocating the pet")
+	for frame in range(60):
+		leader.position.z -= 0.05
+		follower._process(1.0 / 60.0)
+	var resumed: Dictionary = follower.presentation_snapshot()
+	check(follower.visible and before.distance_to(follower.global_position) > 1.0 and follower.global_position.distance_to(leader.global_position) < 2.2 and resumed.recovery_count == state_before.recovery_count and resumed.decision_count <= int(state_before.decision_count) + 12 and resumed.maximum_queries_seen <= 6, "Normal updates continue following after a slow frame without recovery or extra decision/query bursts")
+	print("PET LONG FRAME: ", JSON.stringify({"simulated_delta": 0.07, "visible_step": step, "recoveries": int(resumed.recovery_count) - int(state_before.recovery_count), "decisions": int(resumed.decision_count) - int(state_before.decision_count), "maximum_queries": resumed.maximum_queries_seen, "distance_to_leader": follower.global_position.distance_to(leader.global_position)}))
+	follower.free()
 
 func _spawn_pet() -> void:
 	pet = game._pet_presenter.get_ref() as Node3D if game._pet_presenter != null else null
@@ -254,7 +288,7 @@ func _rooms_and_travel() -> void:
 	var old: WeakRef = weakref(pet)
 	var secret_seed := -1
 	for candidate in range(1, 65):
-		for room: Dictionary in Generator.generate(candidate).rooms:
+		for room: Dictionary in Generator.generate_for_depth(candidate, 1).rooms:
 			if room.hidden:
 				secret_seed = candidate
 				break

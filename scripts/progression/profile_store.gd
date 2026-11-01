@@ -4,7 +4,8 @@ extends RefCounted
 ## a temporary file, and renamed only after a successful read-back. A previous
 ## valid profile is kept as .bak. This is offline persistence, not remote authority.
 
-const VERSION := 5
+const VERSION := 6
+const DepthProgress = preload("res://scripts/progression/depth_progression.gd")
 const MAX_COUNT := 2147483647
 const MAX_COMPANION_LEVEL := 20
 const MAX_COMPANION_EXPERIENCE := 19000
@@ -32,6 +33,7 @@ static func empty_profile() -> Dictionary:
 			"total_gold": 0, "total_kills": 0, "best_seconds": 0.0, "last_seed": 0}}
 	profile.merge(VaultInventory.empty_fields(), true)
 	profile["pets"] = VaultPetProgression.empty_fields()
+	profile["depth_progression"] = DepthProgress.empty_fields()
 	return profile
 
 func load_profile() -> Dictionary:
@@ -143,6 +145,8 @@ static func normalize(value: Variant) -> Dictionary:
 static func _normalize(value: Variant, unavailable_items: Dictionary, unavailable_pets: bool = false) -> Dictionary:
 	if not value is Dictionary or not _integer(value.get("version"), 1, VERSION):
 		return {}
+	if not DepthProgress.preservation_error(value).is_empty():
+		return {}
 	if int(value.version) >= 2:
 		# Instance-based versions are complete, not optional patches. Missing sections indicate
 		# an invalid save and must trigger backup recovery rather than empty defaults.
@@ -191,6 +195,10 @@ static func _normalize(value: Variant, unavailable_items: Dictionary, unavailabl
 		if not _integer(stats.get(key, 0), 0, MAX_COUNT):
 			return {}
 		result.statistics[key] = int(stats.get(key, 0))
+	var depths := DepthProgress.normalize(value.get("depth_progression")) if int(value.version) >= 6 else DepthProgress.migrate_legacy(value, int(result.statistics.completed))
+	if depths.is_empty():
+		return {}
+	result.depth_progression = depths
 	var best: Variant = stats.get("best_seconds", 0.0)
 	if not (best is float or best is int) or not is_finite(float(best)) or float(best) < 0.0:
 		return {}
@@ -270,6 +278,10 @@ static func _unsupported_profile_reason(value: Variant) -> String:
 	var version: Variant = value.get("version", 0) if value is Dictionary else 0
 	if (version is int or version is float) and is_finite(float(version)) and float(version) > VERSION:
 		return "This profile uses a newer format. Secured data was left unchanged."
+	if value is Dictionary:
+		var depth_error := DepthProgress.preservation_error(value)
+		if not depth_error.is_empty():
+			return depth_error
 	if not value is Dictionary or not _integer(version, 2, VERSION) or not value.get("inventory") is Array:
 		return ""
 	var unavailable := {}

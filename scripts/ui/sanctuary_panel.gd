@@ -3,6 +3,7 @@ extends Control
 signal close_requested
 signal waypoint_requested(id: StringName)
 signal enter_requested
+signal depth_selected(depth: int)
 signal map_requested
 
 const UI = preload("res://scripts/ui/ui_theme.gd")
@@ -30,13 +31,23 @@ func open_panel(value: StringName, data: Dictionary, details: Dictionary = {}) -
 	context = details.duplicate(true)
 	selected_district = &"map"
 	entry_enabled = bool(context.get("entry_enabled", false))
-	notice = ""
+	notice = String(context.get("entry_reason", ""))
 	_cancel_pointers()
 	show()
 	queue_redraw()
 
 func update_snapshot(data: Dictionary) -> void:
 	snapshot = data.duplicate(true)
+	queue_redraw()
+
+func update_portal_details(details: Dictionary) -> void:
+	if not visible or kind != &"portal": return
+	# A changed selection invalidates every held confirmation before new intent
+	# becomes available, including a second finger still touching ENTER.
+	_cancel_pointers()
+	context = details.duplicate(true)
+	entry_enabled = bool(context.get("entry_enabled", false))
+	notice = String(context.get("entry_reason", ""))
 	queue_redraw()
 
 func set_entry_available(value: bool, reason: String = "") -> void:
@@ -70,6 +81,12 @@ func handle_event(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.physical_keycode in [KEY_ESCAPE, KEY_M]: close_requested.emit()
 		elif event.physical_keycode in [KEY_ENTER, KEY_KP_ENTER] and kind == &"portal" and entry_enabled: _activate("enter")
+		elif has_depth_selector():
+			match event.physical_keycode:
+				KEY_LEFT: _activate("depth:-1")
+				KEY_RIGHT: _activate("depth:1")
+				KEY_PAGEUP: _activate("depth:-10")
+				KEY_PAGEDOWN: _activate("depth:10")
 	elif event is InputEventScreenTouch:
 		var point := _local_point(event.position)
 		if event.pressed and not event.canceled: _begin(event.index, point)
@@ -104,6 +121,10 @@ func _end(id: int, point: Vector2, canceled: bool) -> void:
 func _hit(point: Vector2) -> String:
 	if close_rect().has_point(point): return "close"
 	if kind == &"portal":
+		if has_depth_selector():
+			for index in range(4):
+				if depth_rect(index).has_point(point) and _depth_delta_enabled(_depth_delta(index)):
+					return "depth:" + str(_depth_delta(index))
 		return "enter" if entry_enabled and primary_rect().has_point(point) else ""
 	if kind != &"map":
 		return "map" if primary_rect().has_point(point) else ""
@@ -123,6 +144,11 @@ func _activate(action: String) -> void:
 	elif action == "enter" and kind == &"portal" and entry_enabled:
 		entry_enabled = false
 		enter_requested.emit()
+	elif action.begins_with("depth:") and has_depth_selector():
+		var delta := action.trim_prefix("depth:").to_int()
+		if delta in [-10, -1, 1, 10] and _depth_delta_enabled(delta):
+			entry_enabled = false
+			depth_selected.emit(clampi(int(context.selected_depth) + delta, 1, int(context.maximum_depth)))
 	elif action == "map": map_requested.emit()
 	elif action == "clear": waypoint_requested.emit(&"")
 	elif action.begins_with("district:"):
@@ -143,6 +169,23 @@ func close_rect() -> Rect2:
 func primary_rect() -> Rect2:
 	var rect := panel_rect()
 	return Rect2(rect.end - Vector2(344, 78), Vector2(320, 54))
+
+func has_depth_selector() -> bool:
+	return kind == &"portal" and context.has("selected_depth") and int(context.get("maximum_depth", 0)) >= 1
+
+func depth_rect(index: int) -> Rect2:
+	var rect := panel_rect()
+	var edge := 54.0 * ui_scale
+	var at := rect.position + Vector2(32, 91)
+	if index < 2: at.x += float(index) * (edge + 12)
+	else: at.x = rect.end.x - 32 - edge - float(3 - index) * (edge + 12)
+	return Rect2(at, Vector2.ONE * edge)
+
+func _depth_delta(index: int) -> int:
+	return [-10, -1, 1, 10][clampi(index, 0, 3)]
+
+func _depth_delta_enabled(delta: int) -> bool:
+	return int(context.get("selected_depth", 1)) > 1 if delta < 0 else int(context.get("selected_depth", 1)) < int(context.get("maximum_depth", 1))
 
 func clear_rect() -> Rect2:
 	var rect := panel_rect()
@@ -235,10 +278,18 @@ func _draw_map() -> void:
 
 func _draw_information() -> void:
 	var rect := panel_rect()
-	var y := rect.position.y + 122
+	var selecting_depth := has_depth_selector()
+	var y := rect.position.y + (190 if selecting_depth else 122)
+	if selecting_depth:
+		for index in range(4):
+			var delta := _depth_delta(index)
+			_button(depth_rect(index), ("+" if delta > 0 else "") + str(delta), _depth_delta_enabled(delta))
+		var label := "DEPTH %d" % int(context.selected_depth)
+		var label_size := _font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, roundi(22 * ui_scale))
+		_text(label, Vector2(rect.get_center().x - label_size.x * 0.5, depth_rect(0).get_center().y + 8), 22, UI.GOLD)
 	for line: String in context.get("lines", []):
-		_text(line, Vector2(rect.position.x + 32, y), 15, UI.IVORY, rect.size.x - 64)
-		y += 42 * ui_scale
+		_text(line, Vector2(rect.position.x + 32, y), 14 if selecting_depth else 15, UI.IVORY, rect.size.x - 64)
+		y += (32 if selecting_depth else 42) * ui_scale
 
 func _button(rect: Rect2, label: String, selected: bool, strong_prompt: bool = false) -> void:
 	if strong_prompt:

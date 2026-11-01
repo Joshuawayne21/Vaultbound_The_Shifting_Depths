@@ -31,7 +31,13 @@ func _run() -> void:
 	await _earned_sources()
 	await _gated_crafting()
 	var saved := Store.new(PROFILE).load_profile()
-	check(saved.inventory == session.profile.inventory and saved.equipment == session.profile.equipment and saved.character == session.profile.character and saved.gold == session.profile.gold, "Saved starter equipment, crafted instances, character and exact Depthmark balance reload unchanged")
+	# Rolled floating modifiers use the same exact encoded-intent contract as
+	# elapsed times. Preserve live bits; do not round rolls or add a tolerance.
+	var live_inventory_bytes := var_to_bytes(session.profile.inventory)
+	var encoded := JSON.stringify(Store.normalize(session.profile), "\t", true, true)
+	var expected := Store.normalize(JSON.parse_string(encoded))
+	check(not expected.is_empty() and saved == expected and FileAccess.get_file_as_bytes(PROFILE) == encoded.to_utf8_buffer(), "Saved starter profile retains exact full-precision primary bytes and complete decoded intent")
+	check(Store._same_discrete_values(session.profile, saved) and saved.equipment == session.profile.equipment and saved.character == session.profile.character and saved.gold == session.profile.gold and var_to_bytes(session.profile.inventory) == live_inventory_bytes, "Starter item identities, quantities, protections, upgrades, character and exact Depthmarks reload unchanged without mutating live rolls")
 	check(game.current_location == &"sanctuary" and game.party.members.size() == 3 and saved.companions.guardian.recruited and saved.companions.mystic.recruited, "Existing Sanctuary and both recruited adventurers survive starter progression and extraction")
 	await seconds(0.5)
 	finish()

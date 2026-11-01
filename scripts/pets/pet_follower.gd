@@ -4,6 +4,7 @@ extends Node3D
 const Visual = preload("res://scripts/pets/pet_visual.gd")
 const Trail = preload("res://scripts/pets/pet_trail.gd")
 const INTERVAL := 0.1
+const MAX_VISIBLE_STEP := 0.28
 var trail := Trail.new()
 var visual: Node3D
 var _leader: WeakRef
@@ -129,7 +130,10 @@ func _process(delta: float) -> void:
 		_decision_tick()
 	if not _recovering:
 		_blend = minf(1.0, _blend + maxf(delta, 0.0) / INTERVAL)
-		global_position = _from.lerp(_to, _blend)
+		# A long render frame must not expose the whole validated trail segment
+		# as one visible jump. Keep normal interpolation, approaching its already
+		# checked position without extra decisions, physics queries or shortcuts.
+		global_position = global_position.move_toward(_from.lerp(_to, _blend), MAX_VISIBLE_STEP)
 		var direction := _to - _from
 		if Vector2(direction.x, direction.z).length_squared() > 0.00001:
 			var world := _world.get_ref() as Node3D

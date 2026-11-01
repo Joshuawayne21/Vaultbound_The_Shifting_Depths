@@ -9,6 +9,7 @@ const ENEMIES := {
 	&"golem": preload("res://scenes/enemies/golem.tscn"),
 }
 const MAX_ACTIVE_ENEMIES := 6
+const DEPTH_POLICY = preload("res://resources/expedition/depth_policy.tres")
 var layout: Dictionary
 var rooms: Dictionary
 var seed_value := 0
@@ -22,9 +23,18 @@ var _tick := 0.0
 var _spawn_ordinals: Dictionary = {}
 var _registered_actors: Dictionary = {}
 var _defeated_receipts: Dictionary = {}
+var _depth_policy: Dictionary = {}
 
-func configure(value: Dictionary, instances: Dictionary, level: Node3D, expedition_seed: int) -> void:
-	layout = value
+func configure(value: Dictionary, instances: Dictionary, level: Node3D, expedition_seed: int, expedition_depth: int = 1) -> void:
+	if is_inside_tree() or not _depth_policy.is_empty():
+		return
+	# The world froze this plan before admission. Room activation may happen much
+	# later, so never resolve live Resource values when spawning an encounter.
+	var policy: Dictionary = level.issued_depth_policy() if is_instance_valid(level) and level.has_method("issued_depth_policy") else DEPTH_POLICY.describe_depth(expedition_depth)
+	if not VaultDepthPolicy.valid_snapshot(policy, expedition_depth):
+		return
+	_depth_policy = policy.duplicate(true)
+	layout = value.duplicate(true)
 	rooms = instances
 	_level = level
 	seed_value = expedition_seed
@@ -63,12 +73,12 @@ func _spawn_initial(id: int) -> void:
 	encounter_started.emit(id)
 
 func _spawn(room_id: int, archetype: StringName, local_point: Vector3, elite: bool, strength: float = 1.0) -> Node3D:
-	if not rooms.has(room_id) or not ENEMIES.has(archetype):
+	if _depth_policy.is_empty() or not rooms.has(room_id) or not ENEMIES.has(archetype):
 		return null
 	var enemy := ENEMIES[archetype].instantiate() as Node3D
 	var data: Resource = enemy.data.duplicate(true)
-	data.max_health *= strength * (1.3 if elite else 1.0)
-	data.damage *= strength * (1.15 if elite else 1.0)
+	data.max_health *= float(_depth_policy.health_multiplier) * strength * (1.3 if elite else 1.0)
+	data.damage *= float(_depth_policy.damage_multiplier) * strength * (1.15 if elite else 1.0)
 	data.leash_radius = 8.5
 	data.patrol_radius = 1.0
 	data.detection_range = 8.0

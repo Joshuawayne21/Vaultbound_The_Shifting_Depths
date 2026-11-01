@@ -14,6 +14,7 @@ signal pet_changed(active_snapshot: Dictionary)
 const PetProgress = preload("res://scripts/pets/pet_progression.gd")
 const PetCatalog = preload("res://scripts/pets/pet_catalog.gd")
 const EncounterRewards = preload("res://resources/loot/monster_rewards.tres")
+const DepthProgress = preload("res://scripts/progression/depth_progression.gd")
 
 var store := VaultProfileStore.new()
 var profile: Dictionary = VaultProfileStore.empty_profile()
@@ -47,6 +48,8 @@ var _world: Node3D
 var _pet_pending := PetProgress.empty_pending()
 var _pet_quotes: Dictionary = {}
 var _encounter_sources: Dictionary = {}
+var _issued_depth: Dictionary = {}
+var _configured_depth_run := false
 
 func _ready() -> void:
 	profile = store.load_profile()
@@ -80,12 +83,40 @@ func configure_storage(path: String) -> bool:
 	return not store.read_only
 
 func begin_run(seed_value: int) -> bool:
+	# Deliberate compatibility for isolated legacy fixtures, never Game travel.
+	return _begin_depth_run(seed_value, 1, false)
+
+func depth_entry_status(depth: int) -> Dictionary:
+	var result := DepthProgress.entry_status(profile, depth)
+	if store.read_only:
+		result.ok = false
+		result.reason = storage_error if not storage_error.is_empty() else "Secured progression is read-only."
+	elif active:
+		result.ok = false
+		result.reason = "An expedition is already in progress."
+	return result
+
+func issued_run_context() -> Dictionary:
+	return _issued_depth.duplicate(true) if active else {}
+
+func begin_depth_run(seed_value: int, depth: int) -> bool:
+	return _begin_depth_run(seed_value, depth, true)
+
+func _begin_depth_run(seed_value: int, depth: int, configured: bool) -> bool:
 	if active:
 		notice.emit("An expedition is already in progress.")
 		return false
 	if store.read_only:
 		notice.emit(storage_error)
 		return false
+	var admission := DepthProgress.entry_status(profile, depth)
+	if not bool(admission.ok):
+		notice.emit(String(admission.reason))
+		return false
+	var policy: Dictionary = admission.policy.duplicate(true)
+	_issued_depth = {"expedition_depth": depth, "biome_id": String(policy.biome_id),
+		"depth_policy_version": int(policy.policy_version), "policy": policy}
+	_configured_depth_run = configured
 	active = true
 	run_seed = seed_value
 	run_generation += 1
@@ -105,7 +136,8 @@ func begin_run(seed_value: int) -> bool:
 	_emit_elapsed = 0.0
 	last_results.clear()
 	_emit_changed()
-	return active and run_generation == issued_generation and run_seed == seed_value
+	return active and run_generation == issued_generation and run_seed == seed_value \
+		and int(_issued_depth.get("expedition_depth", 0)) == depth and _configured_depth_run == configured
 
 func has_claimed(chest_id: String) -> bool:
 	return _claimed.has(chest_id)
@@ -187,10 +219,19 @@ func register_loot(reward: Dictionary, room_id: int, at: Vector3, kind: String, 
 	return result
 
 func run_context_valid(world: Node3D, generation: int) -> bool:
-	return active and generation == run_generation and is_instance_valid(world) and world == _world \
+	if not (active and generation == run_generation and is_instance_valid(world) and world == _world \
 		and world.is_inside_tree() and not world.is_queued_for_deletion() and world.get("run_generation") == generation \
 		and world.get("seed_value") == run_seed and _location == &"rootbound_abyss" \
-		and world.get_script() != null and world.get_script().resource_path == "res://scripts/expedition/abyss_level.gd"
+		and world.get_script() != null and world.get_script().resource_path == "res://scripts/expedition/abyss_level.gd"):
+		return false
+	if not world.has_method("issued_depth_context") or not world.has_method("issued_depth_policy") or _issued_depth.is_empty():
+		return false
+	var issued: Dictionary = world.issued_depth_context()
+	return int(issued.get("expedition_depth", 0)) == int(_issued_depth.expedition_depth) \
+		and String(issued.get("biome_id", "")) == String(_issued_depth.biome_id) \
+		and int(issued.get("depth_policy_version", 0)) == int(_issued_depth.depth_policy_version) \
+		and int(issued.get("generator_version", 0)) == (2 if _configured_depth_run else 1) \
+		and world.issued_depth_policy() == _issued_depth.policy
 
 func complete_encounter(world: Node3D, enemy: Node3D, generation: int) -> Dictionary:
 	var rejected := {"ok": false, "cache_id": "", "generation": generation, "still_current": false, "error": "Encounter source unavailable."}
@@ -206,7 +247,7 @@ func complete_encounter(world: Node3D, enemy: Node3D, generation: int) -> Dictio
 	if kind not in ["regular", "elite", "boss"] or kills >= VaultProfileStore.MAX_COUNT:
 		return rejected
 	var source := "boss" if kind == "boss" else EncounterRewards.source_for(String(record.archetype), bool(record.elite))
-	var reward: Dictionary = EncounterRewards.roll(run_seed, String(record.receipt), source, int(record.depth))
+	var reward: Dictionary = EncounterRewards.roll_for_depth(run_seed, String(record.receipt), source, int(record.depth), int(_issued_depth.expedition_depth), _issued_depth.policy)
 	var validated := _validate_reward(reward)
 	var findings := PetCatalog.findings_for(run_seed, String(record.receipt), kind)
 	var pending := PetProgress.append_findings(_pet_pending, findings, String(record.receipt))
@@ -407,6 +448,11 @@ func extract() -> bool:
 		notice.emit("Defeat the Rootwarden to awaken the extraction spring.")
 		return false
 	var next := profile.duplicate(true)
+	var completed_depth := DepthProgress.complete(next.depth_progression, int(_issued_depth.get("expedition_depth", 0)), _issued_depth.get("policy", {}))
+	if completed_depth.is_empty():
+		notice.emit("The issued dungeon depth could not be verified. Your secured progression was preserved.")
+		return false
+	next.depth_progression = completed_depth
 	next.gold = int(next.gold) + unsecured_gold
 	if not VaultInventory.add_items(next, run_items, run_seed):
 		notice.emit("Extraction needs room for your unsecured items. Your rewards remain available; consume supplies and retry.")
@@ -432,7 +478,7 @@ func extract() -> bool:
 	var companion_experience := _award_extraction_experience(next)
 	var old_level := int(profile.character.level)
 	var old_experience := int(profile.character.experience)
-	var earned_experience := mini(CharacterProgression.EXPERIENCE_CAP, 250 + kills * 20)
+	var earned_experience := _scaled_extraction_xp(250 + kills * 20, CharacterProgression.EXPERIENCE_CAP)
 	next.character = CharacterProgression.award_xp(next.character, earned_experience)
 	for monster: String in _run_monsters:
 		if not next.monster_discoveries.has(monster):
@@ -498,6 +544,11 @@ func _publish_finished(result: Dictionary, generation: int, message: String = ""
 
 func _results(outcome: String) -> Dictionary:
 	return {"outcome": outcome, "seed": run_seed, "run_generation": run_generation, "gold": unsecured_gold,
+		"expedition_depth": int(_issued_depth.get("expedition_depth", 1)),
+		"biome_id": String(_issued_depth.get("biome_id", "rootbound_abyss")),
+		"depth_policy_version": int(_issued_depth.get("depth_policy_version", 1)),
+		"tier_label": String(_issued_depth.get("policy", {}).get("tier_label", "Beginner")),
+		"highest_unlocked_depth": int(profile.depth_progression.highest_unlocked_depth),
 		"items": _describe_items(run_items), "kills": kills, "elapsed_seconds": elapsed,
 		"boss_defeated": boss_defeated, "secured_total": int(profile.gold),
 		"discovered": _run_discoveries.keys(), "new_discoveries": [],
@@ -510,6 +561,8 @@ func _pet_findings() -> Dictionary:
 
 func _clear_run() -> void:
 	active = false
+	_issued_depth.clear()
+	_configured_depth_run = false
 	unsecured_gold = 0
 	run_items.clear()
 	_claimed.clear()
@@ -541,6 +594,12 @@ func snapshot() -> Dictionary:
 	var bag := _describe_items(run_items)
 	var inventory := _describe_items(profile.items)
 	return {"active": active, "run_seed": run_seed, "run_generation": run_generation, "unsecured_gold": unsecured_gold,
+		"expedition_depth": int(_issued_depth.get("expedition_depth", 1)),
+		"biome_id": String(_issued_depth.get("biome_id", "rootbound_abyss")),
+		"depth_policy_version": int(_issued_depth.get("depth_policy_version", 1)),
+		"tier_label": String(_issued_depth.get("policy", {}).get("tier_label", "Beginner")),
+		"highest_unlocked_depth": int(profile.depth_progression.highest_unlocked_depth),
+		"depth_progression": profile.depth_progression.duplicate(true),
 		"secured_gold": int(profile.gold), "bag": bag, "run_items": bag,
 		"inventory": inventory, "secured_items": inventory, "discoveries": profile.discoveries.duplicate(),
 		"boss_defeated": boss_defeated, "kills": kills, "elapsed": elapsed, "elapsed_seconds": elapsed,
@@ -589,7 +648,7 @@ func _award_extraction_experience(candidate: Dictionary) -> Dictionary:
 	# Experience is part of the same transaction as secured loot. Failed saves,
 	# repeated extraction requests, abandoned runs and defeats grant no progress.
 	var rewards: Dictionary = {}
-	var earned := mini(VaultProfileStore.MAX_COMPANION_EXPERIENCE, 150 + kills * 10)
+	var earned := _scaled_extraction_xp(150 + kills * 10, VaultProfileStore.MAX_COMPANION_EXPERIENCE)
 	for id: String in candidate.companions:
 		var entry: Dictionary = candidate.companions[id]
 		if not bool(entry.recruited):
@@ -602,6 +661,10 @@ func _award_extraction_experience(candidate: Dictionary) -> Dictionary:
 		entry.proficiency = float(int(entry.level) + 19) / 40.0
 		rewards[id] = int(entry.experience) - before
 	return rewards
+
+func _scaled_extraction_xp(base: int, cap: int) -> int:
+	var policy: Dictionary = _issued_depth.get("policy", {})
+	return mini(cap, roundi(float(base) * float(policy.get("reward_multiplier", 1.0))))
 
 func use_consumable(player: Node) -> bool:
 	for item_id: String in ["mooncap_tonic", "sunfruit_elixir"]:

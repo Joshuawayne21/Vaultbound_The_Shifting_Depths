@@ -20,6 +20,7 @@ func _run() -> void:
 		legacy.version = version
 		legacy.gold = 61
 		legacy.erase("pets")
+		legacy.erase("depth_progression")
 		if version == 4:
 			legacy.character = CharacterProgression.award_xp(legacy.character, CharacterProgression.EXPERIENCE_CAP)
 			VaultInventory.add_items(legacy, {"vaultheart_staff": 1, "rootwarden_heart": 1, "root_fiber": 17}, 601)
@@ -46,15 +47,16 @@ func _run() -> void:
 		_write(PATH + ".pre-v4.bak", "previous immutable backup")
 		var store := Store.new(PATH)
 		var migrated := store.load_profile()
-		check(not store.read_only and migrated.version == 5 and migrated.pets == VaultPetProgression.empty_fields(), "Version %d receives empty cosmetic defaults" % version)
+		check(not store.read_only and migrated.version == Store.VERSION and migrated.pets == VaultPetProgression.empty_fields(), "Version %d receives empty cosmetic defaults" % version)
 		if version == 4:
 			var restored := migrated.duplicate(true)
 			restored.erase("pets")
+			restored.erase("depth_progression")
 			restored.version = 4
 			check(restored == legacy, "Complete v4 +10 equipment, rolls, loadout, display, receipts, stock, recruited roster and progression are unchanged")
-		check(FileAccess.get_file_as_string(PATH) == exact and not FileAccess.file_exists(PATH + ".pre-v5.bak"), "Version %d load never writes" % version)
+		check(FileAccess.get_file_as_string(PATH) == exact and not FileAccess.file_exists(PATH + ".pre-v%d.bak" % Store.VERSION), "Version %d load never writes" % version)
 		check(store.save_profile(migrated), "Version %d first migrated save succeeds" % version)
-		check(FileAccess.get_file_as_string(PATH + ".pre-v5.bak") == exact and FileAccess.get_file_as_string(PATH + ".pre-v4.bak") == "previous immutable backup", "Version %d immutable migration bytes retained" % version)
+		check(FileAccess.get_file_as_string(PATH + ".pre-v%d.bak" % Store.VERSION) == exact and FileAccess.get_file_as_string(PATH + ".pre-v4.bak") == "previous immutable backup", "Version %d immutable migration bytes retained" % version)
 		check(Store.new(PATH).load_profile() == migrated and migrated.gold == 61, "Version %d current roundtrip retains progress" % version)
 	_clean()
 	var owned := Fixtures.owned()
@@ -101,7 +103,7 @@ func _run() -> void:
 	store = Store.new(PATH)
 	store.load_profile()
 	unknown = owned.duplicate(true)
-	unknown.version = 6
+	unknown.version = Store.VERSION + 1
 	_write(PATH, JSON.stringify(unknown))
 	check(not store.save_profile(owned) and store.read_only, "Future disk replacement is rechecked at transaction time")
 	for key: String in VaultPetProgression.KEYS:

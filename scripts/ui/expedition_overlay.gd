@@ -8,6 +8,7 @@ signal consumable_requested
 signal equipment_requested(item_id: String)
 signal city_waypoint_requested(id: StringName)
 signal portal_entry_requested
+signal portal_depth_selected(depth: int)
 signal emote_requested(id: StringName)
 signal actor_inspection_requested(id: String)
 
@@ -117,6 +118,7 @@ func _ready() -> void:
 	sanctuary_panel.close_requested.connect(close_modal)
 	sanctuary_panel.waypoint_requested.connect(func(id: StringName) -> void: city_waypoint_requested.emit(id))
 	sanctuary_panel.enter_requested.connect(func() -> void: portal_entry_requested.emit())
+	sanctuary_panel.depth_selected.connect(func(depth: int) -> void: portal_depth_selected.emit(depth))
 	sanctuary_panel.map_requested.connect(open_city_map)
 	social_panel = preload("res://scripts/ui/social_panel.gd").new()
 	social_panel.name = "SocialPanel"
@@ -1468,9 +1470,9 @@ func _draw_storage_warning() -> void:
 func _draw_expedition_status() -> void:
 	var rect := Rect2(Vector2(size.x * 0.5 - 250, 128 + _safe().y), Vector2(500, 64))
 	_panel(rect, PANEL)
-	var floor_number := int(dungeon_snapshot.get("floor", 1))
+	var floor_number := int(dungeon_snapshot.get("expedition_depth", session_snapshot.get("expedition_depth", dungeon_snapshot.get("floor", 1))))
 	var run_seed := int(dungeon_snapshot.get("seed", session_snapshot.get("run_seed", 0)))
-	_text("FLOOR %02d  ·  SEED %d" % [floor_number, run_seed], rect.position + Vector2(14, 21), 11, MUTED)
+	_text("DEPTH %02d  ·  SEED %d" % [floor_number, run_seed], rect.position + Vector2(14, 21), 11, MUTED)
 	_text("%d DM · UNSECURED" % int(session_snapshot.get("unsecured_gold", 0)), rect.position + Vector2(rect.size.x - 14, 21), 11, GOLD, false, true)
 	var awareness := clampf(float(dungeon_snapshot.get("awareness", 0)), 0, 100)
 	_text("AWARENESS", rect.position + Vector2(14, 47), 10, IVORY)
@@ -1611,10 +1613,14 @@ func _draw_results() -> void:
 	var success := String(results_snapshot.get("outcome", "")) == "extracted"
 	var title := "EXPEDITION SECURED" if success else "RETURNED TO THE SANCTUARY"
 	_text(title, rect.position + Vector2(30, 49), 25, TEAL if success else GOLD)
-	_text("Your discoveries are safe." if success else "Unsecured finds were lost. Your secured collection is unchanged.", rect.position + Vector2(30, 78), 14, IVORY)
+	var outcome_line := "Your discoveries are safe." if success else "Unsecured finds were lost. Your secured collection is unchanged."
+	if success and results_snapshot.has("highest_unlocked_depth"):
+		outcome_line += " Highest unlocked depth: %d." % int(results_snapshot.highest_unlocked_depth)
+	_text(outcome_line, rect.position + Vector2(30, 78), 14, IVORY)
 	var seconds := int(results_snapshot.get("elapsed_seconds", 0))
 	var seed_value := int(results_snapshot.get("seed", 0))
-	_text("ROOTBOUND ABYSS  ·  SEED %d  ·  %02d:%02d" % [seed_value, seconds / 60, seconds % 60], rect.position + Vector2(30, 105), 12, MUTED)
+	var completed_depth := int(results_snapshot.get("expedition_depth", 1))
+	_text("ROOTBOUND · DEPTH %d · SEED %d · %02d:%02d" % [completed_depth, seed_value, seconds / 60, seconds % 60], rect.position + Vector2(30, 105), 12, MUTED)
 	var summaries := [
 		["DM SECURED" if success else "DM LOST", str(results_snapshot.get("gold", 0))],
 		["ENEMIES DEFEATED", str(results_snapshot.get("kills", 0))],

@@ -57,10 +57,10 @@ func _layout_contracts() -> int:
 	var eggs := 0
 	var rescues := 0
 	for seed_value in range(1, 101):
-		var layout := Generator.generate(seed_value)
+		var layout := Generator.generate_for_depth(seed_value, 1)
 		var before := var_to_str(layout)
 		var plan: Array = DiscoveryLayout.plan(layout, seed_value)
-		var valid := plan == DiscoveryLayout.plan(layout, seed_value) and before == var_to_str(Generator.generate(seed_value))
+		var valid := plan == DiscoveryLayout.plan(layout, seed_value) and before == var_to_str(Generator.generate_for_depth(seed_value, 1))
 		var egg_count := 0
 		var rescue_count := 0
 		var receipts: Dictionary = {}
