@@ -1,6 +1,6 @@
 # Living Sanctuary — Android review
 
-No physical Android test has been performed for this expansion. Headless Godot checks verify scripts, resources, physics and simulated input; they do not establish touch comfort, keyboard behavior, shader appearance, sound quality, battery use or sustained frame rate. The 6B city, 6C scenery/accessibility, 6D social presentation and 6E Spiritweaving stages have passed their automated gates. Use the checklist below on a verified checkpoint; those automated results do not replace device testing.
+No physical Android test has been performed for this expansion. Headless Godot checks verify scripts, resources, physics and simulated input; they do not establish touch comfort, keyboard behavior, shader appearance, sound quality, battery use or sustained frame rate. The 6B city, 6C scenery/accessibility, 6D social presentation, 6E Spiritweaving and 6F TEST exchange stages have passed their automated gates. Use the checklist below on a verified checkpoint; those automated results do not replace device testing.
 
 ## Import without losing progression
 
@@ -9,7 +9,7 @@ No physical Android test has been performed for this expansion. Headless Godot c
 3. Run the main project (`scenes/main.tscn`). Start at **Medium / 30 FPS**, normal UI scale, with reduced effects if your device needs them. These are targets, not measured performance guarantees.
 4. Verify your previous Depthmarks, item-instance quantities, enhancements, loadouts, talents, companion roster and Collection Hall assignments before making transactions. Do not delete a save or replace it with defaults to resolve a loading error.
 
-The progression profile remains v4 through 6D; 6E introduces v5 for cosmetic pet ownership. Old profiles migrate in memory on load. Before the first migrated write, exact original bytes are retained in `.pre-v5.bak`; earlier migration backups remain. The 6C preferences migration affects the separate graphics file only. Opening an old preferences file must preserve its prior choices and must not rewrite it merely because it was loaded. 6D chat display choices use a separate version-one `social_settings.cfg`; no chat transcript or draft is saved there.
+The progression profile remains v4 through 6D; 6E introduces v5 for cosmetic pet ownership. Old profiles migrate in memory on load. Before the first migrated write, exact original bytes are retained in `.pre-v5.bak`; earlier migration backups remain. The 6C preferences migration affects the separate graphics file only. Opening an old preferences file must preserve its prior choices and must not rewrite it merely because it was loaded. 6D chat display choices use a separate version-one `social_settings.cfg`; no chat transcript or draft is saved there. 6F leaves profile v5 unchanged and uses `user://vaultbound/demo_exchange/demo_exchange.json` for its separate synthetic market. TEST assets and DM never enter progression.
 
 Running in the Android editor needs no APK export. The ARM64 export preset requires matching templates, SDK/build tools and your own signing configuration for an exported build. No signing keys, APK, account service, live trading or billing are supplied by these stages.
 
@@ -62,6 +62,22 @@ Use the 6E checkpoint for these checks. Follow the [pet guide](living-sanctuary-
 - Test a failed expedition separately: the results should mark its findings **LOST**, while previously secured ingredients, owned pets, equipment and Depthmarks remain. A successful extraction and restart must retain new findings. Do not force storage failures against your only real save; disposable automated fixtures cover interrupted writes and retry behavior.
 
 Record sustained frame times with the pet selected and rested on the same route. Host mesh counts and simulated decision-rate checks do not establish Android performance or rendered appearance.
+
+## 6F TEST exchange review
+
+Use the verified 6F checkpoint for these checks. The Ring Exchange must say **DEMO / NOT LIVE** throughout. Both participants are synthetic test accounts operated on this device. Their TEST DM and assets are separate from your earned Depthmarks and equipment. Follow the [exchange guide](living-sanctuary-exchange.md); no account, remote player, background trader or real-world payment is involved.
+
+- Approach the physical Ring Exchange terminal and open its guide, then the TEST exchange. Verify the city-map shortcut still works. The ordinary top-right map must not remotely authorize market actions. Try all four exchange tabs in both camera modes, each UI scale and the device's safe areas.
+- Search, filter and sort listings. Use the native editor for search, quantity, price, offered DM and controlled demo-clock values. Test composed Android text, paste, keyboard submit, Back, cancel and background/resume. Applying a text draft must not buy, sell or trade; a separate review is required.
+- As **DEMO A**, list five Root Fiber at eight TEST DM per unit. As **DEMO B**, fill two. Verify the sixteen TEST DM transfer and two units in B's Claims; collect them, then cancel A's remaining three units and collect the return. Your gameplay wallet and inventory must remain unchanged.
+- Inspect base and enhanced/damaged equipment before trading. Exact enhancement, condition, modifiers and identity must survive transfer. Orders for one variant must not silently fill with another. Try ineligible or protected items and invalid quantities; show a failure without changing balances or assets.
+- Open History's **ACTIVITY** and **SALES** views. Only completed order executions should appear as sales. Check selected-variant last/min/max price and executed volume; direct trades must not invent individual item prices. The controlled clock is a test tool, not device time or an online schedule.
+- Request a direct trade, decline it, then request and accept a new one. Offer an item and TEST DM, lock both sides, edit an offer and verify both locks clear. Lock again and inspect the combined review. Confirm A only: nothing settles. Confirm B separately: all agreed transfers happen once. Repeat with rapid taps, a held finger and closure between confirmations.
+- Close or background the exchange with a pending trade. Reopen and confirm that uncompleted offers remain visibly reserved until a fresh review or a successfully saved cancellation. No old final approval should survive. Travel after closing and return; only the actual current nearby terminal should authorize actions.
+- Restart and verify orders, Claims, actual sale history and settled assets persist in the dedicated TEST file. The RESET DEMO action requires confirmation and resets only that fixture. Never delete your progression profile to reset the exchange. Save-failure, corrupted-file and replay cases use disposable automated fixtures; do not damage your only player save to reproduce them.
+- After the demo, use a real merchant and inspect real owned equipment. TEST origin labels must be gone. Recheck earned Depthmarks, gear IDs, enhancements, companions, pet selection and Hall displays; enter a dungeon and extract normally.
+
+Measure responsiveness while scrolling the bounded listing, activity and sale views, and while opening/closing the native editor. No Android menu-latency or keyboard-composition result is implied by headless input tests. Report the build, device, IME and the exact test action, without including account secrets or private text.
 
 ## Preserve the expedition loop
 

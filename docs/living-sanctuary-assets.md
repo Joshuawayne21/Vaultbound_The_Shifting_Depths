@@ -33,6 +33,12 @@ The Conservatory renders the same pet definition and appearance in an isolated, 
 
 Focused native mesh measurements found 7–14 meshes, 312–828 triangles and 1–6 animated pivots per species. These structural counts are not GPU measurements. The full stage report records accepted source and follower checks; Android silhouettes, apparent foot contact, wing motion and luminous intensity still need rendered review.
 
+## TEST exchange presentation — 6F
+
+The local exchange reuses the existing fantasy theme, catalog family icons and item inspection models. Native controls provide the search/numeric editor; no new font, third-party UI asset or production item artwork is included. DEMO labels distinguish synthetic holdings and TEST DM from the player's progression. Recent sale rows are transaction data, not images of a live population or an online market.
+
+The backend proposal references official open-source project documentation only. No SDK, server package, paid asset or external service was installed for that proposal.
+
 ## Performance and visual limits
 
 The source defines explicit geometry, actor and effect ceilings. Retained butterfly slots are distinct from visible/active butterflies; room motes and existing item effects have their own budgets. Counts and measurements belong in the stage's validation/performance report, not an inferred FPS claim.

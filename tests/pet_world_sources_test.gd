@@ -5,6 +5,9 @@ const DiscoveryLayout = preload("res://resources/pets/discovery_layout.tres")
 const Discovery = preload("res://scripts/pets/pet_discovery.gd")
 const Placement = preload("res://scripts/treasure/loot_placement.gd")
 const PROFILE := "/tmp/vaultbound-6e-pet-world/profile.json"
+## Same exact runtime double covered by profile_roundtrip_test. Its emitted
+## decimal parses one ULP higher in Godot 4.6.3; no gameplay value is rounded.
+const ADJACENT_ELAPSED_BYTES := "f813950d6baaee3f"
 var session: Node
 var player: Node3D
 var level: Node3D
@@ -236,10 +239,15 @@ func _encounters_and_save() -> void:
 	level.extraction.interact(player)
 	check(session.active and session.profile == secured and session._pet_pending == pending and not level.extraction._committed, "Failed extraction write preserves exact old secured data and retryable actual source")
 	DirAccess.remove_absolute(PROFILE + ".tmp")
+	session.elapsed = ADJACENT_ELAPSED_BYTES.hex_decode().decode_double(0)
 	level.extraction.interact(player)
 	await arrive(&"sanctuary")
 	var loaded: Dictionary = VaultProfileStore.new(PROFILE).load_profile()
-	check(loaded == session.profile and loaded.pets.statistics.rootwarden_victories == 1 and loaded.pets.statistics.eggs_found == 1 and loaded.pets.statistics.rescues > 0, "Actual extraction secures findings and full profile reload preserves provenance counters")
+	var encoded := JSON.stringify(VaultProfileStore.normalize(session.profile), "\t", true, true)
+	var expected := VaultProfileStore.normalize(JSON.parse_string(encoded))
+	check(not expected.is_empty() and loaded == expected and FileAccess.get_file_as_bytes(PROFILE) == encoded.to_utf8_buffer(), "Actual extraction stores exact full-precision bytes and reloads their complete normalized intent")
+	check(VaultProfileStore._same_discrete_values(session.profile, loaded) and loaded.pets == session.profile.pets and loaded.pets.statistics.rootwarden_victories == 1 and loaded.pets.statistics.eggs_found == 1 and loaded.pets.statistics.rescues > 0, "Actual extraction preserves all discrete ownership fields and exact pet provenance counters")
+	check(var_to_bytes(session.profile.statistics.best_seconds) == var_to_bytes(ADJACENT_ELAPSED_BYTES.hex_decode().decode_double(0)), "Actual extraction does not quantize or mutate the caller's adjacent-double elapsed time")
 	check(not session.active and session._pet_pending.sources.is_empty(), "Successful source extraction clears unsecured receipts")
 
 func _actual_death(seed_value: int) -> void:

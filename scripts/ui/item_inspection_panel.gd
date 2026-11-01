@@ -323,6 +323,8 @@ func _build_lines() -> void:
 	var owned := not String(item.get("uid", "")).is_empty()
 	var origin := String(item.get("inspection_origin", "owned_instance" if owned else "catalog"))
 	match origin:
+		"demo_asset": _add_paragraph("LOCAL TEST ASSET · DEMO / NOT LIVE · NOT REAL INVENTORY", UI.GOLD)
+		"demo_order": _add_paragraph("LOCAL TEST ORDER · DEMO / NOT LIVE · NOT REAL INVENTORY", UI.GOLD)
 		"owned_instance": _add_paragraph("OWNED INSTANCE · " + String(item.get("uid", "")), UI.GOLD)
 		"unsecured_stack": _add_paragraph("EXPEDITION LOOT · UNSECURED · Quantity %d" % int(item.get("quantity", 1)), UI.GOLD)
 		"secured_reserve": _add_paragraph("SECURED LEGACY RESERVE · Quantity %d" % int(item.get("quantity", 1)), UI.GOLD)
@@ -334,7 +336,7 @@ func _build_lines() -> void:
 		_add_paragraph("UNAVAILABLE · Future content. Cannot be acquired or equipped in this prototype.", UI.WARNING)
 	elif item.get("category", "") == "equipment" and not bool(item.get("combat_supported", true)):
 		_add_paragraph("COMBAT UNAVAILABLE · This weapon family has no supported attacks.", UI.WARNING)
-	if owned:
+	if owned or origin in ["demo_asset", "demo_order"]:
 		_add_paragraph("Enhancement +%d · Durability %d%% · Quantity %d" % [int(item.get("enhancement", 0)), int(item.get("durability", 100)), int(item.get("quantity", 1))], UI.IVORY)
 	_add_paragraph(String(item.get("description", "")), UI.IVORY)
 	if not bool(item.get("identified", true)):

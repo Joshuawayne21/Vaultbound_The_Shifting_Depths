@@ -104,7 +104,7 @@ func _build_training_court() -> void:
 
 func _build_terminals() -> void:
 	var descriptions := {
-		&"map": "The Ring Exchange connects eight Sanctuary districts. Choose a destination and follow its waypoint. Services are available when you reach them. The city is an offline local sanctuary; player trading is not available here.",
+		&"map": "Choose the city guide or a LOCAL TEST Exchange. DEMO / NOT LIVE: synthetic accounts, items and TEST DM only. Nothing enters your real collection; online player trading remains unavailable.",
 		&"equipment": "Preview your owned equipment and appearance using the existing equipment viewer. Cosmetic purchases and a separate cosmetic catalog are not available in this build.",
 		&"conservatory": "Weave earned cosmetic pets, explore their journal, and choose one companion to follow you. Expedition ingredients remain unsecured until extraction.",
 	}

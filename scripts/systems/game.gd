@@ -29,6 +29,7 @@ var _world_process_mode := Node.PROCESS_MODE_INHERIT
 var _player_process_mode := Node.PROCESS_MODE_INHERIT
 var party: VaultParty
 var social_session: Node
+var demo_exchange: Node
 var _inspected_companion_id := ""
 var _city_waypoint: Dictionary = {}
 var _city_portal_source: WeakRef
@@ -54,6 +55,10 @@ func _ready() -> void:
 	social_session.name = "SocialSession"
 	add_child(social_session)
 	hud.bind_social(social_session)
+	demo_exchange = preload("res://scripts/exchange/demo_exchange_controller.gd").new()
+	demo_exchange.name = "DemoExchange"
+	add_child(demo_exchange)
+	hud.bind_demo_exchange(demo_exchange)
 	ExpeditionSession.changed.connect(_on_progression_changed)
 	ExpeditionSession.pet_changed.connect(_on_pet_changed)
 	_pet_selection = _saved_pet_selection()
@@ -184,6 +189,7 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	_city_portal_route.clear()
 	hud.set_sanctuary_snapshot({})
 	ExpeditionSession.close_service()
+	if is_instance_valid(demo_exchange): demo_exchange.close_service()
 	party.set_paused(true)
 	if _modal_open:
 		hud.close_modals()
@@ -210,12 +216,14 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	active_world = next_world
 	current_location = destination
 	ExpeditionSession.bind_game_context(player, destination, active_world)
+	demo_exchange.bind_game_context(player, destination, active_world)
 	# The same identity is required after binding and the next physics boundary.
 	if _travel_generation_valid(issued_generation, issued_seed): await get_tree().physics_frame
 	if not _travel_generation_valid(issued_generation, issued_seed):
 		active_world = previous_world
 		current_location = previous_location
 		ExpeditionSession.bind_game_context(player, previous_location, previous_world)
+		demo_exchange.bind_game_context(player, previous_location, previous_world)
 		_cancel_candidate_travel(next_world)
 		return
 	if is_instance_valid(previous_world):
@@ -326,7 +334,7 @@ func _on_city_terminal(source: Node3D, kind: StringName, context: Dictionary) ->
 	if kind == &"equipment":
 		hud.expedition_overlay.open_equipment()
 	elif kind == &"map":
-		hud.expedition_overlay.open_city_map()
+		if demo_exchange.open_service(source): hud.expedition_overlay.open_exchange()
 	elif kind == &"conservatory":
 		ExpeditionSession.open_pet_service(source, player)
 	else:

@@ -75,6 +75,9 @@ var social_panel: Control
 var pet_panel: Control
 var pet_name_panel: Control
 var pet_preview: Control
+var demo_exchange: Node
+var exchange_panel: Control
+var exchange_text_panel: Control
 var results_tab := &"expedition"
 var _social_pointers: Dictionary = {}
 var _social_epoch := 0
@@ -138,6 +141,74 @@ func _ready() -> void:
 	pet_name_panel.input_owner = self
 	add_child(pet_name_panel)
 	pet_name_panel.back_requested.connect(_return_from_pet_name)
+	exchange_panel = preload("res://scripts/ui/demo_exchange_panel.gd").new()
+	exchange_panel.name = "DemoExchangePanel"
+	add_child(exchange_panel)
+	exchange_panel.close_requested.connect(close_modal)
+	exchange_panel.city_map_requested.connect(_exchange_city_map)
+	exchange_panel.edit_requested.connect(open_exchange_field)
+	exchange_text_panel = preload("res://scripts/ui/exchange_text_panel.gd").new()
+	exchange_text_panel.name = "NativeExchangeFieldPanel"
+	exchange_text_panel.input_owner = self
+	add_child(exchange_text_panel)
+	exchange_text_panel.value_submitted.connect(_exchange_field_applied)
+	exchange_text_panel.canceled.connect(_exchange_field_canceled)
+
+
+func bind_demo_exchange(value: Node) -> void:
+	if is_instance_valid(demo_exchange) and demo_exchange.changed.is_connected(_on_exchange_changed):
+		demo_exchange.changed.disconnect(_on_exchange_changed)
+	demo_exchange = value
+	exchange_panel.bind_exchange(value)
+	if is_instance_valid(demo_exchange): demo_exchange.changed.connect(_on_exchange_changed)
+
+
+func open_exchange() -> void:
+	if mode != &"none" or not is_instance_valid(demo_exchange): return
+	if not demo_exchange.is_source_available(): return
+	if _open_modal(&"exchange"): exchange_panel.open_panel("guide")
+
+
+func _exchange_city_map() -> void:
+	if mode != &"exchange" or sanctuary_snapshot.is_empty(): return
+	if not _open_modal(&"sanctuary"): return
+	sanctuary_panel.open_panel(&"map", sanctuary_snapshot)
+
+
+func open_exchange_field(context: Dictionary) -> void:
+	if mode != &"exchange" or not exchange_panel.is_edit_current(String(context.get("request_id", ""))): return
+	if not _open_modal(&"exchange_text"): return
+	InputHub.begin_text_capture()
+	if is_instance_valid(source_surface): source_surface.native_gui_passthrough = true
+	exchange_text_panel.open_field(context)
+	refresh_exchange_source()
+
+
+func _exchange_field_applied(request_id: String, value: String) -> void:
+	_return_from_exchange_field(request_id, value, false)
+
+
+func _exchange_field_canceled(request_id: String) -> void:
+	_return_from_exchange_field(request_id, "", true)
+
+
+func _return_from_exchange_field(request_id: String, value: String, canceled: bool) -> void:
+	if mode != &"exchange_text" or String(exchange_text_panel.context.get("request_id", "")) != request_id: return
+	var valid: bool = exchange_panel.is_edit_current(request_id)
+	if not _open_modal(&"exchange"): return
+	exchange_panel.resume_edit(request_id, value, canceled or not valid)
+
+
+func _on_exchange_changed(_snapshot: Dictionary) -> void:
+	refresh_exchange_source()
+
+
+func refresh_exchange_source() -> void:
+	if mode not in [&"exchange", &"exchange_text"] or not is_instance_valid(demo_exchange): return
+	if mode == &"exchange_text":
+		# The controller already watches physical source lifetime. Native fields
+		# need only current availability, never another inventory/history copy.
+		exchange_text_panel.set_source_available(demo_exchange.is_source_available())
 
 
 func bind_social(value: Node) -> void:
@@ -185,6 +256,7 @@ func is_native_chat_active() -> bool:
 func _native_panel() -> Control:
 	if mode == &"chat": return chat_panel
 	if mode == &"pet_name": return pet_name_panel
+	if mode == &"exchange_text": return exchange_text_panel
 	return null
 
 
@@ -234,6 +306,9 @@ func _handle_back() -> void:
 		return
 	if mode == &"pet_name":
 		_return_from_pet_name()
+		return
+	if mode == &"exchange_text":
+		_exchange_field_canceled(String(exchange_text_panel.context.get("request_id", "")))
 		return
 	close_modal()
 
@@ -319,7 +394,7 @@ func apply_visual_settings(settings: Dictionary) -> void:
 		var receiver := _native_panel()
 		_cancel_native_pointers()
 		receiver.cancel_for_focus_loss()
-	for panel: Control in [pet_panel, pet_name_panel, pet_preview]:
+	for panel: Control in [pet_panel, pet_name_panel, pet_preview, exchange_panel, exchange_text_panel]:
 		if is_instance_valid(panel): panel.apply_visual_settings(settings)
 	queue_redraw()
 
@@ -554,6 +629,16 @@ func _open_modal(value: StringName) -> bool:
 	if is_instance_valid(_native_panel()) and value != mode:
 		_stop_native_panel()
 		if generation != _modal_epoch: return false
+	if mode in [&"exchange", &"exchange_text"] and value not in [&"exchange", &"exchange_text"]:
+		exchange_panel.hide_panel()
+		if generation != _modal_epoch: return false
+		if is_instance_valid(demo_exchange): demo_exchange.close_service()
+		if generation != _modal_epoch: return false
+	if value != &"exchange" and is_instance_valid(exchange_panel) and exchange_panel.visible:
+		exchange_panel.hide_panel(value == &"exchange_text")
+		if generation != _modal_epoch: return false
+	if value != &"exchange_text" and is_instance_valid(exchange_text_panel) and exchange_text_panel.visible:
+		exchange_text_panel.hide_panel()
 	if mode in [&"pets", &"pet_name"] and value not in [&"pets", &"pet_name"] and is_instance_valid(progression_session):
 		progression_session.close_service()
 		if generation != _modal_epoch: return false
@@ -594,12 +679,18 @@ func close_modal() -> void:
 	var generation := _modal_epoch
 	var was_results := mode == &"results"
 	var was_pet := mode in [&"pets", &"pet_name"]
+	var was_exchange := mode in [&"exchange", &"exchange_text"]
 	if is_instance_valid(_native_panel()):
 		_stop_native_panel()
 		if generation != _modal_epoch: return
 	_social_epoch += 1
 	_social_pointers.clear()
 	mode = &"none"
+	if is_instance_valid(exchange_panel): exchange_panel.hide_panel()
+	if generation != _modal_epoch: return
+	if is_instance_valid(exchange_text_panel) and exchange_text_panel.visible: exchange_text_panel.hide_panel()
+	if was_exchange and is_instance_valid(demo_exchange): demo_exchange.close_service()
+	if generation != _modal_epoch: return
 	if is_instance_valid(pet_panel): pet_panel.hide_panel()
 	if generation != _modal_epoch: return
 	if is_instance_valid(pet_name_panel) and pet_name_panel.visible: pet_name_panel.hide_panel()
@@ -655,6 +746,9 @@ func _input(event: InputEvent) -> void:
 		# Consume the complete event stream while open, including releases/drags;
 		# a finger that opened/closed a panel must never become a world attack.
 		get_viewport().set_input_as_handled()
+		if is_instance_valid(exchange_panel) and exchange_panel.visible:
+			exchange_panel.handle_event(event)
+			return
 		if is_instance_valid(pet_panel) and pet_panel.visible:
 			pet_panel.handle_event(event)
 			return
@@ -889,6 +983,14 @@ func _exit_tree() -> void:
 	if is_instance_valid(_native_panel()):
 		InputHub.end_text_capture()
 		if is_instance_valid(source_surface): source_surface.native_gui_passthrough = false
+
+
+func retain_modal_pointer_tails(indices: Array) -> void:
+	# A manually drawn panel may close while another finger remains down. Keep
+	# those existing presses owned until release, just like native modal tails.
+	for index: int in indices:
+		if index >= 0: _owned_touches[index] = true
+		elif index == -1: _owned_mouse = true
 
 
 func _claim_press(event: InputEvent) -> void:

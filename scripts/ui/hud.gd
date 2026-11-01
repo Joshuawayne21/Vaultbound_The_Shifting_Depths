@@ -35,6 +35,10 @@ func bind_social(session: Node) -> void:
 	expedition_overlay.bind_social(session)
 
 
+func bind_demo_exchange(controller: Node) -> void:
+	expedition_overlay.bind_demo_exchange(controller)
+
+
 func open_actor_card(data: Dictionary) -> void:
 	expedition_overlay.open_actor_card(data)
 
