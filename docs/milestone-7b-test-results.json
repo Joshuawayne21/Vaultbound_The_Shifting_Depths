@@ -1,0 +1,633 @@
+{
+  "milestone": "7B",
+  "status": "passed",
+  "checked_at_utc": "2026-11-01T01:59:25.516815+00:00",
+  "engine": "Godot4.6.3.stable.official.7d41c59c4",
+  "renderer": "gl_compatibility",
+  "base_commit": "d3e812526652bb70fc3fea2a3702c2339a578ca2",
+  "source_snapshot": "/tmp/vaultbound-7b-accepted-f7l1tf6t/source",
+  "source_sha256": "9a8823d1d9b2fb3621dbb908d28008ea3b33a27411aeb3fa74d793e985a30b18",
+  "semantic_file_count": 785,
+  "source_opening_equals_closing_equals_workspace": true,
+  "semantic_scope": [
+    "project.godot",
+    "scripts/**",
+    "resources/**",
+    "scenes/**",
+    "assets/**",
+    "tests/**"
+  ],
+  "semantic_exclusions": [
+    "*.uid",
+    "*.import"
+  ],
+  "export_presets_sha256": "870e9be40e5d1c366f8643ebbf4d8bd5735f4bf7cbab46d06dcfc0fd5dc984d7",
+  "release": {
+    "project_version": "0.7.0-7b",
+    "android_version_name": "0.7.0-7b",
+    "android_version_code": 13
+  },
+  "resource_counts": {
+    ".gd": 223,
+    ".tscn": 59,
+    ".tres": 472,
+    ".gdshader": 7,
+    ".svg": 19
+  },
+  "source_delta_from_7a": {
+    "added": [
+      "resources/portals/collection_hall.tres",
+      "resources/portals/combat_practice.tres",
+      "resources/portals/dungeon_practice.tres",
+      "resources/portals/rootbound.tres",
+      "resources/portals/sanctuary_return.tres",
+      "resources/sanctuary/capital_landmarks.tres",
+      "scripts/sanctuary/sanctuary_landmark_data.gd",
+      "scripts/sanctuary/sanctuary_landmarks.gd",
+      "scripts/visual/portal_visual_profile.gd",
+      "tests/sanctuary_capital_test.gd"
+    ],
+    "changed": [
+      "project.godot",
+      "scripts/sanctuary/sanctuary_city_builder.gd",
+      "scripts/world/portal.gd",
+      "scripts/world/sanctuary.gd"
+    ],
+    "removed": []
+  },
+  "accepted_gate": {
+    "assertions": 2118,
+    "suites": 16,
+    "invocations": 17,
+    "independent_readers": 1,
+    "setup_engine_processes": 2,
+    "startup_frames": 120,
+    "full_89_suite_gate_repeated": false
+  },
+  "prior_6f_full_gate": {
+    "assertions": 17741,
+    "suites": 89,
+    "invocations": 108,
+    "independent_readers": 15,
+    "repeated_or_added_to_new_total": false
+  },
+  "storage_isolation": "Frozen copied source; sequential engine processes; per-suite XDG_DATA_HOME/XDG_CONFIG_HOME/XDG_CACHE_HOME under the gate directory. Reader shares writer namespace only. Explicit profile fixtures under /tmp. Normal play storage not used.",
+  "invocations": [
+    {
+      "suite": "import",
+      "exit_code": 0,
+      "passed": 0,
+      "errors": [],
+      "environment_notices": [
+        "ERROR: Condition \"_sock == -1\" is true. Returning: FAILED",
+        "ERROR: Condition \"err != OK\" is true. Returning: ERR_CANT_CREATE",
+        "ERROR: Condition \"_sock == -1\" is true. Returning: FAILED",
+        "ERROR: Condition \"err != OK\" is true. Returning: ERR_CANT_CREATE",
+        "Unable to open Android 'build-tools' directory."
+      ],
+      "seconds": 7.335,
+      "log": "/tmp/vaultbound-7b-accepted-f7l1tf6t/logs/import.log",
+      "ok": true,
+      "log_sha256": "f4007d5ab9e6959dc9ebb2681fc92cba7aace989730a75fefdc62707485e760e",
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-7b-accepted-f7l1tf6t/source",
+        "--editor",
+        "--import",
+        "--quit"
+      ]
+    },
+    {
+      "suite": "startup",
+      "exit_code": 0,
+      "passed": 0,
+      "errors": [],
+      "environment_notices": [],
+      "seconds": 5.778,
+      "log": "/tmp/vaultbound-7b-accepted-f7l1tf6t/logs/startup.log",
+      "ok": true,
+      "log_sha256": "a9912b85473f126d3f4f63ec824170c828df3473a292f866dde86cafda5b66da",
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-7b-accepted-f7l1tf6t/source",
+        "--quit-after",
+        "120"
+      ]
+    },
+    {
+      "suite": "sanctuary_capital_test",
+      "exit_code": 0,
+      "passed": 245,
+      "errors": [],
+      "environment_notices": [],
+      "seconds": 73.7,
+      "log": "/tmp/vaultbound-7b-accepted-f7l1tf6t/logs/sanctuary_capital_test.log",
+      "ok": true,
+      "log_sha256": "08e9cbcecf25cb26e807836fb9976cff5be9f8e0652c002538bbc07b8b3a05fa",
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-7b-accepted-f7l1tf6t/source",
+        "--script",
+        "res://tests/sanctuary_capital_test.gd"
+      ]
+    },
+    {
+      "suite": "smoke_test",
+      "exit_code": 0,
+      "passed": 770,
+      "errors": [],
+      "environment_notices": [],
+      "seconds": 8.09,
+      "log": "/tmp/vaultbound-7b-accepted-f7l1tf6t/logs/smoke_test.log",
+      "ok": true,
+      "log_sha256": "787fadc81a23556cef443d8c512b3290f6b2b2368b7a25ee4c832f2de093fa89",
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-7b-accepted-f7l1tf6t/source",
+        "--script",
+        "res://tests/smoke_test.gd"
+      ]
+    },
+    {
+      "suite": "sanctuary_world_test",
+      "exit_code": 0,
+      "passed": 225,
+      "errors": [],
+      "environment_notices": [],
+      "seconds": 12.754,
+      "log": "/tmp/vaultbound-7b-accepted-f7l1tf6t/logs/sanctuary_world_test.log",
+      "ok": true,
+      "log_sha256": "571de13a2c5427cee5e94f47b592087a6ad054301383bdf2d2ee5779eabfad7b",
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-7b-accepted-f7l1tf6t/source",
+        "--script",
+        "res://tests/sanctuary_world_test.gd"
+      ]
+    },
+    {
+      "suite": "sanctuary_ui_test",
+      "exit_code": 0,
+      "passed": 59,
+      "errors": [],
+      "environment_notices": [],
+      "seconds": 4.176,
+      "log": "/tmp/vaultbound-7b-accepted-f7l1tf6t/logs/sanctuary_ui_test.log",
+      "ok": true,
+      "log_sha256": "3e46bc6a61b8f10c4f5fb5755780d99fac4eebcd815eddd2dd1448ca1ff89404",
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-7b-accepted-f7l1tf6t/source",
+        "--script",
+        "res://tests/sanctuary_ui_test.gd"
+      ]
+    },
+    {
+      "suite": "city_navigation_test",
+      "exit_code": 0,
+      "passed": 68,
+      "errors": [],
+      "environment_notices": [],
+      "seconds": 119.91,
+      "log": "/tmp/vaultbound-7b-accepted-f7l1tf6t/logs/city_navigation_test.log",
+      "ok": true,
+      "log_sha256": "542113a5d542115087aaa9a33947eaf43c71222b0435d60c0511e48743a1f586",
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-7b-accepted-f7l1tf6t/source",
+        "--script",
+        "res://tests/city_navigation_test.gd"
+      ]
+    },
+    {
+      "suite": "city_surface_test",
+      "exit_code": 0,
+      "passed": 21,
+      "errors": [],
+      "environment_notices": [],
+      "seconds": 7.004,
+      "log": "/tmp/vaultbound-7b-accepted-f7l1tf6t/logs/city_surface_test.log",
+      "ok": true,
+      "log_sha256": "756511c070bb81e24ba8541ee0aa64c0cba7f32447cc85b75aedec6d042db711",
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-7b-accepted-f7l1tf6t/source",
+        "--script",
+        "res://tests/city_surface_test.gd"
+      ]
+    },
+    {
+      "suite": "companion_navigation_test",
+      "exit_code": 0,
+      "passed": 41,
+      "errors": [],
+      "environment_notices": [],
+      "seconds": 14.898,
+      "log": "/tmp/vaultbound-7b-accepted-f7l1tf6t/logs/companion_navigation_test.log",
+      "ok": true,
+      "log_sha256": "63bb26d3d88c86c018e1d2f807caa58602b22a1a6c4739b3322deeb60a86ac99",
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-7b-accepted-f7l1tf6t/source",
+        "--script",
+        "res://tests/companion_navigation_test.gd"
+      ]
+    },
+    {
+      "suite": "pet_follow_test",
+      "exit_code": 0,
+      "passed": 80,
+      "errors": [],
+      "environment_notices": [],
+      "seconds": 29.303,
+      "log": "/tmp/vaultbound-7b-accepted-f7l1tf6t/logs/pet_follow_test.log",
+      "ok": true,
+      "log_sha256": "ae125f33892bc0d6d5d736318c22b6954d22524bd6c4d5385c76f41cb9e59425",
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-7b-accepted-f7l1tf6t/source",
+        "--script",
+        "res://tests/pet_follow_test.gd"
+      ]
+    },
+    {
+      "suite": "city_scenery_test",
+      "exit_code": 0,
+      "passed": 141,
+      "errors": [],
+      "environment_notices": [],
+      "seconds": 4.169,
+      "log": "/tmp/vaultbound-7b-accepted-f7l1tf6t/logs/city_scenery_test.log",
+      "ok": true,
+      "log_sha256": "fedd6508312c6461849c681d085e1c6f25aeecd0b4653263d3d0f2ce70db0d66",
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-7b-accepted-f7l1tf6t/source",
+        "--script",
+        "res://tests/city_scenery_test.gd"
+      ]
+    },
+    {
+      "suite": "static_visual_batcher_test",
+      "exit_code": 0,
+      "passed": 32,
+      "errors": [],
+      "environment_notices": [],
+      "seconds": 1.318,
+      "log": "/tmp/vaultbound-7b-accepted-f7l1tf6t/logs/static_visual_batcher_test.log",
+      "ok": true,
+      "log_sha256": "444c5c56465cc07d7dc5fed873cbe6b9cbe7665a8574c5d7551160effe4f72bb",
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-7b-accepted-f7l1tf6t/source",
+        "--script",
+        "res://tests/static_visual_batcher_test.gd"
+      ]
+    },
+    {
+      "suite": "visual_integration_test",
+      "exit_code": 0,
+      "passed": 63,
+      "errors": [],
+      "environment_notices": [],
+      "seconds": 8.739,
+      "log": "/tmp/vaultbound-7b-accepted-f7l1tf6t/logs/visual_integration_test.log",
+      "ok": true,
+      "log_sha256": "c2518128a07a474a677fbdd9f78430e042af86288002d7aed1fcb3bca99cdfbf",
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-7b-accepted-f7l1tf6t/source",
+        "--script",
+        "res://tests/visual_integration_test.gd"
+      ]
+    },
+    {
+      "suite": "visual_style_test",
+      "exit_code": 0,
+      "passed": 48,
+      "errors": [],
+      "environment_notices": [],
+      "seconds": 0.768,
+      "log": "/tmp/vaultbound-7b-accepted-f7l1tf6t/logs/visual_style_test.log",
+      "ok": true,
+      "log_sha256": "a19d127a155043f61ad461f5bdfd71805324571335449325fc8c9309dccd2744",
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-7b-accepted-f7l1tf6t/source",
+        "--script",
+        "res://tests/visual_style_test.gd"
+      ]
+    },
+    {
+      "suite": "visual_settings_test",
+      "exit_code": 0,
+      "passed": 54,
+      "errors": [],
+      "environment_notices": [],
+      "seconds": 1.217,
+      "log": "/tmp/vaultbound-7b-accepted-f7l1tf6t/logs/visual_settings_test.log",
+      "ok": true,
+      "log_sha256": "9d79ff262ccc6fb1db8aa8b89de2cf025570d9f1f3d1a6f5c1ff0cbf8623401c",
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-7b-accepted-f7l1tf6t/source",
+        "--script",
+        "res://tests/visual_settings_test.gd"
+      ]
+    },
+    {
+      "suite": "visual_accessibility_test",
+      "exit_code": 0,
+      "passed": 144,
+      "errors": [],
+      "environment_notices": [],
+      "seconds": 3.173,
+      "log": "/tmp/vaultbound-7b-accepted-f7l1tf6t/logs/visual_accessibility_test.log",
+      "ok": true,
+      "log_sha256": "d6a92780b2f3acccbd26eb927dcd92938ec590b5b825a1920a5d1cb0f1805720",
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-7b-accepted-f7l1tf6t/source",
+        "--script",
+        "res://tests/visual_accessibility_test.gd"
+      ]
+    },
+    {
+      "suite": "accessibility_preferences_test",
+      "exit_code": 0,
+      "passed": 41,
+      "errors": [],
+      "environment_notices": [],
+      "seconds": 0.566,
+      "log": "/tmp/vaultbound-7b-accepted-f7l1tf6t/logs/accessibility_preferences_test.log",
+      "ok": true,
+      "log_sha256": "bafcc141e2785e95030643c93c4b493717a4224d68a40d7acb9c70d59e3505ec",
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-7b-accepted-f7l1tf6t/source",
+        "--script",
+        "res://tests/accessibility_preferences_test.gd"
+      ]
+    },
+    {
+      "suite": "accessibility_preferences_test:read",
+      "exit_code": 0,
+      "passed": 3,
+      "errors": [],
+      "environment_notices": [],
+      "seconds": 0.566,
+      "log": "/tmp/vaultbound-7b-accepted-f7l1tf6t/logs/accessibility_preferences_test_read.log",
+      "ok": true,
+      "log_sha256": "d79854b9862b7bac767d4fa28530c16af9de5d6f88e8bf4b05b12614530c4000",
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-7b-accepted-f7l1tf6t/source",
+        "--script",
+        "res://tests/accessibility_preferences_test.gd",
+        "--",
+        "--read"
+      ]
+    },
+    {
+      "suite": "demo_exchange_controller_test",
+      "exit_code": 0,
+      "passed": 83,
+      "errors": [],
+      "environment_notices": [],
+      "seconds": 4.577,
+      "log": "/tmp/vaultbound-7b-accepted-f7l1tf6t/logs/demo_exchange_controller_test.log",
+      "ok": true,
+      "log_sha256": "6d7275d14c4a8432c12d5e8d20c9307dc336163ef7a0c4aeb48b57e0e3c7bfd5",
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/tmp/vaultbound-7b-accepted-f7l1tf6t/source",
+        "--script",
+        "res://tests/demo_exchange_controller_test.gd"
+      ]
+    }
+  ],
+  "geometry_evidence": {
+    "camera_transition_frames": 4080,
+    "meshes": 19,
+    "optional_caps": [
+      2,
+      4,
+      7
+    ],
+    "tree_heights": {
+      "lantern_crown": {
+        "foundation_y": -8.0,
+        "full_height": 34.0,
+        "top_y": 26.0
+      },
+      "moonveil_willow": {
+        "foundation_y": -8.0,
+        "full_height": 32.0,
+        "top_y": 24.0
+      },
+      "starbough": {
+        "foundation_y": -8.0,
+        "full_height": 30.0,
+        "top_y": 22.0
+      },
+      "sundered_root": {
+        "foundation_y": -8.0,
+        "full_height": 37.0999984741211,
+        "top_y": 29.0999984741211
+      }
+    },
+    "triangles": 8671
+  },
+  "navigation_evidence": {
+    "Guardian": {
+      "geometry_probes": 14145,
+      "recoveries": 0,
+      "replans": 271
+    },
+    "Mystic": {
+      "geometry_probes": 10917,
+      "recoveries": 0,
+      "replans": 233
+    },
+    "distance": {
+      "Guardian": 488.001005511076,
+      "Mystic": 497.769402216072,
+      "Player": 496.343467744475
+    },
+    "maximum_actor_step": 0.089333787560463,
+    "observed_physics_frames": 7045,
+    "player": {
+      "geometry_probes": 18796,
+      "replans": 165
+    }
+  },
+  "pet_follow_evidence": {
+    "maximum_visible_step": 0.193137764930725,
+    "worlds": [
+      {
+        "decision_count": 188,
+        "intentional_leader_repositions": 3,
+        "maximum_queries": 6,
+        "placements": 4,
+        "recoveries": 3,
+        "retained_points": 1,
+        "total_queries": 1009,
+        "world": "sanctuary"
+      },
+      {
+        "decision_count": 67,
+        "intentional_leader_repositions": 0,
+        "maximum_queries": 6,
+        "placements": 1,
+        "recoveries": 0,
+        "retained_points": 0,
+        "total_queries": 388,
+        "world": "rootbound_abyss"
+      },
+      {
+        "decision_count": 2,
+        "intentional_leader_repositions": 0,
+        "maximum_queries": 5,
+        "placements": 1,
+        "recoveries": 0,
+        "retained_points": 1,
+        "total_queries": 7,
+        "world": "collection_hall"
+      }
+    ]
+  },
+  "pet_simulated_update_rates": [
+    {
+      "decision_count": 50,
+      "distance_to_leader": 1.44999980926514,
+      "maximum_queries": 6,
+      "simulated_fps": 30
+    },
+    {
+      "decision_count": 50,
+      "distance_to_leader": 1.50000095367432,
+      "maximum_queries": 6,
+      "simulated_fps": 60
+    },
+    {
+      "decision_count": 50,
+      "distance_to_leader": 1.52500104904175,
+      "maximum_queries": 6,
+      "simulated_fps": 120
+    }
+  ],
+  "dungeon_visual_integration_seeds": [
+    7,
+    23,
+    81
+  ],
+  "development_runs_excluded_from_accepted_totals": [
+    {
+      "total": 0,
+      "invocations": 1,
+      "source_sha256": "a31ae56539f3d8c1471e4804709a7351d5ab15c6343090e9134fc1d1b9ed03bb",
+      "source_unchanged": true,
+      "ok": false,
+      "directory": "/tmp/vaultbound-7b-focused-y04ki3qs/logs",
+      "results": [
+        {
+          "suite": "import",
+          "exit_code": 0,
+          "passed": 0,
+          "errors": [],
+          "environment_notices": [
+            "ERROR: Condition \"_sock == -1\" is true. Returning: FAILED",
+            "ERROR: Condition \"err != OK\" is true. Returning: ERR_CANT_CREATE",
+            "ERROR: Condition \"_sock == -1\" is true. Returning: FAILED",
+            "ERROR: Condition \"err != OK\" is true. Returning: ERR_CANT_CREATE",
+            "Unable to open Android 'build-tools' directory."
+          ],
+          "seconds": 6.383,
+          "log": "/tmp/vaultbound-7b-focused-y04ki3qs/logs/import.log",
+          "ok": true,
+          "log_sha256": "f4007d5ab9e6959dc9ebb2681fc92cba7aace989730a75fefdc62707485e760e"
+        },
+        {
+          "suite": "sanctuary_capital_test",
+          "exit_code": 1,
+          "passed": 0,
+          "errors": [
+            "SCRIPT ERROR: Parse Error: The variable type is being inferred from a Variant value, so it will be typed as Variant. (Warning treated as error.)",
+            "ERROR: Failed to load script \"res://tests/sanctuary_capital_test.gd\" with error \"Parse error\"."
+          ],
+          "environment_notices": [],
+          "seconds": 0.164,
+          "log": "/tmp/vaultbound-7b-focused-y04ki3qs/logs/sanctuary_capital_test.log",
+          "ok": false,
+          "log_sha256": "b0dfbad4fd092970be87f5263bba2ede0af7203030c9dc021f029b579c47cd85"
+        }
+      ]
+    },
+    {
+      "total": 227,
+      "invocations": 1,
+      "source_sha256": "22c804f1ee96b95bcd5f7b028057c83cfe2851b13a8ef6ac8d08dd0ab559bccd",
+      "source_unchanged": true,
+      "ok": true,
+      "directory": "/tmp/vaultbound-7b-focused-y04ki3qs/attempt-2",
+      "results": [
+        {
+          "suite": "sanctuary_capital_test",
+          "exit_code": 0,
+          "passed": 227,
+          "errors": [],
+          "environment_notices": [],
+          "seconds": 51.999,
+          "log": "/tmp/vaultbound-7b-focused-y04ki3qs/attempt-2/sanctuary_capital_test.log",
+          "ok": true,
+          "log_sha256": "56953391cc6d6b3553d612d0b3214073e0d89a4030c6cd9edf38dc98de04583f"
+        }
+      ]
+    }
+  ],
+  "development_correction": "The first new test invocation failed a strict GDScript inferred-Variant warning on its WeakRef local. An explicit WeakRef type fixed only the test. The next focused227-check run passed; final gate adds three actual tower-position camera probes. Production source was unchanged by these findings.",
+  "limits": [
+    "Headless structural/collision/logic checks do not establish rendered art quality, GPU timing, draw calls, Android FPS, touch comfort or IME behavior.",
+    "No physical Android, APK export, screen/video capture, display/GPU installation or permission retry, paid asset, hosting or live backend testing occurred.",
+    "Only the established editor local-socket and absent Android build-tools notices are permitted. Accepted runtime logs contain no script error, warning or leak.",
+    "Existing native meshes and new original authored procedural geometry are prototype art. Purple/red destinations, depth progression and later Milestone7 stages are not claimed by7B."
+  ]
+}

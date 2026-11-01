@@ -10,6 +10,7 @@ const Terminal = preload("res://scripts/sanctuary/city_terminal.gd")
 const CityBuilder = preload("res://scripts/sanctuary/sanctuary_city_builder.gd")
 const DistrictArt = preload("res://scripts/sanctuary/sanctuary_district_art.gd")
 const Landscape = preload("res://scripts/sanctuary/sanctuary_landscape.gd")
+const Landmarks = preload("res://scripts/sanctuary/sanctuary_landmarks.gd")
 const Ambience = preload("res://scripts/sanctuary/sanctuary_ambience.gd")
 const Fauna = preload("res://scripts/visual/ambient_fauna.gd")
 const VisualStyle = preload("res://scripts/visual/visual_style.gd")
@@ -32,6 +33,7 @@ func _ready() -> void:
 
 func _build_scenery() -> void:
 	Landscape.new().build(self, CITY_LAYOUT, bool(get_tree().get_meta("capture_city_scenery_geometry", false)))
+	Landmarks.new().build(self)
 	var ambience := Ambience.new()
 	ambience.configure(self, CITY_LAYOUT)
 	add_child(ambience)

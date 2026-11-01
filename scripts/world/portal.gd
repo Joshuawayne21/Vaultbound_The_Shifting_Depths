@@ -4,6 +4,16 @@ extends Node3D
 signal travel_requested(destination: StringName, entry_id: StringName)
 signal portal_info_requested(source: Node3D)
 
+# This is presentation data for existing routes, never a destination registry.
+# Purple/red landmarks are added only when their playable worlds are implemented.
+const VISUAL_PROFILES := {
+	&"rootbound_abyss": preload("res://resources/portals/rootbound.tres"),
+	&"collection_hall": preload("res://resources/portals/collection_hall.tres"),
+	&"dungeon": preload("res://resources/portals/dungeon_practice.tres"),
+	&"combat_arena": preload("res://resources/portals/combat_practice.tres"),
+	&"sanctuary": preload("res://resources/portals/sanctuary_return.tres"),
+}
+
 @export var destination: StringName = &"dungeon"
 @export var entry_id: StringName = &"from_sanctuary"
 @export var title: String = "THE SHIFTING DEPTHS"
@@ -20,6 +30,8 @@ var _range_elapsed := 0.0
 var _near_player: Node3D
 var _motion_scale := 1.0
 var _high_contrast := false
+var _visual_profile: Resource
+var _route_label: Label3D
 
 
 func _ready() -> void:
@@ -28,12 +40,17 @@ func _ready() -> void:
 	var stone: Material = palette.light_stone
 	var dark_stone: Material = palette.dark_stone
 	var gold: Material = palette.gold
-	var glow: Material = palette.glow
+	_visual_profile = VISUAL_PROFILES.get(destination, VISUAL_PROFILES[&"dungeon"])
+	set_meta("portal_visual_profile_id", _visual_profile.id)
+	# Tinting a cached palette resource would recolor every other world and gate.
+	var glow := palette.glow.duplicate() as StandardMaterial3D
+	glow.albedo_color = _visual_profile.accent_color
+	glow.emission = _visual_profile.accent_color
 	_surface_material = ShaderMaterial.new()
 	_surface_material.shader = preload("res://resources/shaders/portal_veil.gdshader")
-	if destination == &"collection_hall":
-		_surface_material.set_shader_parameter("magic_color", Color("9f814c"))
-		_surface_material.set_shader_parameter("rim_color", Color("e4cea3"))
+	_surface_material.set_shader_parameter("deep_color", _visual_profile.deep_color)
+	_surface_material.set_shader_parameter("magic_color", _visual_profile.magic_color)
+	_surface_material.set_shader_parameter("rim_color", _visual_profile.rim_color)
 	for side in [-1.0, 1.0]:
 		_box(Vector3(side * 1.95, 0.22, 0), Vector3(0.9, 0.44, 0.9), dark_stone)
 		_box(Vector3(side * 1.95, 1.7, 0), Vector3(0.56, 2.8, 0.62), stone, true)
@@ -96,6 +113,18 @@ func _ready() -> void:
 	title_label.position = Vector3(0, 4.96, 0)
 	title_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	add_child(title_label)
+	_add_landmark(stone, gold, glow)
+	_route_label = Label3D.new()
+	_route_label.name = "RouteKind"
+	_route_label.text = _visual_profile.route_label
+	_route_label.font_size = 30
+	_route_label.pixel_size = 0.0031
+	_route_label.outline_size = 8
+	_route_label.modulate = _visual_profile.rim_color
+	_route_label.position = Vector3(0, 5.26, 0)
+	_route_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_route_label.no_depth_test = false
+	add_child(_route_label)
 	if require_entry_card:
 		_range_material = StandardMaterial3D.new()
 		_range_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -135,6 +164,9 @@ func _process(delta: float) -> void:
 func apply_visual_settings(settings: Dictionary) -> void:
 	_motion_scale = clampf(float(settings.get("decorative_motion_scale", 0.0 if bool(settings.get("reduced_motion", false)) else 1.0)), 0.0, 1.0)
 	_high_contrast = bool(settings.get("high_contrast_prompts", false))
+	if is_instance_valid(_route_label):
+		_route_label.modulate = Color.WHITE if _high_contrast else _visual_profile.rim_color
+		_route_label.outline_size = 12 if _high_contrast else 8
 	if is_instance_valid(_range_label):
 		_range_label.modulate = Color.WHITE if _high_contrast else Color("f1f1e8")
 		_range_label.outline_size = 16 if _high_contrast else 12
@@ -167,6 +199,59 @@ func interact(actor: Node3D) -> void:
 		if can_interact(actor): portal_info_requested.emit(self)
 	else:
 		travel_requested.emit(destination, entry_id)
+
+
+func _add_landmark(stone: Material, gold: Material, glow: Material) -> void:
+	# Small original heraldry extends the upper frame, leaving the opening, existing
+	# pillars and reach circle unchanged. Every added opaque box has exact camera
+	# collision; none alters movement, interaction visibility or admission checks.
+	var landmark := Node3D.new()
+	landmark.name = "PortalLandmark"
+	add_child(landmark)
+	for side in [-1.0, 1.0]:
+		var suffix := "West" if side < 0.0 else "East"
+		_landmark_box(landmark, "Cornice" + suffix, Vector3(side * 1.68, 4.10, 0), Vector3(0.92, 0.20, 0.46), stone, side * -0.43)
+		_landmark_box(landmark, "CorniceInlay" + suffix, Vector3(side * 1.68, 4.10, 0.25), Vector3(0.75, 0.055, 0.035), gold, side * -0.43)
+	var center := Vector3(0, 4.39, 0.32)
+	match _visual_profile.crest:
+		"root":
+			_landmark_box(landmark, "RootStem", center, Vector3(0.055, 0.35, 0.045), glow)
+			for side in [-1.0, 1.0]:
+				_landmark_box(landmark, "RootLeaf" + str(int(side)), center + Vector3(side * 0.09, 0.045, 0.015), Vector3(0.07, 0.23, 0.035), glow, side * -0.65)
+		"relic":
+			_landmark_box(landmark, "RelicDiamond", center, Vector3(0.22, 0.22, 0.045), glow, PI / 4.0)
+			_landmark_box(landmark, "RelicCrown", center + Vector3(0, 0.21, 0), Vector3(0.26, 0.05, 0.045), glow)
+			_landmark_box(landmark, "RelicFoot", center + Vector3(0, -0.21, 0), Vector3(0.26, 0.05, 0.045), glow)
+		"practice":
+			for side in [-1.0, 1.0]:
+				_landmark_box(landmark, "PracticeBlade" + str(int(side)), center, Vector3(0.055, 0.40, 0.04), glow, side * 0.65)
+		"home":
+			for side in [-1.0, 1.0]:
+				_landmark_box(landmark, "HomeRoof" + str(int(side)), center + Vector3(side * 0.075, 0.07, 0), Vector3(0.055, 0.25, 0.04), glow, side * 0.70)
+			_landmark_box(landmark, "HomeDoor", center + Vector3(0, -0.10, 0), Vector3(0.08, 0.15, 0.045), glow)
+
+
+func _landmark_box(parent: Node3D, node_name: String, at: Vector3, size: Vector3, material: Material, turn: float = 0.0) -> void:
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	var art := MeshInstance3D.new()
+	art.name = node_name
+	art.mesh = mesh
+	art.position = at
+	art.rotation.z = turn
+	art.material_override = material
+	art.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(art)
+	var body := StaticBody3D.new()
+	body.name = "LandmarkCameraBlocker"
+	body.collision_layer = 8
+	body.collision_mask = 0
+	art.add_child(body)
+	var collider := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = size
+	collider.shape = shape
+	body.add_child(collider)
 
 
 func _mesh(shape: Mesh, at: Vector3, material: Material) -> MeshInstance3D:

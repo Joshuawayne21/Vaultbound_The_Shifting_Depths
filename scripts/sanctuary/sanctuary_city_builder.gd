@@ -103,18 +103,85 @@ static func _build_ramp(parent: Node3D, kit: Architecture, width: float, height:
 	parent.add_child(body)
 
 static func _build_boundary(kit: Architecture, layout: Resource) -> void:
+	var art := Dressing.new(kit.root, kit.palette)
 	for index in range(64):
 		var angle := (index + 0.5) * TAU / 64.0
 		var at := Vector3(sin(angle) * 44.6, 0, -cos(angle) * 44.6)
-		var wall := kit.box(at + Vector3.UP * 0.7, Vector3(4.48, 1.4, 0.8), "stone", true)
+		var basis := Basis(Vector3.UP, -angle)
+		var height := 3.2 + float(index % 3) * 0.5
+		# The original 64 wall footprints remain authoritative for movement.
+		# Raised opaque masonry and its world/camera collider share one size.
+		var wall := kit.box(at + Vector3.UP * height * 0.5, Vector3(4.48, height, 0.8), "stone", true)
+		wall.name = "CapitalWall_%02d" % index
 		wall.rotation.y = -angle
-		var coping := kit.box(at + Vector3.UP * 1.46, Vector3(4.52, 0.16, 1.0), "light_stone")
-		coping.rotation.y = -angle
+		wall.add_to_group("capital_boundary_walls")
+		wall.set_meta("capital_wall_index", index)
+		wall.set_meta("capital_wall_height", height)
+		# Insets and coping stay inside the wall envelope. Every quality preset
+		# retains this silhouette; small optional foliage has no collision.
+		art.box(at + Vector3.UP * (height - 0.08), Vector3(4.48, 0.16, 0.8), "light_stone", basis)
+		art.box(at + basis * Vector3(0, 0.32, 0.375), Vector3(4.4, 0.12, 0.055), "bronze", basis)
+		for side: float in [-1.0, 1.0]:
+			art.box(at + basis * Vector3(side * 1.93, height * 0.5, 0.36), Vector3(0.3, height - 0.3, 0.08), "light_stone", basis)
+		if index % 2 == 0:
+			var rune := at + basis * Vector3(0, height * 0.59, 0.402)
+			art.box(rune, Vector3(0.075, 0.58, 0.012), "glow", basis)
+			art.box(rune, Vector3(0.38, 0.065, 0.012), "gold", basis)
+		if index % 4 == 1:
+			for vine in range(3):
+				art.leaf(at + basis * Vector3(-0.8 + float(vine) * 0.7, height - 0.7, 0.4), 0.65, 0.15, "leaf", -angle, PI)
+	art.flush("CapitalMasonry")
 	for index in range(16):
 		var angle := (index + 0.5) * TAU / 16.0
 		var at: Vector3 = Vector3(sin(angle), 0, -cos(angle)) * (layout.radius - 1.6)
-		kit.column(at, 2.8 if index % 2 else 3.8)
-		kit.cone(at + Vector3.UP * (3.7 if index % 2 else 4.7), 0.6, 0.65, "gold")
+		_build_boundary_tower(kit, at, index)
+
+static func _build_boundary_tower(kit: Architecture, at: Vector3, index: int) -> void:
+	var node := Node3D.new()
+	node.name = "CapitalBoundaryTower_%02d" % index
+	node.position = at
+	# Do not rotate the original square ground bases: their exact X/Z
+	# footprint is part of the existing city navigation contract.
+	node.add_to_group("capital_boundary_towers")
+	var variant := index % 3
+	var height := 5.6 + float(variant) * 1.2
+	node.set_meta("capital_tower_index", index)
+	node.set_meta("capital_tower_height", height)
+	kit.root.add_child(node)
+	var tower := Architecture.new(node)
+	var base := tower.box(Vector3(0, 0.18, 0), Vector3(1.5, 0.36, 1.5), "dark_stone", true)
+	base.name = "OriginalGroundBase"
+	tower.box(Vector3(0, 0.4, 0), Vector3(1.25, 0.12, 1.25), "gold")
+	var crown_height := 1.5 if variant == 2 else 1.1
+	var shaft_height := height - crown_height - 0.4
+	var shaft := tower.cylinder(Vector3(0, shaft_height * 0.5 + 0.4, 0), 0.48, shaft_height, "light_stone", true, 8)
+	shaft.name = "RaisedTowerShaft"
+	tower.cylinder(Vector3(0, 0.65, 0), 0.54, 0.19, "stone", false, 8)
+	tower.cylinder(Vector3(0, height - crown_height, 0), 0.56, 0.18, "gold", false, 8)
+	match variant:
+		0:
+			tower.box(Vector3(0, height - 1.0, 0), Vector3(1.3, 0.2, 1.3), "light_stone")
+			tower.cone(Vector3(0, height - 0.425, 0), 0.62, 0.85, "gold")
+		1:
+			tower.box(Vector3(0, height - 1.0, 0), Vector3(1.4, 0.2, 1.4), "light_stone")
+			tower.box(Vector3(0, height - 0.68, 0), Vector3(1.1, 0.44, 1.1), "bronze")
+			tower.cone(Vector3(0, height - 0.25, 0), 0.4, 0.5, "crystal")
+		_:
+			tower.box(Vector3(0, height - 1.4, 0), Vector3(1.3, 0.2, 1.3), "light_stone")
+			tower.cone(Vector3(0, height - 0.65, 0), 0.55, 1.3, "crystal")
+	# The cap can be wider than the old shaft. Camera-only collision covers
+	# the full opaque crown while preserving the existing ground obstacles.
+	var blocker := StaticBody3D.new()
+	blocker.name = "CrownCameraOccluder"
+	blocker.collision_layer = 8
+	blocker.collision_mask = 0
+	blocker.position.y = height - crown_height * 0.5
+	var collider := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(1.4, crown_height, 1.4)
+	collider.shape = shape
+	blocker.add_child(collider)
+	node.add_child(blocker)
 
 static func _build_exchange(kit: Architecture) -> void:
 	kit.cylinder(Vector3(0, 0.035, 0), 3.2, 0.045, "dark_stone", false, 48)

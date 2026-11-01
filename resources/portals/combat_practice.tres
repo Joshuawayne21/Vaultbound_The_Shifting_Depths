@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="VaultPortalVisualProfile" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/visual/portal_visual_profile.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"combat_practice"
+route_label = "LOCAL COMBAT PRACTICE"
+crest = "practice"
+deep_color = Color(0.055, 0.09, 0.085, 1)
+magic_color = Color(0.26, 0.60, 0.47, 1)
+rim_color = Color(0.78, 0.93, 0.70, 1)
+accent_color = Color(0.62, 0.87, 0.62, 1)

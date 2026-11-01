@@ -1,10 +1,10 @@
-; Vaultbound: The Shifting Depths — milestone 5.6 loot and equipment prototype.
+; Vaultbound: The Shifting Depths — milestone 7B Sanctuary landmarks.
 ; Import this file with Godot 4.6.3 (Compatibility renderer).
 config_version=5
 
 [application]
 config/name="Vaultbound: The Shifting Depths"
-config/version="0.6.0-6f"
+config/version="0.7.0-7b"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://assets/icon.svg"

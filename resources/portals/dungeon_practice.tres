@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="VaultPortalVisualProfile" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/visual/portal_visual_profile.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"dungeon_practice"
+route_label = "LOCAL DUNGEON PRACTICE"
+crest = "practice"
+deep_color = Color(0.025, 0.10, 0.15, 1)
+magic_color = Color(0.12, 0.63, 0.57, 1)
+rim_color = Color(0.60, 0.91, 0.81, 1)
+accent_color = Color(0.38, 0.85, 0.74, 1)
