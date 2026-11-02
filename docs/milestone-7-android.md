@@ -50,7 +50,7 @@ The [7D.2 headless gate](milestone-7d2-validation.md) passed; these physical-dev
 checks remain required. See the [encounter guide](rootbound-encounters.md) for
 the implemented scope and initial selection
 rules. The following 7D.3 section covers the newer hazards and events; other
-themes, Ancient encounters and early extraction remain later work.
+themes and Ancient encounters remain later work. The 7D.4 section below covers Return springs.
 
 1. Preserve a backed-up profile and confirm Depth 1 still selects Rootwarden.
    At Depth 2 or higher, compare the portal's possible-boss list with the actual
@@ -98,6 +98,17 @@ The [7D.3 headless gate](milestone-7d3-validation.md) passed. The checks below s
 5. Switch cameras during each event, issue Guardian/Mystic commands and verify reaction delays, safe hive routes and readable arrival/resume/member feedback. Downed party members must not receive a spawn directly on them. Review crowded warning readability.
 6. Search part or all of a reward cache, finish the required boss, extract and restart. Confirm only collected items/DM were secured once and event records persisted. On a separate failed run, secured equipment remains while current unsecured rewards are lost.
 7. Repeat on Low/Medium/High, reduced effects and ambient density settings. Essential hazard/core silhouettes remain; optional motes reduce. Record frame-time spikes, memory, thermal behavior and touch comfort. Host microsecond timings and mesh budgets are not device FPS measurements.
+
+## 7D.4 Return springs
+
+The [7D.4 headless gate](milestone-7d4-validation.md) passed. These checks still require a physical Android device; no mobile FPS or touchscreen result is implied.
+
+1. Select a legitimately unlocked depth with 10 or more generated rooms and record seed/depth. Discover an **R** Return spring. Short floors have none; 16–24-room floors have two. Check the second branch location on a short-main-route fallback rather than assuming every spring is on the main route.
+2. Fight the original local pack. Check blocked prompts during warnings, projectiles, hit recovery and reviving. Clear threats and approach the seal in both cameras. It provides no healing or invulnerability. After the required boss dies, use **E**, the final extraction.
+3. Walk between a nearby searchable cache and the spring. Search, take only part, close the window, and return. Confirm the closest interaction remains usable at every UI scale and that full inventory does not hide Return or force Take All.
+4. Verify **LOOT SECURED · DEPTH INCOMPLETE**, collected DM/items and kill-only XP, unchanged completed count/depth unlock and merchant rotation. Restart; secured rewards and older equipment, recruits and pets remain. Untaken cache contents must not appear in inventory.
+5. Background/resume the app around a Return tap and scene fade. Confirm controls, party and cameras recover and no duplicate grant appears. Controlled save/load failure injection is covered by automation; do not corrupt a personal save to simulate it on-device.
+6. Repeat on Low/Medium/High and reduced motion, including long floors, paired Search/Return prompts, phone cutouts, notch-safe UI and thermal/frame-time observation. Capture rendered spring readability and transition video where available.
 
 ## Capture performance and visual evidence
 

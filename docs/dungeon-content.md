@@ -6,7 +6,7 @@ Thornmarshal and Mycelial Cantor controllers, an Ascendant Thornmarshal pattern
 and an optional Root Bark Champion to Rootbound. Read the [encounter guide](rootbound-encounters.md)
 for selection rules and mechanics. The [7D.3 event batch](rootbound-events.md)
 adds spike lanes, spore patches, a destructible hive and finite horde. Additional
-biomes, trap families, Ancient encounters and early extraction remain later work. Headless validation does not
+biomes, trap families and Ancient encounters remain later work. The [7D.4 Return springs](dungeon-return-springs.md) now provide safe early exits without completing a floor. Headless validation does not
 replace physical Android play-testing or rendered visual review.
 
 ## One issued expedition
@@ -17,7 +17,7 @@ The Rootbound progression track keeps its existing `biome_id: rootbound_abyss`. 
 
 Session admits a content run through `begin_content_run`; Abyss independently prepares it through `configure_content`. Game compares both full plans and the separate depth policy during travel. Public getters return detached copies. The original `begin_run`, `begin_depth_run`, `generate` and `generate_for_depth` remain compatibility paths for explicit fixtures; production travel uses the content path. `generate_for_run` adds content metadata without changing configured topology version 2 or the bounded seed mixer.
 
-Content version 3 retains the required boss selection and freezes separate hazard, hive and horde profiles and source rules. `RoomContentPlanner` derives optional placement from that plan and
+Content version 4 retains the required boss, hazard, hive and horde profiles and adds the frozen Return spring policy. `RoomContentPlanner` derives optional placement from that plan and
 the generated layout. The world privately admits the actual room after native
 floor, body and route checks; an unsafe optional slot is omitted. These probes
 exclude the retained previous world's collision and require ground belonging to
@@ -66,6 +66,14 @@ and four admitted across the encounter. Failure is harmless and consumes the
 attempt. Owner death, room exit or source invalidation cancels support without
 counting it as a kill. Rootwarden keeps its original activation behavior.
 
+## Return spring source proof
+
+The private planner reserves Return rooms before optional Champion and event placement. It preserves native modules, roles, ordinary packs and all connectors. Long layouts guarantee one or two sources; short-main-route fallback honestly uses a distant nonhidden branch for the second. Each source needs actual native floor, body, chest-front approach and route admission. Public markers and advisory safety never authorize a transaction.
+
+Fresh safety checks require verified local pack deaths, a resolved initial trap opportunity and no relevant pending damage, hostile actor or incoming projectile. Legacy and ordinary attack dispatch observations cover callbacks still on the stack; malformed safety results deny. Native room/source poses and the complete issued world identity remain bound. Unassigned global awareness queues do not block a clear local source.
+
+`secure_early` saves collected rewards, eligible discoveries and kill-only XP once, without full-clear statistics or depth unlocks. Private accepted-source identity, a closed run and Game's transition ownership are rechecked through deferred travel and final fade. Failed saves leave the active bag; failed arrival after saving leaves a travel-only retry. A replacement run cannot inherit an old return. Profile v7 retains its existing shape. See [mechanics and limits](dungeon-return-springs.md).
+
 ## Rootbound event source proof
 
 D3 assigns independent deterministic optional slots after Champion placement. Hazard pools retain two wrappers. Typed hazard admission reserves warning capacity without cancelling existing ordinary attacks merely to make space. Hives and hordes suspend ordinary activity and use full 3.5-second spawn/resume warnings; reservations count toward the shared limits. Legacy ordinary warnings are not represented as using a new global four-shape cap.
@@ -96,7 +104,7 @@ Hit callbacks can end an encounter or remove a world. Guards run again before fu
 
 ## Save compatibility
 
-Profile v7 adds a small `encounter_records` namespace alongside the existing four-ID monster journal. It records secured theme discoveries and boss encounters, with counts, highest recorded floor, first recorded revision and local discovery time. Actual successful extraction saves these with loot, pets, XP and depth unlocks. Pending records are lost on death or abandonment; failed saves remain retryable.
+Profile v7 adds a small `encounter_records` namespace alongside the existing four-ID monster journal. It records secured theme discoveries and boss encounters, with counts, highest recorded floor, first recorded revision and local discovery time. Full extraction saves these with loot, pets, XP and depth unlocks. A valid Return spring can secure eligible pending records and collected rewards without a full-clear bonus or depth unlock. Pending records are lost on death or abandonment; failed saves remain retryable.
 
 7D.2 keeps that save shape and adds exact encounter IDs. A validated Ascendant
 Thornmarshal defeat derives one journal-only subset observation alongside its

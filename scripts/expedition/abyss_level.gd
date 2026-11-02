@@ -24,6 +24,7 @@ const Scheduler = preload("res://scripts/expedition/encounter_event_scheduler.gd
 const Presentation = preload("res://scripts/visual/dungeon_presentation.gd")
 const RoomContent = preload("res://scripts/expedition/room_content_planner.gd")
 const SpawnPlanner = preload("res://scripts/expedition/encounter_spawn_planner.gd")
+const Checkpoints = preload("res://scripts/expedition/dungeon_checkpoints.gd")
 const EventRuntime = preload("res://scripts/expedition/dungeon_events.gd")
 
 var display_name := "THE ROOTBOUND ABYSS"
@@ -72,6 +73,8 @@ var _room_slots: Array[Dictionary] = []
 var _admitted_slots: Array[Dictionary] = []
 var _optional_records: Dictionary = {}
 var _combat_admission_ready := false
+var _checkpoints: DungeonCheckpoints
+var _initial_traps: Dictionary = {}
 var _events: DungeonEvents
 
 func configure_run_context(generation: int) -> bool:
@@ -180,12 +183,15 @@ func prepare_combat_admission() -> bool:
 	if _events != null and not _events.prepare():
 		validation_errors.append("Registered room event admission failed")
 		return false
+	if _checkpoints != null and not _checkpoints.prepare():
+		validation_errors.append("A required return spring has no valid native approach")
+		return false
 	_combat_admission_ready = true
 	return combat_admission_valid()
 
 func combat_admission_valid() -> bool:
 	if _content_plan.is_empty(): return true
-	if (_events != null and not _events.admission_valid()) or not _combat_admission_ready or _room_slots != _admitted_slots or not RoomContent.valid_slots(_room_slots, layout, _content_plan) \
+	if (_checkpoints != null and not _checkpoints.admission_valid()) or (_events != null and not _events.admission_valid()) or not _combat_admission_ready or _room_slots != _admitted_slots or not RoomContent.valid_slots(_room_slots, layout, _content_plan) \
 			or _optional_records.size() != _room_slots.size() or not is_instance_valid(boss) \
 			or _boss_record.is_empty() or _boss_record.actor.get_ref() != boss or boss.get_parent() != rooms.get(int(layout.boss_id)): return false
 	var required_receipt := "rootwarden_reward" if _content_plan.required_boss_id == "rootwarden" else "boss_room_%d_%s" % [int(layout.boss_id), String(_content_plan.required_boss_id)]
@@ -291,6 +297,11 @@ func _ready() -> void:
 		_events.name = "RegisteredRoomEvents"
 		_events.configure(self, _content_plan, shared_materials)
 		add_child(_events)
+	if int(_content_plan.get("content_version", 0)) == 4:
+		_checkpoints = Checkpoints.new()
+		_checkpoints.name = "ReturnCheckpoints"
+		_checkpoints.configure(self, shared_materials)
+		add_child(_checkpoints)
 	loot_caches = LootCaches.new()
 	loot_caches.name = "LootCaches"
 	loot_caches.configure(_session, rooms, _player, self, run_generation)
@@ -312,6 +323,7 @@ func _ready() -> void:
 		var hazard := Hazard.new()
 		hazard.name = "PooledRoots_%d" % i
 		if not shared_materials.is_empty(): hazard.configure_presentation(shared_materials)
+		hazard.legacy_retired.connect(_on_legacy_hazard_retired.bind(hazard))
 		add_child(hazard)
 		_hazards.append(hazard)
 	_populate_treasure()
@@ -413,7 +425,11 @@ func _enter_room(id: int) -> void:
 	if room.kind == &"trap" and not _trap_visited.has(id) and (_events == null or not _events.replaces_roots(id)):
 		_trap_visited[id] = true
 		# Ground is marked in advance and all four entry lanes remain clear.
-		_arm_roots(id, Vector3.ZERO, 2.4)
+		if _checkpoints != null:
+			_initial_traps[id] = {"generation": run_generation, "state": "attempting", "actor": null, "serial": -1}
+		var armed := _arm_roots(id, Vector3.ZERO, 2.4)
+		if _initial_traps.has(id) and _initial_traps[id].state == "attempting" and run_source_context_valid():
+			_initial_traps[id].state = "unproven" if armed else "omitted"
 		notice.emit("Restless roots mark the floor — avoid the amber ring")
 	_refresh_rooms()
 	snapshot_changed.emit(snapshot())
@@ -784,6 +800,8 @@ func _on_warning(message: String) -> void:
 		notice.emit(message)
 
 func _reserve_awareness_warning(kind: StringName) -> bool:
+	if _checkpoints != null and _checkpoints.room_reserved(current_room_id) and initial_trap_resolved(current_room_id) \
+		and bool(encounters.checkpoint_room_status(current_room_id).complete): return false
 	return scheduler != null and run_source_context_valid() \
 		and scheduler.request_event(current_room_id, String(kind), "awareness_" + String(kind))
 
@@ -820,7 +838,13 @@ func _arm_roots(id: int, local_point: Vector3, warning_time: float, event_receip
 			var source_receipt := event_receipt if not event_receipt.is_empty() else "roots_%d" % _hazard_sequence
 			var reservation := scheduler.reserve_hazard(id, source_receipt) if scheduler != null else -1
 			if scheduler != null and reservation < 0: return false
+			var initial: Dictionary = _initial_traps.get(id, {})
+			var tracking: bool = initial.get("state", "") == "attempting" and event_receipt.is_empty()
+			if tracking:
+				initial.actor = weakref(hazard)
+				initial.serial = int(hazard.legacy_activation_snapshot().serial) + 1
 			var started := hazard.trigger(rooms[id].to_global(local_point), id, warning_time, 2.0, 12.0 * float(_depth_policy.damage_multiplier))
+			if tracking and started and initial.state == "attempting": initial.state = "accepted"
 			if scheduler != null:
 				if not started or not scheduler.bind_hazard(reservation, hazard):
 					scheduler.release_reservation(reservation)
@@ -891,6 +915,7 @@ func snapshot() -> Dictionary:
 		"enemy_budget": Encounters.MAX_ACTIVE_ENEMIES, "elapsed": _elapsed,
 		"fps": Engine.get_frames_per_second(), "draw_calls": Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)}
 	if _events != null: result.merge(_events.snapshot(), true)
+	result["return_springs"] = _checkpoints.map_snapshot() if _checkpoints != null else []
 	return result
 
 func room_content_slots() -> Array[Dictionary]:
@@ -933,3 +958,46 @@ func event_completion_record(source: Node3D) -> Dictionary:
 
 func active_event_core_count() -> int:
 	return _events.active_core_count() if _events != null else 0
+
+func checkpoint_slots() -> Array[Dictionary]:
+	return _checkpoints.slots() if _checkpoints != null else RoomContent.checkpoint_slots(layout, _content_plan)
+
+func registered_checkpoints() -> Array[Node3D]:
+	return _checkpoints.sources() if _checkpoints != null else [] as Array[Node3D]
+
+func early_exit_record(source: Node3D, player: Node3D) -> Dictionary:
+	return _checkpoints.record(source, player) if _checkpoints != null else {}
+
+func early_exit_status(source: Node3D, player: Node3D) -> Dictionary:
+	return _checkpoints.status(source, player) if _checkpoints != null else {"ok": false, "reason": "Return unavailable", "checkpoint_id": "", "room_id": -1}
+
+func completed_early_exit_matches(source: Node3D, generation: int, token: Dictionary) -> bool:
+	return _checkpoints != null and _checkpoints.completed_matches(source, generation, token)
+
+func checkpoint_cache_placement_allowed(at: Vector3, footprint: float) -> bool:
+	return _checkpoints == null or _checkpoints.cache_allowed(at, footprint)
+
+func initial_trap_resolved(room_id: int) -> bool:
+	if not rooms.has(room_id): return false
+	if layout.rooms[room_id].kind != &"trap": return true
+	var row: Dictionary = _initial_traps.get(room_id, {})
+	if row.is_empty() or int(row.generation) != run_generation: return false
+	if row.state == "omitted": return true
+	if row.state != "resolved": return false
+	var actor := row.actor.get_ref() as Node3D if row.actor != null else null
+	return not is_instance_valid(actor) or not bool(actor.legacy_activation_snapshot().delivery_in_progress)
+
+func _on_legacy_hazard_retired(terminal: Dictionary, actor: Node3D) -> void:
+	if not owns_environment_hazard(actor) or not run_source_context_valid() or terminal != actor.legacy_terminal_snapshot(): return
+	var id := int(terminal.get("room_id", -1))
+	var row: Dictionary = _initial_traps.get(id, {})
+	if row.is_empty() or row.actor == null or row.actor.get_ref() != actor or int(row.generation) != run_generation \
+		or int(row.serial) != int(terminal.get("serial", -2)) or terminal.get("cause", "") not in ["expired", "cancelled"]: return
+	row.state = "resolved"
+
+func checkpoint_hostile_source_owned(actor: Node3D) -> bool:
+	if not is_instance_valid(actor) or not is_ancestor_of(actor): return false
+	if encounters != null and encounters.checkpoint_actor_owned(actor): return true
+	var row: Dictionary = _boss_record if actor == boss else _optional_records.get(actor.get_instance_id(), {})
+	return not row.is_empty() and row.actor.get_ref() == actor and int(row.generation) == run_generation \
+		and actor.get_parent() == rooms.get(int(row.room_id))

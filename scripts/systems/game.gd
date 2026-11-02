@@ -42,6 +42,8 @@ var _pet_selection: Dictionary = {}
 var _pet_presenter: WeakRef
 # Off-tree recovery ownership lasts only through the final content fade.
 var _travel_retained_world: Node3D
+var _travel_serial := 0
+var _return_focus_suspend: Dictionary = {}
 
 func _ready() -> void:
 	InputHub.controls_enabled = false
@@ -124,6 +126,7 @@ func _notification(what: int) -> void:
 			hud.expedition_overlay.sanctuary_panel.set_entry_available(false, "Entry canceled when focus changed. Reopen this portal to review it.")
 	elif what in [NOTIFICATION_APPLICATION_FOCUS_IN, NOTIFICATION_APPLICATION_RESUMED]:
 		_application_focused = true
+		if is_node_ready(): _resume_return_focus()
 
 func _on_action(action: StringName) -> void:
 	if action == &"camera_toggle" and not transitioning:
@@ -144,10 +147,13 @@ func _on_action(action: StringName) -> void:
 func start_expedition(seed_value: int = -1, expedition_depth: int = 1) -> void:
 	await change_location(&"rootbound_abyss", &"default", seed_value, expedition_depth)
 
-func change_location(destination: StringName, entry_id: StringName = &"default", expedition_seed: int = -1, expedition_depth: int = 1) -> void:
+func change_location(destination: StringName, entry_id: StringName = &"default", expedition_seed: int = -1, expedition_depth: int = 1, completed_return: Dictionary = {}) -> void:
 	if transitioning:
 		return
 	var request_world := active_world
+	if not completed_return.is_empty() and (destination != &"sanctuary" or entry_id != &"from_abyss" \
+			or not _completed_return_current(completed_return, request_world, request_world)):
+		return
 	if not LEVELS.has(destination):
 		hud.show_message("That passage is not available in this build.")
 		return
@@ -212,6 +218,9 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 		if not is_instance_valid(active_world) or active_world.get("run_generation") != issued_generation:
 			next_world.free()
 			return
+		if not completed_return.is_empty() and not _completed_return_current(completed_return, request_world, request_world):
+			next_world.free()
+			return
 		if ExpeditionSession.active: ExpeditionSession.fail_run("abandoned")
 		if ExpeditionSession.active or ExpeditionSession.run_generation != issued_generation:
 			next_world.free()
@@ -221,6 +230,9 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 		_abort_unentered_run(issued_generation, issued_seed, issued_context, issued_plan)
 		return
 	transitioning = true
+	_return_focus_suspend.clear()
+	_travel_serial += 1
+	var travel_serial := _travel_serial
 	_city_review_epoch += 1
 	_set_pet_suspended(true)
 	_city_waypoint.clear()
@@ -238,6 +250,9 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	var fade_out := create_tween()
 	fade_out.tween_method(hud.set_transition, 0.0 if active_world != null else 1.0, 1.0, 0.18)
 	await fade_out.finished
+	if not completed_return.is_empty() and not _completed_return_owned(completed_return, request_world, request_world, travel_serial):
+		await _recover_completed_return(next_world, completed_return, travel_serial)
+		return
 	if not _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan):
 		_cancel_candidate_travel(next_world, issued_generation, issued_seed, issued_context, issued_plan)
 		return
@@ -250,6 +265,9 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	var candidate_process := next_world.process_mode
 	next_world.process_mode = Node.PROCESS_MODE_DISABLED
 	world_root.add_child(next_world)
+	if not completed_return.is_empty() and not _completed_return_owned(completed_return, request_world, request_world, travel_serial):
+		await _recover_completed_return(next_world, completed_return, travel_serial)
+		return
 	if not _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan) or not _candidate_ready_valid(next_world, issued_context, issued_plan):
 		_cancel_candidate_travel(next_world, issued_generation, issued_seed, issued_context, issued_plan)
 		return
@@ -257,9 +275,21 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	active_world = next_world
 	current_location = destination
 	ExpeditionSession.bind_game_context(player, destination, active_world)
+	if not completed_return.is_empty() and not _completed_return_owned(completed_return, next_world, request_world, travel_serial):
+		await _recover_completed_return(next_world, completed_return, travel_serial)
+		return
 	demo_exchange.bind_game_context(player, destination, active_world)
+	if not completed_return.is_empty() and not _completed_return_owned(completed_return, next_world, request_world, travel_serial):
+		await _recover_completed_return(next_world, completed_return, travel_serial)
+		return
 	# The same identity is required after binding and the next physics boundary.
 	if _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan): await get_tree().physics_frame
+	if not completed_return.is_empty() and not _completed_return_owned(completed_return, next_world, request_world, travel_serial):
+		await _recover_completed_return(next_world, completed_return, travel_serial)
+		return
+	if not completed_return.is_empty() and not _completed_return_arrival_valid(next_world):
+		await _recover_completed_return(next_world, completed_return, travel_serial)
+		return
 	var combat_admitted := true
 	if not issued_plan.is_empty() and _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan) \
 			and _candidate_ready_valid(next_world, issued_context, issued_plan):
@@ -277,12 +307,21 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	if is_instance_valid(previous_world):
 		_pet_presenter = null
 		world_root.remove_child(previous_world)
-		if issued_plan.is_empty(): previous_world.queue_free()
+		if issued_plan.is_empty() and completed_return.is_empty(): previous_world.queue_free()
 		else: _travel_retained_world = previous_world
 	next_world.process_mode = candidate_process
 	player.reset_for_spawn(active_world.get_spawn_transform(entry_id))
+	if not completed_return.is_empty() and not _completed_return_owned(completed_return, next_world, previous_world, travel_serial):
+		await _recover_completed_return(next_world, completed_return, travel_serial)
+		return
 	player.apply_progression(ExpeditionSession.profile)
+	if not completed_return.is_empty() and not _completed_return_owned(completed_return, next_world, previous_world, travel_serial):
+		await _recover_completed_return(next_world, completed_return, travel_serial)
+		return
 	party.enter_world(active_world, destination)
+	if not completed_return.is_empty() and not _completed_return_owned(completed_return, next_world, next_world, travel_serial):
+		await _recover_completed_return(next_world, completed_return, travel_serial)
+		return
 	camera_rig.reset_position()
 	_wire_world_travel(active_world)
 	hud.set_location(active_world.display_name, active_world.objective)
@@ -294,6 +333,10 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	var fade_in := create_tween()
 	fade_in.tween_method(hud.set_transition, 1.0, 0.0, 0.25)
 	await fade_in.finished
+	if not completed_return.is_empty() and (not _completed_return_owned(completed_return, next_world, next_world, travel_serial) \
+			or not _completed_return_arrival_valid(next_world)):
+		await _recover_completed_return(next_world, completed_return, travel_serial)
+		return
 	if not issued_plan.is_empty() and (not _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan) \
 			or active_world != next_world or not _candidate_ready_valid(next_world, issued_context, issued_plan) \
 			or not next_world.has_method("combat_admission_valid") or not next_world.combat_admission_valid()):
@@ -319,6 +362,235 @@ func _exit_tree() -> void:
 	if is_instance_valid(_travel_retained_world) and _travel_retained_world.get_parent() == null:
 		_travel_retained_world.free()
 	_travel_retained_world = null
+	_travel_serial += 1
+
+
+func _return_node(context: Dictionary, key: String) -> Node:
+	var reference: Variant = context.get(key)
+	return reference.get_ref() as Node if reference is WeakRef else null
+
+
+func _completed_return_proof(context: Dictionary) -> bool:
+	if not is_inside_tree() or is_queued_for_deletion() or int(context.get("game_id", 0)) != get_instance_id(): return false
+	var world := _return_node(context, "world") as Node3D
+	var source := _return_node(context, "source") as Node3D
+	if not is_instance_valid(world) or not is_instance_valid(source) or not context.get("token") is Dictionary: return false
+	if _return_node(context, "player") != player or _return_node(context, "party") != party: return false
+	return ExpeditionSession.completed_early_return_matches(world, source, int(context.get("generation", -1)), context.token)
+
+
+func _completed_return_current(context: Dictionary, expected_world: Node3D, expected_party_world: Node3D) -> bool:
+	if not _completed_return_proof(context) or not is_instance_valid(expected_world) or expected_world != active_world \
+			or expected_world.is_queued_for_deletion() or expected_world.get_parent() != world_root \
+			or not is_instance_valid(player) or not player.is_inside_tree() or player.is_queued_for_deletion() \
+			or not is_instance_valid(party) or party.is_queued_for_deletion() or party.get_parent() != self \
+			or party.world != expected_party_world or party.leader != player:
+		return false
+	var source_world := _return_node(context, "world") as Node3D
+	if expected_world == source_world: return current_location == &"rootbound_abyss"
+	return current_location == &"sanctuary" and (source_world.get_parent() == world_root \
+		or (source_world.get_parent() == null and source_world == _travel_retained_world))
+
+
+func _completed_return_owned(context: Dictionary, expected_world: Node3D, expected_party_world: Node3D, serial: int) -> bool:
+	return transitioning and serial == _travel_serial and _completed_return_current(context, expected_world, expected_party_world)
+
+
+func _on_completed_return_request(destination: StringName, entry_id: StringName, world_reference: WeakRef, source_reference: WeakRef, generation: int) -> void:
+	if transitioning or not _application_focused or destination != &"sanctuary" or entry_id != &"from_abyss": return
+	var world := world_reference.get_ref() as Node3D
+	var source := source_reference.get_ref() as Node3D
+	if not is_instance_valid(world) or not is_instance_valid(source) or not source.has_method("completed_return_token"): return
+	var context := {"game_id": get_instance_id(), "world": world_reference, "source": source_reference,
+		"player": weakref(player), "party": weakref(party), "generation": generation,
+		"token": source.completed_return_token().duplicate(true)}
+	if not _completed_return_current(context, world, world): return
+	_completed_return_deferred.call_deferred(context)
+
+
+func _completed_return_deferred(context: Dictionary) -> void:
+	var world := _return_node(context, "world") as Node3D
+	if transitioning or not _application_focused or not _completed_return_current(context, world, world): return
+	change_location(&"sanctuary", &"from_abyss", -1, 1, context)
+
+
+func _completed_return_arrival_valid(candidate: Node3D) -> bool:
+	# This native check runs at travel boundaries, not every frame. The retained
+	# dungeon must not supply a false floor or obstruct the Sanctuary candidate.
+	if not is_instance_valid(candidate) or candidate.get_parent() != world_root or not candidate.has_method("get_spawn_transform"): return false
+	var spawn: Transform3D = candidate.get_spawn_transform(&"from_abyss")
+	if not spawn.is_finite(): return false
+	var excluded: Array[RID] = []
+	for other: Node in world_root.get_children():
+		if other == candidate: continue
+		for body: Node in other.find_children("*", "CollisionObject3D", true, false):
+			excluded.append((body as CollisionObject3D).get_rid())
+	var ray := PhysicsRayQueryParameters3D.create(spawn.origin + Vector3.UP, spawn.origin - Vector3.UP * 2.0, 1)
+	ray.exclude = excluded
+	ray.collide_with_areas = false
+	var hit := get_world_3d().direct_space_state.intersect_ray(ray)
+	if hit.is_empty() or not candidate.is_ancestor_of(hit.collider) or Vector3(hit.normal).y < 0.8: return false
+	var collider := player.get_node_or_null("CollisionShape3D") as CollisionShape3D
+	if collider == null or collider.shape == null: return false
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = collider.shape
+	query.transform = spawn * collider.transform
+	query.collision_mask = 1 | 16
+	query.exclude = excluded
+	query.margin = 0.0
+	query.collide_with_areas = false
+	return get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty()
+
+
+func _return_recovery_owned(context: Dictionary, serial: int, expected_world: Node3D, expected_party_world: Node3D) -> bool:
+	return is_inside_tree() and not is_queued_for_deletion() and transitioning and serial == _travel_serial \
+		and int(context.get("game_id", 0)) == get_instance_id() \
+		and _return_node(context, "player") == player and _return_node(context, "party") == party \
+		and is_instance_valid(expected_world) and expected_world == active_world and expected_world.get_parent() == world_root \
+		and not expected_world.is_queued_for_deletion() and is_instance_valid(player) and player.is_inside_tree() \
+		and not player.is_queued_for_deletion() and is_instance_valid(party) and not party.is_queued_for_deletion() \
+		and party.get_parent() == self and party.world == expected_party_world and party.leader == player
+
+
+func _discard_unowned_return_candidate(candidate: Node3D) -> void:
+	# Never remove an explicitly adopted world or alter a replacement owner's
+	# pause/input/modal state, even if that owner did not use our travel serial.
+	var party_world: Node3D = party.world if is_instance_valid(party) else null
+	if is_instance_valid(candidate) and candidate != active_world and candidate != party_world:
+		if candidate.get_parent() != null: candidate.get_parent().remove_child(candidate)
+		candidate.queue_free()
+
+
+func _discard_lost_return(candidate: Node3D, source_world: Node3D) -> void:
+	_discard_unowned_return_candidate(candidate)
+	var party_world: Node3D = party.world if is_instance_valid(party) else null
+	if source_world != active_world and source_world != party_world:
+		_retire_return_source(source_world)
+
+
+func _recover_completed_return(candidate: Node3D, context: Dictionary, serial: int) -> void:
+	var source_world := _return_node(context, "world") as Node3D
+	var owner_world := active_world
+	var owner_party_world: Node3D = party.world if is_instance_valid(party) else null
+	if owner_world not in [candidate, source_world] or owner_party_world not in [candidate, source_world] \
+			or not _return_recovery_owned(context, serial, owner_world, owner_party_world):
+		_discard_lost_return(candidate, source_world)
+		return
+	if _completed_return_proof(context) and is_instance_valid(source_world) and source_world.get_parent() == world_root \
+			and owner_party_world == source_world:
+		# Admission failed before departure. The floor stays CLOSED, and only
+		# the registered source can retry travel using the existing saved token.
+		active_world = source_world
+		current_location = &"rootbound_abyss"
+		ExpeditionSession.bind_game_context(player, current_location, source_world)
+		if not _return_recovery_owned(context, serial, source_world, source_world):
+			_discard_lost_return(candidate, source_world)
+			return
+		demo_exchange.bind_game_context(player, current_location, source_world)
+		if not _return_recovery_owned(context, serial, source_world, source_world):
+			_discard_lost_return(candidate, source_world)
+			return
+		_discard_unowned_return_candidate(candidate)
+		_finish_return_recovery("Loot is secured. The Sanctuary arrival was unavailable; try the Return spring again.")
+		return
+	# Recover only our own shell. A historical commit never reopens an active
+	# dungeon or grants permission to overwrite a newer Game/party owner.
+	var restore := candidate
+	var invalid_arrival := is_instance_valid(restore) and restore == active_world and owner_party_world == restore \
+		and restore.get_parent() == world_root and not _completed_return_arrival_valid(restore)
+	if invalid_arrival or not is_instance_valid(restore) or restore.is_queued_for_deletion() or not restore.has_method("get_spawn_transform"):
+		var packed := load(LEVELS[&"sanctuary"]) as PackedScene
+		if packed == null: return
+		restore = packed.instantiate() as Node3D
+		if restore == null or not restore.has_method("get_spawn_transform"):
+			if restore != null: restore.free()
+			return
+	if restore.get_parent() == null:
+		restore.process_mode = Node.PROCESS_MODE_DISABLED
+		world_root.add_child(restore)
+		if not _return_recovery_owned(context, serial, owner_world, owner_party_world):
+			_discard_lost_return(restore, source_world)
+			return
+	elif restore.get_parent() != world_root:
+		return
+	active_world = restore
+	current_location = &"sanctuary"
+	ExpeditionSession.bind_game_context(player, current_location, restore)
+	if not _return_recovery_owned(context, serial, restore, owner_party_world): return
+	demo_exchange.bind_game_context(player, current_location, restore)
+	if not _return_recovery_owned(context, serial, restore, owner_party_world): return
+	# A newly attached recovery scene must earn native floor/body admission.
+	# Keep the player and party untouched until this physics boundary succeeds.
+	_keep_world_collision(restore)
+	await get_tree().physics_frame
+	if not _return_recovery_owned(context, serial, restore, owner_party_world): return
+	if not _completed_return_arrival_valid(restore):
+		# This cannot be presented as a successful arrival. Preserve the saved
+		# profile and keep actors suspended rather than placing them over no floor.
+		hud.show_message("Loot is saved, but the Sanctuary floor is unavailable. Restart to return safely.")
+		return
+	restore.process_mode = Node.PROCESS_MODE_INHERIT
+	_pet_presenter = null
+	_wire_world_travel(restore)
+	if not _return_recovery_owned(context, serial, restore, owner_party_world): return
+	player.reset_for_spawn(restore.get_spawn_transform(&"from_abyss"))
+	if not _return_recovery_owned(context, serial, restore, owner_party_world): return
+	player.apply_progression(ExpeditionSession.profile)
+	if not _return_recovery_owned(context, serial, restore, owner_party_world): return
+	party.enter_world(restore, current_location)
+	if not _return_recovery_owned(context, serial, restore, restore): return
+	if candidate != restore: _discard_unowned_return_candidate(candidate)
+	_retire_return_source(source_world)
+	camera_rig.reset_position()
+	if not _return_recovery_owned(context, serial, restore, restore): return
+	hud.set_location(restore.display_name, restore.objective)
+	hud.set_dungeon_snapshot({})
+	party.ensure_safe_arrivals()
+	if not _return_recovery_owned(context, serial, restore, restore): return
+	_sync_pet_presenter()
+	if not _return_recovery_owned(context, serial, restore, restore): return
+	_finish_return_recovery("Your secured loot is safe. The return context changed.")
+	# results_are_current rejects a callback-created replacement generation.
+	if not ExpeditionSession.active: hud.present_pending_results()
+
+
+func _retire_return_source(source_world: Node3D) -> void:
+	if is_instance_valid(source_world) and source_world != active_world:
+		if source_world.get_parent() != null: source_world.get_parent().remove_child(source_world)
+		source_world.queue_free()
+	if _travel_retained_world == source_world: _travel_retained_world = null
+
+
+func _finish_return_recovery(message: String) -> void:
+	transitioning = false
+	if not is_instance_valid(party) or not is_instance_valid(player) or not is_instance_valid(active_world): return
+	var available := not _modal_open and _application_focused
+	party.set_paused(not available)
+	_set_pet_suspended(not available)
+	player.set_controls_enabled(available)
+	InputHub.controls_enabled = available
+	hud.set_input_enabled(available)
+	if not _application_focused and not _modal_open:
+		_return_focus_suspend = {"world": weakref(active_world), "player": weakref(player), "party": weakref(party), "serial": _travel_serial}
+	hud.set_transition(0.0)
+	hud.show_message(message)
+	if current_location == &"sanctuary": _publish_city_snapshot()
+
+
+func _resume_return_focus() -> void:
+	if _return_focus_suspend.is_empty(): return
+	var context := _return_focus_suspend
+	_return_focus_suspend = {}
+	if transitioning or _modal_open or int(context.serial) != _travel_serial \
+		or _return_node(context, "world") != active_world or _return_node(context, "player") != player \
+		or _return_node(context, "party") != party or not is_instance_valid(party) or not is_instance_valid(player) \
+		or party.world != active_world or party.leader != player:
+		return
+	party.set_paused(false)
+	_set_pet_suspended(false)
+	player.set_controls_enabled(true)
+	InputHub.controls_enabled = true
+	hud.set_input_enabled(true)
 
 
 func _wire_world_travel(world: Node3D) -> void:
@@ -340,9 +612,12 @@ func _bind_world_travel_signal(source: Node, world: Node3D) -> void:
 	# their previous generation is stale. Replace only this shell's travel edge.
 	for connection: Dictionary in source.get_signal_connection_list("travel_requested"):
 		var callback: Callable = connection.callable
-		if callback.get_object() == self and callback.get_method() == &"_on_source_travel":
+		if callback.get_object() == self and callback.get_method() in [&"_on_source_travel", &"_on_completed_return_request"]:
 			source.disconnect("travel_requested", callback)
-	source.connect("travel_requested", _on_source_travel.bind(world, ExpeditionSession.run_generation))
+	if world.has_method("registered_checkpoints") and world.registered_checkpoints().has(source):
+		source.connect("travel_requested", _on_completed_return_request.bind(weakref(world), weakref(source), ExpeditionSession.run_generation))
+	else:
+		source.connect("travel_requested", _on_source_travel.bind(world, ExpeditionSession.run_generation))
 
 
 func _restore_after_content_fade(candidate: Node3D, previous: Node3D, location: StringName,

@@ -20,7 +20,7 @@ flowchart LR
 
 Registered ordinary and elite encounters provide Rootbound essence. The actual Rootwarden also provides a vessel and a Rootling Guardian memory. Seeded mysterious eggs and secret-room rescues provide a matching creature memory plus an egg or spirit vessel. Revealing a hidden room alone grants no rescue. These are real nearby interaction sources; no unavailable biome or unfinished boss is required.
 
-Findings stay in the current expedition ledger until extraction. They share the same verified save transaction as the existing rewards. A failed save keeps them available for retry; death, retreat or closing the app during the run loses only its unsecured findings. Previously secured ingredients, owned pets, equipment and currency remain.
+Findings stay in the current expedition ledger until extraction. They share the same verified save transaction as the existing rewards. A failed save keeps them available for retry; death, retreat or closing the app during the run loses only its unsecured findings. Previously secured ingredients, owned pets, equipment and currency remain. The later [7D.4 Return springs](dungeon-return-springs.md) can also secure eligible collected pet findings; they do not grant new completion-based achievements or count as a full floor clear.
 
 At the western **G — Spiritweaving Conservatory**, inspect a recipe, its actual costs and any achievement requirement. Creation consumes the displayed cosmetic ingredients once. Selection, resting and naming also save before the new state is shown. A confirmation expires when the source, scene or profile revision changes; reopening a menu does not bypass ownership or costs.
 

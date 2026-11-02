@@ -4,7 +4,7 @@ This guide describes the first playable 7D.2 content batch, covered by the
 [accepted headless validation](milestone-7d2-validation.md). Physical Android
 play-testing and rendered art review remain pending. This batch does not
 complete Milestone 7D or add Ancient Bosses, additional biomes, hives, hordes or
-early extraction.
+early extraction. The later [7D.3 event batch](rootbound-events.md) adds hives/hordes and hazards, and [7D.4 Return springs](dungeon-return-springs.md) add collected-loot early exits.
 
 ## Selection and progression
 

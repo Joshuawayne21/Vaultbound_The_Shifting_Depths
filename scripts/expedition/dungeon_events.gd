@@ -269,7 +269,7 @@ func _arm_hazard(slot: Dictionary) -> void:
 		var reservation: int = world.scheduler.reserve_typed_hazard(int(slot.room_id), String(slot.id))
 		if reservation < 0: return
 		var serial := int(actor.cast_serial) + 1
-		var issued := {"run_generation": int(world.run_generation), "content_version": 3, "room_id": int(slot.room_id),
+		var issued := {"run_generation": int(world.run_generation), "content_version": int(_plan.content_version), "room_id": int(slot.room_id),
 			"source_receipt": String(slot.id), "cast_serial": serial, "profile": _plan.hazard_profiles[slot.definition_id].duplicate(true),
 			"shape": shape, "depth_policy": world.issued_depth_policy()}
 		_hazard_records[actor.get_instance_id()] = {"actor": weakref(actor), "issued": issued.duplicate(true)}

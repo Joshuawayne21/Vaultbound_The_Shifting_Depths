@@ -2,6 +2,7 @@ class_name AbyssHazard
 extends Node3D
 ## Two reusable hazards per expedition. A generous ground telegraph precedes damage.
 signal finished
+signal legacy_retired(record: Dictionary)
 const TypedCast = preload("res://scripts/expedition/hazard_cast.gd")
 const WarningVisual = preload("res://scripts/enemies/boss_warning_visual.gd")
 const TypedVisual = preload("res://scripts/visual/rootbound_hazard_visual.gd")
@@ -22,6 +23,10 @@ var _typed_warning: Node3D
 var _typed_visual: Node3D
 var _typed_visual_id: StringName = &""
 var _typed_materials: Dictionary = {}
+var _legacy_serial := 0
+var _legacy_room_id := -1
+var _legacy_delivery_depth := 0
+var _legacy_terminal: Dictionary = {}
 var cast_serial: int:
 	get: return _typed.serial
 
@@ -75,6 +80,13 @@ func trigger_typed(issued: Dictionary, context: Node3D) -> bool:
 func typed_snapshot() -> Dictionary:
 	return _typed.snapshot() if _typed_mode else {}
 
+func legacy_activation_snapshot() -> Dictionary:
+	return {"serial": _legacy_serial, "room_id": _legacy_room_id,
+		"active": active and not _typed_mode, "delivery_in_progress": _legacy_delivery_depth > 0}
+
+func legacy_terminal_snapshot() -> Dictionary:
+	return _legacy_terminal.duplicate(true)
+
 func _ready() -> void:
 	add_to_group("abyss_hazards")
 	add_to_group("combat_telegraphs")
@@ -114,6 +126,8 @@ func trigger(at: Vector3, owner_room: int, warning_time: float = 2.0, size: floa
 	if active or _typed.live:
 		return false
 	_typed_mode = false
+	_legacy_serial += 1
+	_legacy_room_id = owner_room
 	if is_instance_valid(_typed_visual): _typed_visual.visible = false
 	if is_instance_valid(_typed_warning): _typed_warning.hide_all()
 	global_position = at
@@ -131,6 +145,11 @@ func trigger(at: Vector3, owner_room: int, warning_time: float = 2.0, size: floa
 	return true
 
 func cancel() -> void:
+	_retire(&"cancelled")
+
+func _retire(cause: StringName) -> void:
+	var legacy_live := active and not _typed_mode
+	var terminal := {"serial": _legacy_serial, "room_id": _legacy_room_id, "cause": String(cause)}
 	if _typed.live: _typed.cancel()
 	if is_instance_valid(_typed_warning): _typed_warning.hide_all()
 	if is_instance_valid(_typed_visual):
@@ -141,6 +160,9 @@ func cancel() -> void:
 	visible = false
 	if _thorns != null:
 		_thorns.visible = false
+	if legacy_live:
+		_legacy_terminal = terminal
+		legacy_retired.emit(terminal.duplicate(true))
 
 func _physics_process(delta: float) -> void:
 	if not active:
@@ -165,13 +187,22 @@ func _physics_process(delta: float) -> void:
 			_thorns.visible = true
 			_thorns.scale = Vector3(radius, 1.0, radius)
 			_attack_id = CombatRules.next_attack_id()
+			# Observation only: cancellation inside a hit callback must not make a
+			# checkpoint claim the still-executing legacy delivery loop is finished.
+			_legacy_delivery_depth += 1
 			for member: Node3D in members:
 				var offset := member.global_position - global_position
 				offset.y = 0.0
 				if offset.length() <= radius and CombatRules.has_line_of_sight(self, member):
 					CombatRules.apply_hit(self, member, damage, _attack_id, &"roots", 0.2)
+					if not is_instance_valid(self): return
+					if not is_inside_tree() or is_queued_for_deletion():
+						_legacy_delivery_depth -= 1
+						return
+			_legacy_delivery_depth -= 1
 	elif _remaining <= 0.0:
-		cancel()
+		_retire(&"expired")
+		if not is_instance_valid(self) or not is_inside_tree() or is_queued_for_deletion(): return
 		finished.emit()
 
 func get_danger_zones() -> Array[Dictionary]:

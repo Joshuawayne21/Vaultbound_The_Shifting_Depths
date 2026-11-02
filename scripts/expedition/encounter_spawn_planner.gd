@@ -155,3 +155,29 @@ static func hazard_escape_clear(world: Node3D, room: Node3D, shape: Dictionary) 
 			if _path_clear(world, actor.global_position + Vector3.UP * 0.025, grounded, room, 0.38, 1.7, excluded): escaped = true
 		if not escaped: return false
 	return true
+
+static func checkpoint_anchor_clear(world: Node3D, room: Node3D) -> bool:
+	if not _valid(world, room, 0.4, 1.9): return false
+	var excluded := _foreign_colliders(world)
+	var center := _floor(world, room.global_position, room, excluded)
+	if not center.is_finite() or not _body_clear(world, center, 0.75, 1.9, excluded): return false
+	# The authored chest may already occupy its anchor during candidate admission.
+	# Prove its normal front interaction pose, never a capsule inside the solid chest.
+	var chest_anchor: Vector3 = room.get_chest_anchor()
+	var chest_approach := chest_anchor + Vector3(0, 0, -1.75)
+	var targets: Array[Vector3] = [chest_approach, Vector3(0, 0, -4)]
+	for direction: StringName in room.openings:
+		match direction:
+			&"north": targets.append(Vector3(0, 0, -8))
+			&"south": targets.append(Vector3(0, 0, 8))
+			&"east": targets.append(Vector3(8, 0, 0))
+			&"west": targets.append(Vector3(-8, 0, 0))
+	for target: Vector3 in targets:
+		var point := _floor(world, room.to_global(target), room, excluded)
+		if not point.is_finite() or not _path_clear(world, center, point, room, 0.4, 1.9, excluded): return false
+	var sight := PhysicsRayQueryParameters3D.create(room.to_global(chest_approach) + Vector3.UP * 1.3,
+		room.to_global(chest_anchor) + Vector3.UP * 1.3, 1 | 16, excluded)
+	sight.collide_with_areas = false
+	sight.hit_from_inside = true
+	if not world.get_world_3d().direct_space_state.intersect_ray(sight).is_empty(): return false
+	return true

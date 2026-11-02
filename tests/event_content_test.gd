@@ -13,7 +13,7 @@ func _run() -> void:
 	for depth: int in [1, 2, 6, 11, 30, 50]:
 		for seed_value in range(100):
 			var plan: Dictionary = Content.resolve_run_plan(seed_value, depth)
-			if not check(not plan.is_empty() and plan.content_version == 3 and Content.valid_run_plan(plan, Policy.describe_depth(depth)), "Depth%d seed%d resolves complete versioned event policy" % [depth, seed_value]): continue
+			if not check(not plan.is_empty() and plan.content_version == 4 and Content.valid_run_plan(plan, Policy.describe_depth(depth)), "Depth%d seed%d resolves complete versioned event policy" % [depth, seed_value]): continue
 			var layout: Dictionary = Generator.generate_for_run(seed_value, depth)
 			var slots: Array[Dictionary] = Planner.content_slots(layout, plan)
 			var occupied := {}

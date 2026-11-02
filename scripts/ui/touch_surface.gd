@@ -654,12 +654,18 @@ func _draw_icon(action: StringName, center: Vector2, color: Color) -> void:
 			_diamond(center, 4.0, color)
 
 
+func interaction_prompt_rect() -> Rect2:
+	var maximum := minf(480.0, size.x - _safe_inset.x * 2 - 32.0)
+	var width := clampf(_font.get_string_size(interaction, HORIZONTAL_ALIGNMENT_LEFT, -1, roundi(16 * ui_scale)).x + 76.0,
+		minf(270.0, maximum), maximum)
+	return Rect2((size.x - width) * 0.5, size.y - _safe_inset.y - (268.0 if party_visible else 176.0), width, 44.0)
+
+
 func _draw_prompts() -> void:
 	var center_x := size.x * 0.5
 	var bottom := size.y - _safe_inset.y
 	if not interaction.is_empty() and not party_revive_prompt_active:
-		var width := clampf(_font.get_string_size(interaction, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x + 76.0, 270.0, 480.0)
-		var rect := Rect2(center_x - width * 0.5, bottom - (268.0 if party_visible else 176.0), width, 44.0)
+		var rect := interaction_prompt_rect()
 		VaultUITheme.prompt_frame(self, rect, PANEL, GOLD, high_contrast_prompts)
 		_text("F", rect.position + Vector2(22.0, 28.0), 15, VaultUITheme.prompt_ink(GOLD, high_contrast_prompts), true)
 		draw_line(rect.position + Vector2(41.0, 11.0), rect.position + Vector2(41.0, 33.0), Color(GOLD, 0.35), 1.0)

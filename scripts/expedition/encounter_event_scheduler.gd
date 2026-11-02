@@ -440,3 +440,15 @@ func event_support_spawn_authorized(owner_receipt: String, receipt: String, room
 	return _current() and _event_owner() != null and not _event_spawn_authority.is_empty() \
 			and _event_spawn_authority.owner_receipt == owner_receipt and _event_spawn_authority.receipt == receipt \
 			and _event_spawn_authority.room_id == room_id and _event_spawn_authority.point == point and _event_spawn_authority.definition_id == definition_id
+
+func checkpoint_pending_danger(room_id: int, _center: Vector3, _radius: float) -> bool:
+	if not _current(): return true
+	if not _event.is_empty() and int(_event.get("room_id", -1)) == room_id: return true
+	for reservation: Dictionary in _reservations.values():
+		if int(reservation.get("room_id", -1)) == room_id: return true
+	var event := _event_owner()
+	if event != null:
+		var world := _get_world()
+		var record: Dictionary = world.registered_event_source(event)
+		if not record.is_empty() and int(record.room_id) == room_id: return true
+	return false

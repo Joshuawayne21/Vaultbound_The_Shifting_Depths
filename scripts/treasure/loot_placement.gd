@@ -9,7 +9,8 @@ const FLOOR_TOLERANCE := 0.14
 const BODY_RADIUS := 0.4
 const BODY_HEIGHT := 1.7
 
-static func find_position(context: Node3D, desired: Vector3, room: Node3D, radius: float = BODY_RADIUS) -> Vector3:
+static func find_position(context: Node3D, desired: Vector3, room: Node3D, radius: float = BODY_RADIUS,
+		accept_candidate: Callable = Callable()) -> Vector3:
 	if not is_instance_valid(context) or not context.is_inside_tree() \
 			or not is_instance_valid(room) or not room.is_inside_tree() or not desired.is_finite():
 		return Vector3.INF
@@ -42,7 +43,14 @@ static func find_position(context: Node3D, desired: Vector3, room: Node3D, radiu
 			continue
 		for anchor: Vector3 in safe_anchors:
 			if segment_clear(context, floor, anchor, room, radius):
-				return floor
+				# Optional presentation spacing follows all existing physical checks.
+				# An absent predicate preserves the original candidate order/result.
+				if not accept_candidate.is_valid(): return floor
+				var accepted: Variant = accept_candidate.call(floor)
+				if not is_instance_valid(context) or not context.is_inside_tree() or context.is_queued_for_deletion() \
+						or not is_instance_valid(room) or not room.is_inside_tree() or room.is_queued_for_deletion(): return Vector3.INF
+				if accepted is bool and accepted: return floor
+				break # One predicate evaluation per physically accepted candidate.
 	return Vector3.INF
 
 static func floor_point(context: Node3D, point: Vector3, room: Node3D) -> Vector3:
@@ -83,7 +91,9 @@ static func _body_query(point: Vector3, radius: float) -> PhysicsShapeQueryParam
 	capsule.height = maxf(BODY_HEIGHT, capsule.radius * 2.0 + 0.02)
 	var query := PhysicsShapeQueryParameters3D.new()
 	query.shape = capsule
-	query.collision_mask = 1
+	# Existing stationary encounter bodies (the live hive) occupy bit16.
+	# Floor rays remain bit1: a destructible shell is never walkable floor.
+	query.collision_mask = 1 | 16
 	query.collide_with_areas = false
 	query.margin = 0.005
 	query.transform = Transform3D(Basis.IDENTITY, point + Vector3.UP * (capsule.height * 0.5 + 0.04))

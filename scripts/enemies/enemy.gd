@@ -13,6 +13,7 @@ const VisualScript = preload("res://scripts/enemies/enemy_visual.gd")
 @export var data: EnemyData
 @export var combat_active: bool = true
 
+var attack_dispatch_in_progress := false
 var health: float = 90.0
 var max_health: float = 90.0
 var state: StringName = &"idle"
@@ -252,6 +253,11 @@ func _start_windup() -> void:
 
 
 func _commit_attack() -> void:
+	attack_dispatch_in_progress = true
+	_commit_attack_body()
+	if is_instance_valid(self): attack_dispatch_in_progress = false
+
+func _commit_attack_body() -> void:
 	_set_state(&"attack", data.attack_active_time)
 	var attack_id: int = CombatRules.next_attack_id()
 	attacked.emit(attack_id)

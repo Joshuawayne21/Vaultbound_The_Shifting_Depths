@@ -7,6 +7,9 @@ const CACHE_SCENE := preload("res://scenes/treasure/loot_cache.tscn")
 const Placement := preload("res://scripts/treasure/loot_placement.gd")
 const MAX_VIEWS := 8
 const REFRESH_INTERVAL := 0.2
+## Full ground artwork (including the optional floor ring), independently
+## bounded from native open/closed meshes. Existing physical radii stay below.
+const VISUAL_FOOTPRINT_RADII := {"regular": 0.59, "elite": 0.82, "boss": 1.10}
 var views: Array[VaultLootCache] = []
 var _session: WeakRef
 var _player: WeakRef
@@ -140,20 +143,39 @@ func _bind(view: VaultLootCache, record: Dictionary, authority: Node) -> void:
 
 func _position_for(record: Dictionary) -> Vector3:
 	var id: String = record.id
+	var room := _rooms.get(int(record.room_id)) as Node3D
+	var world := _world.get_ref() as Node3D if _world != null else null
+	var predicate := Callable()
+	var filtered := is_instance_valid(world) and world.has_method("checkpoint_cache_placement_allowed")
+	if filtered:
+		if not _placement_world_current(world, room): return Vector3.INF
+		predicate = Callable(world, "checkpoint_cache_placement_allowed").bind(float(VISUAL_FOOTPRINT_RADII.get(String(record.kind), 1.10)))
 	if _placements.has(id):
-		return _placements[id]
+		if not predicate.is_valid(): return _placements[id]
+		var accepted: Variant = predicate.call(_placements[id])
+		if not _placement_world_current(world, room): return Vector3.INF
+		if accepted is bool and accepted: return _placements[id]
+		_placements.erase(id)
 	if _elapsed < float(_retry_after.get(id, -1.0)):
 		return Vector3.INF
-	var room := _rooms.get(int(record.room_id)) as Node3D
 	# Clearance fits the complete model as well as the player's approach body.
 	var radius := 0.96 if record.kind == "boss" else (0.72 if record.kind == "elite" else 0.52)
-	var point := Placement.find_position(self, record.position, room, radius)
+	var point := Placement.find_position(self, record.position, room, radius, predicate)
+	# The pure world predicate must never let a replacement generation/source
+	# install a placement in this manager after a synchronous callback.
+	if filtered and not _placement_world_current(world, room): return Vector3.INF
 	if point.is_finite():
 		_placements[id] = point
 		_retry_after.erase(id)
 	else:
 		_retry_after[id] = _elapsed + 1.0
 	return point
+
+func _placement_world_current(world: Node3D, room: Node3D) -> bool:
+	return is_instance_valid(world) and world.is_inside_tree() and not world.is_queued_for_deletion() \
+		and _world != null and _world.get_ref() == world and world.is_ancestor_of(self) \
+		and is_instance_valid(room) and room.is_inside_tree() and not room.is_queued_for_deletion() \
+		and world.is_ancestor_of(room) and room.get_viewport() == get_viewport() and _context_valid()
 
 func _authority() -> Node:
 	return _session.get_ref() as Node if _session != null else null

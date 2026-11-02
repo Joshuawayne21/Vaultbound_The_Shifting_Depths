@@ -26,6 +26,7 @@ var _registered_actors: Dictionary = {}
 var _defeated_receipts: Dictionary = {}
 var _depth_policy: Dictionary = {}
 var _content_plan: Dictionary = {}
+var _initial_packs: Dictionary = {}
 
 func configure(value: Dictionary, instances: Dictionary, level: Node3D, expedition_seed: int, expedition_depth: int = 1) -> void:
 	if is_inside_tree() or not _depth_policy.is_empty():
@@ -63,6 +64,7 @@ func _spawn_initial(id: int) -> void:
 	var count := rng.randi_range(1, 2) if room.kind == &"trap" else rng.randi_range(2, 3)
 	var points: Array[Vector3] = rooms[id].get_spawn_points()
 	var has_golem := false
+	_initial_packs[id] = {"state": "initializing", "expected": mini(count, points.size()), "receipts": []}
 	for index in range(mini(count, points.size())):
 		var roll := rng.randf()
 		var archetype: StringName = &"skeleton" if roll < 0.55 else (&"archer" if roll < 0.88 else &"golem")
@@ -72,7 +74,11 @@ func _spawn_initial(id: int) -> void:
 			else:
 				has_golem = true
 		var elite: bool = room.depth >= 3 and rng.randf() < 0.12
-		_spawn(id, archetype, points[index], elite, 1.0 + minf(0.2, room.depth * 0.025))
+		var actor := _spawn(id, archetype, points[index], elite, 1.0 + minf(0.2, room.depth * 0.025))
+		if not is_instance_valid(self): return
+		if is_instance_valid(actor): _initial_packs[id].receipts.append(live_receipt(actor))
+	var initial: Dictionary = _initial_packs[id]
+	initial.state = "issued" if initial.receipts.size() == int(initial.expected) and not initial.receipts.has("") else "failed"
 	encounter_started.emit(id)
 
 func _spawn(room_id: int, archetype: StringName, local_point: Vector3, elite: bool, strength: float = 1.0,
@@ -371,3 +377,30 @@ func _retained_actors(room_id: int) -> Array[Node3D]:
 		if is_instance_valid(candidate) and candidate is Node3D: result.append(candidate as Node3D)
 	if actors_by_room.has(room_id): actors_by_room[room_id] = result
 	return result
+
+func checkpoint_room_status(room_id: int) -> Dictionary:
+	if not rooms.has(room_id): return {"complete": false, "reason": "This chamber is unavailable"}
+	if layout.rooms[room_id].kind in [&"combat", &"trap"]:
+		var initial: Dictionary = _initial_packs.get(room_id, {})
+		if initial.get("state", "") != "issued": return {"complete": false, "reason": "The chamber encounter is unresolved"}
+		for receipt: String in initial.receipts:
+			if not _defeated_receipts.has(receipt): return {"complete": false, "reason": "Clear this chamber before returning"}
+	for record: Dictionary in _registered_actors.values():
+		if int(record.room_id) != room_id: continue
+		var actor := record.actor.get_ref() as Node3D
+		if is_instance_valid(actor) and bool(actor.get("attack_dispatch_in_progress")):
+			return {"complete": false, "reason": "An attack is still resolving"}
+		if not _defeated_receipts.has(record.receipt): return {"complete": false, "reason": "A local threat remains"}
+	return {"complete": true, "reason": ""}
+
+func checkpoint_registered_actors() -> Array[Node3D]:
+	var result: Array[Node3D] = []
+	for record: Dictionary in _registered_actors.values():
+		var actor := record.actor.get_ref() as Node3D
+		if is_instance_valid(actor) and actor.get_parent() == rooms.get(int(record.room_id)): result.append(actor)
+	return result
+
+func checkpoint_actor_owned(actor: Node3D) -> bool:
+	if not is_instance_valid(actor): return false
+	var record: Dictionary = _registered_actors.get(actor.get_instance_id(), {})
+	return not record.is_empty() and record.actor.get_ref() == actor and actor.get_parent() == rooms.get(int(record.room_id))

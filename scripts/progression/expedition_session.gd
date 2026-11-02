@@ -21,6 +21,8 @@ const EVENT_RECORD_KEYS := ["encounter_definition_id", "content_version", "encou
 	"reward_profile_id", "pet_profile_id", "discovery_id", "kind", "roster_profile_id",
 	"receipt", "room_id", "depth", "drop_position", "member_deaths"]
 const EVENT_MEMBER_KEYS := ["receipt", "wave_ordinal", "member_ordinal", "encounter_definition_id", "archetype", "encounter_version"]
+const EARLY_RECORD_KEYS := ["receipt", "room_id", "checkpoint_id", "checkpoint_policy_version"]
+const EARLY_TOKEN_KEYS := ["run_generation", "outcome", "receipt", "checkpoint_id", "checkpoint_policy_version"]
 
 var store := VaultProfileStore.new()
 var profile: Dictionary = VaultProfileStore.empty_profile()
@@ -58,6 +60,7 @@ var _issued_depth: Dictionary = {}
 var _configured_depth_run := false
 var _issued_content_plan: Dictionary = {}
 var _pending_encounters: Dictionary = {}
+var _completed_early_return: Dictionary = {}
 
 func _ready() -> void:
 	profile = store.load_profile()
@@ -82,6 +85,7 @@ func configure_storage(path: String) -> bool:
 	# could redirect earned rewards, so it is deliberately rejected.
 	if active or path.is_empty():
 		return false
+	_completed_early_return.clear()
 	store = VaultProfileStore.new(path)
 	profile = store.load_profile()
 	close_service()
@@ -132,6 +136,7 @@ func _begin_depth_run(seed_value: int, depth: int, configured: bool, content_mod
 	if content_mode and (plan.is_empty() or not Content.valid_run_plan(plan, policy)):
 		notice.emit("This expedition content is unavailable. Your secured progress was preserved.")
 		return false
+	_completed_early_return.clear()
 	_issued_content_plan = plan.duplicate(true)
 	var expected_depth := {"expedition_depth": depth, "biome_id": String(policy.biome_id),
 		"depth_policy_version": int(policy.policy_version), "policy": policy.duplicate(true)}
@@ -692,6 +697,131 @@ func extract() -> bool:
 	_publish_finished(result, generation, "Level %d · New talent points are ready in Character" % int(result.character_level) if int(result.character_level) > old_level else "")
 	return true
 
+func secure_early(world: Node3D, source: Node3D, generation: int) -> Dictionary:
+	var rejected := {"ok": false, "generation": generation, "still_current": false,
+		"outcome": "", "error": "This Return spring is unavailable.", "return_token": {}}
+	if not run_context_valid(world, generation) or int(_issued_content_plan.get("content_version", 0)) != 4 \
+			or _issued_content_plan.get("checkpoint_policy", {}).get("version", 0) != 1 \
+			or not is_instance_valid(source) or not source.is_inside_tree() or source.is_queued_for_deletion() \
+			or not world.has_method("early_exit_record") or not world.has_method("completed_early_exit_matches") \
+			or not world.has_method("checkpoint_slots") or not _actor_ready():
+		return rejected
+	rejected.still_current = true
+	if store.read_only:
+		rejected.error = store.last_error if not store.last_error.is_empty() else "Secured progression is read-only. Your collected rewards remain available."
+		return rejected
+	if boss_defeated:
+		rejected.error = "The required boss has fallen. Use the awakened final extraction spring."
+		return rejected
+	var record: Dictionary = world.early_exit_record(source, _player)
+	if not is_instance_valid(world) or not is_instance_valid(source) or source.is_queued_for_deletion() \
+			or not run_context_valid(world, generation) or boss_defeated:
+		rejected.still_current = false
+		return rejected
+	var token := _early_source_token(world, record, generation)
+	if token.is_empty() or not run_context_valid(world, generation) or boss_defeated \
+			or not world.completed_early_exit_matches(source, generation, token):
+		rejected.still_current = is_instance_valid(world) and is_instance_valid(source) and run_context_valid(world, generation)
+		rejected.error = "Return is not safe yet. Clear the nearby encounter and danger."
+		return rejected
+	if not is_instance_valid(world) or not is_instance_valid(source) or source.is_queued_for_deletion() \
+			or not run_context_valid(world, generation) or boss_defeated:
+		rejected.still_current = false
+		return rejected
+	# Only a detached candidate changes until the verified write succeeds. No
+	# signal or await can interrupt this source-proof/save/install boundary.
+	var next := profile.duplicate(true)
+	next.gold = int(next.gold) + unsecured_gold
+	if not VaultInventory.add_items(next, run_items, run_seed):
+		rejected.error = "Make room for collected expedition items, then try the Return spring again."
+		return rejected
+	var newly_discovered: Array[String] = []
+	for item_id: String in _run_discoveries:
+		if not next.discoveries.has(item_id):
+			next.discoveries.append(item_id)
+			newly_discovered.append(item_id)
+	next.discoveries.sort()
+	newly_discovered.sort()
+	var secured_pets := PetProgress.secure(next, _pet_pending)
+	var secured_encounters := EncounterProgress.secure(next, _pending_encounters, int(Time.get_unix_time_from_system()))
+	if secured_pets.is_empty() or secured_encounters.is_empty():
+		rejected.error = "Collected findings could not be secured. Your expedition remains available for retry."
+		return rejected
+	# Securing genuine discoveries must not backfill completion-count rewards
+	# on a return that explicitly leaves the floor incomplete.
+	for achievement: String in PetCatalog.POLICY.achievement_rules:
+		if PetCatalog.POLICY.achievement_rules[achievement].stat == "completed" and not profile.pets.achievements.has(achievement):
+			secured_pets.achievements.erase(achievement)
+	next.pets = secured_pets
+	next.encounter_records = secured_encounters
+	next.statistics.total_gold = int(next.statistics.total_gold) + unsecured_gold
+	next.statistics.total_kills = int(next.statistics.total_kills) + kills
+	var companion_experience := _award_extraction_experience(next, 0)
+	var old_level := int(profile.character.level)
+	var old_experience := int(profile.character.experience)
+	next.character = CharacterProgression.award_xp(next.character, _scaled_extraction_xp(kills * 20, CharacterProgression.EXPERIENCE_CAP))
+	for monster: String in _run_monsters:
+		if not next.monster_discoveries.has(monster): next.monster_discoveries.append(monster)
+	next.monster_discoveries.sort()
+	_wear_equipped(next, 2)
+	next.revision = int(next.revision) + 1
+	if not store.save_profile(next):
+		storage_error = store.last_error
+		rejected.error = "Return could not save: " + storage_error + " Your collected rewards remain available for retry."
+		return rejected
+	profile = next
+	storage_error = ""
+	var result := _results("secured_early")
+	result["return_token"] = token.duplicate(true)
+	result.new_discoveries = newly_discovered
+	result.companion_experience = companion_experience
+	result.character_experience = int(profile.character.experience) - old_experience
+	result.character_level = int(profile.character.level)
+	last_results = result.duplicate(true)
+	_clear_run()
+	_completed_early_return = {"world": weakref(world), "source": weakref(source), "world_id": world.get_instance_id(),
+		"source_id": source.get_instance_id(), "token": token.duplicate(true), "revision": int(profile.revision)}
+	_publish_finished(result, generation, "Level %d · New talent points are ready in Character" % int(result.character_level) if int(result.character_level) > old_level else "")
+	# A listener can replace the run after the write. A committed reward remains
+	# successful, while only the still-matching private identity permits return.
+	var still_current := false
+	if is_instance_valid(world) and is_instance_valid(source):
+		still_current = completed_early_return_matches(world, source, generation, token)
+	return {"ok": true, "generation": generation, "still_current": still_current,
+		"outcome": "secured_early", "error": "", "return_token": token.duplicate(true)}
+
+func _early_source_token(world: Node3D, record: Dictionary, generation: int) -> Dictionary:
+	if record.size() != EARLY_RECORD_KEYS.size() or record.keys().any(func(key: Variant) -> bool: return key not in EARLY_RECORD_KEYS) \
+			or not record.get("receipt") is String or not record.get("checkpoint_id") is String \
+			or not record.get("room_id") is int or int(record.room_id) < 0 \
+			or not record.get("checkpoint_policy_version") is int or record.checkpoint_policy_version != 1:
+		return {}
+	for slot: Dictionary in world.checkpoint_slots():
+		if slot.get("id") != record.checkpoint_id or slot.get("room_id") != record.room_id \
+				or slot.get("checkpoint_policy_version") != record.checkpoint_policy_version or not slot.get("ordinal") is int:
+			continue
+		var receipt := "checkpoint_room_%d_%d" % [int(record.room_id), int(slot.ordinal)]
+		if record.receipt != receipt or record.checkpoint_id != receipt:
+			return {}
+		return {"run_generation": generation, "outcome": "secured_early", "receipt": receipt,
+			"checkpoint_id": String(record.checkpoint_id), "checkpoint_policy_version": int(record.checkpoint_policy_version)}
+	return {}
+
+func completed_early_return_matches(world: Node3D, source: Node3D, generation: int, token: Dictionary) -> bool:
+	# Historical accepted-save proof is necessary, not sufficient, for travel.
+	# Game separately validates its current transition/candidate/party ownership.
+	if active or generation != run_generation or _completed_early_return.is_empty() \
+			or not is_instance_valid(world) or not is_instance_valid(source) \
+			or world.is_queued_for_deletion() or source.is_queued_for_deletion() \
+			or token.size() != EARLY_TOKEN_KEYS.size() or token != _completed_early_return.token \
+			or _completed_early_return.world.get_ref() != world or _completed_early_return.source.get_ref() != source \
+			or world.get_instance_id() != _completed_early_return.world_id or source.get_instance_id() != _completed_early_return.source_id \
+			or int(profile.revision) < int(_completed_early_return.revision) \
+			or last_results.get("outcome") != "secured_early" or last_results.get("run_generation") != generation \
+			or last_results.get("return_token") != token or not world.has_method("completed_early_exit_matches"):
+		return false
+	return bool(world.completed_early_exit_matches(source, generation, token))
+
 func fail_run(reason: String = "death") -> void:
 	if not active:
 		return
@@ -753,6 +883,7 @@ func _pet_findings() -> Dictionary:
 
 func _clear_run() -> void:
 	active = false
+	_completed_early_return.clear()
 	_issued_depth.clear()
 	_configured_depth_run = false
 	_issued_content_plan.clear()
@@ -849,11 +980,11 @@ func set_companion_recruited(id: String, recruited: bool) -> bool:
 	_emit_changed()
 	return true
 
-func _award_extraction_experience(candidate: Dictionary) -> Dictionary:
+func _award_extraction_experience(candidate: Dictionary, completion_bonus: int = 150) -> Dictionary:
 	# Experience is part of the same transaction as secured loot. Failed saves,
 	# repeated extraction requests, abandoned runs and defeats grant no progress.
 	var rewards: Dictionary = {}
-	var earned := _scaled_extraction_xp(150 + kills * 10, VaultProfileStore.MAX_COMPANION_EXPERIENCE)
+	var earned := _scaled_extraction_xp(completion_bonus + kills * 10, VaultProfileStore.MAX_COMPANION_EXPERIENCE)
 	for id: String in candidate.companions:
 		var entry: Dictionary = candidate.companions[id]
 		if not bool(entry.recruited):

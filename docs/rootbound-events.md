@@ -2,7 +2,7 @@
 
 This guide describes the accepted **7D.3 Rootbound event batch**, covered by [headless validation](milestone-7d3-validation.md). Physical Android play-testing and rendered art review remain pending.
 
-The batch extends the existing Rootbound world, room modules, shared combat, companions, searchable caches and extraction. It does not add another inventory, change Depthmarks, or turn optional encounters into required floor objectives. Other biomes, additional trap families, early return springs and Ancient encounters remain later work.
+The batch extends the existing Rootbound world, room modules, shared combat, companions, searchable caches and extraction. It does not add another inventory, change Depthmarks, or turn optional encounters into required floor objectives. Other biomes, additional trap families and Ancient encounters remain later work. The later [7D.4 Return springs](dungeon-return-springs.md) can secure collected event rewards without completing the floor.
 
 ## Selection and readable hazards
 
@@ -56,7 +56,7 @@ The current floor reward factor scales DM once. These source-specific tables use
 
 One validated terminal event creates one reinforced-style searchable cache. Its appearance does not mean the shell or defenders were elite enemies. Search/Take and Take All use the existing ledger; unavailable visible cache slots do not discard stored rewards. Unsearched items do not enter the player's bag automatically.
 
-Only the event's actual defeated members contribute aggregate kill credit and honest species discoveries. The shell adds none. Full extraction retains the existing XP formulas and secures collected items, DM and pending event records in one save. Event completion does not defeat the required boss or unlock another depth. Death or abandonment discards unsecured progress while preserving previously secured equipment, currency, recruits and discoveries.
+Only the event's actual defeated members contribute aggregate kill credit and honest species discoveries. The shell adds none. Full extraction retains the existing XP formulas and secures collected items, DM and pending event records in one save. A safe Return spring secures those collected rewards and eligible records with kill-only XP, leaving full-clear statistics and depth unlocks unchanged. Event completion does not defeat the required boss or unlock another depth. Death or abandonment discards unsecured progress while preserving previously secured equipment, currency, recruits and discoveries.
 
 The existing profile-v7 shape remains. These local source and save checks support offline testing; they are not a secure online authority.
 

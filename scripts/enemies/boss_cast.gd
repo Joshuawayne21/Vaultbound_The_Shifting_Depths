@@ -24,7 +24,7 @@ func configure(owner: Node3D, context: Node3D, payload: Dictionary) -> bool:
 		if not payload[key] is int or int(payload[key]) < 0: return false
 	for key: String in ["theme_id", "encounter_definition_id", "boss_id", "encounter_receipt", "objective_role", "variant_id", "arena_profile_id"]:
 		if not payload[key] is String or String(payload[key]).is_empty() or String(payload[key]).length() > 160: return false
-	if payload.theme_id != "rootbound_abyss" or payload.content_version not in [2, 3] or payload.encounter_version != 1 \
+	if payload.theme_id != "rootbound_abyss" or payload.content_version not in [2, 3, 4] or payload.encounter_version != 1 \
 			or payload.objective_role not in ["required", "optional"] or not payload.profile is Dictionary \
 			or not payload.depth_policy is Dictionary or not Policy.valid_snapshot(payload.depth_policy, int(payload.depth_policy.get("expedition_depth", 0))) \
 			or payload.boss_id != payload.profile.get("id") or payload.encounter_definition_id != payload.boss_id \

@@ -1579,8 +1579,11 @@ func _draw_dungeon_map() -> void:
 		minimum = minimum.min(cell)
 		maximum = maximum.max(cell)
 	var span := maximum - minimum + Vector2.ONE
-	var spacing := minf(25, 105.0 / maxf(span.x, span.y))
-	var center := rect.get_center() + Vector2(0, 2)
+	var returns := minimap_return_markers()
+	var spacing := minf(25, (92.0 if not returns.is_empty() else 105.0) / maxf(span.x, span.y))
+	var center := rect.get_center() + Vector2(0, 7 if not returns.is_empty() else 2)
+	if not returns.is_empty():
+		_text("R RETURN · E EXTRACT", rect.position + Vector2(rect.size.x * 0.5, 31), 8, MUTED, true)
 	var midpoint := (minimum + maximum) * 0.5
 	var room_data: Dictionary = {}
 	for room: Dictionary in dungeon_snapshot.get("rooms", []):
@@ -1606,7 +1609,23 @@ func _draw_dungeon_map() -> void:
 		draw_rect(Rect2(position - Vector2.ONE * radius, Vector2.ONE * radius * 2), color, false, 1)
 		if id == int(dungeon_snapshot.get("current_room_id", -1)):
 			_diamond(position, radius * 0.5, IVORY)
+		if returns.has(id):
+			var available := bool(returns[id].get("available", false))
+			draw_circle(position, radius + 2.0, PANEL)
+			draw_arc(position, radius + 2.0, 0.0, TAU if available else PI * 1.5, 16, TEAL if available else MUTED, 1.5, true)
+			_text("R", position + Vector2(0, 3), 8, IVORY, true)
+		elif kind == "extraction" and not returns.is_empty():
+			_text("E", position + Vector2(0, 3), 8, GOLD, true)
 	_text("%d ROOMS DISCOVERED" % positions.size(), rect.position + Vector2(rect.size.x * 0.5, rect.size.y - 11), 8, MUTED, true)
+
+
+func minimap_return_markers() -> Dictionary:
+	var result: Dictionary = {}
+	var positions := minimap_room_positions()
+	for entry: Dictionary in dungeon_snapshot.get("return_springs", []):
+		var room_id := int(entry.get("room_id", -1))
+		if positions.has(room_id): result[room_id] = entry.duplicate(true)
+	return result
 
 
 func notification_rect(index: int, width: float) -> Rect2:
@@ -1679,23 +1698,37 @@ func _draw_pack() -> void:
 	_button(_continue_rect(), "RETURN TO GAME", true)
 
 
+func result_display_lines() -> Dictionary:
+	var outcome := String(results_snapshot.get("outcome", ""))
+	var early := outcome == "secured_early"
+	var completed := outcome == "extracted"
+	var secured := completed or early
+	var title := "LOOT SECURED · DEPTH INCOMPLETE" if early else "EXPEDITION SECURED" if completed else "RETURNED TO THE SANCTUARY"
+	var detail := "Collected finds are safe. This depth remains incomplete." if early else "Your discoveries are safe." if completed \
+		else "Unsecured finds were lost. Your secured collection is unchanged."
+	if secured and results_snapshot.has("highest_unlocked_depth"):
+		detail += " Unlocked depth: %d." % int(results_snapshot.highest_unlocked_depth) if early \
+			else " Highest unlocked depth: %d." % int(results_snapshot.highest_unlocked_depth)
+	return {"title": title, "detail": detail, "secured": secured, "completed": completed, "early": early,
+		"currency": "DM SECURED" if secured else "DM LOST",
+		"items": "COLLECTED & SECURED" if secured else "UNSECURED ITEMS LOST",
+		"xp": maxi(0, int(results_snapshot.get("character_experience", 0)))}
+
+
 func _draw_results() -> void:
 	var rect := _modal_rect()
 	_panel(rect, PANEL)
-	var success := String(results_snapshot.get("outcome", "")) == "extracted"
-	var title := "EXPEDITION SECURED" if success else "RETURNED TO THE SANCTUARY"
-	_text(title, rect.position + Vector2(30, 49), 25, TEAL if success else GOLD)
-	var outcome_line := "Your discoveries are safe." if success else "Unsecured finds were lost. Your secured collection is unchanged."
-	if success and results_snapshot.has("highest_unlocked_depth"):
-		outcome_line += " Highest unlocked depth: %d." % int(results_snapshot.highest_unlocked_depth)
-	_text(outcome_line, rect.position + Vector2(30, 78), 14, IVORY)
+	var presentation := result_display_lines()
+	var success: bool = presentation.secured
+	_text(String(presentation.title), rect.position + Vector2(30, 49), 25, TEAL if success else GOLD)
+	_text(String(presentation.detail), rect.position + Vector2(30, 78), 14, IVORY)
 	var seconds := int(results_snapshot.get("elapsed_seconds", 0))
 	var seed_value := int(results_snapshot.get("seed", 0))
 	var completed_depth := int(results_snapshot.get("expedition_depth", 1))
 	_text("%s · DEPTH %d · SEED %d · %02d:%02d" % [String(results_snapshot.get("theme_label", "Rootbound Abyss")).to_upper(), completed_depth, seed_value, seconds / 60, seconds % 60], rect.position + Vector2(30, 105), 12, MUTED)
 	var summaries := [
-		["DM SECURED" if success else "DM LOST", str(results_snapshot.get("gold", 0))],
-		["ENEMIES DEFEATED", str(results_snapshot.get("kills", 0))],
+		[String(presentation.currency), str(results_snapshot.get("gold", 0))],
+		["DEFEATED · KILL XP" if presentation.early else "ENEMIES DEFEATED", "%d · %d XP" % [int(results_snapshot.get("kills", 0)), int(presentation.xp)] if presentation.early else str(results_snapshot.get("kills", 0))],
 		[String(results_snapshot.get("required_boss_name", "Rootwarden")).to_upper(), "DEFEATED" if bool(results_snapshot.get("boss_defeated", false)) else "STILL WATCHING"],
 	]
 	for index in range(summaries.size()):
@@ -1712,7 +1745,7 @@ func _draw_results() -> void:
 			_button(_continue_rect(), "CONTINUE", true)
 			return
 	else:
-		_text("COLLECTED & SECURED" if success else "UNSECURED ITEMS LOST", rect.position + Vector2(30, 222), 12, GOLD)
+		_text(String(presentation.items), rect.position + Vector2(30, 222), 12, GOLD)
 	var items: Array = results_snapshot.get("items", []) if results_snapshot.get("items", []) is Array else []
 	for index in range(mini(items.size(), 7)):
 		var item: Dictionary = items[index]

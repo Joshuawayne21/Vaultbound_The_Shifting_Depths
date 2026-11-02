@@ -6,11 +6,12 @@ const SLOT_KEYS := ["id", "encounter_definition_id", "room_id", "ordinal", "loca
 
 static func plan(layout: Dictionary, issued: Dictionary) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	if int(issued.get("content_version", 0)) not in [2, 3] or int(issued.get("expedition_depth", 0)) < 6 \
+	if int(issued.get("content_version", 0)) not in [2, 3, 4] or int(issued.get("expedition_depth", 0)) < 6 \
 			or issued.get("optional_profile", {}).get("id", "") != "root_bark_champion": return result
+	var reserved := checkpoint_rooms(layout, issued)
 	var candidates: Array[int] = []
 	for room: Dictionary in layout.get("rooms", []):
-		if room.kind == &"combat" and not bool(room.main) and not bool(room.hidden): candidates.append(int(room.id))
+		if room.kind == &"combat" and not bool(room.main) and not bool(room.hidden) and not reserved.has(int(room.id)): candidates.append(int(room.id))
 	if candidates.is_empty(): return result
 	var rng := RandomNumberGenerator.new()
 	rng.seed = Streams.seed_for(int(issued.seed), int(issued.expedition_depth), int(issued.depth_policy_version), &"optional_encounters")
@@ -26,10 +27,10 @@ static func valid_slots(slots: Array[Dictionary], layout: Dictionary, issued: Di
 
 static func content_slots(layout: Dictionary, issued: Dictionary) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	if int(issued.get("content_version", 0)) != 3: return result
+	if int(issued.get("content_version", 0)) not in [3, 4]: return result
 	var depth := int(issued.expedition_depth)
 	if depth < 2: return result
-	var occupied := {}
+	var occupied := checkpoint_rooms(layout, issued)
 	for slot: Dictionary in plan(layout, issued): occupied[int(slot.room_id)] = true
 	var rng := RandomNumberGenerator.new()
 	var rules: Dictionary = issued.room_content_rules
@@ -77,3 +78,56 @@ static func valid_content_slots(slots: Array[Dictionary], layout: Dictionary, is
 		if not planned.has(slot) or seen.has(slot.id): return false
 		seen[slot.id] = true
 	return true
+
+static func checkpoint_rooms(layout: Dictionary, issued: Dictionary) -> Dictionary:
+	var result := {}
+	for slot: Dictionary in checkpoint_slots(layout, issued): result[int(slot.room_id)] = true
+	return result
+
+static func checkpoint_slots(layout: Dictionary, issued: Dictionary) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if int(issued.get("content_version", 0)) != 4 or issued.get("checkpoint_policy", {}).get("version") != 1: return result
+	var count: int = layout.get("rooms", []).size()
+	if count < 10: return result
+	var route: Array = layout.get("main_route", [])
+	if route.size() < 5: return result
+	var boss_index := route.size() - 2
+	var chosen: Array[int] = []
+	if count < 16:
+		chosen.append(int(route[clampi(roundi(boss_index * 0.5), 2, boss_index - 1)]))
+	elif route.size() >= 9:
+		var first := roundi(boss_index / 3.0)
+		var second := roundi(boss_index * 2.0 / 3.0)
+		var best_score := 2147483647
+		for a in range(1, boss_index):
+			for b in range(a + 3, boss_index):
+				var da := absi(a - first)
+				var db := absi(b - second)
+				var score := (da + db) * 1000000 + maxi(da, db) * 10000 + a * 100 + b
+				if score < best_score:
+					best_score = score
+					chosen.assign([int(route[a]), int(route[b])])
+	else:
+		chosen.append(int(route[2]))
+		var distances := {chosen[0]: 0}
+		var queue: Array[int] = [chosen[0]]
+		while not queue.is_empty():
+			var id: int = queue.pop_front()
+			for neighbor: int in layout.rooms[id].neighbors:
+				if not distances.has(neighbor):
+					distances[neighbor] = int(distances[id]) + 1
+					queue.append(neighbor)
+		var best := -1
+		for room: Dictionary in layout.rooms:
+			if room.kind != &"combat" or bool(room.main) or bool(room.hidden): continue
+			var id := int(room.id)
+			if best < 0 or int(distances[id]) > int(distances[best]) or (distances[id] == distances[best] and int(room.depth) > int(layout.rooms[best].depth)):
+				best = id
+		if best < 0: return result
+		chosen.append(best)
+	for ordinal in range(chosen.size()):
+		var id := chosen[ordinal]
+		if layout.rooms[id].kind not in [&"corridor", &"combat", &"trap"] or bool(layout.rooms[id].hidden): return [] as Array[Dictionary]
+		result.append({"id": "checkpoint_room_%d_%d" % [id, ordinal], "room_id": id, "ordinal": ordinal,
+			"local_position": Vector3.ZERO, "checkpoint_policy_version": 1})
+	return result

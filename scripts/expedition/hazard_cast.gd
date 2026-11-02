@@ -42,7 +42,7 @@ static func valid_issued(payload: Variant) -> bool:
 	if not payload is Dictionary or not Attack.exact_keys(payload, KEYS): return false
 	for key: String in ["run_generation", "content_version", "room_id", "cast_serial"]:
 		if not payload[key] is int or int(payload[key]) < 0: return false
-	return payload.content_version == 3 and payload.cast_serial > 0 and payload.source_receipt is String \
+	return payload.content_version in [3, 4] and payload.cast_serial > 0 and payload.source_receipt is String \
 		and not String(payload.source_receipt).is_empty() and String(payload.source_receipt).length() <= 160 \
 		and payload.profile is Dictionary and payload.shape is Dictionary and payload.depth_policy is Dictionary \
 		and Definition.valid_shape(payload.profile, payload.shape) \
