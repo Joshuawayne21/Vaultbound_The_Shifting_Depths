@@ -15,6 +15,9 @@ const SpawnPlanner = preload("res://scripts/expedition/encounter_spawn_planner.g
 var _adds: Dictionary = {}
 var _spawn_authority: Dictionary = {}
 var _summon_receipts: Dictionary = {}
+var _registered_event: WeakRef
+var _event_spawn_authority: Dictionary = {}
+var _event_rest := 0.0
 
 func configure(world: Node3D, plan: Dictionary, generation: int) -> bool:
 	if _world != null or not is_instance_valid(world) or generation < 0 \
@@ -31,6 +34,7 @@ func tick(delta: float) -> void:
 		cancel_all(&"world_invalid")
 		return
 	_prune()
+	_event_rest = maxf(0.0, _event_rest - delta)
 	if not _event.is_empty() and _event.state == "warning":
 		_event.remaining = maxf(0.0, float(_event.remaining) - delta)
 	for id: int in _reservations.keys():
@@ -53,9 +57,11 @@ func set_boss_owner(owner: Node3D) -> bool:
 
 func select_active_ordinary(candidates: Array[Node3D]) -> Array[Node3D]:
 	var selected: Array[Node3D] = []
-	if not _current() or _boss() != null: return selected
+	if not _current() or _boss() != null or _event_owner() != null: return selected
 	var world := _get_world()
-	var remaining := maxi(0, int(_plan.event_profile.enemy_limit) - _reserved_enemies())
+	var remaining := maxi(0, int(_plan.event_profile.enemy_limit) - _reserved_enemies() - _core_count())
+	var typed := _typed_hazard_count()
+	if typed > 0: remaining = mini(remaining, 4 - typed)
 	for candidate: Node3D in candidates:
 		if selected.size() >= remaining: break
 		if is_instance_valid(candidate) and world.encounters.owns_live_actor(candidate) and not selected.has(candidate):
@@ -68,7 +74,7 @@ func reserve_hazard(room_id: int, event_receipt: String) -> int:
 		and _event.get("definition_id") == "roots" and _event.get("receipt") == event_receipt \
 		and int(_event.get("reserved_hazards", 0)) == 1
 	if not _current() or _boss() != null or event_receipt.is_empty() or event_receipt.length() > 160 \
-			or (not _event.is_empty() and not owns_event_cast) or not _room_allowed(room_id) \
+			or _event_owner() != null or (not _event.is_empty() and not owns_event_cast) or not _room_allowed(room_id) \
 			or _hazards.size() + _reserved_hazards() - (1 if owns_event_cast else 0) >= int(_plan.event_profile.hazard_limit):
 		return -1
 	for reservation: Dictionary in _reservations.values():
@@ -94,13 +100,13 @@ func release_reservation(reservation_id: int) -> void:
 
 func request_event(room_id: int, definition_id: String, event_receipt: String) -> bool:
 	_prune()
-	if not _current() or not _event.is_empty() or _boss() != null or not _room_allowed(room_id) \
+	if not _current() or not _event.is_empty() or _event_owner() != null or _boss() != null or _typed_hazard_count() > 0 or _event_rest > 0.0 or not _room_allowed(room_id) \
 			or event_receipt.is_empty() or event_receipt.length() > 160 or _event_receipts.has(event_receipt) \
 			or event_receipt != "awareness_" + definition_id \
 			or not _plan.event_profile.event_ids.has(definition_id) or not _hazards.is_empty() or not _reservations.is_empty():
 		return false
 	var needed := 0 if definition_id == "roots" else 1
-	if _active_ordinary() + _reserved_enemies() + needed > int(_plan.event_profile.enemy_limit): return false
+	if _active_ordinary() + _reserved_enemies() + _core_count() + needed > int(_plan.event_profile.enemy_limit): return false
 	_event = {"room_id": room_id, "definition_id": definition_id, "receipt": event_receipt, "reserved_enemies": needed,
 		"reserved_hazards": 1 if definition_id == "roots" else 0, "state": "warning", "remaining": float(_plan.event_profile.warning_seconds)}
 	return true
@@ -189,6 +195,9 @@ func owned_boss_adds(owner: Node3D) -> Array[Node3D]:
 	return result
 
 func support_active(actor: Node3D) -> bool:
+	var world := _get_world()
+	var event_owner: Node3D = world.event_member_owner(actor) if is_instance_valid(world) and world.has_method("event_member_owner") else null
+	if event_owner != null: return _current() and _event_owner() == event_owner and event_owner.member_active()
 	var record: Dictionary = _adds.get(actor.get_instance_id(), {}) if is_instance_valid(actor) else {}
 	return _current() and not record.is_empty() and record.actor.get_ref() == actor and _boss() != null \
 		and record.owner.get_ref() == _boss() and _source_valid(_boss()) and int(_get_world().current_room_id) == int(record.room_id)
@@ -228,9 +237,12 @@ func budget_snapshot() -> Dictionary:
 	return {"enemy_limit": 6, "active_ordinary": _active_ordinary(), "active_boss_adds": owned_boss_adds(_boss()).size() if _boss() != null else 0,
 		"reserved_enemies": _reserved_enemies(), "boss_active": _boss() != null,
 		"hazard_limit": 2, "active_hazards": _hazards.size(), "reserved_hazards": _reserved_hazards(),
-		"event_active": not _event.is_empty(), "pending_event_count": int(world.pending_environment_events()) if is_instance_valid(world) else 0}
+		"event_active": not _event.is_empty() or _event_owner() != null, "active_event_members": _event_owner().members().size() if _event_owner() != null else 0, "active_cores": _core_count(), "typed_hazards": _typed_hazard_count(), "pending_event_count": int(world.pending_environment_events()) if is_instance_valid(world) else 0}
 
 func _cancel_environment() -> void:
+	var event_owner := _event_owner()
+	if event_owner != null: event_owner.pause()
+	_registered_event = null
 	for record: Dictionary in _hazards.values():
 		var hazard := record.hazard.get_ref() as Node3D
 		if is_instance_valid(hazard): hazard.cancel()
@@ -281,7 +293,7 @@ func _active_ordinary() -> int:
 func _reserved_enemies() -> int:
 	var count := int(_event.get("reserved_enemies", 0))
 	for reservation: Dictionary in _reservations.values():
-		if reservation.kind == "boss_add": count += reservation.sockets.size()
+		if reservation.kind in ["boss_add", "event_wave"]: count += reservation.sockets.size()
 	return count
 
 func _reserved_hazards() -> int:
@@ -302,3 +314,129 @@ func _current() -> bool:
 
 func _get_world() -> Node3D:
 	return _world.get_ref() as Node3D if _world != null else null
+
+func boss_active() -> bool:
+	return _boss() != null
+
+func reserve_typed_hazard(room_id: int, receipt: String) -> int:
+	_prune()
+	if not _current() or _event_owner() != null or not _event.is_empty() or _boss() != null or _event_rest > 0.0 \
+			or _active_ordinary() + _core_count() > 3 - _typed_hazard_count(): return -1
+	var result := reserve_hazard(room_id, receipt)
+	if result >= 0: _reservations[result]["typed"] = true
+	return result
+
+func _typed_hazard_count() -> int:
+	var count := 0
+	for record: Dictionary in _hazards.values():
+		var actor := record.hazard.get_ref() as Node3D
+		if is_instance_valid(actor) and actor.has_method("typed_snapshot") and not actor.typed_snapshot().is_empty(): count += 1
+	for record: Dictionary in _reservations.values():
+		if record.get("typed", false): count += 1
+	return count
+
+func _core_count() -> int:
+	var world := _get_world()
+	return int(world.active_event_core_count()) if is_instance_valid(world) and world.has_method("active_event_core_count") else 0
+
+func _event_owner() -> Node3D:
+	return _registered_event.get_ref() as Node3D if _registered_event != null else null
+
+func begin_registered_event(owner: Node3D) -> bool:
+	_prune()
+	var world := _get_world()
+	if not _current() or not is_instance_valid(owner) or world.registered_event_source(owner).is_empty() or _boss() != null: return false
+	if not _room_allowed(int(world.registered_event_source(owner).room_id)): return false
+	if _event_owner() == owner: return true
+	if _event_owner() != null or _event_rest > 0.0 or not _event.is_empty() or not _hazards.is_empty() or not _reservations.is_empty(): return false
+	if not world.event_reserve_roster(owner): return false
+	_registered_event = weakref(owner)
+	world.encounters._refresh_activity()
+	return true
+
+func finish_registered_event(owner: Node3D) -> void:
+	cancel_event_wave(owner)
+	if _event_owner() == owner:
+		if owner.snapshot().event_state in ["complete", "cancelled"]: _event_rest = float(_plan.event_profile.minimum_gap)
+		_registered_event = null
+	var world := _get_world()
+	if is_instance_valid(world) and is_instance_valid(world.encounters) and world.encounters.is_inside_tree(): world.encounters._refresh_activity()
+
+func cancel_event_wave(owner: Node3D) -> void:
+	for id: int in _reservations.keys():
+		var record: Dictionary = _reservations[id]
+		if record.kind == "event_wave" and record.owner.get_ref() == owner: _reservations.erase(id)
+	_event_spawn_authority = {}
+
+func reserve_event_wave(owner: Node3D, wave: int) -> Dictionary:
+	var denied := {"reservation_id": -1, "sockets": []}
+	var world := _get_world()
+	if not _current() or _event_owner() != owner or not owner.wave_reservation_valid(wave) or not _reservations.is_empty(): return denied
+	var source: Dictionary = world.registered_event_source(owner)
+	if source.is_empty(): return denied
+	var archetypes: Array[StringName] = owner.expected_members(wave)
+	if archetypes.size() < 2 or archetypes.size() > 3: return denied
+	var points := _event_points(owner, source, archetypes)
+	if points.size() != archetypes.size() or points.size() + _core_count() + owner.members().size() > 6: return denied
+	_sequence += 1
+	_reservations[_sequence] = {"kind": "event_wave", "owner": weakref(owner), "room_id": int(source.room_id), "receipt": String(source.receipt),
+		"wave": wave, "sockets": points, "archetypes": archetypes.duplicate(), "remaining": 5.0}
+	var sockets: Array[Vector3] = []
+	for point: Vector3 in points: sockets.append(world.rooms[int(source.room_id)].to_global(point))
+	return {"reservation_id": _sequence, "sockets": sockets}
+
+func _event_points(owner: Node3D, source: Dictionary, archetypes: Array[StringName], fixed: Array[Vector3] = [], ignored: Array[Node3D] = []) -> Array[Vector3]:
+	var world := _get_world()
+	var points: Array[Vector3] = fixed.duplicate()
+	if points.is_empty():
+		points.assign([Vector3(-5, 0, -5), Vector3(-5, 0, 5), Vector3(5, 0, 5)])
+		if source.definition_id != "root_spore_hive": points.append(Vector3(5, 0, -5))
+	var occupied: Array[Node3D] = world.encounters.all_actors()
+	for actor: Node3D in ignored: occupied.erase(actor)
+	var core: Node3D = owner.core()
+	if is_instance_valid(core) and float(core.health) > 0.0: occupied.append(core)
+	var radius := 0.7 if archetypes.has(&"golem") else 0.4
+	var height := 2.7 if archetypes.has(&"golem") else 1.9
+	return SpawnPlanner.admit_event_sockets(world, world.rooms[int(source.room_id)], points, radius, height, archetypes.size(), occupied)
+
+func commit_event_wave(owner: Node3D, reservation_id: int, wave: int) -> Array[Node3D]:
+	var result: Array[Node3D] = []
+	var record: Dictionary = _reservations.get(reservation_id, {})
+	if not _current() or _event_owner() != owner or record.is_empty() or record.kind != "event_wave" \
+			or record.owner.get_ref() != owner or int(record.wave) != wave or not owner.wave_commit_ready(wave): return result
+	var world := _get_world()
+	var source: Dictionary = world.registered_event_source(owner)
+	if source.is_empty(): return result
+	var archetypes: Array[StringName] = []
+	archetypes.assign(record.archetypes)
+	var candidates: Array[Vector3] = []
+	candidates.assign(record.sockets)
+	var points := _event_points(owner, source, archetypes, candidates)
+	_reservations.erase(reservation_id)
+	if points.size() != archetypes.size(): return result
+	for index in range(points.size()):
+		if not _current() or _event_owner() != owner or not owner.wave_commit_ready(wave): break
+		if _event_points(owner, source, archetypes, points, result).size() != archetypes.size(): break
+		var receipt := String(source.receipt) + "_wave_%d_member_%d" % [wave, index]
+		_event_spawn_authority = {"owner_receipt": String(source.receipt), "receipt": receipt, "room_id": int(source.room_id),
+			"point": points[index], "definition_id": "root_event_" + String(archetypes[index])}
+		var actor: Node3D = world.encounters.spawn_event_support(int(source.room_id), points[index], receipt, String(source.receipt), archetypes[index])
+		_event_spawn_authority = {}
+		if not is_instance_valid(actor): break
+		result.append(actor)
+	var construction_valid := result.size() == archetypes.size() and _current()
+	if construction_valid:
+		construction_valid = _event_points(owner, source, archetypes, points, result).size() == archetypes.size()
+		for index in range(result.size()):
+			construction_valid = construction_valid and is_instance_valid(result[index]) and result[index].global_position == world.rooms[int(source.room_id)].to_global(points[index] + Vector3.UP * 0.15)
+	if not construction_valid or not world.accept_event_members(owner, wave, result):
+		for actor: Node3D in result:
+			if is_instance_valid(actor): world.encounters.discard_boss_support(actor, String(source.receipt))
+		result.clear()
+	world.encounters._refresh_activity()
+	return result
+
+func event_support_spawn_authorized(owner_receipt: String, receipt: String, room_id: int, point: Vector3, definition_id: String) -> bool:
+	return _current() and _event_owner() != null and not _event_spawn_authority.is_empty() \
+			and _event_spawn_authority.owner_receipt == owner_receipt and _event_spawn_authority.receipt == receipt \
+			and _event_spawn_authority.room_id == room_id and _event_spawn_authority.point == point and _event_spawn_authority.definition_id == definition_id

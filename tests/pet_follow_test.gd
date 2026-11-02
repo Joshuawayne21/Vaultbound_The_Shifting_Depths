@@ -14,6 +14,23 @@ var maximum_visible_step := 0.0
 var ramp_middle := false
 var actual_metrics: Array[Dictionary] = []
 var intentional_repositions := 0
+var render_samples := 0
+var render_worlds: Dictionary = {}
+var render_previous_id := 0
+var render_previous_world := 0
+var render_previous_frame := -1
+var render_previous_placements := 0
+var render_previous_recoveries := 0
+var render_cadence_valid := true
+var render_identity_valid := true
+var render_recovery_hidden := true
+
+class RenderObserver extends Node:
+	var fixture: WeakRef
+	func _process(_delta: float) -> void:
+		var fixture_owner: Object = fixture.get_ref()
+		if is_instance_valid(fixture_owner):
+			fixture_owner.call("_observe_render")
 
 func _initialize() -> void:
 	Engine.max_fps = 120
@@ -22,6 +39,12 @@ func _initialize() -> void:
 
 func _run() -> void:
 	await _frame_rates_and_budget()
+	var render_observer := RenderObserver.new()
+	render_observer.fixture = weakref(self)
+	# Nodes process in ascending priority. Sample after the actual follower's
+	# idle update, including every frame between awaited physics callbacks.
+	render_observer.process_priority = 1000000
+	root.add_child(render_observer)
 	DirAccess.make_dir_recursive_absolute(PROFILE.get_base_dir())
 	var fixture := Store.empty_profile()
 	fixture.pets.ingredients = {"rootbound_essence": 6, "mysterious_egg": 1, "lantern_fox_memory": 1}
@@ -31,6 +54,7 @@ func _run() -> void:
 	check(planned.ok and Store.new(PROFILE).save_profile(planned.profile), "Follower test saves a legitimate selected-pet fixture before Game startup")
 	check(root.get_node("ExpeditionSession").configure_storage(PROFILE), "Follower test binds its disposable profile")
 	if not await boot_game():
+		render_observer.free()
 		finish()
 		return
 	await frames(5)
@@ -59,9 +83,16 @@ func _run() -> void:
 		await _terrace(ramp)
 	await _recovery()
 	await _rooms_and_travel()
+	for attempt in range(3):
+		if render_previous_id == pet.get_instance_id():
+			break
+		await process_frame
+	check(render_samples > 0 and render_worlds.size() == 3 and render_previous_id == pet.get_instance_id() and render_cadence_valid, "Idle observer samples the actual pet across all three worlds without skipped process frames")
+	check(render_identity_valid and render_recovery_hidden, "Pet identity stays in its bound world and recovery placements remain hidden between idle samples")
 	check(maximum_visible_step < 0.30, "No observed visible movement step disguises a cosmetic relocation")
 	_capture_metrics()
-	print("PET ACTUAL FOLLOW: ", JSON.stringify({"worlds": actual_metrics, "maximum_visible_step": maximum_visible_step}))
+	print("PET ACTUAL FOLLOW: ", JSON.stringify({"worlds": actual_metrics, "maximum_visible_step": maximum_visible_step, "idle_samples": render_samples, "sampled_worlds": render_worlds.size(), "cadence_valid": render_cadence_valid, "identity_valid": render_identity_valid, "recovery_hidden": render_recovery_hidden}))
+	render_observer.free()
 	game.queue_free()
 	await frames(4)
 	finish()
@@ -173,8 +204,6 @@ func _spawn_pet() -> void:
 	if not check(is_instance_valid(pet), "Actual Game creates a presenter from the committed selected pet"):
 		return
 	check(pet.get_parent() == game.active_world and pet.is_processing(), "Game-created follower is world-owned and actively processing after configuration")
-	previous = pet.global_position
-	previously_visible = false
 
 func _reactions() -> void:
 	await frames(12)
@@ -216,7 +245,6 @@ func _terrace(ramp: Dictionary) -> void:
 	game.player.reset_for_spawn(Transform3D(Basis.IDENTITY, ramp.bottom - outward * 2.5 + Vector3.UP * 0.15))
 	intentional_repositions += 1
 	pet.reset_trail()
-	previously_visible = false
 	navigator.clear()
 	await frames(8)
 	check(await _wait_pet(func() -> bool: return pet.visible, 5.0), "Pet validates a ground arrival at ramp " + String(ramp.id))
@@ -264,11 +292,36 @@ func _wait_pet(predicate: Callable, timeout: float) -> bool:
 func _observe() -> void:
 	if not is_instance_valid(pet):
 		return
+	ramp_middle = ramp_middle or (pet.global_position.y > 0.15 and pet.global_position.y < 0.65)
+
+func _observe_render() -> void:
+	if not is_instance_valid(pet) or not pet.is_inside_tree():
+		previously_visible = false
+		render_previous_id = 0
+		return
+	var identity := pet.get_instance_id()
+	var world_identity := pet.get_parent().get_instance_id()
+	var frame := Engine.get_process_frames()
+	var state: Dictionary = pet.presentation_snapshot()
+	if render_previous_id == identity:
+		render_cadence_valid = render_cadence_valid and frame == render_previous_frame + 1
+		render_identity_valid = render_identity_valid and world_identity == render_previous_world
+		if previously_visible and pet.visible:
+			render_recovery_hidden = render_recovery_hidden and int(state.placement_count) == render_previous_placements and int(state.recovery_count) == render_previous_recoveries
+	else:
+		# A newly bound world-owned presenter has no preceding visible pose.
+		previously_visible = false
 	if previously_visible and pet.visible:
 		maximum_visible_step = maxf(maximum_visible_step, previous.distance_to(pet.global_position))
 	previous = pet.global_position
 	previously_visible = pet.visible
-	ramp_middle = ramp_middle or (pet.global_position.y > 0.15 and pet.global_position.y < 0.65)
+	render_previous_id = identity
+	render_previous_world = world_identity
+	render_previous_frame = frame
+	render_previous_placements = int(state.placement_count)
+	render_previous_recoveries = int(state.recovery_count)
+	render_worlds[world_identity] = true
+	render_samples += 1
 
 func _recovery() -> void:
 	game.player.reset_for_spawn(Transform3D(Basis.IDENTITY, Vector3(0, 0.15, 8)))

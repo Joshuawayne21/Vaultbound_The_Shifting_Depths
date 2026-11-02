@@ -11,6 +11,7 @@ const GRID_STEP := 1.2
 const REPLAN_INTERVAL := 0.65
 const MAX_SEARCH_NODES := 720
 const CACHE_KEY := &"vaultbound_companion_navigation"
+const BODY_PATH_MASK := 1 | 16
 const CITY_SAMPLE_STEP := 0.4
 const CITY_MAX_SLOPE := 0.2
 const CITY_MAX_GRAPH_POINTS := 48
@@ -31,6 +32,7 @@ var _path_index := 0
 var _replan_remaining := 0.0
 var _destination := Vector3.INF
 var _world_id := 0
+var _stationary_revision := -1
 var _cache: Dictionary = {}
 var _capsule := CapsuleShape3D.new()
 var _zones: Array[Dictionary] = []
@@ -195,6 +197,7 @@ func _refresh_context() -> void:
 			signature += "%d:%s;" % [passage.get_instance_id(), passage.get("opened")]
 	if _world_id != world.get_instance_id():
 		_world_id = world.get_instance_id()
+		_stationary_revision = -1
 		clear()
 		_city_surface = false
 		_city_graph = {}
@@ -208,6 +211,21 @@ func _refresh_context() -> void:
 	if not world.has_meta(CACHE_KEY):
 		world.set_meta(CACHE_KEY, {"points": {}, "edges": {}, "surfaces": {}, "signature": signature})
 	_cache = world.get_meta(CACHE_KEY)
+	var blocker_revision := int(world.stationary_blocker_revision()) if world.has_method("stationary_blocker_revision") else 0
+	if int(_cache.get("stationary_revision", -1)) != blocker_revision:
+		_cache.points.clear()
+		_cache.edges.clear()
+		_cache["stationary_revision"] = blocker_revision
+	# Shared cached geometry can be cleared by another member first. Each actor
+	# independently retires its own old path before its next navigation query.
+	if _stationary_revision != blocker_revision:
+		_stationary_revision = blocker_revision
+		path.clear()
+		_path_index = 0
+		_destination = Vector3.INF
+		_replan_remaining = 0.0
+		_danger_escape_active = false
+		_clear_city_route()
 	if String(_cache.get("signature", "")) != signature:
 		_cache.points.clear()
 		_cache.edges.clear()
@@ -395,7 +413,7 @@ func _city_segment_clear(from: Vector3, to: Vector3) -> bool:
 	var space := actor.get_world_3d().direct_space_state
 	var query := PhysicsShapeQueryParameters3D.new()
 	query.shape = _capsule
-	query.collision_mask = 1
+	query.collision_mask = BODY_PATH_MASK
 	query.margin = 0.005
 	for index in range(points.size() - 1):
 		geometry_probe_count += 1
@@ -533,7 +551,7 @@ func _body_clear(position: Vector3) -> bool:
 	geometry_probe_count += 1
 	var query := PhysicsShapeQueryParameters3D.new()
 	query.shape = _capsule
-	query.collision_mask = 1
+	query.collision_mask = BODY_PATH_MASK
 	query.margin = 0.005
 	query.transform = Transform3D(Basis.IDENTITY, Vector3(position.x, position.y + 0.85 if _city_surface else 0.91, position.z))
 	return actor.get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty()
@@ -561,7 +579,7 @@ func _segment_clear(from: Vector3, to: Vector3, check_floor: bool = true) -> boo
 	geometry_probe_count += 1
 	var query := PhysicsShapeQueryParameters3D.new()
 	query.shape = _capsule
-	query.collision_mask = 1
+	query.collision_mask = BODY_PATH_MASK
 	query.margin = 0.005
 	query.transform = Transform3D(Basis.IDENTITY, Vector3(from.x, 0.91, from.z))
 	query.motion = Vector3(to.x - from.x, 0, to.z - from.z)

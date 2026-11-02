@@ -5,6 +5,11 @@ const Ids = preload("res://scripts/expedition/content_ids.gd")
 const Streams = preload("res://scripts/expedition/depth_streams.gd")
 const Bosses = preload("res://scripts/enemies/boss_registry.gd")
 const Biome = preload("res://scripts/expedition/biome_definition.gd")
+const EventDefinition = preload("res://scripts/expedition/dungeon_event_definition.gd")
+const HazardDefinition = preload("res://scripts/expedition/hazard_definition.gd")
+const EVENT_DEFINITIONS := {"root_spore_hive": preload("res://resources/events/root_spore_hive.tres"), "root_horde": preload("res://resources/events/root_horde.tres")}
+const HAZARDS := {"root_spike_lane": preload("res://resources/hazards/root_spike_lane.tres"), "root_spore_patch": preload("res://resources/hazards/root_spore_patch.tres")}
+const ROOM_RULES := {"version": 1, "spike_chance": 0.5, "spike_limit": 2, "spore_chance": 0.35, "spore_limit": 1, "hive_chance": 0.35, "hive_limit": 1, "horde_chance": 0.05, "horde_limit": 1}
 const ROOTBOUND = preload("res://resources/biomes/rootbound_abyss.tres")
 const POLICY = preload("res://resources/expedition/depth_policy.tres")
 const REWARDS = preload("res://resources/loot/monster_rewards.tres")
@@ -19,7 +24,7 @@ const ENEMY_NUMBERS := ["max_health", "damage", "armor", "move_speed", "detectio
 	"collision_radius", "collision_height", "label_height"]
 const PLAN_KEYS := ["plan_version", "content_version", "seed", "expedition_depth", "depth_policy_version", "biome_id",
 	"generator_version", "theme_id", "theme_version", "theme", "required_boss_id", "required_boss_version",
-	"variant_id", "boss_seed", "boss", "encounters", "event_profile", "reward_profiles", "pet_profiles", "optional_profile", "selection_rules"]
+	"variant_id", "boss_seed", "boss", "encounters", "event_profile", "reward_profiles", "pet_profiles", "optional_profile", "selection_rules", "hazard_profiles", "event_definitions", "room_content_rules"]
 const SELECTION_RULES := {"version": 1, "required_weights": {"rootwarden": 50, "thornmarshal": 25, "mycelial_cantor": 25},
 	"alternatives_minimum_depth": 2, "ascendant_minimum_depth": 6, "ascendant_denominator": 4,
 	"optional_minimum_depth": 6, "optional_limit": 1, "optional_definition_id": "root_bark_champion"}
@@ -31,6 +36,8 @@ const REWARD_PROFILES := {
 	"thornmarshal": {"id": "thornmarshal", "version": 1, "source": "encounter:thornmarshal"},
 	"mycelial_cantor": {"id": "mycelial_cantor", "version": 1, "source": "encounter:mycelial_cantor"},
 	"root_bark_champion": {"id": "root_bark_champion", "version": 1, "source": "encounter:root_bark_champion"},
+	"event_root_spore_hive": {"id": "event_root_spore_hive", "version": 1, "source": "encounter:root_spore_hive"},
+	"event_root_horde": {"id": "event_root_horde", "version": 1, "source": "encounter:root_horde"},
 }
 const PET_PROFILES := {
 	"rootbound_regular": {"id": "rootbound_regular", "version": 1, "kind": "regular"},
@@ -57,14 +64,15 @@ static func resolve_run_plan(seed_value: int, expedition_depth: int) -> Dictiona
 	for reward: Dictionary in REWARD_PROFILES.values():
 		if not REWARDS.registered_profile_valid(reward): return {}
 	var boss_seed := Streams.seed_for(seed_value, expedition_depth, int(policy.policy_version), &"boss")
-	var result := {"plan_version": 2, "content_version": 2, "seed": seed_value, "expedition_depth": expedition_depth,
+	var result := {"plan_version": 3, "content_version": 3, "seed": seed_value, "expedition_depth": expedition_depth,
 		"depth_policy_version": int(policy.policy_version), "biome_id": "rootbound_abyss", "generator_version": 2,
 		"theme_id": "rootbound_abyss", "theme_version": int(theme.theme_version), "theme": theme,
 		"required_boss_id": selection.id, "required_boss_version": int(boss.encounter_version),
 		"variant_id": selection.variant, "boss_seed": boss_seed, "boss": boss,
 		"encounters": _encounters(root_profile), "event_profile": EVENT_PROFILE.duplicate(true),
 		"reward_profiles": REWARD_PROFILES.duplicate(true), "pet_profiles": PET_PROFILES.duplicate(true),
-		"optional_profile": optional, "selection_rules": SELECTION_RULES.duplicate(true)}
+		"optional_profile": optional, "selection_rules": SELECTION_RULES.duplicate(true),
+		"hazard_profiles": _hazards(), "event_definitions": _events(), "room_content_rules": ROOM_RULES.duplicate(true)}
 	return result if valid_run_plan(result, policy) else {}
 
 static func valid_run_plan(value: Variant, issued_depth_policy: Dictionary) -> bool:
@@ -74,7 +82,7 @@ static func valid_run_plan(value: Variant, issued_depth_policy: Dictionary) -> b
 			or not VaultDepthPolicy.valid_snapshot(issued_depth_policy, int(value.expedition_depth)):
 		return false
 	for key: String in ["plan_version", "content_version"]:
-		if not value[key] is int or int(value[key]) != 2: return false
+		if not value[key] is int or int(value[key]) != 3: return false
 	for key: String in ["depth_policy_version", "theme_version", "required_boss_version"]:
 		if not value[key] is int or int(value[key]) != 1:
 			return false
@@ -91,6 +99,7 @@ static func valid_run_plan(value: Variant, issued_depth_policy: Dictionary) -> b
 	if not value.boss_seed is int or int(value.boss_seed) != expected_seed or value.variant_id != selected.variant \
 			or value.required_boss_id != selected.id or not value.boss.allowed_variant_ids.has(value.variant_id):
 		return false
+	if value.room_content_rules != ROOM_RULES or not _valid_profiles(value.hazard_profiles, value.event_definitions): return false
 	if value.reward_profiles != REWARD_PROFILES or value.pet_profiles != PET_PROFILES or value.event_profile != EVENT_PROFILE:
 		return false
 	if not value.encounters is Dictionary or not _keys_match(value.encounters, Ids.ENCOUNTER_IDS):
@@ -127,7 +136,7 @@ static func encounter_snapshot(encounter_definition_id: String) -> Dictionary:
 
 static func boss_pool_preview(expedition_depth: int) -> Dictionary:
 	var result := {"available": false, "theme_id": "rootbound_abyss", "theme_label": "Rootbound Abyss",
-		"required": [], "stronger_eligible": false, "optional_eligible": false, "content_version": 2}
+		"required": [], "stronger_eligible": false, "optional_eligible": false, "content_version": 3}
 	if not POLICY.supports_depth(expedition_depth) or not ROOTBOUND.available: return result
 	var choices: Array[Dictionary] = []
 	for id: String in Bosses.IDS:
@@ -170,18 +179,18 @@ static func _descriptor(id: String, variant: String) -> Dictionary:
 		return {}
 	var required := Bosses.IDS.has(id)
 	var optional := id == "root_bark_champion"
-	var support := id == "rootbound_boss_defender"
+	var support := id == "rootbound_boss_defender" or id.begins_with("root_event_")
 	var elite := required or optional or variant == "elite"
 	var reward := "rootwarden_legacy" if id == "rootwarden" else id if required or optional else "" if support else "enemy_elite" if elite else "enemy_stronger" if id == "golem" else "enemy_basic"
 	var pet := "rootwarden_legacy" if id == "rootwarden" else "none" if required or optional or support else "rootbound_elite" if elite else "rootbound_regular"
 	return {"encounter_definition_id": id, "boss_id": id if required or optional else "",
 		"objective_role": "required" if required else "optional" if optional else "support" if support else "none",
 		"reward_profile_id": reward, "pet_profile_id": pet, "discovery_id": "" if support else id,
-		"content_version": 2, "encounter_version": 1, "variant_id": variant,
+		"content_version": 3, "encounter_version": 1, "variant_id": variant,
 		"archetype": _archetype(id), "elite": elite, "kind": "boss" if required else "elite" if elite else "regular"}
 
 static func _archetype(id: String) -> String:
-	return "skeleton" if id in ["root_bark_champion", "rootbound_boss_defender"] else id
+	return id.trim_prefix("root_event_") if id.begins_with("root_event_") else "skeleton" if id in ["root_bark_champion", "rootbound_boss_defender"] else id
 
 static func _variants(id: String) -> Array:
 	if id == "rootwarden": return ["none", "thick_bark", "blooming_thorns"]
@@ -227,3 +236,38 @@ static func _keys_match(value: Dictionary, keys: Array) -> bool:
 	for key: String in keys:
 		if not value.has(key): return false
 	return true
+
+static func _hazards() -> Dictionary:
+	var result := {}
+	for id: String in HAZARDS: result[id] = HAZARDS[id].snapshot()
+	return result
+
+static func _events() -> Dictionary:
+	var result := {}
+	for id: String in EVENT_DEFINITIONS: result[id] = EVENT_DEFINITIONS[id].snapshot()
+	return result
+
+static func _valid_profiles(hazards: Variant, events: Variant) -> bool:
+	if not hazards is Dictionary or not events is Dictionary or hazards.size() != 2 or events.size() != 2: return false
+	for id: String in HAZARDS:
+		if not HazardDefinition.valid_snapshot(hazards.get(id)) or hazards[id].id != id: return false
+	for id: String in EVENT_DEFINITIONS:
+		if not EventDefinition.valid_snapshot(events.get(id)) or events[id].id != id: return false
+	return true
+
+static func event_source_descriptor(plan: Dictionary, id: String, roster_profile_id: String) -> Dictionary:
+	if int(plan.get("content_version", 0)) != 3 or not plan.get("event_definitions", {}).has(id): return {}
+	var profile: Dictionary = plan.event_definitions[id]
+	if not EventDefinition.valid_snapshot(profile): return {}
+	if (id == "root_spore_hive" and roster_profile_id != "hive_two_waves") or (id == "root_horde" and roster_profile_id not in ["horde_solo", "horde_party"]): return {}
+	return {"encounter_definition_id": id, "content_version": 3, "encounter_version": 1, "objective_role": "optional",
+		"reward_profile_id": String(profile.reward_profile_id), "pet_profile_id": "none", "discovery_id": id, "kind": "elite", "roster_profile_id": roster_profile_id}
+
+static func event_roster_members(plan: Dictionary, id: String, roster: String) -> Array:
+	if event_source_descriptor(plan, id, roster).is_empty(): return []
+	var result: Array = []
+	for wave in range(2):
+		var members: Array[String] = []
+		for member: StringName in EventDefinition.wave_members(roster, int(plan.expedition_depth), wave): members.append(String(member))
+		result.append(members)
+	return result

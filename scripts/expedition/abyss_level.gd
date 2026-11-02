@@ -24,6 +24,7 @@ const Scheduler = preload("res://scripts/expedition/encounter_event_scheduler.gd
 const Presentation = preload("res://scripts/visual/dungeon_presentation.gd")
 const RoomContent = preload("res://scripts/expedition/room_content_planner.gd")
 const SpawnPlanner = preload("res://scripts/expedition/encounter_spawn_planner.gd")
+const EventRuntime = preload("res://scripts/expedition/dungeon_events.gd")
 
 var display_name := "THE ROOTBOUND ABYSS"
 var objective := "Find the Rootwarden • Defeat the guardian • Extract your treasure"
@@ -71,6 +72,7 @@ var _room_slots: Array[Dictionary] = []
 var _admitted_slots: Array[Dictionary] = []
 var _optional_records: Dictionary = {}
 var _combat_admission_ready := false
+var _events: DungeonEvents
 
 func configure_run_context(generation: int) -> bool:
 	# The shell binds the issued run before its fade awaits and before _ready.
@@ -144,6 +146,7 @@ func registered_optional_encounters() -> Array[Node3D]:
 	return result
 
 func optional_room_reserved(id: int) -> bool:
+	if _events != null and _events.hive_room_reserved(id): return true
 	for slot: Dictionary in _room_slots:
 		if int(slot.room_id) == id: return true
 	return false
@@ -174,12 +177,15 @@ func prepare_combat_admission() -> bool:
 		admitted.append(slot.duplicate(true))
 	_room_slots = admitted
 	_admitted_slots = admitted.duplicate(true)
+	if _events != null and not _events.prepare():
+		validation_errors.append("Registered room event admission failed")
+		return false
 	_combat_admission_ready = true
 	return combat_admission_valid()
 
 func combat_admission_valid() -> bool:
 	if _content_plan.is_empty(): return true
-	if not _combat_admission_ready or _room_slots != _admitted_slots or not RoomContent.valid_slots(_room_slots, layout, _content_plan) \
+	if (_events != null and not _events.admission_valid()) or not _combat_admission_ready or _room_slots != _admitted_slots or not RoomContent.valid_slots(_room_slots, layout, _content_plan) \
 			or _optional_records.size() != _room_slots.size() or not is_instance_valid(boss) \
 			or _boss_record.is_empty() or _boss_record.actor.get_ref() != boss or boss.get_parent() != rooms.get(int(layout.boss_id)): return false
 	var required_receipt := "rootwarden_reward" if _content_plan.required_boss_id == "rootwarden" else "boss_room_%d_%s" % [int(layout.boss_id), String(_content_plan.required_boss_id)]
@@ -280,6 +286,11 @@ func _ready() -> void:
 		geometry.add_child(instance)
 		_keep_static_collisions(instance)
 		rooms[int(room.id)] = instance
+	if not _content_plan.is_empty():
+		_events = EventRuntime.new()
+		_events.name = "RegisteredRoomEvents"
+		_events.configure(self, _content_plan, shared_materials)
+		add_child(_events)
 	loot_caches = LootCaches.new()
 	loot_caches.name = "LootCaches"
 	loot_caches.configure(_session, rooms, _player, self, run_generation)
@@ -300,6 +311,7 @@ func _ready() -> void:
 	for i in range(2):
 		var hazard := Hazard.new()
 		hazard.name = "PooledRoots_%d" % i
+		if not shared_materials.is_empty(): hazard.configure_presentation(shared_materials)
 		add_child(hazard)
 		_hazards.append(hazard)
 	_populate_treasure()
@@ -371,6 +383,7 @@ func _process(delta: float) -> void:
 		for hazard: AbyssHazard in _hazards:
 			if hazard.active:
 				hazard.cancel()
+	if _events != null: _events.tick(delta)
 	var event_safe := kind not in [&"entrance", &"boss", &"extraction", &"secret"] and not boss_near
 	awareness.tick(delta, event_safe)
 	if _refresh_time >= 0.2:
@@ -379,6 +392,7 @@ func _process(delta: float) -> void:
 		snapshot_changed.emit(snapshot())
 
 func _enter_room(id: int) -> void:
+	if _events != null: _events.enter_room(id)
 	if scheduler != null and current_room_id != id and awareness != null:
 		awareness.cancel_warning()
 	if not _content_plan.is_empty() and _content_plan.required_boss_id != "rootwarden" and id != int(layout.boss_id) \
@@ -396,7 +410,7 @@ func _enter_room(id: int) -> void:
 		if hazard.active and hazard.room_id != id:
 			hazard.cancel()
 	var room: Dictionary = layout.rooms[id]
-	if room.kind == &"trap" and not _trap_visited.has(id):
+	if room.kind == &"trap" and not _trap_visited.has(id) and (_events == null or not _events.replaces_roots(id)):
 		_trap_visited[id] = true
 		# Ground is marked in advance and all four entry lanes remain clear.
 		_arm_roots(id, Vector3.ZERO, 2.4)
@@ -853,7 +867,7 @@ func snapshot() -> Dictionary:
 			boss_state.phase_label = String(appearance.get("phase_label", "OPTIONAL ENCOUNTER" if role == "optional" else "PHASE I"))
 			boss_state.modifier = String(appearance.get("modifier", ""))
 	var active_count := (encounters.active_enemy_count() if encounters != null else 0) + (1 if boss_state.visible else 0)
-	return {"active": true, "biome": "Rootbound Abyss", "floor": int(_depth_context.get("expedition_depth", 1)), "seed": _issued_seed,
+	var result := {"active": true, "biome": "Rootbound Abyss", "floor": int(_depth_context.get("expedition_depth", 1)), "seed": _issued_seed,
 		"theme_id": String(_content_plan.get("theme_id", "rootbound_abyss")),
 		"theme_label": String(_content_plan.get("theme", {}).get("display_name", "Rootbound Abyss")),
 		"required_boss_id": String(_content_plan.get("required_boss_id", "rootwarden")), "required_boss_name": required_boss_label(),
@@ -876,3 +890,46 @@ func snapshot() -> Dictionary:
 		"extraction_unlocked": _boss_dead, "active_enemies": active_count,
 		"enemy_budget": Encounters.MAX_ACTIVE_ENEMIES, "elapsed": _elapsed,
 		"fps": Engine.get_frames_per_second(), "draw_calls": Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)}
+	if _events != null: result.merge(_events.snapshot(), true)
+	return result
+
+func room_content_slots() -> Array[Dictionary]:
+	return _events.slots() if _events != null else RoomContent.content_slots(layout, _content_plan)
+
+func registered_events() -> Array[Node3D]:
+	return _events.directors() if _events != null else [] as Array[Node3D]
+
+func engaged_hive_targets() -> Array[Node3D]:
+	return _events.engaged_hives() if _events != null else [] as Array[Node3D]
+
+func stationary_blocker_revision() -> int:
+	return _events.stationary_blocker_revision() if _events != null else 0
+
+func registered_hazard_actors() -> Array[Node3D]:
+	var result: Array[Node3D] = []
+	for actor: Node3D in _hazards: result.append(actor)
+	return result
+
+func registered_hazard_cast_valid(actor: Node3D, generation: int, receipt: String, serial: int) -> bool:
+	return _events != null and _hazards.has(actor) and _events.hazard_valid(actor, generation, receipt, serial)
+
+func registered_event_source(actor: Node3D) -> Dictionary:
+	return _events.source_record(actor) if _events != null else {}
+
+func event_reserve_roster(actor: Node3D) -> bool:
+	return _events != null and _events.reserve_roster(actor)
+
+func accept_event_members(actor: Node3D, wave: int, members: Array[Node3D]) -> bool:
+	return _events != null and _events.accept_members(actor, wave, members)
+
+func event_member_owner(actor: Node3D) -> Node3D:
+	return _events.member_owner(actor) if _events != null else null
+
+func record_event_member_death(actor: Node3D, record: Dictionary) -> void:
+	if _events != null: _events.member_died(actor, record)
+
+func event_completion_record(source: Node3D) -> Dictionary:
+	return _events.completion_record(source) if _events != null else {}
+
+func active_event_core_count() -> int:
+	return _events.active_core_count() if _events != null else 0

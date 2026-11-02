@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="VaultHazardDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/expedition/hazard_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"root_spike_lane"
+version = 1
+shape = &"capsule"
+radius = 0.65
+axis_length = 6.0
+warning_time = 1.8
+active_time = 0.45
+damage = 14.0
+pulse_count = 1
+pulse_interval = 0.0
+height_tolerance = 2.0

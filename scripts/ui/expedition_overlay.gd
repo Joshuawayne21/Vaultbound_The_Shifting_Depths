@@ -1483,11 +1483,46 @@ func _draw_expedition_status() -> void:
 	for threshold in [0.25, 0.5, 0.75]:
 		draw_line(track.position + Vector2(track.size.x * threshold, -2), track.position + Vector2(track.size.x * threshold, 9), Color(GOLD, 0.6), 1)
 	_text("%d" % int(awareness), rect.position + Vector2(470, 47), 12, WARNING if awareness >= 50 else TEAL, true)
-	var warning := String(dungeon_snapshot.get("awareness_warning", ""))
-	if not warning.is_empty():
-		_text(warning, Vector2(size.x * 0.5, 214 + _safe().y), 12, WARNING, true)
-	elif bool(dungeon_snapshot.get("extraction_ready", false)):
-		_text("EXTRACTION AWAKENED · Follow the spring", Vector2(size.x * 0.5, 214 + _safe().y), 12, TEAL, true)
+	var notice := expedition_notice_text()
+	if not notice.is_empty():
+		var ready := String(dungeon_snapshot.get("event_name", "")).is_empty() \
+			and String(dungeon_snapshot.get("awareness_warning", "")).is_empty() and bool(dungeon_snapshot.get("extraction_ready", false))
+		_text(_fit_text(notice, 660, 12), Vector2(size.x * 0.5, 214 + _safe().y), 12, TEAL if ready else WARNING, true)
+
+
+func expedition_notice_text() -> String:
+	# One existing HUD lane, driven by the world's current registered source.
+	# UI countdowns never authorize a spawn, declare kills or grant a cache.
+	var event_name := String(dungeon_snapshot.get("event_name", "")).strip_edges()
+	var awareness_warning := String(dungeon_snapshot.get("awareness_warning", ""))
+	var event_state := String(dungeon_snapshot.get("event_state", ""))
+	# A dormant or completed optional objective must not hide an existing danger
+	# announcement. A live arrival/resume countdown keeps its more urgent lane.
+	if not awareness_warning.is_empty() and event_state not in ["warning", "resuming"]:
+		return awareness_warning
+	if not event_name.is_empty():
+		var state := event_state
+		var wave := int(dungeon_snapshot.get("event_wave", 0))
+		var waves := int(dungeon_snapshot.get("event_waves", 0))
+		var wave_label := "WAVE %d/%d" % [wave, waves] if wave > 0 and wave <= waves else "ENCOUNTER"
+		var prefix := event_name.to_upper() + " · "
+		match state:
+			"warning", "resuming":
+				var remaining := float(dungeon_snapshot.get("event_remaining", 0.0))
+				if not is_finite(remaining): return prefix + "WAITING"
+				return prefix + ("RESUMING" if state == "resuming" else wave_label) + " IN %.1fs" % maxf(0.0, remaining)
+			"active":
+				return prefix + wave_label + " · %d FOES REMAINING" % maxi(0, int(dungeon_snapshot.get("event_members_remaining", 0)))
+			"complete":
+				return prefix + "ENCOUNTER COMPLETE"
+			"dormant":
+				return prefix + "OPTIONAL · DORMANT"
+			"waiting", "paused", "cancelled":
+				var warning := String(dungeon_snapshot.get("event_warning", "")).strip_edges()
+				return prefix + (warning if not warning.is_empty() else state.to_upper())
+		return prefix + "OPTIONAL ENCOUNTER"
+	if not awareness_warning.is_empty(): return awareness_warning
+	return "EXTRACTION AWAKENED · Follow the spring" if bool(dungeon_snapshot.get("extraction_ready", false)) else ""
 
 
 func boss_display_lines() -> Dictionary:

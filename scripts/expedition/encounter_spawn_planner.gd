@@ -23,12 +23,19 @@ static func clear_anchor(world: Node3D, room: Node3D, local: Vector3, radius: fl
 
 static func admit_sockets(world: Node3D, room: Node3D, candidates: Array[Vector3], radius: float,
 		height: float, maximum: int, occupied: Array[Node3D]) -> Array[Vector3]:
+	return _admit(world, room, candidates, radius, height, maximum, occupied, CombatRules.party_targets(world), 2)
+
+static func admit_event_sockets(world: Node3D, room: Node3D, candidates: Array[Vector3], radius: float,
+		height: float, maximum: int, occupied: Array[Node3D]) -> Array[Vector3]:
+	return _admit(world, room, candidates, radius, height, maximum, occupied, current_party_occupants(world), 3)
+
+static func _admit(world: Node3D, room: Node3D, candidates: Array[Vector3], radius: float,
+		height: float, maximum: int, occupied: Array[Node3D], party: Array[Node3D], limit: int) -> Array[Vector3]:
 	var accepted: Array[Vector3] = []
-	if not _valid(world, room, radius, height) or maximum < 1 or maximum > 2: return accepted
+	if not _valid(world, room, radius, height) or maximum < 1 or maximum > limit: return accepted
 	var excluded := _foreign_colliders(world)
 	var center := _floor(world, room.global_position, room, excluded)
 	if not center.is_finite(): return accepted
-	var party := CombatRules.party_targets(world)
 	if party.is_empty(): return accepted
 	for local: Vector3 in candidates:
 		if accepted.size() >= maximum: break
@@ -74,7 +81,7 @@ static func _query(point: Vector3, radius: float, height: float, excluded: Array
 	shape.height = height
 	var query := PhysicsShapeQueryParameters3D.new()
 	query.shape = shape
-	query.collision_mask = 1
+	query.collision_mask = 1 | 16
 	query.collide_with_areas = false
 	query.exclude = excluded
 	query.margin = 0.005
@@ -106,5 +113,45 @@ static func _foreign_colliders(world: Node3D) -> Array[RID]:
 
 static func _collect_foreign(node: Node, world: Node3D, result: Array[RID]) -> void:
 	if node == world: return
-	if node is CollisionObject3D and (node.collision_layer & 1) != 0: result.append(node.get_rid())
+	if node is CollisionObject3D and (node.collision_layer & (1 | 16)) != 0: result.append(node.get_rid())
 	for child: Node in node.get_children(): _collect_foreign(child, world, result)
+
+static func current_party_occupants(world: Node3D) -> Array[Node3D]:
+	var result: Array[Node3D] = []
+	if not is_instance_valid(world) or not world.is_inside_tree(): return result
+	for party: Node in world.get_tree().get_nodes_in_group("party_system"):
+		if party.get("world") != world: continue
+		for actor: Node3D in party.members.values():
+			if not is_instance_valid(actor) or not actor.is_inside_tree() or actor.is_queued_for_deletion() or bool(actor.get("eliminated")): continue
+			if float(actor.get("health")) > 0.0 or party.is_downed(actor):
+				if not result.has(actor): result.append(actor)
+	return result
+
+static func hazard_site_clear(world: Node3D, room: Node3D, shape: Dictionary) -> bool:
+	var geometry := preload("res://scripts/combat/danger_geometry.gd")
+	if not geometry.validate(shape).is_empty(): return false
+	var excluded := _foreign_colliders(world)
+	var center: Vector3 = shape.position
+	var extent: float = float(shape.radius) + (3.0 if shape.shape == "capsule" else 0.0)
+	for x in range(-ceili(extent / 0.35), ceili(extent / 0.35) + 1):
+		for z in range(-ceili(float(shape.radius) / 0.35), ceili(float(shape.radius) / 0.35) + 1):
+			var point := center + Vector3(x * 0.35, 0, z * 0.35)
+			if not geometry.contains(shape, point): continue
+			var floor_point := _floor(world, point, room, excluded)
+			if not floor_point.is_finite() or not _body_clear(world, floor_point, 0.35, 1.7, excluded): return false
+	return clear_anchor(world, room, room.to_local(center), 0.35, 1.7)
+
+static func hazard_escape_clear(world: Node3D, room: Node3D, shape: Dictionary) -> bool:
+	var geometry := preload("res://scripts/combat/danger_geometry.gd")
+	var excluded := _foreign_colliders(world)
+	for actor: Node3D in current_party_occupants(world):
+		if not geometry.contains(shape, actor.global_position, 0.5): continue
+		if float(actor.health) <= 0.0: return false
+		var escaped := false
+		for heading: Vector3 in [Vector3.FORWARD, Vector3.BACK, Vector3.LEFT, Vector3.RIGHT]:
+			var target := actor.global_position + heading * 2.5
+			var grounded := _floor(world, target, room, excluded)
+			if not grounded.is_finite() or geometry.contains(shape, grounded, 0.55): continue
+			if _path_clear(world, actor.global_position + Vector3.UP * 0.025, grounded, room, 0.38, 1.7, excluded): escaped = true
+		if not escaped: return false
+	return true

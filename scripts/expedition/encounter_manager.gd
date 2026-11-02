@@ -76,18 +76,21 @@ func _spawn_initial(id: int) -> void:
 	encounter_started.emit(id)
 
 func _spawn(room_id: int, archetype: StringName, local_point: Vector3, elite: bool, strength: float = 1.0,
-		support_receipt: String = "", owner_receipt: String = "") -> Node3D:
+		support_receipt: String = "", owner_receipt: String = "", event_definition: String = "") -> Node3D:
 	if _depth_policy.is_empty() or not rooms.has(room_id) or not ENEMIES.has(archetype):
 		return null
-	if not support_receipt.is_empty() and (_level.scheduler == null \
-			or not _level.scheduler.support_spawn_authorized(owner_receipt, support_receipt, room_id, local_point)): return null
+	if not support_receipt.is_empty():
+		if _level.scheduler == null: return null
+		if event_definition.is_empty():
+			if not _level.scheduler.support_spawn_authorized(owner_receipt, support_receipt, room_id, local_point): return null
+		elif not _level.scheduler.event_support_spawn_authorized(owner_receipt, support_receipt, room_id, local_point, event_definition): return null
 	for record: Dictionary in _registered_actors.values():
 		if not support_receipt.is_empty() and record.receipt == support_receipt: return null
 	var enemy := ENEMIES[archetype].instantiate() as Node3D
 	var data: Resource = enemy.data.duplicate(true)
 	var descriptor: Dictionary = {}
 	if not _content_plan.is_empty():
-		var definition_id := String(archetype) if support_receipt.is_empty() else "rootbound_boss_defender"
+		var definition_id := event_definition if not event_definition.is_empty() else String(archetype) if support_receipt.is_empty() else "rootbound_boss_defender"
 		descriptor = Content.source_descriptor(_content_plan, definition_id, "elite" if elite else "none")
 		if descriptor.is_empty():
 			enemy.free()
@@ -118,7 +121,44 @@ func _spawn(room_id: int, archetype: StringName, local_point: Vector3, elite: bo
 		"owner_encounter_receipt": owner_receipt}
 	enemy.position = local_point + Vector3.UP * 0.15
 	if not _content_plan.is_empty(): enemy.combat_active = false
-	rooms[room_id].add_child(enemy)
+	# add_child emits synchronous tree callbacks. Preserve this attempt's owners
+	# before attaching; cancellation/retirement must not append a stale actor.
+	var receiver_ref: WeakRef = weakref(self)
+	var world_ref: WeakRef = weakref(_level)
+	var room: Node3D = rooms[room_id]
+	var room_ref: WeakRef = weakref(room)
+	var enemy_ref: WeakRef = weakref(enemy)
+	var actor_id := enemy.get_instance_id()
+	var had_content := not _content_plan.is_empty()
+	var generation := int(_level.run_generation) if had_content else -1
+	var receiver_inside := is_inside_tree()
+	var world_inside := _level.is_inside_tree()
+	var room_inside := room.is_inside_tree()
+	room.add_child(enemy)
+	var receiver := receiver_ref.get_ref() as Node
+	var remaining_world := world_ref.get_ref() as Node3D
+	var remaining_room := room_ref.get_ref() as Node3D
+	var created := enemy_ref.get_ref() as Node3D
+	var attached: bool = is_instance_valid(receiver) and not receiver.is_queued_for_deletion() \
+		and is_instance_valid(remaining_world) and not remaining_world.is_queued_for_deletion() \
+		and is_instance_valid(remaining_room) and not remaining_room.is_queued_for_deletion() \
+		and is_instance_valid(created) and not created.is_queued_for_deletion()
+	if attached:
+		attached = (not receiver_inside or receiver.is_inside_tree()) and (not world_inside or remaining_world.is_inside_tree()) \
+			and (not room_inside or remaining_room.is_inside_tree()) and receiver._level == remaining_world \
+			and receiver.rooms.get(room_id) == remaining_room and created.get_parent() == remaining_room
+	if attached and had_content:
+		attached = int(remaining_world.run_generation) == generation and remaining_world.run_source_context_valid() \
+			and remaining_world.issued_run_plan_matches(receiver._content_plan)
+		if attached and not support_receipt.is_empty():
+			attached = remaining_world.scheduler.support_spawn_authorized(owner_receipt, support_receipt, room_id, local_point) if event_definition.is_empty() \
+				else remaining_world.scheduler.event_support_spawn_authorized(owner_receipt, support_receipt, room_id, local_point, event_definition)
+	if not attached:
+		if is_instance_valid(receiver):
+			var pending: Dictionary = receiver._registered_actors.get(actor_id, {})
+			if not pending.is_empty() and pending.actor.get_ref() == created: receiver._registered_actors.erase(actor_id)
+		if is_instance_valid(created): created.queue_free()
+		return null
 	if not actors_by_room.has(room_id):
 		actors_by_room[room_id] = []
 	actors_by_room[room_id].append(enemy)
@@ -149,7 +189,7 @@ func spawn_patrol(room_id: int, elite: bool = false) -> bool:
 	if record.kind in [&"entrance", &"extraction", &"boss", &"secret"]:
 		return false
 	# Bound all awareness reinforcements to two per room and one per event.
-	var actors: Array = actors_by_room.get(room_id, [])
+	var actors: Array[Node3D] = _retained_actors(room_id)
 	if actors.size() >= 5:
 		return false
 	var player := get_tree().get_first_node_in_group("player") as Node3D
@@ -188,14 +228,14 @@ func _process(delta: float) -> void:
 		_refresh_activity()
 
 func _refresh_activity() -> void:
-	if current_room_id < 0:
+	if not is_inside_tree() or is_queued_for_deletion() or current_room_id < 0:
 		return
 	var player := get_tree().get_first_node_in_group("player") as Node3D
 	if player == null:
 		return
 	var candidates: Array[Node3D] = []
 	for id: int in actors_by_room:
-		for enemy: Node3D in actors_by_room[id]:
+		for enemy: Node3D in _retained_actors(id):
 			if not is_instance_valid(enemy) or enemy.health <= 0.0:
 				continue
 			if not support_owner_receipt(enemy).is_empty():
@@ -234,11 +274,13 @@ func _on_enemy_died(enemy: Node3D) -> void:
 		return
 	_defeated_receipts[record.receipt] = true
 	if not String(record.get("owner_encounter_receipt", "")).is_empty():
-		# Boss defenders are actual enemies, but not independent reward sources.
+		# Supported actors are actual enemies, but not independent reward sources.
+		if String(record.get("descriptor", {}).get("encounter_definition_id", "")).begins_with("root_event_"):
+			_level.record_event_member_death(enemy, death_record(enemy))
 		return
 	var id := int(record.room_id)
 	var alive := false
-	for actor: Node3D in actors_by_room.get(id, []):
+	for actor: Node3D in _retained_actors(id):
 		if is_instance_valid(actor) and actor.health > 0.0:
 			alive = true
 	if not alive:
@@ -282,8 +324,8 @@ func _actor_record(enemy: Node3D) -> Dictionary:
 
 func active_enemy_count() -> int:
 	var count := 0
-	for actors: Array in actors_by_room.values():
-		for actor: Node3D in actors:
+	for id: int in actors_by_room:
+		for actor: Node3D in _retained_actors(id):
 			if is_instance_valid(actor) and actor.health > 0.0 and actor.combat_active:
 				count += 1
 	return count
@@ -296,8 +338,36 @@ func active_ordinary_count() -> int:
 
 func all_actors() -> Array[Node3D]:
 	var result: Array[Node3D] = []
-	for actors: Array in actors_by_room.values():
-		for actor: Node3D in actors:
+	for id: int in actors_by_room:
+		for actor: Node3D in _retained_actors(id):
 			if is_instance_valid(actor):
 				result.append(actor)
+	return result
+
+func spawn_event_support(room_id: int, point: Vector3, receipt: String, owner_receipt: String, archetype: StringName) -> Node3D:
+	return _spawn(room_id, archetype, point, false, 1.0, receipt, owner_receipt, "root_event_" + String(archetype))
+
+func ordinary_room_proven_clear(room_id: int) -> bool:
+	if not spawned.has(room_id): return false
+	var found := false
+	for record: Dictionary in _registered_actors.values():
+		if int(record.room_id) != room_id or not String(record.get("owner_encounter_receipt", "")).is_empty(): continue
+		found = true
+		if not _defeated_receipts.has(record.receipt): return false
+	return found
+
+func event_support_record(actor: Node3D) -> Dictionary:
+	var record := _actor_record(actor)
+	if record.is_empty() or not String(record.get("descriptor", {}).get("encounter_definition_id", "")).begins_with("root_event_"): return {}
+	return {"receipt": String(record.receipt), "archetype": String(record.archetype), "owner_encounter_receipt": String(record.owner_encounter_receipt),
+		"encounter_definition_id": String(record.descriptor.encounter_definition_id), "room_id": int(record.room_id)}
+
+func _retained_actors(room_id: int) -> Array[Node3D]:
+	# Corpse disposal may leave a freed Object Variant in the old room array.
+	# Validate before assigning to a typed Node variable; never turn absence
+	# into a death or erase the private source/death receipt registry.
+	var result: Array[Node3D] = []
+	for candidate: Variant in actors_by_room.get(room_id, []):
+		if is_instance_valid(candidate) and candidate is Node3D: result.append(candidate as Node3D)
+	if actors_by_room.has(room_id): actors_by_room[room_id] = result
 	return result

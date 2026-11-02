@@ -110,7 +110,7 @@ func _physics_process(delta: float) -> void:
 		else: queue_free()
 		return
 	var destination := global_position + direction * speed * delta
-	var mask := 1 | (2 if target_group in [&"player", &"party_members"] else 4)
+	var mask := 1 | 16 | (2 if target_group in [&"player", &"party_members"] else 4)
 	var ray := PhysicsRayQueryParameters3D.create(global_position, destination, mask)
 	ray.collide_with_areas = false
 	ray.hit_from_inside = true
@@ -141,7 +141,7 @@ func _physics_process(delta: float) -> void:
 			if not target is Node3D or target == actor:
 				continue
 			var center: Vector3 = target.global_position + Vector3.UP
-			if center.distance_to(global_position) <= splash_radius and CombatRules.visible_from(self, global_position + Vector3(collision.normal) * 0.04, center) and _impact_allowed(target):
+			if center.distance_to(global_position) <= splash_radius and CombatRules.visible_from(self, global_position + Vector3(collision.normal) * 0.04, center, target) and _impact_allowed(target):
 				CombatRules.apply_hit(source, target, damage * 0.7, attack_id, &"magic", stagger)
 			if not is_instance_valid(self): return
 			if not _guard_or_cancel(): return

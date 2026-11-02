@@ -164,7 +164,7 @@ func _choose_target(order: StringName) -> Node3D:
 	var examined := 0
 	# Encounters cap active enemies at six. Extra inactive rooms are rejected
 	# before scoring, so generation size never increases the decision budget.
-	for candidate: Node in actor.get_tree().get_nodes_in_group("enemies"):
+	for candidate: Node in _automatic_targets():
 		if not _valid_enemy(candidate):
 			continue
 		var distance: float = actor.global_position.distance_to(candidate.global_position)
@@ -187,6 +187,17 @@ func _choose_target(order: StringName) -> Node3D:
 			best = score
 			selected = candidate as Node3D
 	return selected
+
+func _automatic_targets() -> Array[Node]:
+	var candidates: Array[Node] = actor.get_tree().get_nodes_in_group("enemies")
+	var world := actor.party.get("world") as Node3D
+	# A dormant destructible is never a normal monster. Only its actual world
+	# registration can offer an engaged core for assistance after a valid hit.
+	# Keep it outside enemies so ordinary monster lifesteal/kill rules stay intact.
+	if is_instance_valid(world) and world.has_method("engaged_hive_targets"):
+		for core: Node3D in world.engaged_hive_targets():
+			if is_instance_valid(core) and not candidates.has(core): candidates.append(core)
+	return candidates
 
 func _valid_enemy(candidate: Variant) -> bool:
 	if not is_instance_valid(candidate) or not candidate is Node3D or not candidate.is_inside_tree():

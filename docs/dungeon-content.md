@@ -4,8 +4,9 @@
 [validated 7D.2 checkpoint](milestone-7d2-validation.md) adds actual
 Thornmarshal and Mycelial Cantor controllers, an Ascendant Thornmarshal pattern
 and an optional Root Bark Champion to Rootbound. Read the [encounter guide](rootbound-encounters.md)
-for selection rules and mechanics. Additional biomes, hives, hordes, Ancient
-encounters and early extraction remain later work. Headless validation does not
+for selection rules and mechanics. The [7D.3 event batch](rootbound-events.md)
+adds spike lanes, spore patches, a destructible hive and finite horde. Additional
+biomes, trap families, Ancient encounters and early extraction remain later work. Headless validation does not
 replace physical Android play-testing or rendered visual review.
 
 ## One issued expedition
@@ -16,8 +17,7 @@ The Rootbound progression track keeps its existing `biome_id: rootbound_abyss`. 
 
 Session admits a content run through `begin_content_run`; Abyss independently prepares it through `configure_content`. Game compares both full plans and the separate depth policy during travel. Public getters return detached copies. The original `begin_run`, `begin_depth_run`, `generate` and `generate_for_depth` remain compatibility paths for explicit fixtures; production travel uses the content path. `generate_for_run` adds content metadata without changing configured topology version 2 or the bounded seed mixer.
 
-Content version 2 freezes the required selection, eligible optional profile and
-source rules. `RoomContentPlanner` derives optional placement from that plan and
+Content version 3 retains the required boss selection and freezes separate hazard, hive and horde profiles and source rules. `RoomContentPlanner` derives optional placement from that plan and
 the generated layout. The world privately admits the actual room after native
 floor, body and route checks; an unsafe optional slot is omitted. These probes
 exclude the retained previous world's collision and require ground belonging to
@@ -65,6 +65,16 @@ spawn lift. Cantor consumes one attempt per phase, with at most two live defende
 and four admitted across the encounter. Failure is harmless and consumes the
 attempt. Owner death, room exit or source invalidation cancels support without
 counting it as a kill. Rootwarden keeps its original activation behavior.
+
+## Rootbound event source proof
+
+D3 assigns independent deterministic optional slots after Champion placement. Hazard pools retain two wrappers. Typed hazard admission reserves warning capacity without cancelling existing ordinary attacks merely to make space. Hives and hordes suspend ordinary activity and use full 3.5-second spawn/resume warnings; reservations count toward the shared limits. Legacy ordinary warnings are not represented as using a new global four-shape cap.
+
+The private event registry binds the actual core, committed wave actors and verified deaths to one issued run. Pausing retains those actors, health and identities, cancels their attacks and owned projectiles, and requires a fresh warning. Missing actors are never substituted for kills. Core-only completion grants no shell kill XP; hordes require all committed waves. Terminal proof produces one aggregate cache/kill credit/record, while individual event members produce no independent rewards. Existing v7 records accept the two registered event identities.
+
+The opaque hive uses physical, camera and stationary-obstacle layers. Cached companion routes invalidate on actual body admission/removal. Gameplay line-of-sight and projectile sweeps include that obstacle; a direct ray may hit its intended target, but cannot ignore a different intervening core. Ordinary enemies retain their prior collision bits and add the stationary obstacle. Floor probes keep the original world layer.
+
+See [exact event timing, selection and rewards](rootbound-events.md). Resource edits affect future issued content; the approved v1 hazard/event tuning tuples are fixed, rather than freely retunable exports.
 
 ## Attack footprints and projectile lifetime
 

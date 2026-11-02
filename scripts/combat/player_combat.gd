@@ -265,15 +265,14 @@ func _within_melee(candidate: Variant, data: AttackData) -> bool:
 func _clear_spell_center(destination: Vector3) -> Vector3:
 	var start: Vector3 = actor.global_position + Vector3.UP
 	var end: Vector3 = destination + Vector3.UP
-	var ray := PhysicsRayQueryParameters3D.create(start, end, 1)
+	var ray := PhysicsRayQueryParameters3D.create(start, end, 1 | 16)
 	var hit: Dictionary = actor.get_world_3d().direct_space_state.intersect_ray(ray)
 	if not hit.is_empty():
 		return Vector3(hit.position) - (end - start).normalized() * 0.2 - Vector3.UP
 	return destination
 
 func _clear_from(center: Vector3, candidate: Node3D) -> bool:
-	var ray := PhysicsRayQueryParameters3D.create(center + Vector3.UP, candidate.global_position + Vector3.UP, 1)
-	return actor.get_world_3d().direct_space_state.intersect_ray(ray).is_empty()
+	return CombatRules.visible_from(actor, center + Vector3.UP, candidate.global_position + Vector3.UP, candidate)
 
 func find_target(reach: float = 12.0, require_cone: bool = true) -> Node3D:
 	if actor.target_locked and _valid_target(actor.target):

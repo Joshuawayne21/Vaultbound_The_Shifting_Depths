@@ -77,15 +77,24 @@ static func party_targets(context: Node) -> Array[Node3D]:
 static func has_line_of_sight(source: Node3D, target: Node3D) -> bool:
 	if not is_instance_valid(source) or not is_instance_valid(target):
 		return false
-	return visible_from(source, source.global_position + Vector3.UP, target.global_position + Vector3.UP)
+	return visible_from(source, source.global_position + Vector3.UP, target.global_position + Vector3.UP, target)
 
-static func visible_from(context: Node3D, origin: Vector3, destination: Vector3) -> bool:
+static func visible_from(context: Node3D, origin: Vector3, destination: Vector3, intended_target: Node3D = null) -> bool:
 	if not is_instance_valid(context) or not context.is_inside_tree():
 		return false
-	var query := PhysicsRayQueryParameters3D.create(origin, destination, 1)
+	# Stationary encounter bodies also occlude combat and interaction rays. An
+	# aimed destructible must remain reachable through its own hit collider;
+	# allowing only the first hit on that exact target preserves other blockers.
+	var query := PhysicsRayQueryParameters3D.create(origin, destination, 1 | 16)
 	query.collide_with_areas = false
 	query.hit_from_inside = true
-	return context.get_world_3d().direct_space_state.intersect_ray(query).is_empty()
+	if context is CollisionObject3D and (context.collision_layer & 16) != 0:
+		query.exclude = [context.get_rid()]
+	var hit := context.get_world_3d().direct_space_state.intersect_ray(query)
+	if hit.is_empty(): return true
+	if not is_instance_valid(intended_target): return false
+	var collider: Node = hit.get("collider") as Node
+	return collider == intended_target or (is_instance_valid(collider) and intended_target.is_ancestor_of(collider))
 
 static func apply_hit(source: Node3D, target: Node3D, amount: float, attack_id: int,
 		kind: StringName = &"melee", stagger: float = 0.0,

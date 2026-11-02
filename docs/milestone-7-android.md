@@ -49,8 +49,8 @@ The [content integration guide](dungeon-content.md) describes source-bound rewar
 The [7D.2 headless gate](milestone-7d2-validation.md) passed; these physical-device
 checks remain required. See the [encounter guide](rootbound-encounters.md) for
 the implemented scope and initial selection
-rules; other themes, hives, hordes, Ancient encounters and early extraction remain
-later work.
+rules. The following 7D.3 section covers the newer hazards and events; other
+themes, Ancient encounters and early extraction remain later work.
 
 1. Preserve a backed-up profile and confirm Depth 1 still selects Rootwarden.
    At Depth 2 or higher, compare the portal's possible-boss list with the actual
@@ -87,6 +87,18 @@ later work.
    attachments, frame-time spikes, warmth and battery use. No headless result
    substitutes for these physical-device observations.
 
+## 7D.3 hazards, hive and horde
+
+The [7D.3 headless gate](milestone-7d3-validation.md) passed. The checks below still require real Android hardware. Use backed-up test profiles with legitimately unlocked depths; record the visible seed/depth. Desktop reproduction can use the main scene's `debug_expedition_seed` or `--expedition-seed=N`; this does not bypass depth eligibility.
+
+1. At Depth 2+, find a selected spike lane or spore grove. Check warning footprints in both cameras, dodge readability, no sudden pulse burst after a hitch, and no continuing damage after leaving. A cancelled shown room hazard does not restart for free on re-entry.
+2. At Depth 6+, find an optional Spore Hive. Walk and orbit the camera around it; bodies, attacks and camera must not pass through the core. Confirm dormant companions leave it alone, direct attacks work, and companions can assist after a valid hit. Check nearby doorways and chest approaches.
+3. Damage a hive slowly to see both warned waves, then try a separate run with a fast core defeat. Only actual committed defenders count; the core itself grants no monster kill XP. Kill outstanding defenders and search the single cache.
+4. Find a selected horde after clearing its original room pack. Solo waves contain two members, party waves three. At Depth 11+, verify the second-wave golem. Move through a doorway during a warning or fight, return, and check surviving health, the fresh warning and absence of stale projectiles.
+5. Switch cameras during each event, issue Guardian/Mystic commands and verify reaction delays, safe hive routes and readable arrival/resume/member feedback. Downed party members must not receive a spawn directly on them. Review crowded warning readability.
+6. Search part or all of a reward cache, finish the required boss, extract and restart. Confirm only collected items/DM were secured once and event records persisted. On a separate failed run, secured equipment remains while current unsecured rewards are lost.
+7. Repeat on Low/Medium/High, reduced effects and ambient density settings. Essential hazard/core silhouettes remain; optional motes reduce. Record frame-time spikes, memory, thermal behavior and touch comfort. Host microsecond timings and mesh budgets are not device FPS measurements.
+
 ## Capture performance and visual evidence
 
 Record at least ten minutes covering plaza/perimeter traversal, crowded district views, portals, combat and a representative dungeon. Compare cold start and warmed-up play; note frame-time spikes, thermal throttling, touch comfort and battery drain. Use the metrics display/profiler where available. Native mesh counts and cloud CPU timings cannot establish device FPS.
@@ -97,4 +109,4 @@ Record at least ten minutes covering plaza/perimeter traversal, crowded district
 
 Attach actual screenshots or a short recording for visual issues. Label any desktop software-rendered capture accurately; it is not Android evidence. **30 FPS** and optional **60 FPS** remain device goals until verified.
 
-Run only the checks applicable to the downloaded checkpoint. Further biomes/bosses/recruits, genetics, Veilgarden and Frontier require their own stage-specific tests when implemented. Their presence in the [plan](milestone-7-plan.md) does not make them available in 7B, 7C or 7D.1.
+Run only the checks applicable to the downloaded checkpoint. Further biomes/bosses/recruits, genetics, Veilgarden and Frontier require their own stage-specific tests when implemented. Their presence in the [plan](milestone-7-plan.md) does not make them available in the current checkpoint.

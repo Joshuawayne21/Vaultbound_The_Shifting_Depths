@@ -41,6 +41,11 @@ static func normalize(value: Variant, revision: int) -> Dictionary:
 		result.entries[id] = {"discovered_before_tracking": bool(entry.discovered_before_tracking),
 			"secured_defeats": int(entry.secured_defeats), "highest_recorded_depth": int(entry.highest_recorded_depth),
 			"first_recorded_revision": int(entry.first_recorded_revision), "first_recorded_utc": int(entry.first_recorded_utc)}
+	# Events were introduced with actual source tracking. Old floor/kill totals
+	# cannot imply historical hive/horde completions or a zero-count legacy flag.
+	for id: String in Ids.EVENT_IDS:
+		if result.entries.has(id) and (result.entries[id].discovered_before_tracking or result.entries[id].secured_defeats < 1):
+			return {}
 	# Variant observations are subsets, not additional boss identities or kills.
 	# Validate after the whole map so dictionary order cannot change acceptance.
 	for id: String in Ids.VARIANT_JOURNAL:

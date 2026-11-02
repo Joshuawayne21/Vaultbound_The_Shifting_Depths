@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="VaultHazardDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/expedition/hazard_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"root_spore_patch"
+version = 1
+shape = &"circle"
+radius = 1.6
+axis_length = 0.0
+warning_time = 2.0
+active_time = 3.0
+damage = 4.0
+pulse_count = 3
+pulse_interval = 1.0
+height_tolerance = 2.0

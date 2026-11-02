@@ -53,7 +53,7 @@ func _ready() -> void:
 	_patrol_destination = spawn_position
 	floor_snap_length = 0.35
 	collision_layer = 4
-	collision_mask = 3
+	collision_mask = 3 | 16
 	add_to_group("combat_targets")
 	add_to_group("enemies")
 	add_to_group("combat_telegraphs")
@@ -382,7 +382,7 @@ func _steer_direction(desired: Vector3) -> Vector3:
 
 func _direction_clear(direction: Vector3, distance: float) -> bool:
 	var origin: Vector3 = global_position + Vector3.UP * 0.6
-	var ray := PhysicsRayQueryParameters3D.create(origin, origin + direction * distance, 1, [get_rid()])
+	var ray := PhysicsRayQueryParameters3D.create(origin, origin + direction * distance, 1 | 16, [get_rid()])
 	return get_world_3d().direct_space_state.intersect_ray(ray).is_empty()
 
 

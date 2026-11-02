@@ -33,5 +33,5 @@ slot = &""
 aura_profile = &"none"
 special_effects = Array[String]([])
 crafting_tags = Array[String]([])
-acquisition_sources = Array[String](["chest:ancient", "chest:cursed", "monster:elite", "encounter:mycelial_cantor"])
+acquisition_sources = Array[String](["chest:ancient", "chest:cursed", "monster:elite", "encounter:mycelial_cantor", "encounter:root_spore_hive"])
 icon = ExtResource("2")

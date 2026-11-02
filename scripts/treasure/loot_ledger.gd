@@ -15,6 +15,8 @@ const SOURCE_PRESENTATIONS := {
 	"thornmarshal": {"kind": "boss", "label": "Thornmarshal Reliquary"},
 	"mycelial_cantor": {"kind": "boss", "label": "Mycelial Cantor Reliquary"},
 	"root_bark_champion": {"kind": "elite", "label": "Root Bark Champion Cache"},
+	"root_spore_hive": {"kind": "elite", "label": "Spore Hive Cache"},
+	"root_horde": {"kind": "elite", "label": "Rootbound Horde Cache"},
 }
 
 var _records: Dictionary = {}

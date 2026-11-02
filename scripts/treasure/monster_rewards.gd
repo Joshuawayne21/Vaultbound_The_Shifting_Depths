@@ -7,6 +7,11 @@ const SOURCES := ["basic", "stronger", "elite", "boss"]
 const DEPTH_POLICY = preload("res://resources/expedition/depth_policy.tres")
 const REGISTERED_SOURCES := {"enemy_basic": "basic", "enemy_stronger": "stronger", "enemy_elite": "elite", "rootwarden_legacy": "boss"}
 const ENCOUNTER_SOURCES := {"thornmarshal": "encounter:thornmarshal", "mycelial_cantor": "encounter:mycelial_cantor", "root_bark_champion": "encounter:root_bark_champion"}
+const EVENT_SOURCES := {"event_root_spore_hive": "encounter:root_spore_hive", "event_root_horde": "encounter:root_horde"}
+const EVENT_ITEMS := {
+	"event_root_spore_hive": ["glow_spore", "root_fiber", "emerald_dust", "common_enhancement_stone", "resonant_root_sap", "bloomheart_nectar"],
+	"event_root_horde": ["root_fiber", "iron_ore", "emerald_dust", "common_enhancement_stone", "tempered_ingot", "mooncap_tonic", "heartwood_splinter"],
+}
 const ROOTWARDEN_EXCLUSIVE := ["rootwarden_heart", "rootwarden_essence", "verdant_oathblade", "vaultheart_staff"]
 @export var basic_table: VaultLootTable
 @export var stronger_table: VaultLootTable
@@ -14,6 +19,8 @@ const ROOTWARDEN_EXCLUSIVE := ["rootwarden_heart", "rootwarden_essence", "verdan
 @export var boss_table: VaultLootTable
 ## Explicit actual encounter sources; never fall back to the Rootwarden table.
 @export var encounter_tables: Dictionary = {}
+## One aggregate reward after actual terminal event proof, never per defender.
+@export var event_tables: Dictionary = {}
 @export var currency_ranges: Dictionary = {
 	"basic": Vector2i(4, 8), "stronger": Vector2i(8, 18),
 	"elite": Vector2i(25, 50), "boss": Vector2i(120, 250),
@@ -125,7 +132,7 @@ func roll_registered(seed_value: int, receipt: String, source_profile: Dictionar
 		return roll_for_depth(seed_value, receipt, String(source_profile.source), room_distance, int(depth), issued_depth_policy)
 	if receipt.is_empty() or receipt.length() > 160 or room_distance < 0 or not VaultDepthPolicy.valid_snapshot(issued_depth_policy, int(depth)):
 		return {}
-	var table: VaultLootTable = encounter_tables[source_profile.id]
+	var table: VaultLootTable = event_tables[source_profile.id] if EVENT_SOURCES.has(source_profile.id) else encounter_tables[source_profile.id]
 	var reward := table.roll(seed_value ^ int(String(source_profile.source).hash()), receipt)
 	if reward.is_empty():
 		return {}
@@ -141,6 +148,8 @@ func registered_profile_valid(source_profile: Dictionary) -> bool:
 	var id: String = source_profile.id
 	if REGISTERED_SOURCES.has(id):
 		return source_profile.get("source") == REGISTERED_SOURCES[id] and is_valid()
+	if EVENT_SOURCES.has(id):
+		return _event_profile_valid(source_profile)
 	if not ENCOUNTER_SOURCES.has(id) or source_profile.get("source") != ENCOUNTER_SOURCES[id] \
 			or not encounter_tables.get(id) is VaultLootTable:
 		return false
@@ -155,6 +164,21 @@ func registered_profile_valid(source_profile: Dictionary) -> bool:
 	for item: VaultItemDefinition in all_items:
 		if item.category == "gold" or String(item.id) in ROOTWARDEN_EXCLUSIVE \
 				or not VaultInventory.definition_available(item):
+			return false
+	return true
+
+func _event_profile_valid(source_profile: Dictionary) -> bool:
+	var id: String = source_profile.id
+	if source_profile.get("source") != EVENT_SOURCES[id] or not event_tables.get(id) is VaultLootTable:
+		return false
+	var table: VaultLootTable = event_tables[id]
+	if table.source_tag() != EVENT_SOURCES[id] or not table.is_valid() or table.gold_max > 1000000 \
+			or table.category != &"reinforced" or table.guaranteed_item != null or not table.guaranteed_items.is_empty():
+		return false
+	# The base hive is valid with zero defenders; no elite, boss, future-content
+	# or equipment grants may be smuggled into these modest aggregate sources.
+	for item: VaultItemDefinition in table.entries:
+		if String(item.id) not in EVENT_ITEMS[id] or not VaultInventory.definition_available(item):
 			return false
 	return true
 

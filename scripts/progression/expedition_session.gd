@@ -17,6 +17,10 @@ const EncounterRewards = preload("res://resources/loot/monster_rewards.tres")
 const DepthProgress = preload("res://scripts/progression/depth_progression.gd")
 const EncounterProgress = preload("res://scripts/progression/encounter_progression.gd")
 const Content = preload("res://scripts/expedition/dungeon_content.gd")
+const EVENT_RECORD_KEYS := ["encounter_definition_id", "content_version", "encounter_version", "objective_role",
+	"reward_profile_id", "pet_profile_id", "discovery_id", "kind", "roster_profile_id",
+	"receipt", "room_id", "depth", "drop_position", "member_deaths"]
+const EVENT_MEMBER_KEYS := ["receipt", "wave_ordinal", "member_ordinal", "encounter_definition_id", "archetype", "encounter_version"]
 
 var store := VaultProfileStore.new()
 var profile: Dictionary = VaultProfileStore.empty_profile()
@@ -341,6 +345,109 @@ func _content_source(record: Dictionary) -> Dictionary:
 	if not _issued_content_plan.reward_profiles.has(expected.reward_profile_id) or not _issued_content_plan.pet_profiles.has(expected.pet_profile_id):
 		return {}
 	return expected
+
+func complete_event(world: Node3D, source: Node3D, generation: int) -> Dictionary:
+	var rejected := {"ok": false, "cache_id": "", "generation": generation, "still_current": false, "error": "Event source unavailable."}
+	if _issued_content_plan.is_empty() or not run_context_valid(world, generation) or not world.has_method("event_completion_record") \
+			or not is_instance_valid(source) or not source.is_inside_tree() or source.is_queued_for_deletion():
+		return rejected
+	rejected.still_current = true
+	# Only the actual registered owner can return terminal core/roster proof.
+	# A planned wave, culled actor or rewardless support death is not completion.
+	var record: Dictionary = world.event_completion_record(source)
+	var admitted := _event_record_admission(record)
+	if admitted.is_empty() or not run_context_valid(world, generation):
+		return rejected
+	var receipt: String = record.receipt
+	if _encounter_sources.has(receipt) or _claimed.has(receipt) or _loot_ledger.has_source(receipt) \
+			or kills > VaultProfileStore.MAX_COUNT - int(admitted.kill_credit):
+		return rejected
+	var descriptor: Dictionary = admitted.descriptor
+	var reward_profile: Dictionary = _issued_content_plan.reward_profiles.get(descriptor.reward_profile_id, {})
+	var pet_profile: Dictionary = _issued_content_plan.pet_profiles.get(descriptor.pet_profile_id, {})
+	var reward := EncounterRewards.roll_registered(run_seed, receipt, reward_profile, int(record.depth), _issued_depth.policy)
+	var validated := _validate_reward(reward)
+	var findings := PetCatalog.findings_for_encounter(run_seed, receipt, pet_profile)
+	var pending := PetProgress.append_findings(_pet_pending, findings, receipt)
+	var next_encounters := EncounterProgress.append_pending(_pending_encounters, receipt,
+		String(descriptor.discovery_id), String(_issued_content_plan.theme_id), int(_issued_depth.expedition_depth))
+	if validated.is_empty() or pending.is_empty() or next_encounters.is_empty():
+		return rejected
+	var result := _loot_ledger.register(validated, int(record.room_id), record.drop_position, "elite", "", String(descriptor.encounter_definition_id))
+	if not bool(result.get("ok", false)):
+		return rejected
+	# One aggregate receipt owns every effect. Install all consequences before
+	# callbacks; none of the members or the hive shell receives a second grant.
+	_encounter_sources[receipt] = true
+	_pet_pending = pending
+	_pending_encounters = next_encounters
+	kills += int(admitted.kill_credit)
+	for archetype: String in admitted.discoveries:
+		_run_monsters[archetype] = true
+	loot_changed.emit()
+	if run_context_valid(world, generation):
+		_emit_changed()
+	return {"ok": true, "cache_id": String(result.id), "generation": generation,
+		"still_current": run_context_valid(world, generation), "error": ""}
+
+func _event_record_admission(record: Dictionary) -> Dictionary:
+	if record.size() != EVENT_RECORD_KEYS.size() or record.keys().any(func(key: Variant) -> bool: return key not in EVENT_RECORD_KEYS) \
+			or not record.get("encounter_definition_id") is String or not record.get("roster_profile_id") is String \
+			or not record.get("receipt") is String or not record.get("room_id") is int or int(record.room_id) < 0 \
+			or not record.get("depth") is int or int(record.depth) < 0 or not record.get("drop_position") is Vector3 \
+			or not record.drop_position.is_finite() or not record.get("member_deaths") is Array:
+		return {}
+	var descriptor := Content.event_source_descriptor(_issued_content_plan, record.encounter_definition_id, record.roster_profile_id)
+	if descriptor.is_empty() or record.encounter_definition_id not in EncounterProgress.Ids.EVENT_IDS:
+		return {}
+	for key: String in descriptor:
+		if not record.has(key) or record[key] != descriptor[key]:
+			return {}
+	var receipt := "event_room_%d_%s_0" % [int(record.room_id), String(record.encounter_definition_id)]
+	if record.receipt != receipt or receipt.length() > 160 or descriptor.objective_role != "optional" \
+			or descriptor.pet_profile_id != "none" or descriptor.kind != "elite" \
+			or not _issued_content_plan.reward_profiles.has(descriptor.reward_profile_id) \
+			or not _issued_content_plan.pet_profiles.has(descriptor.pet_profile_id):
+		return {}
+	var roster: Array = Content.event_roster_members(_issued_content_plan, record.encounter_definition_id, record.roster_profile_id)
+	if roster.size() != 2:
+		return {}
+	var expected: Dictionary = {}
+	for wave_index in range(roster.size()):
+		if not roster[wave_index] is Array:
+			return {}
+		for member_index in range(roster[wave_index].size()):
+			var archetype: Variant = roster[wave_index][member_index]
+			if not archetype is String or archetype not in ["skeleton", "archer", "golem"]:
+				return {}
+			var member_receipt := "%s_wave_%d_member_%d" % [receipt, wave_index, member_index]
+			expected[member_receipt] = {"receipt": member_receipt, "wave_ordinal": wave_index, "member_ordinal": member_index,
+				"encounter_definition_id": "root_event_" + archetype, "archetype": archetype, "encounter_version": 1}
+	if expected.size() < 4 or expected.size() > 6 or record.member_deaths.size() > expected.size() \
+			or (record.encounter_definition_id == "root_horde" and record.member_deaths.size() != expected.size()):
+		return {}
+	var seen: Dictionary = {}
+	var discoveries: Array[String] = []
+	for value: Variant in record.member_deaths:
+		if not value is Dictionary or value.size() != EVENT_MEMBER_KEYS.size() or not value.get("receipt") is String \
+				or not expected.has(value.receipt) or seen.has(value.receipt) or value != expected[value.receipt]:
+			return {}
+		seen[value.receipt] = true
+		if not discoveries.has(String(value.archetype)):
+			discoveries.append(String(value.archetype))
+	if record.encounter_definition_id == "root_spore_hive":
+		# The factory commits complete pairs atomically. Wave two is available
+		# only after the first pair's real deaths; failed/unscheduled waves vanish.
+		if seen.size() not in [0, 2, 4]:
+			return {}
+		for wave in range(2):
+			if wave * 2 >= seen.size():
+				break
+			for member in range(2):
+				if not seen.has("%s_wave_%d_member_%d" % [receipt, wave, member]):
+					return {}
+	discoveries.sort()
+	return {"descriptor": descriptor, "kill_credit": seen.size(), "discoveries": discoveries}
 
 func claim_pet_discovery(world: Node3D, source: Node3D, actor: Node, generation: int) -> Dictionary:
 	var rejected := {"ok": false, "still_current": false, "generation": generation, "error": "Move closer to this discovery."}
