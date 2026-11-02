@@ -36,12 +36,13 @@ func snapshot() -> Dictionary:
 		"accent_color": [data.accent_color.r, data.accent_color.g, data.accent_color.b, data.accent_color.a]}
 	for key: String in NUMBERS: values[key] = float(data.get(key))
 	var crystal := id == &"crystal_lancekeeper"
+	var ember := id == &"cinder_pikewarden"
 	var result := {"id": String(id), "display_name": display_name, "scene_path": scene.resource_path,
 		"available": available, "content_version": content_version, "encounter_version": encounter_version,
 		"archetype": "skeleton", "objective_eligible": false, "phase_enabled": false,
-		"arena_profile_id": "crystal_lancekeeper_arena" if crystal else "rootbound_champion_arena", "reward_profile_id": String(id), "pet_profile_id": "none",
+		"arena_profile_id": "ember_pikewarden_arena" if ember else "crystal_lancekeeper_arena" if crystal else "rootbound_champion_arena", "reward_profile_id": String(id), "pet_profile_id": "none",
 		"discovery_id": String(id), "trophy_item_id": "", "allowed_variant_ids": ["none"],
-		"data": values, "attack": attack.snapshot(), "movement_radius": 2.5 if crystal else 4.0}
+		"data": values, "attack": attack.snapshot(), "movement_radius": 2.5 if crystal or ember else 4.0}
 	return result if valid_snapshot(result) else {}
 
 func is_valid() -> bool:
@@ -50,13 +51,14 @@ func is_valid() -> bool:
 static func valid_snapshot(value: Variant) -> bool:
 	if not value is Dictionary or not Attack.exact_keys(value, KEYS): return false
 	var crystal: bool = value.id == "crystal_lancekeeper"
-	if value.id not in ["root_bark_champion", "crystal_lancekeeper"] or value.display_name != ("Crystal Lancekeeper" if crystal else "Root Bark Champion") \
+	var ember: bool = value.id == "cinder_pikewarden"
+	if value.id not in ["root_bark_champion", "crystal_lancekeeper", "cinder_pikewarden"] or value.display_name != ("Cinder Pikewarden" if ember else "Crystal Lancekeeper" if crystal else "Root Bark Champion") \
 			or value.scene_path != "res://scenes/enemies/" + String(value.id) + ".tscn" or not value.available is bool \
-			or not value.content_version is int or value.content_version != (5 if crystal else 2) or not value.encounter_version is int or value.encounter_version != 1 \
+			or not value.content_version is int or value.content_version != (6 if ember else 5 if crystal else 2) or not value.encounter_version is int or value.encounter_version != 1 \
 			or value.archetype != "skeleton" or not value.objective_eligible is bool or value.objective_eligible \
-			or not value.phase_enabled is bool or value.phase_enabled or value.arena_profile_id != ("crystal_lancekeeper_arena" if crystal else "rootbound_champion_arena") \
+			or not value.phase_enabled is bool or value.phase_enabled or value.arena_profile_id != ("ember_pikewarden_arena" if ember else "crystal_lancekeeper_arena" if crystal else "rootbound_champion_arena") \
 			or value.reward_profile_id != value.id or value.discovery_id != value.id or value.pet_profile_id != "none" \
-			or value.trophy_item_id != "" or value.allowed_variant_ids != ["none"] or value.movement_radius != (2.5 if crystal else 4.0):
+			or value.trophy_item_id != "" or value.allowed_variant_ids != ["none"] or value.movement_radius != (2.5 if crystal or ember else 4.0):
 		return false
 	if not value.data is Dictionary or not Attack.exact_keys(value.data, DATA_KEYS): return false
 	var d: Dictionary = value.data
@@ -67,7 +69,7 @@ static func valid_snapshot(value: Variant) -> bool:
 	for channel: Variant in d.accent_color:
 		if not Attack.finite_number(channel, 0.0, 1.0): return false
 	for bound: Array in [["max_health", 100.0, 400.0], ["damage", 1.0, 50.0], ["armor", 0.0, 0.2],
-		["move_speed", 0.5, 3.0], ["detection_range", 3.0, 8.0], ["attack_range", 1.0, 3.0 if crystal else 2.8],
+		["move_speed", 0.5, 3.0], ["detection_range", 3.0, 8.0], ["attack_range", 1.0, 3.0 if crystal or ember else 2.8],
 		["preferred_range", 0.5, 2.8], ["patrol_radius", 0.0, 1.0], ["windup_time", 1.6, 4.0],
 		["recovery_time", 1.8, 4.0], ["attack_active_time", 0.05, 0.25], ["attack_cone_dot", 0.5, 0.9],
 		["hit_recovery", 0.0, 0.7], ["stagger_resistance", 0.0, 0.75], ["label_height", 1.9, 3.0]]:
@@ -75,8 +77,8 @@ static func valid_snapshot(value: Variant) -> bool:
 	# These collision/arena dimensions are part of the surveyed room admission,
 	# while the authored combat numbers above may be tuned within safe bounds.
 	if d.collision_radius != 0.4 or d.collision_height != 1.9 or d.leash_radius != 8.0: return false
-	if crystal:
-		return Attack.valid_snapshot(value.attack) and value.attack.id == "crystal_lance_thrust" and value.attack.pattern_version == 2 \
+	if crystal or ember:
+		return Attack.valid_snapshot(value.attack) and value.attack.id == ("cinder_pike_thrust" if ember else "crystal_lance_thrust") and value.attack.pattern_version == 2 \
 			and value.attack.parameters.length == d.attack_range and value.attack.parameters.radius == 0.65 \
 			and value.attack.damage == d.damage and value.attack.warning_time == d.windup_time \
 			and value.attack.active_time == d.attack_active_time and value.attack.recovery_time == d.recovery_time

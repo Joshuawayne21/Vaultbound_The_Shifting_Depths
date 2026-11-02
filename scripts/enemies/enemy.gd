@@ -44,8 +44,13 @@ var _aggressor: Node3D
 var _aggression_remaining := 0.0
 var _cosmetic_profile: StringName = &"legacy_native"
 
+func _move_ground_motion(_delta: float) -> void:
+	# Preserve the existing native motion for ordinary and historical actors.
+	# New bounded encounter leaves may own their exact swept motion here.
+	move_and_slide()
+
 func configure_cosmetic_profile(profile_id: StringName) -> bool:
-	if is_inside_tree() or profile_id not in [&"legacy_native", &"crystal_native"]: return false
+	if is_inside_tree() or profile_id not in [&"legacy_native", &"crystal_native", &"ember_native"]: return false
 	_cosmetic_profile = profile_id
 	return true
 
@@ -160,7 +165,7 @@ func _physics_process(delta: float) -> void:
 	velocity.x = move_toward(velocity.x, desired.x, acceleration * delta)
 	velocity.z = move_toward(velocity.z, desired.z, acceleration * delta)
 	velocity.y = -0.4 if is_on_floor() else velocity.y - 20.0 * delta
-	move_and_slide()
+	_move_ground_motion(delta)
 	if global_position.y < -6.0:
 		global_position = spawn_position + Vector3.UP * 0.1
 		velocity = Vector3.ZERO

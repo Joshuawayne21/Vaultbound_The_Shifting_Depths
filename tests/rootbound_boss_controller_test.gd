@@ -18,7 +18,9 @@ func _run() -> void:
 		if spec[0] != "thornmarshal": attacks = [&"brood_ground_patches", &"brood_core_pulse"]
 		for pattern: StringName in attacks: await _attack_cycle(pattern)
 		await _cancel_and_ward(attacks[0])
-		if spec[0] == "thornmarshal": await _charge_obstruction()
+		if spec[0] == "thornmarshal":
+			await _charge_obstruction()
+			await _charge_native_wall_contact()
 		else: await _reentrant_delivery()
 		await _phase_and_death(spec[1] == "ascendant_pattern")
 	await retire_fixture()
@@ -102,6 +104,43 @@ func _charge_obstruction() -> void:
 		commit(boss)
 		step(boss, 1.0)
 		check(Vector2(boss.global_position.x - boss.spawn_position.x, boss.global_position.z - boss.spawn_position.z).length() <= 9.0, "Long-frame actual charge remains within the admitted corridor")
+
+func _charge_native_wall_contact() -> void:
+	await focus(boss, 4.0)
+	if not check(boss.request_attack(&"sentinel_charge"), "Registered Sentinel admits a fresh charge before native wall contact"): return
+	var schedule: Dictionary = attack_snapshot(boss, "sentinel_charge")
+	var warned: Dictionary = boss.get_danger_zones()[0]
+	var direction: Vector3 = (warned.end - warned.start).normalized()
+	var token: Dictionary = boss._cast.token()
+	var before: float = player.health
+	var start: Vector3 = boss.global_position
+	step(boss, float(schedule.warning_time) - 0.01)
+	check(boss.state == &"windup" and player.health == before \
+		and Vector2(boss.global_position.x - start.x, boss.global_position.z - start.z).length() < 0.001,
+		"Sentinel wall-contact probe pays the complete issued warning before motion or damage")
+	step(boss, 0.02)
+	step(boss, 0.10)
+	var travelled := Vector2(boss.global_position.x - start.x, boss.global_position.z - start.z).length()
+	if not check(boss.state == &"active" and travelled >= 0.5 and player.health == before,
+		"Sentinel completes actual native partial travel before a new wall appears"): return
+	var at: Vector3 = start + direction * 2.0
+	at.y = (boss.get_parent() as Node3D).global_position.y + 1.4
+	var wall := obstacle(at, Vector3(2.0, 1.2, 0.25))
+	wall.rotation.y = atan2(direction.x, direction.z)
+	wall.reparent(boss.get_parent(), true)
+	await frames(2)
+	step(boss, float(boss.snapshot().remaining) + 0.01)
+	var stopped: Vector3 = boss.global_position
+	var contact: KinematicCollision3D = boss.move_and_collide(direction * 0.05, true)
+	check(world.is_ancestor_of(wall) and contact != null and contact.get_collider() == wall and boss.global_position == stopped \
+		and Vector2(stopped.x - start.x, stopped.z - start.z).length() > travelled \
+		and Vector2(stopped.x - warned.end.x, stopped.z - warned.end.z).length() > 0.5,
+		"Actual Sentinel capsule stops against the native non-party collider inside its warned lane")
+	check(player.health == before and boss.state == &"recovery" and boss.snapshot().remaining == float(schedule.recovery_time) \
+		and boss.get_danger_zones().is_empty() and not boss.cast_token_valid(token) and not boss.request_attack(&"sentinel_charge"),
+		"Native wall contact gives no party damage, retires the cast and preserves the complete authored recovery")
+	wall.get_parent().remove_child(wall)
+	wall.queue_free()
 
 func _reentrant_delivery() -> void:
 	await focus(boss)

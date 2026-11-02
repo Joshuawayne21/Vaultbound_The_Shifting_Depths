@@ -26,7 +26,7 @@ func _ready() -> void:
 	for index in range(24):
 		var point := Vector3(rng.randf_range(-bounds.x * 0.5, bounds.x * 0.5), rng.randf_range(0.3, maxf(0.31, bounds.y)), rng.randf_range(-bounds.z * 0.5, bounds.z * 0.5))
 		instances.set_instance_transform(index, Transform3D(Basis.IDENTITY, point))
-		var tint := Color("9ebfee") if biome == &"crystal" else Color("a7e8b2") if biome == &"abyss" else Color("ffd69a")
+		var tint := Color("b9a896") if biome == &"ember" else Color("9ebfee") if biome == &"crystal" else Color("a7e8b2") if biome == &"abyss" else Color("ffd69a")
 		if index % 3 == 0:
 			tint = Color("6bd9cc")
 		tint.a = 0.85 if index % 2 == 0 else 0.45

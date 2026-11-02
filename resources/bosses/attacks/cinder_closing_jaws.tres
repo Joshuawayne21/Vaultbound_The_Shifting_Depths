@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="VaultBossAttackDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/enemies/boss_attack_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"cinder_closing_jaws"
+controller_family = &"conductor"
+pattern_version = 2
+shape = &"capsule"
+damage_kind = &"magic"
+warning_time = 1.9
+active_time = 0.2
+recovery_time = 1.8
+damage = 14.0
+stage_count = 2
+stage_gap = 0.7
+parameters = {"radius": 0.6, "length": 5.0, "count": 1, "lateral_offset": 0.0, "lane_spacing": 0.0}
+stage_two = {"warning_time": 1.9, "active_time": 0.2, "damage": 14.0, "stagger": 0.0, "parameters": {"radius": 0.6, "length": 5.0, "count": 1, "lateral_offset": 0.0, "lane_spacing": 0.0}}

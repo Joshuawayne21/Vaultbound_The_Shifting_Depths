@@ -14,7 +14,13 @@ func _run() -> void:
 	var selected: Dictionary = {}
 	var root_plan: Dictionary = {}
 	for depth: int in [1, 5, 6, 11, 30, 50]:
-		for seed_value in range(100):
+		var retained_seeds: Array[int] = []
+		for candidate in range(2048):
+			var candidate_plan: Dictionary = Content.resolve_run_plan(candidate, depth)
+			if candidate_plan.get("theme_id") in ["rootbound_abyss", "crystal_caverns"]: retained_seeds.append(candidate)
+			if retained_seeds.size() == 100: break
+		if not check(retained_seeds.size() == 100, "Bounded public selection retains one hundred prior-theme cases at Depth%d" % depth): continue
+		for seed_value: int in retained_seeds:
 			var plan: Dictionary = Content.resolve_run_plan(seed_value, depth)
 			if not check(Content.valid_run_plan(plan, Policy.describe_depth(depth)), "Depth%d seed%d issues one complete executable theme" % [depth, seed_value]): continue
 			var crystal: bool = plan.theme_id == "crystal_caverns"
@@ -57,7 +63,7 @@ func _run() -> void:
 	check(shallow.available and shallow.themes.size() == 1 and shallow.themes[0].weight == 100 \
 		and deeper.available and deeper.themes.size() == 2 and deeper.themes[0].weight == 60 and deeper.themes[1].weight == 40 \
 		and not deeper.has("seed") and not deeper.has("required_boss_id"), "Preview honestly lists eligible weighted possibilities without issuing a seed")
-	check(Content.theme_pool_preview(51) == {"available": false, "content_version": 5, "themes": []}, "Unavailable depth cannot advertise partial theme choices")
+	check(Content.theme_pool_preview(51) == {"available": false, "content_version": 6, "themes": []}, "Unavailable depth cannot advertise partial theme choices")
 	for id: String in ["crystal_skeleton", "crystal_archer", "crystal_golem"]:
 		for variant: String in ["none", "elite"]:
 			var descriptor: Dictionary = Content.source_descriptor(selected, id, variant)
@@ -77,7 +83,7 @@ func _run() -> void:
 	changed.encounters.crystal_skeleton.variants.none.reward_profile_id = "rootwarden_legacy"
 	mutations.append(changed)
 	changed = selected.duplicate(true)
-	changed.theme_selection.weights.crystal_caverns = 100
+	changed.theme_selection.prior.weights.crystal_caverns = 100
 	mutations.append(changed)
 	changed = selected.duplicate(true)
 	changed.ordinary_profile.weights.golem = 90

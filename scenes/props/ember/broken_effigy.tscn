@@ -1,0 +1,122 @@
+[gd_scene load_steps=17 format=3]
+
+[ext_resource type="Material" path="res://resources/materials/ember/stone.tres" id="m0"]
+[ext_resource type="Material" path="res://resources/materials/ember/stone_light.tres" id="m1"]
+[ext_resource type="Material" path="res://resources/materials/ember/metal_trim.tres" id="m2"]
+
+[sub_resource type="BoxMesh" id="mesh0"]
+size = Vector3(1.45, 0.22, 0.65)
+
+[sub_resource type="BoxShape3D" id="shape0"]
+size = Vector3(1.45, 0.22, 0.65)
+
+[sub_resource type="BoxMesh" id="mesh1"]
+size = Vector3(0.62, 1.32, 0.36)
+
+[sub_resource type="BoxShape3D" id="shape1"]
+size = Vector3(0.62, 1.32, 0.36)
+
+[sub_resource type="BoxMesh" id="mesh2"]
+size = Vector3(0.32, 0.96, 0.36)
+
+[sub_resource type="BoxShape3D" id="shape2"]
+size = Vector3(0.32, 0.96, 0.36)
+
+[sub_resource type="BoxMesh" id="mesh3"]
+size = Vector3(0.62, 0.2, 0.44)
+
+[sub_resource type="BoxShape3D" id="shape3"]
+size = Vector3(0.62, 0.2, 0.44)
+
+[sub_resource type="BoxMesh" id="mesh4"]
+size = Vector3(0.42, 0.15, 0.4)
+
+[sub_resource type="BoxShape3D" id="shape4"]
+size = Vector3(0.42, 0.15, 0.4)
+
+[sub_resource type="BoxMesh" id="mesh5"]
+size = Vector3(0.21, 0.62, 0.42)
+
+[sub_resource type="BoxShape3D" id="shape5"]
+size = Vector3(0.21, 0.62, 0.42)
+
+[sub_resource type="BoxMesh" id="mesh6"]
+size = Vector3(0.46, 0.09, 0.035)
+
+[node name="BrokenEffigy" type="Node3D"]
+
+[node name="EffigyFoot" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.11, 0)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh0")
+material_override = ExtResource("m0")
+
+[node name="LeftFace" type="MeshInstance3D" parent="."]
+position = Vector3(-0.4, 0.88, 0.03)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh1")
+material_override = ExtResource("m0")
+
+[node name="BrokenRightFace" type="MeshInstance3D" parent="."]
+position = Vector3(0.4, 0.7, 0.03)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh2")
+material_override = ExtResource("m0")
+
+[node name="RaisedBrow" type="MeshInstance3D" parent="."]
+position = Vector3(-0.32, 1.68, 0)
+rotation = Vector3(0, 0, 0.18)
+mesh = SubResource("mesh3")
+material_override = ExtResource("m1")
+
+[node name="BrokenBrow" type="MeshInstance3D" parent="."]
+position = Vector3(0.34, 1.29, 0.02)
+rotation = Vector3(0, 0, -0.2)
+mesh = SubResource("mesh4")
+material_override = ExtResource("m1")
+
+[node name="MaskNose" type="MeshInstance3D" parent="."]
+position = Vector3(-0.03, 1.05, -0.15)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh5")
+material_override = ExtResource("m1")
+
+[node name="MouthSeal" type="MeshInstance3D" parent="."]
+position = Vector3(-0.08, 0.86, -0.37)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh6")
+material_override = ExtResource("m2")
+
+[node name="Solid" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="EffigyFootCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(0, 0.11, 0)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape0")
+
+[node name="LeftFaceCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(-0.4, 0.88, 0.03)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape1")
+
+[node name="BrokenRightFaceCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(0.4, 0.7, 0.03)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape2")
+
+[node name="RaisedBrowCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(-0.32, 1.68, 0)
+rotation = Vector3(0, 0, 0.18)
+shape = SubResource("shape3")
+
+[node name="BrokenBrowCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(0.34, 1.29, 0.02)
+rotation = Vector3(0, 0, -0.2)
+shape = SubResource("shape4")
+
+[node name="MaskNoseCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(-0.03, 1.05, -0.15)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape5")

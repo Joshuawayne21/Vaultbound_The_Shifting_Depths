@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="VaultMonsterRewards" load_steps=18 format=3]
+[gd_resource type="Resource" script_class="VaultMonsterRewards" load_steps=25 format=3]
 
 [ext_resource type="Script" path="res://scripts/treasure/monster_rewards.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/loot/common.tres" id="2"]
@@ -21,6 +21,14 @@
 [ext_resource type="Resource" path="res://resources/loot/ordinary_crystal_stronger.tres" id="16"]
 [ext_resource type="Resource" path="res://resources/loot/ordinary_crystal_elite.tres" id="17"]
 
+[ext_resource type="Resource" path="res://resources/loot/ordinary_ember_basic.tres" id="18"]
+[ext_resource type="Resource" path="res://resources/loot/ordinary_ember_stronger.tres" id="19"]
+[ext_resource type="Resource" path="res://resources/loot/ordinary_ember_elite.tres" id="20"]
+[ext_resource type="Resource" path="res://resources/loot/encounter_furnace_warden.tres" id="21"]
+[ext_resource type="Resource" path="res://resources/loot/encounter_cinder_liturgist.tres" id="22"]
+[ext_resource type="Resource" path="res://resources/loot/encounter_ash_sealkeeper.tres" id="23"]
+[ext_resource type="Resource" path="res://resources/loot/encounter_cinder_pikewarden.tres" id="24"]
+
 [resource]
 script = ExtResource("1")
 basic_table = ExtResource("2")
@@ -28,6 +36,6 @@ stronger_table = ExtResource("3")
 elite_table = ExtResource("4")
 boss_table = ExtResource("5")
 source_restrictions = {"rootwarden_heart": ["boss"], "elite_monster_fragment": ["elite"], "rootwarden_essence": ["boss"], "verdant_oathblade": ["boss"], "vaultheart_staff": ["boss"]}
-encounter_tables = {"thornmarshal": ExtResource("6"), "mycelial_cantor": ExtResource("7"), "root_bark_champion": ExtResource("8"), "prism_conductor": ExtResource("11"), "geode_colossus": ExtResource("12"), "shard_wraith": ExtResource("13"), "crystal_lancekeeper": ExtResource("14")}
+encounter_tables = {"thornmarshal": ExtResource("6"), "mycelial_cantor": ExtResource("7"), "root_bark_champion": ExtResource("8"), "prism_conductor": ExtResource("11"), "geode_colossus": ExtResource("12"), "shard_wraith": ExtResource("13"), "crystal_lancekeeper": ExtResource("14"), "furnace_warden": ExtResource("21"), "cinder_liturgist": ExtResource("22"), "ash_sealkeeper": ExtResource("23"), "cinder_pikewarden": ExtResource("24")}
 event_tables = {"event_root_spore_hive": ExtResource("9"), "event_root_horde": ExtResource("10")}
-ordinary_theme_tables = {"crystal_basic": ExtResource("15"), "crystal_stronger": ExtResource("16"), "crystal_elite": ExtResource("17")}
+ordinary_theme_tables = {"crystal_basic": ExtResource("15"), "crystal_stronger": ExtResource("16"), "crystal_elite": ExtResource("17"), "ember_basic": ExtResource("18"), "ember_stronger": ExtResource("19"), "ember_elite": ExtResource("20")}

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="VaultBossAttackDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/enemies/boss_attack_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"furnace_advance"
+controller_family = &"sentinel"
+pattern_version = 2
+shape = &"capsule"
+damage_kind = &"enemy_melee"
+warning_time = 1.9
+active_time = 1.15
+recovery_time = 1.8
+damage = 16.0
+stage_count = 1
+stage_gap = 0.0
+parameters = {"radius": 0.85, "length": 5.0, "count": 1, "lateral_offset": 0.0, "lane_spacing": 0.0}
+stage_two = {}

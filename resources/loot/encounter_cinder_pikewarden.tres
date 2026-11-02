@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="VaultLootTable" load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/loot_table.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="2"]
+[ext_resource type="Resource" path="res://resources/items/cracked_forge_brick.tres" id="3"]
+[ext_resource type="Resource" path="res://resources/items/temple_scrap.tres" id="4"]
+[ext_resource type="Resource" path="res://resources/items/common_enhancement_stone.tres" id="5"]
+[ext_resource type="Resource" path="res://resources/items/iron_ore.tres" id="6"]
+[ext_resource type="Resource" path="res://resources/items/obsidian_flake.tres" id="7"]
+[ext_resource type="Resource" path="res://resources/items/temple_mason_seal.tres" id="8"]
+[ext_resource type="Resource" path="res://resources/items/lanternwatch_blade.tres" id="9"]
+
+[resource]
+script = ExtResource("1")
+category = &"reinforced"
+label = "Cinder Pikewarden Cache"
+gold_min = 25
+gold_max = 50
+minimum_rolls = 2
+maximum_rolls = 3
+entries = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9")])
+weights = PackedFloat32Array(25.0, 20.0, 20.0, 15.0, 10.0, 8.0, 2.0)
+guaranteed_item = ExtResource("5")
+reward_source = "encounter:cinder_pikewarden"

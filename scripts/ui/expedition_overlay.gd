@@ -1599,6 +1599,10 @@ func minimap_layout(has_returns: bool) -> Dictionary:
 		center.y = rect.position.y + (98.0 if has_returns else 92.0)
 		extent = 60.0 if has_returns else 72.0
 		legend = 18.0 + line_height + 17.0
+	if has_returns:
+		var last_title_baseline := 18.0 + (title.size() - 1) * line_height
+		legend = maxf(legend, last_title_baseline + _font.get_descent(roundi(9 * ui_scale)) \
+			+ _font.get_ascent(roundi(8 * ui_scale)) + 2.0)
 	return {"rect": rect, "title": title, "title_baseline": 18.0, "line_height": line_height,
 		"center": center, "extent": extent, "legend_baseline": legend, "footer_baseline": rect.size.y - 11.0}
 

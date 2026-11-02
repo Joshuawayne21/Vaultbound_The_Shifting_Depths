@@ -69,7 +69,10 @@ static func _valid_v2(value: Dictionary) -> bool:
 					or float(value.pulse_count - 1) * value.pulse_interval >= value.active_time: return false
 		_: return false
 	# Numeric vocabulary is broader than the one actual supported v2 presenter.
-	return value.id == "crystal_resonance_lane" and value.shape == "capsule" and value.delivery_mode == "pulse_edges"
+	if value.id == "crystal_resonance_lane": return value.shape == "capsule" and value.delivery_mode == "pulse_edges"
+	if value.id == "ember_flame_vent": return value.shape == "capsule" and value.delivery_mode == "contact_once" and value.axis_length <= 4.0
+	if value.id == "ember_arcane_mine": return value.shape == "circle" and value.delivery_mode == "contact_once"
+	return false
 
 static func runtime_timing(value: Dictionary) -> Dictionary:
 	if not valid_snapshot(value): return {}

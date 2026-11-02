@@ -49,9 +49,10 @@ func _pool() -> void:
 		var preview: Dictionary = Content.theme_pool_preview(depth)
 		var lines: Array = panel.context.lines
 		var combined: String = "\n".join(PackedStringArray(lines))
-		check(lines.size() == 8 and "not known before generation" in String(lines[5]) \
-			and "local human" in String(lines[6]) and "No remote players" in String(lines[6]) \
-			and "Matchmaking unavailable" in String(lines[7]), "Existing eight-row card keeps modifier, party and offline disclosures at depth " + str(depth))
+		var row_count: int = 9 if preview.themes.size() == 3 else 8
+		check(lines.size() == row_count and "not known before generation" in String(lines[row_count - 3]) \
+			and "local human" in String(lines[row_count - 2]) and "No remote players" in String(lines[row_count - 2]) \
+			and "Matchmaking unavailable" in String(lines[row_count - 1]), "Full pool card keeps modifier, party and offline disclosures at depth " + str(depth))
 		if depth == 51:
 			check(not preview.available and preview.themes.is_empty() and not panel.entry_enabled \
 				and "unavailable" in String(lines[1]) and session.profile.depth_progression.highest_unlocked_depth == 51, "Unsupported earned depth stays saved and advertises no partial theme pool")
@@ -66,10 +67,14 @@ func _pool() -> void:
 					all_named = all_named and String(entry.label) in combined
 			if depth < 6:
 				check(ids == ["rootbound_abyss"] and weights == [100] and not "Crystal" in combined, "Early depths disclose only actual Rootbound possibilities")
-			else:
+			elif depth < 11:
 				check(ids == ["rootbound_abyss", "crystal_caverns"] and weights == [60, 40] \
 					and "60%" in String(lines[1]) and "40%" in String(lines[2]), "Later depths disclose exact weighted themes without claiming a selected theme")
 				check("Early Return secures loot only" in String(lines[4]) and "Stronger variant" in String(lines[5]), "Pool card distinguishes optional/stronger possibilities and incomplete early Return")
+			else:
+				check(ids == ["rootbound_abyss", "crystal_caverns", "ember_crypt"] and weights == [45, 30, 25] \
+					and "45%" in String(lines[1]) and "30%" in String(lines[2]) and "25%" in String(lines[3]), "Deeper current pools disclose all three weights without choosing an actual theme")
+				check("Early Return secures loot only" in String(lines[5]) and "Stronger variant" in String(lines[6]), "Three-theme pool retains optional/stronger possibilities and incomplete early Return")
 			check(all_named and panel.entry_enabled and not session.active, "Every eligible actual boss is fully named without issuing a run")
 		_measure_layout(depth)
 	check(FileAccess.get_file_as_bytes(CRYSTAL_PROFILE) == saved, "Pool review never saves or spends progression")

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="VaultHazardDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/expedition/hazard_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"ember_arcane_mine"
+version = 2
+shape = &"circle"
+radius = 1.25
+axis_length = 0.0
+warning_time = 2.2
+active_time = 0.25
+damage = 14.0
+pulse_count = 1
+pulse_interval = 0.0
+height_tolerance = 2.0
+delivery_mode = "contact_once"

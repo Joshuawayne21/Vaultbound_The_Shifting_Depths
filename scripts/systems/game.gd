@@ -919,6 +919,7 @@ func _portal_information_lines(destination: StringName, depth_status: Dictionary
 			if bool(preview.get("stronger_eligible", false)): extras.append("Ascendant variant possible")
 			if bool(preview.get("optional_eligible", false)): extras.append("optional champion possible")
 		var eligibility := " · ".join(extras) if not extras.is_empty() else "Existing item drop tables"
+		var seed_row := 5
 		lines = ["ROOTBOUND ABYSS · Depth %d · %s · %d–%d rooms" % [depth, String(policy.get("tier_label", "Not available in this build")), int(policy.get("minimum_rooms", 0)), int(policy.get("maximum_rooms", 0))],
 			boss_line,
 			"Health ×%.2f · Damage ×%.2f · Encounter DM / extraction XP ×%.2f" % [float(policy.get("health_multiplier", 1)), float(policy.get("damage_multiplier", 1)), float(policy.get("reward_multiplier", 1))],
@@ -926,14 +927,16 @@ func _portal_information_lines(destination: StringName, depth_status: Dictionary
 			"Highest unlocked: %d · Build: 1–%d · %s." % [int(depth_status.highest_unlocked_depth), DEPTH_POLICY.supported_maximum_depth, eligibility],
 			"Seed on entry · Modifiers not known before generation · Root hazards, awareness, mixed foes."]
 		if choices.size() > 1:
-			# The depth ladder stays Rootbound. Neither weighted theme row is an
-			# issued choice, and no preview dictionary participates in admission.
-			lines = ["ROOTBOUND DEPTHS · Depth %d · %s · %d–%d rooms · Highest unlocked %d · Build 1–%d" % [depth, String(policy.tier_label), int(policy.minimum_rooms), int(policy.maximum_rooms), int(depth_status.highest_unlocked_depth), DEPTH_POLICY.supported_maximum_depth],
-				_theme_boss_line(choices[0]), _theme_boss_line(choices[1]),
+			# The depth ladder stays Rootbound. Weighted theme rows are not issued
+			# choices, and no preview dictionary participates in admission.
+			lines = ["ROOTBOUND DEPTHS · Depth %d · %s · %d–%d rooms · Highest unlocked %d · Build 1–%d" % [depth, String(policy.tier_label), int(policy.minimum_rooms), int(policy.maximum_rooms), int(depth_status.highest_unlocked_depth), DEPTH_POLICY.supported_maximum_depth]]
+			for choice: Dictionary in choices: lines.append(_theme_boss_line(choice))
+			lines.append_array([
 				"Health ×%.2f · Damage ×%.2f · Encounter DM / extraction XP ×%.2f" % [float(policy.health_multiplier), float(policy.damage_multiplier), float(policy.reward_multiplier)],
 				"Boss + final extraction unlocks the next depth. Early Return secures loot only. Death loses unsecured finds.",
-				"Seed on entry · Modifiers not known before generation · Stronger variant / optional encounter possible."]
-		if debug_expedition_seed >= 0: lines[5] = "Developer seed: %d · layout and modifiers are generated on entry." % debug_expedition_seed
+				"Seed on entry · Modifiers not known before generation · Stronger variant / optional encounter possible."])
+			seed_row = lines.size() - 1
+		if debug_expedition_seed >= 0: lines[seed_row] = "Developer seed: %d · layout and modifiers are generated on entry." % debug_expedition_seed
 	elif destination == &"combat_arena":
 		lines = ["PROVING GROUNDS · Existing combat practice area", "Practice Sword/Shield and Staff combat with the current enemies and targets.", "This is a local training destination, not a player-versus-player match."]
 	elif destination == &"collection_hall":

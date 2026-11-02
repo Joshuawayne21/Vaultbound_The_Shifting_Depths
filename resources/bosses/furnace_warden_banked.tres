@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="VaultBossDefinition" load_steps=7 format=3]
+[ext_resource type="Script" path="res://scripts/enemies/boss_definition.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/bosses/furnace_warden.tscn" id="2"]
+[ext_resource type="Script" path="res://scripts/enemies/boss_attack_definition.gd" id="attack"]
+[ext_resource type="Resource" path="res://resources/bosses/attacks/furnace_advance.tres" id="a0"]
+[ext_resource type="Resource" path="res://resources/bosses/attacks/furnace_backdraft.tres" id="a1"]
+[ext_resource type="Resource" path="res://resources/bosses/attacks/furnace_banked_backdraft.tres" id="a2"]
+[resource]
+script = ExtResource("1")
+id = &"furnace_warden"
+display_name = "Furnace Warden"
+controller_family = &"sentinel"
+scene = ExtResource("2")
+available = true
+content_version = 6
+arena_profile_id = &"ember_furnace_arena"
+reward_profile_id = &"furnace_warden"
+discovery_id = &"furnace_warden"
+visual_profile_id = &"furnace_warden"
+allowed_variant_ids = Array[StringName]([&"none", &"banked_backdraft"])
+stats = {"max_health": 506.0, "armor": 0.08, "move_speed": 1.4, "detection_range": 11.0, "leash_radius": 12.0, "movement_radius": 3.5, "phase_threshold": 0.4, "phase_transition_time": 1.8}
+phase_one_patterns = Array[StringName]([&"furnace_advance", &"furnace_backdraft"])
+phase_two_patterns = Array[StringName]([&"furnace_advance", &"furnace_banked_backdraft"])
+attacks = Array[ExtResource("attack")]([ExtResource("a0"), ExtResource("a1"), ExtResource("a2")])

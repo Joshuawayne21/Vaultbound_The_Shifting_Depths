@@ -6,7 +6,7 @@ Thornmarshal and Mycelial Cantor controllers, an Ascendant Thornmarshal pattern
 and an optional Root Bark Champion to Rootbound. Read the [encounter guide](rootbound-encounters.md)
 for selection rules and mechanics. The [7D.3 event batch](rootbound-events.md)
 adds spike lanes, spore patches, a destructible hive and finite horde. Additional
-themes, trap families and Ancient encounters remain later work. [7D.5 Crystal](glimmering-crystal-abyss.md) adds the first additional executable theme. The [7D.4 Return springs](dungeon-return-springs.md) now provide safe early exits without completing a floor. Headless validation does not
+themes, trap families and Ancient encounters remain later work. [7D.5 Crystal](glimmering-crystal-abyss.md) and [7D.6 Ember](crimson-ember-temple.md) add two executable themes; they do not complete every proposed biome. The [7D.4 Return springs](dungeon-return-springs.md) now provide safe early exits without completing a floor. Headless validation does not
 replace physical Android play-testing or rendered visual review.
 
 ## One issued expedition
@@ -17,7 +17,7 @@ The Rootbound progression track keeps its existing `biome_id: rootbound_abyss`. 
 
 Session admits a content run through `begin_content_run`; Abyss independently prepares it through `configure_content`. Game compares both full plans and the separate depth policy during travel. Public getters return detached copies. The original `begin_run`, `begin_depth_run`, `generate` and `generate_for_depth` remain compatibility paths for explicit fixtures; production travel uses the content path. `generate_for_run` adds content metadata without changing configured topology version 2 or the bounded seed mixer.
 
-Content version 5 retains the boss, event and Return spring contracts and freezes theme selection, ordinary encounter composition, trap/discovery policies and native arena profiles. Depths 1–5 remain Rootbound; higher depths use a dedicated seeded 60/40 Rootbound/Crystal draw. Plans contain only the selected theme's actual producers. All eligible pools must validate before preview and admission; unavailable content never silently falls back. `RoomContentPlanner` derives optional placement from that plan and
+Content version 6 retains the boss, event and Return spring contracts and freezes theme selection, ordinary encounter composition, trap/discovery policies and native arena profiles. Depths 1–5 remain Rootbound; 6–10 retain the seeded 60/40 Rootbound/Crystal draw. From Depth 11, a separate 25% Ember opportunity leaves the old draw unchanged when not selected, producing 45/30/25 Rootbound/Crystal/Ember weights. Plans contain only the selected theme's actual producers. All eligible pools must validate before preview and admission; unavailable content never silently falls back. `RoomContentPlanner` derives optional placement from that plan and
 the generated layout. The world privately admits the actual room after native
 floor, body and route checks; an unsafe optional slot is omitted. These probes
 exclude the retained previous world's collision and require ground belonging to
@@ -37,9 +37,9 @@ objective. Support actors have no independent reward, pet finding, XP or discove
 grant. The optional Champion uses its own registry and source; its elite cache
 cannot unlock extraction.
 
-Only `rootwarden_legacy` resolves the existing Rootwarden loot and Rootling findings. An unknown boss or profile is rejected rather than falling through to that reward. Rootbound ordinary, stronger and elite sources retain their existing tables. Crystal uses three separate ordinary tables and four named encounter tables, with no Rootbound-exclusive or pet fallback. Rewards still use the original loot sampler, source restrictions and catalog-value validation; approved results enter the existing one-claim ledger before callbacks. Searching never rolls again. Live catalog/economy hot reload is not supported by this prototype.
+Only `rootwarden_legacy` resolves the existing Rootwarden loot and Rootling findings. An unknown boss or profile is rejected rather than falling through to that reward. Rootbound ordinary, stronger and elite sources retain their existing tables. Crystal and Ember each use three separate ordinary tables and four named encounter tables, with no Rootbound-exclusive or pet fallback. Rewards still use the original loot sampler, source restrictions and catalog-value validation; approved results enter the existing one-claim ledger before callbacks. Searching never rolls again. Live catalog/economy hot reload is not supported by this prototype.
 
-The three new encounter tables use explicit `encounter:<definition_id>` sources
+The three added Rootbound encounter tables use explicit `encounter:<definition_id>` sources
 and existing items. Their labels come from admitted source presentation IDs, not
 from a cache choosing a reward. None grants Rootwarden-exclusive encounter loot
 or pet findings. New required bosses and Champion apply the frozen floor factors
@@ -110,6 +110,14 @@ The typed resonance hazard uses the existing two-wrapper pool. Initial traps and
 
 New Crystal presentation uses fourteen separate native scenes on the retained grid and connection anchors, shared material roles and bounded instanced decoration. Native scene/actor validation checks collision and posed bounds; geometric envelope arithmetic alone is not admission. The static art and room counts are not a claim of rendered beauty or Android frame rate.
 
+## Ember stages, vents and optional mines
+
+Ember uses the same issued-stage and native arena contracts. Furnace charge geometry is committed only after a grounded full-body route admission inside its home bounds; its later Backdraft follows a successful charge direction and a separate warning. The stronger Banked Backdraft variant adds opposed, separately warned sectors. Liturgist locks the initial origin and aim for two angled lanes or offset marks; each stage receives its own complete warning without following a fleeing target. Sealkeeper reserves finite mixed skeleton/archer support, at most two living defenders and four across the encounter, without independent support rewards. Required bosses, the optional Pikewarden and ordinary archetypes keep distinct registered sources.
+
+Flame vents and arcane mines share the existing two-wrapper environmental pool; no third mine wrapper is allocated. Initial vents and awareness vents keep separate private ownership. Awareness gives its event warning before the hazard's complete warning. A harmless dormant mine indicator is owned by its admitted room slot. Actual eligible party proximity can admit a full warning; it cannot skip directly to damage. Once the attempt is shown, cancellation or room departure does not reset it. Unsafe placements are omitted, and reserved Return/optional encounter rooms are excluded. Dormant indicators alone do not block a safe Return; actual pending warnings, attacks and damage dispatch do.
+
+Fourteen separate Ember modules use the existing flat room grid, eighteen material roles and bounded decoration. Original Rootbound and Crystal authored assets remain intact. Native kilns, urns, effigies and closed grilles are prototype scenery; cooling channels are harmless water, and only actual typed hazards deal damage. This is not new lava traversal, burning status, vertical navigation or finished artwork.
+
 ## Save compatibility
 
 Profile v7 adds a small `encounter_records` namespace alongside the existing four-ID monster journal. It records secured theme discoveries and boss encounters, with counts, highest recorded floor, first recorded revision and local discovery time. Full extraction saves these with loot, pets, XP and depth unlocks. A valid Return spring can secure eligible pending records and collected rewards without a full-clear bonus or depth unlock. Pending records are lost on death or abandonment; failed saves remain retryable.
@@ -118,7 +126,7 @@ Profile v7 adds a small `encounter_records` namespace alongside the existing fou
 Thornmarshal defeat derives one journal-only subset observation alongside its
 base record. Its count and highest depth cannot exceed the base, and its first
 revision cannot precede the base. It is never another kill, reward or objective.
-The Crystal Refracted Conductor uses the same derived-only observation rules alongside its base encounter. Neither variant grants a second reward. No historical variant record is inferred from old items or completions. These
+The Crystal Refracted Conductor uses the same derived-only observation rules alongside its base encounter. Ember Banked Backdraft uses the same derived-only rule beside Furnace Warden. None of these variants grants a second reward. No historical variant record is inferred from old items or completions. These
 new records are available in the saved profile; their dedicated Hall/journal
 interface remains for 7G.
 

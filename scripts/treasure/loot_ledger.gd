@@ -21,6 +21,10 @@ const SOURCE_PRESENTATIONS := {
 	"geode_colossus": {"kind": "boss", "label": "Geode Colossus Reliquary"},
 	"shard_wraith": {"kind": "boss", "label": "Shard Wraith Reliquary"},
 	"crystal_lancekeeper": {"kind": "elite", "label": "Crystal Lancekeeper Cache"},
+	"furnace_warden": {"kind": "boss", "label": "Furnace Warden Reliquary"},
+	"cinder_liturgist": {"kind": "boss", "label": "Cinder Liturgist Reliquary"},
+	"ash_sealkeeper": {"kind": "boss", "label": "Ash Sealkeeper Reliquary"},
+	"cinder_pikewarden": {"kind": "elite", "label": "Cinder Pikewarden Cache"},
 }
 
 var _records: Dictionary = {}

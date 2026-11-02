@@ -204,7 +204,7 @@ static func apply_materials(node: Node, resolved: Dictionary) -> void:
 		var old: Material = node.material_override
 		if old != null:
 			for role: String in ROLE_PATHS:
-				if old.resource_path == ROLE_PATHS[role] or old.resource_path == Catalog.CRYSTAL_ROLE_PATHS[role]:
+				if old.resource_path == ROLE_PATHS[role] or old.resource_path == Catalog.CRYSTAL_ROLE_PATHS[role] or old.resource_path == Catalog.EMBER_ROLE_PATHS[role]:
 					node.material_override = resolved[role]
 					break
 	for child: Node in node.get_children(): apply_materials(child, resolved)

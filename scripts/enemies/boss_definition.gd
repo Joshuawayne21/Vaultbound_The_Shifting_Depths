@@ -141,11 +141,13 @@ static func snapshot_errors(value: Variant) -> PackedStringArray:
 			"mycelial_cantor": ["brood_keeper", "rootbound_brood_arena"],
 			"prism_conductor": ["conductor", "crystal_conductor_arena"],
 			"geode_colossus": ["colossus", "crystal_colossus_arena"],
-			"shard_wraith": ["wraith", "crystal_wraith_arena"]}
+			"shard_wraith": ["wraith", "crystal_wraith_arena"],
+			"furnace_warden": ["sentinel", "ember_furnace_arena"], "cinder_liturgist": ["conductor", "ember_liturgist_arena"],
+			"ash_sealkeeper": ["brood_keeper", "ember_sealkeeper_arena"]}
 		if not executable.has(value.id):
 			errors.append("Boss has no executable controller profile")
 		elif value.controller_family != executable[value.id][0] or value.arena_profile_id != executable[value.id][1] \
-				or value.scene_path != "res://scenes/enemies/bosses/" + String(value.controller_family) + ".tscn" \
+				or value.scene_path != "res://scenes/enemies/bosses/" + String(value.id if value.id in ["furnace_warden", "cinder_liturgist", "ash_sealkeeper"] else value.controller_family) + ".tscn" \
 				or value.visual_profile_id != value.id or value.reward_profile_id != value.id or value.discovery_id != value.id \
 				or value.pet_profile_id != "none" or value.trophy_item_id != "" or not value.objective_eligible:
 			errors.append("Executable boss profile does not match its actual scene/source")
@@ -156,6 +158,12 @@ static func snapshot_errors(value: Variant) -> PackedStringArray:
 			for attack: Variant in value.attacks:
 				if not attack is Dictionary or attack.get("pattern_version") != 2:
 					errors.append("Crystal boss requires actual v2 patterns")
+		if value.id in ["furnace_warden", "cinder_liturgist", "ash_sealkeeper"]:
+			if value.content_version != 6 or value.encounter_version != 1 or value.allowed_variant_ids != (["none", "banked_backdraft"] if value.id == "furnace_warden" else ["none"]):
+				errors.append("Ember boss version or variant mismatch")
+			for attack: Variant in value.attacks:
+				if not attack is Dictionary or attack.get("pattern_version") != 2 or not Attack.EMBER_IDS.has(attack.get("id")):
+					errors.append("Ember boss requires actual reviewed v2 patterns")
 	if value.id == "rootwarden" or value.scene_path == ROOT_SCENE or not value.rootwarden_data.is_empty() \
 			or value.reward_profile_id == "rootwarden_legacy" or value.pet_profile_id == "rootwarden_legacy" \
 			or value.discovery_id == "rootwarden" or value.trophy_item_id == "rootwarden_heart":

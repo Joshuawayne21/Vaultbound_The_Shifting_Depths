@@ -15,6 +15,8 @@ const SpawnPlanner = preload("res://scripts/expedition/encounter_spawn_planner.g
 var _adds: Dictionary = {}
 var _spawn_authority: Dictionary = {}
 var _summon_receipts: Dictionary = {}
+var _summon_counts: Dictionary = {}
+var _summon_attempts: Dictionary = {}
 var _registered_event: WeakRef
 var _event_spawn_authority: Dictionary = {}
 var _event_rest := 0.0
@@ -43,15 +45,25 @@ func tick(delta: float) -> void:
 			_reservations.erase(id)
 
 func set_boss_owner(owner: Node3D) -> bool:
+	var previous_lease := _boss_owner
 	var previous := _boss()
 	if owner == null:
 		if previous != null: cancel_owner(previous, &"boss_released")
-		_boss_owner = null
-		return true
+		if _boss_owner == previous_lease: _boss_owner = null
+		# A callback may have explicitly reacquired a newer lease, even for the
+		# same actor. Report whether this request won; never erase that lease.
+		return _boss_owner == null
 	if not _current() or not _source_valid(owner): return false
-	if previous != null and previous != owner: cancel_owner(previous, &"boss_changed")
+	if previous != null and previous != owner:
+		cancel_owner(previous, &"boss_changed")
+		if _boss_owner != null and _boss_owner != previous_lease:
+			return _current() and _boss() == owner and _source_valid(owner)
 	if previous == null or previous != owner:
+		var expected_lease := _boss_owner
 		_cancel_environment()
+		if _boss_owner != expected_lease:
+			return _current() and _boss() == owner and _source_valid(owner)
+		if not _current() or not _source_valid(owner): return false
 		_boss_owner = weakref(owner)
 	return true
 
@@ -138,22 +150,30 @@ func reserve_boss_adds(owner: Node3D, cast_serial: int, archetypes: Array[String
 			or not owned_boss_adds(owner).is_empty() or not _reservations.is_empty(): return denied
 	var world := _get_world()
 	var source: Dictionary = world.registered_boss_source(owner)
-	if source.descriptor.encounter_definition_id != "mycelial_cantor": return denied
-	for archetype: StringName in archetypes:
-		if archetype != &"skeleton": return denied
-	var receipt := String(source.receipt) + "_cast_%d" % cast_serial
-	if _summon_receipts.has(receipt): return denied
-	# A failed attempt is still consumed; reentry cannot farm a new socket roll.
+	var owner_id := String(source.descriptor.encounter_definition_id)
+	var profile: Dictionary = _plan.boss_support_profiles.get(owner_id, {})
+	if profile.is_empty() or (owner_id == "ash_sealkeeper" and archetypes.size() != 2): return denied
+	for index in range(archetypes.size()):
+		if String(archetypes[index]) != profile.members[index].archetype: return denied
+	var owner_receipt := String(source.receipt)
+	var receipt := owner_receipt + "_cast_%d" % cast_serial
+	if _summon_receipts.has(receipt) or int(_summon_attempts.get(owner_receipt, 0)) >= int(profile.attempt_limit) \
+			or int(_summon_counts.get(owner_receipt, 0)) >= int(profile.lifetime_limit): return denied
 	_summon_receipts[receipt] = true
+	_summon_attempts[owner_receipt] = int(_summon_attempts.get(owner_receipt, 0)) + 1
 	var room: Node3D = world.rooms[int(source.room_id)]
 	var local_sockets: Array[Vector3] = []
 	for point: Vector3 in sockets: local_sockets.append(room.to_local(point))
-	var points := SpawnPlanner.admit_sockets(world, room, local_sockets, 0.4, 1.9,
-		mini(archetypes.size(), 2), world.encounters.all_actors())
+	var maximum := mini(archetypes.size(), int(profile.lifetime_limit) - int(_summon_counts.get(owner_receipt, 0)))
+	var points := SpawnPlanner.admit_boss_sockets(world, room, local_sockets, 0.4, 1.9, maximum, world.encounters.all_actors())
 	if points.is_empty() or _active_ordinary() + _reserved_enemies() + points.size() > int(_plan.event_profile.enemy_limit): return denied
+	var members: Array[Dictionary] = []
+	for index in range(points.size()):
+		members.append({"ordinal": index, "point": points[index], "archetype": String(profile.members[index].archetype),
+			"definition_id": String(profile.members[index].encounter_definition_id)})
 	_sequence += 1
-	_reservations[_sequence] = {"kind": "boss_add", "owner": weakref(owner), "owner_receipt": String(source.receipt),
-		"receipt": receipt, "serial": cast_serial, "room_id": int(source.room_id), "sockets": points.duplicate(), "remaining": 5.0}
+	_reservations[_sequence] = {"kind": "boss_add", "owner": weakref(owner), "owner_receipt": owner_receipt,
+		"receipt": receipt, "serial": cast_serial, "room_id": int(source.room_id), "sockets": points.duplicate(), "members": members, "remaining": 5.0}
 	var world_sockets: Array[Vector3] = []
 	for point: Vector3 in points: world_sockets.append(room.to_global(point))
 	return {"ok": true, "reservation_id": _sequence, "sockets": world_sockets, "reason": ""}
@@ -165,31 +185,35 @@ func commit_boss_adds(owner: Node3D, reservation_id: int, cast_serial: int) -> A
 			or int(record.serial) != cast_serial or _boss() != owner or not _source_valid(owner) \
 			or not owner.has_method("boss_add_commit_ready") or not owner.boss_add_commit_ready(cast_serial): return result
 	var world := _get_world()
-	var candidates: Array[Vector3] = []
-	candidates.assign(record.sockets)
-	var points := SpawnPlanner.admit_sockets(world, world.rooms[int(record.room_id)], candidates, 0.4, 1.9,
-		mini(2, candidates.size()), world.encounters.all_actors())
-	# Revalidate at the commit edge. A changed party/socket never forces a spawn.
 	_reservations.erase(reservation_id)
-	for index in range(points.size()):
+	# Each reserved member retains its original ordinal/type when another socket
+	# becomes unsafe. Never zip a compacted point list with the old archetypes.
+	for member: Dictionary in record.members:
 		if not _current() or _boss() != owner or not _source_valid(owner) or not owner.boss_add_commit_ready(cast_serial): break
-		var receipt := String(record.receipt) + "_member_%d" % index
-		_spawn_authority = {"owner_receipt": String(record.owner_receipt), "receipt": receipt,
-			"room_id": int(record.room_id), "point": points[index]}
-		var actor: Node3D = world.encounters.spawn_boss_support(int(record.room_id), points[index], receipt, String(record.owner_receipt))
-		_spawn_authority = {}
+		var candidates: Array[Vector3] = [member.point]
+		var points := SpawnPlanner.admit_boss_sockets(world, world.rooms[int(record.room_id)], candidates, 0.4, 1.9, 1, world.encounters.all_actors())
+		if points.size() != 1: continue
+		var receipt := String(record.receipt) + "_member_%d" % int(member.ordinal)
+		var authority := {"owner_id": owner.get_instance_id(), "owner_receipt": String(record.owner_receipt), "receipt": receipt,
+			"room_id": int(record.room_id), "point": points[0], "definition_id": String(member.definition_id), "archetype": String(member.archetype)}
+		_spawn_authority = authority
+		var actor: Node3D = world.encounters.spawn_boss_support(int(record.room_id), points[0], receipt, String(record.owner_receipt), String(member.definition_id), StringName(member.archetype))
+		if _spawn_authority == authority: _spawn_authority = {}
 		if not is_instance_valid(actor): continue
-		if not _current() or _boss() != owner or not _source_valid(owner):
-			world.encounters.discard_boss_support(actor, String(record.owner_receipt))
+		if not _current() or _boss() != owner or not _source_valid(owner) or not owner.boss_add_commit_ready(cast_serial):
+			if is_instance_valid(world) and is_instance_valid(world.encounters): world.encounters.discard_boss_support(actor, String(record.owner_receipt))
 			break
+		_summon_counts[record.owner_receipt] = int(_summon_counts.get(record.owner_receipt, 0)) + 1
 		_adds[actor.get_instance_id()] = {"actor": weakref(actor), "owner": weakref(owner), "owner_receipt": String(record.owner_receipt), "room_id": int(record.room_id)}
 		result.append(actor)
-	world.encounters._refresh_activity()
+	if is_instance_valid(world) and is_instance_valid(world.encounters) and world.encounters.is_inside_tree(): world.encounters._refresh_activity()
 	return result
 
-func support_spawn_authorized(owner_receipt: String, receipt: String, room_id: int, point: Vector3) -> bool:
+func support_spawn_authorized(owner_receipt: String, receipt: String, room_id: int, point: Vector3,
+		definition_id: String = "rootbound_boss_defender", archetype: StringName = &"skeleton") -> bool:
 	return _current() and not _spawn_authority.is_empty() and _spawn_authority.owner_receipt == owner_receipt \
-		and _spawn_authority.receipt == receipt and int(_spawn_authority.room_id) == room_id and _spawn_authority.point == point
+		and _spawn_authority.receipt == receipt and int(_spawn_authority.room_id) == room_id and _spawn_authority.point == point \
+		and _spawn_authority.definition_id == definition_id and _spawn_authority.archetype == String(archetype)
 
 func owned_boss_adds(owner: Node3D) -> Array[Node3D]:
 	var result: Array[Node3D] = []
@@ -207,19 +231,22 @@ func support_active(actor: Node3D) -> bool:
 		and record.owner.get_ref() == _boss() and _source_valid(_boss()) and int(_get_world().current_room_id) == int(record.room_id)
 
 func cancel_owner(owner: Node3D, _reason: StringName) -> void:
+	# Publish retirement before any ordinary state/bolt visibility callback.
+	# The following loops own only their captured old reservation/member keys.
+	if _boss_owner != null and _boss_owner.get_ref() == owner: _boss_owner = null
+	if is_instance_valid(owner) and _spawn_authority.get("owner_id") == owner.get_instance_id(): _spawn_authority = {}
 	for id: int in _reservations.keys():
-		var reservation: Dictionary = _reservations[id]
-		if reservation.kind == "boss_add" and reservation.owner.get_ref() == owner: _reservations.erase(id)
+		var reservation: Dictionary = _reservations.get(id, {})
+		if not reservation.is_empty() and reservation.kind == "boss_add" and reservation.owner.get_ref() == owner: _reservations.erase(id)
 	var world := _get_world()
 	for id: int in _adds.keys():
-		var record: Dictionary = _adds[id]
+		var record: Dictionary = _adds.get(id, {})
+		if record.is_empty(): continue
 		if record.owner.get_ref() != owner: continue
 		var actor := record.actor.get_ref() as Node3D
 		_adds.erase(id)
 		if is_instance_valid(world) and world.encounters != null and is_instance_valid(actor):
 			world.encounters.discard_boss_support(actor, String(record.owner_receipt))
-	if _boss_owner != null and _boss_owner.get_ref() == owner: _boss_owner = null
-	_spawn_authority = {}
 
 func cancel_all(_reason: StringName) -> void:
 	var owner := _boss_owner.get_ref() as Node3D if _boss_owner != null else null

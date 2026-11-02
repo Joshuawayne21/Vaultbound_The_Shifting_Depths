@@ -85,13 +85,13 @@ func _spawn_initial(id: int) -> void:
 	encounter_started.emit(id)
 
 func _spawn(room_id: int, archetype: StringName, local_point: Vector3, elite: bool, strength: float = 1.0,
-		support_receipt: String = "", owner_receipt: String = "", event_definition: String = "") -> Node3D:
+		support_receipt: String = "", owner_receipt: String = "", event_definition: String = "", boss_definition: String = "rootbound_boss_defender") -> Node3D:
 	if _depth_policy.is_empty() or not rooms.has(room_id) or not ENEMIES.has(archetype):
 		return null
 	if not support_receipt.is_empty():
 		if _level.scheduler == null: return null
 		if event_definition.is_empty():
-			if not _level.scheduler.support_spawn_authorized(owner_receipt, support_receipt, room_id, local_point): return null
+			if not _level.scheduler.support_spawn_authorized(owner_receipt, support_receipt, room_id, local_point, boss_definition, archetype): return null
 		elif not _level.scheduler.event_support_spawn_authorized(owner_receipt, support_receipt, room_id, local_point, event_definition): return null
 	for record: Dictionary in _registered_actors.values():
 		if not support_receipt.is_empty() and record.receipt == support_receipt: return null
@@ -100,7 +100,7 @@ func _spawn(room_id: int, archetype: StringName, local_point: Vector3, elite: bo
 	var descriptor: Dictionary = {}
 	if not _content_plan.is_empty():
 		var ordinary_id := String(_content_plan.ordinary_profile.definition_ids[String(archetype)])
-		var definition_id := event_definition if not event_definition.is_empty() else ordinary_id if support_receipt.is_empty() else "rootbound_boss_defender"
+		var definition_id := event_definition if not event_definition.is_empty() else ordinary_id if support_receipt.is_empty() else boss_definition
 		descriptor = Content.source_descriptor(_content_plan, definition_id, "elite" if elite else "none")
 		if descriptor.is_empty():
 			enemy.free()
@@ -164,7 +164,7 @@ func _spawn(room_id: int, archetype: StringName, local_point: Vector3, elite: bo
 		attached = int(remaining_world.run_generation) == generation and remaining_world.run_source_context_valid() \
 			and remaining_world.issued_run_plan_matches(receiver._content_plan)
 		if attached and not support_receipt.is_empty():
-			attached = remaining_world.scheduler.support_spawn_authorized(owner_receipt, support_receipt, room_id, local_point) if event_definition.is_empty() \
+			attached = remaining_world.scheduler.support_spawn_authorized(owner_receipt, support_receipt, room_id, local_point, boss_definition, archetype) if event_definition.is_empty() \
 				else remaining_world.scheduler.event_support_spawn_authorized(owner_receipt, support_receipt, room_id, local_point, event_definition)
 	if not attached:
 		if is_instance_valid(receiver):
@@ -179,14 +179,22 @@ func _spawn(room_id: int, archetype: StringName, local_point: Vector3, elite: bo
 	if not _content_plan.is_empty(): _refresh_activity()
 	return enemy
 
-func spawn_boss_support(room_id: int, point: Vector3, receipt: String, owner_receipt: String) -> Node3D:
-	return _spawn(room_id, &"skeleton", point, false, 1.0, receipt, owner_receipt)
+func spawn_boss_support(room_id: int, point: Vector3, receipt: String, owner_receipt: String,
+		definition_id: String = "rootbound_boss_defender", archetype: StringName = &"skeleton") -> Node3D:
+	return _spawn(room_id, archetype, point, false, 1.0, receipt, owner_receipt, "", definition_id)
 
 func discard_boss_support(actor: Node3D, owner_receipt: String) -> void:
 	var record := _actor_record(actor)
 	if record.is_empty() or record.get("owner_encounter_receipt", "") != owner_receipt or owner_receipt.is_empty(): return
 	_set_active(actor, false)
+	if not is_instance_valid(self) or not is_instance_valid(actor) or _actor_record(actor) != record: return
 	actor.velocity = Vector3.ZERO
+	if is_inside_tree():
+		for value: Variant in get_tree().get_nodes_in_group("combat_projectiles"):
+			if is_instance_valid(value) and value.get("source") == actor and value.has_method("cancel_cast"):
+				value.cancel_cast()
+				if not is_instance_valid(self) or not is_instance_valid(actor) or _actor_record(actor) != record: return
+	if not is_instance_valid(self) or not is_instance_valid(actor) or _actor_record(actor) != record: return
 	if actor.died.is_connected(_on_enemy_died): actor.died.disconnect(_on_enemy_died)
 	_registered_actors.erase(actor.get_instance_id())
 	actors_by_room[int(record.room_id)].erase(actor)

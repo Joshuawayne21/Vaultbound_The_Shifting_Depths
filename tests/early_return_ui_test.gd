@@ -16,11 +16,11 @@ func _run() -> void:
 		for perspective in range(2):
 			if not await enter_checkpoint(31, 2): break
 			if perspective == 1: input_hub.request_action(&"camera_toggle")
-			await _present_actual_return()
+			await _present_actual_return(perspective == 0)
 	if is_instance_valid(game): await retire_game()
 	finish()
 
-func _present_actual_return() -> void:
+func _present_actual_return(measure_native: bool) -> void:
 	game.hud.set_dungeon_snapshot(level.snapshot())
 	var actual_markers: Array = level.snapshot().get("return_springs", [])
 	var before_map: Dictionary = overlay.minimap_return_markers()
@@ -28,6 +28,7 @@ func _present_actual_return() -> void:
 		and before_map.size() < actual_markers.size(), "Minimap shows the actually discovered Return spring and withholds the second unexplored source")
 	check(level.layout.rooms[int(checkpoint_slot.room_id)].kind == &"combat" \
 		and level.layout.rooms[int(level.layout.extraction_id)].kind == &"extraction", "Return markers do not rewrite combat or required final extraction room roles")
+	if measure_native: preload("res://tests/minimap_geometry_checks.gd").verify(self, overlay, surface)
 	await frames(3)
 	player._update_interaction()
 	check(player.interaction_target == checkpoint and "Return sealed" in surface.interaction \
@@ -40,6 +41,7 @@ func _present_actual_return() -> void:
 	check(overlay.minimap_room_positions().has(int(level.layout.extraction_id)) \
 		and not overlay.minimap_return_markers().has(int(level.layout.extraction_id)) \
 		and not bool(overlay.dungeon_snapshot.extraction_ready), "Discovered final extraction keeps its separate sealed E role instead of becoming an early Return marker")
+	if measure_native: preload("res://tests/minimap_geometry_checks.gd").verify(self, overlay, surface)
 	var pending_gold: int = session.unsecured_gold
 	level.extraction.interact(player)
 	check(session.active and session.unsecured_gold == pending_gold and not session.boss_defeated, "Original final spring remains boss-gated and cannot turn early loot into full completion")

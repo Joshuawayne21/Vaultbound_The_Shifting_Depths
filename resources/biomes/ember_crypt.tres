@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="VaultBiomeDefinition" load_steps=3 format=3]
+[ext_resource type="Script" path="res://scripts/expedition/biome_definition.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/visual/ember_presentation.tres" id="2"]
+[resource]
+script = ExtResource("1")
+id = "ember_crypt"
+display_name = "Crimson Ember Temple"
+available = true
+content_version = 1
+theme_version = 1
+minimum_depth = 11
+selection_weight = 25
+boss_ids = Array[String](["furnace_warden", "cinder_liturgist", "ash_sealkeeper"])
+encounter_profile_id = "ember_ordinary_v1"
+event_profile_id = "ember_encounters"
+presentation = ExtResource("2")

@@ -403,10 +403,213 @@ const CRYSTAL_PROPS := {
 	"crystal_geode_fan": "res://scenes/props/crystal/geode_fan.tscn"
 }
 
+const EMBER_ROLE_PATHS := {
+	"soil": "res://resources/materials/ember/soil.tres",
+	"paving": "res://resources/materials/ember/paving.tres",
+	"stone": "res://resources/materials/ember/stone.tres",
+	"stone_light": "res://resources/materials/ember/stone_light.tres",
+	"root_shell": "res://resources/materials/ember/root_shell.tres",
+	"root_detail": "res://resources/materials/ember/root_detail.tres",
+	"metal_trim": "res://resources/materials/ember/metal_trim.tres",
+	"foliage": "res://resources/materials/ember/foliage.tres",
+	"moss": "res://resources/materials/ember/moss.tres",
+	"crystal": "res://resources/materials/ember/crystal.tres",
+	"emissive": "res://resources/materials/ember/emissive.tres",
+	"flower": "res://resources/materials/ember/flower.tres",
+	"flower_bud": "res://resources/materials/ember/flower_bud.tres",
+	"fungal_cap": "res://resources/materials/ember/fungal_cap.tres",
+	"water": "res://resources/materials/ember/water.tres",
+	"water_deep": "res://resources/materials/ember/water_deep.tres",
+	"falling_water": "res://resources/materials/ember/falling_water.tres",
+	"foam": "res://resources/materials/ember/foam.tres"
+}
+const EMBER_MODULES := {
+	"boss_heart": {
+		"scene": "res://scenes/rooms/ember/boss_heart.tscn",
+		"motif": "furnace_conclave",
+		"native_slots": {
+			"Decor00": "ember_kiln_buttress",
+			"Decor01": "ember_kiln_buttress",
+			"Decor02": "ember_kiln_buttress",
+			"Decor03": "ember_kiln_buttress",
+			"Decor04": "ember_cinder_altar",
+			"Decor05": "ember_cinder_altar"
+		}
+	},
+	"combat_crystal": {
+		"scene": "res://scenes/rooms/ember/combat_crystal.tscn",
+		"motif": "three_coal_sanctums",
+		"native_slots": {
+			"Decor00": "ember_cinder_altar",
+			"Decor01": "ember_cinder_altar",
+			"Decor02": "ember_cinder_altar",
+			"Decor03": "column",
+			"Decor04": "ember_kiln_buttress",
+			"Decor05": "ember_iron_bloom"
+		}
+	},
+	"combat_falls": {
+		"scene": "res://scenes/rooms/ember/combat_falls.tscn",
+		"motif": "quenching_cascade",
+		"native_slots": {
+			"Decor00": "falls",
+			"Decor01": "stream",
+			"Decor02": "ember_kiln_buttress",
+			"Decor03": "ember_cinder_altar",
+			"Decor04": "ember_ash_urns"
+		}
+	},
+	"combat_grove": {
+		"scene": "res://scenes/rooms/ember/combat_grove.tscn",
+		"motif": "brazier_court",
+		"native_slots": {
+			"Decor00": "ember_kiln_buttress",
+			"Decor01": "ember_kiln_buttress",
+			"Decor02": "ember_ash_urns",
+			"Decor03": "ember_iron_bloom",
+			"Decor04": "ember_broken_effigy"
+		}
+	},
+	"combat_temple": {
+		"scene": "res://scenes/rooms/ember/combat_temple.tscn",
+		"motif": "crimson_processional",
+		"native_slots": {
+			"Decor00": "arch",
+			"Decor01": "column",
+			"Decor02": "column",
+			"Decor03": "rubble",
+			"Decor04": "ember_cinder_altar",
+			"Decor05": "ember_iron_bloom"
+		}
+	},
+	"corridor_roots": {
+		"scene": "res://scenes/rooms/ember/corridor_roots.tscn",
+		"motif": "ash_procession",
+		"native_slots": {
+			"Decor00": "ember_kiln_buttress",
+			"Decor01": "ember_kiln_buttress",
+			"Decor02": "ember_ash_urns",
+			"Decor03": "ember_ash_urns",
+			"Decor04": "ember_ash_urns"
+		}
+	},
+	"corridor_stream": {
+		"scene": "res://scenes/rooms/ember/corridor_stream.tscn",
+		"motif": "cooling_aqueduct",
+		"native_slots": {
+			"Decor00": "stream",
+			"Decor01": "stream",
+			"Decor02": "ember_kiln_buttress",
+			"Decor03": "ember_ash_urns",
+			"Decor04": "ember_iron_bloom",
+			"Decor05": "rubble"
+		}
+	},
+	"entrance_grove": {
+		"scene": "res://scenes/rooms/ember/entrance_grove.tscn",
+		"motif": "kiln_processional",
+		"native_slots": {
+			"Decor00": "ember_kiln_buttress",
+			"Decor01": "ember_kiln_buttress",
+			"Decor02": "ember_ash_urns",
+			"Decor03": "ember_ash_urns",
+			"Decor04": "ember_iron_bloom",
+			"Decor05": "arch"
+		}
+	},
+	"entrance_temple": {
+		"scene": "res://scenes/rooms/ember/entrance_temple.tscn",
+		"motif": "bronze_seal_gate",
+		"native_slots": {
+			"Decor00": "arch",
+			"Decor01": "column",
+			"Decor02": "column",
+			"Decor03": "ember_ash_urns",
+			"Decor04": "ember_iron_bloom",
+			"Decor05": "ember_cinder_altar"
+		}
+	},
+	"extraction_spring": {
+		"scene": "res://scenes/rooms/ember/extraction_spring.tscn",
+		"motif": "tempered_spring",
+		"native_slots": {
+			"Decor00": "falls",
+			"Decor01": "stream",
+			"Decor02": "arch",
+			"Decor03": "ember_iron_bloom",
+			"Decor04": "ember_ash_urns",
+			"Decor05": "ember_cinder_altar"
+		}
+	},
+	"secret_hollow": {
+		"scene": "res://scenes/rooms/ember/secret_hollow.tscn",
+		"motif": "forgotten_effigy",
+		"native_slots": {
+			"Decor00": "ember_kiln_buttress",
+			"Decor01": "ember_kiln_buttress",
+			"Decor02": "ember_ash_urns",
+			"Decor03": "ember_ash_urns",
+			"Decor04": "ember_iron_bloom",
+			"Decor05": "ember_broken_effigy"
+		}
+	},
+	"trap_thorns": {
+		"scene": "res://scenes/rooms/ember/trap_thorns.tscn",
+		"motif": "vent_oath_floor",
+		"native_slots": {
+			"Decor00": "ember_sealed_vent",
+			"Decor01": "ember_sealed_vent",
+			"Decor02": "ember_sealed_vent",
+			"Decor03": "ember_kiln_buttress",
+			"Decor04": "ember_cinder_altar",
+			"Decor05": "rubble"
+		}
+	},
+	"treasure_garden": {
+		"scene": "res://scenes/rooms/ember/treasure_garden.tscn",
+		"motif": "keepers_cooling_garden",
+		"native_slots": {
+			"Decor00": "ember_kiln_buttress",
+			"Decor01": "stream",
+			"Decor02": "ember_ash_urns",
+			"Decor03": "ember_iron_bloom",
+			"Decor04": "ember_iron_bloom",
+			"Decor05": "ember_cinder_altar"
+		}
+	},
+	"treasure_vault": {
+		"scene": "res://scenes/rooms/ember/treasure_vault.tscn",
+		"motif": "sealed_censer_vault",
+		"native_slots": {
+			"Decor00": "arch",
+			"Decor01": "column",
+			"Decor02": "column",
+			"Decor03": "ember_cinder_altar",
+			"Decor04": "rubble",
+			"Decor05": "ember_iron_bloom"
+		}
+	}
+}
+const EMBER_PROPS := {
+	"arch": "res://scenes/props/abyss_arch.tscn",
+	"column": "res://scenes/props/abyss_column.tscn",
+	"rubble": "res://scenes/props/abyss_rubble.tscn",
+	"stream": "res://scenes/props/abyss_stream.tscn",
+	"falls": "res://scenes/props/abyss_falls.tscn",
+	"ember_kiln_buttress": "res://scenes/props/ember/kiln_buttress.tscn",
+	"ember_cinder_altar": "res://scenes/props/ember/cinder_altar.tscn",
+	"ember_ash_urns": "res://scenes/props/ember/ash_urns.tscn",
+	"ember_iron_bloom": "res://scenes/props/ember/iron_bloom.tscn",
+	"ember_broken_effigy": "res://scenes/props/ember/broken_effigy.tscn",
+	"ember_sealed_vent": "res://scenes/props/ember/sealed_vent.tscn"
+}
+
 static func profile(id: String) -> Dictionary:
 	match id:
 		"rootbound_native_v1":
 			return {"roles": ROLE_PATHS.duplicate(true), "modules": MODULES.duplicate(true), "props": ROOT_PROPS.duplicate(true), "environment": "res://resources/environments/abyss.tres"}
 		"crystal_native_v1":
 			return {"roles": CRYSTAL_ROLE_PATHS.duplicate(true), "modules": CRYSTAL_MODULES.duplicate(true), "props": CRYSTAL_PROPS.duplicate(true), "environment": "res://resources/environments/crystal_caverns.tres"}
+		"ember_native_v1":
+			return {"roles": EMBER_ROLE_PATHS.duplicate(true), "modules": EMBER_MODULES.duplicate(true), "props": EMBER_PROPS.duplicate(true), "environment": "res://resources/environments/ember_crypt.tres"}
 	return {}

@@ -86,7 +86,17 @@ func direction_to(destination: Vector3, delta: float) -> Vector3:
 		_destination = destination
 		_replan_remaining = REPLAN_INTERVAL
 	if _danger_escape_active and _danger_cost(actor.global_position) <= 0.0: _danger_escape_active = false
-	while _path_index < path.size() and _flat_distance(actor.global_position, path[_path_index]) < (0.015 if _danger_escape_active else 0.42):
+	var precise_corner := false
+	while _path_index < path.size():
+		var remaining := _flat_distance(actor.global_position, path[_path_index])
+		# A safe polyline can skim a typed warning. Begin braking a metre before
+		# its corner at normal companion speed; never round an unsafe shortcut.
+		# This uses the existing bounded zone snapshot, without native queries.
+		if remaining <= 1.0 and _path_index + 1 < path.size() \
+				and _crosses_danger(actor.global_position, path[_path_index + 1], true):
+			precise_corner = true
+			break
+		if remaining >= (0.015 if _danger_escape_active else 0.42): break
 		_path_index += 1
 	if _path_index >= path.size():
 		return Vector3.ZERO
@@ -94,8 +104,8 @@ func direction_to(destination: Vector3, delta: float) -> Vector3:
 	direction.y = 0.0
 	if direction.length_squared() <= 0.000001: return Vector3.ZERO
 	# A small safe inner hole needs a precise stop, not the ordinary 0.42m
-	# formation arrival radius. Slow only this paid typed-danger intention.
-	if _danger_escape_active: return direction.normalized() * minf(1.0, direction.length())
+	# formation arrival radius. Slow only typed escape or an unsafe corner.
+	if _danger_escape_active or precise_corner: return direction.normalized() * minf(1.0, direction.length())
 	return direction.normalized() if direction.length_squared() > 0.001 else Vector3.ZERO
 
 ## Exposed for deterministic navigation checks. Called automatically at most
@@ -119,7 +129,7 @@ func plan_path(destination: Vector3) -> PackedVector3Array:
 		return PackedVector3Array()
 	if _flat_distance(start, goal) < 0.42:
 		return PackedVector3Array()
-	if _segment_clear(start, goal) and not _crosses_danger(start, goal):
+	if not _crosses_danger(start, goal) and _segment_clear(start, goal):
 		return PackedVector3Array([goal])
 	var result := _search(start, goal)
 	path_failed = result.is_empty()
@@ -458,7 +468,7 @@ func _search(start: Vector3, goal: Vector3) -> PackedVector3Array:
 			var next := current + offset
 			if visited.has(next) or next.x < low.x or next.x > high.x or next.y < low.y or next.y > high.y:
 				continue
-			if not _walkable(next) or not _edge_clear(current, next) or _crosses_danger(_point(current), _point(next), true):
+			if not _walkable(next) or _crosses_danger(_point(current), _point(next), true) or not _edge_clear(current, next):
 				continue
 			var candidate: float = float(costs[current]) + Vector2(offset).length() + _danger_cost(_point(next))
 			if not costs.has(next) or candidate < float(costs[next]):
@@ -481,11 +491,11 @@ func _reconstruct(came_from: Dictionary, current: Vector2i, start: Vector3, goal
 	while index < raw.size():
 		var selected := index
 		for lookahead in range(index, mini(raw.size(), index + 10)):
-			if _segment_clear(anchor, raw[lookahead]) and not _crosses_danger(anchor, raw[lookahead]):
+			if not _crosses_danger(anchor, raw[lookahead]) and _segment_clear(anchor, raw[lookahead]):
 				selected = lookahead
 		# The starting snapped grid node may be behind the actor. Only discard it
 		# when a later swept segment is clear; never smooth through a prop corner.
-		if not _segment_clear(anchor, raw[selected]) or _crosses_danger(anchor, raw[selected], true):
+		if _crosses_danger(anchor, raw[selected], true) or not _segment_clear(anchor, raw[selected]):
 			return PackedVector3Array()
 		result.append(raw[selected])
 		anchor = raw[selected]

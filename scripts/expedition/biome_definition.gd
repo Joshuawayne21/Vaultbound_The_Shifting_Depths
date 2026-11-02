@@ -25,6 +25,8 @@ func snapshot() -> Dictionary:
 		if minimum_depth != 1 or boss_ids != ["rootwarden"] or encounter_profile_id != "rootbound_legacy" or event_profile_id != "rootbound_legacy": return {}
 	elif id == "crystal_caverns":
 		if minimum_depth != 6 or boss_ids != ["prism_conductor", "geode_colossus", "shard_wraith"] or encounter_profile_id != "crystal_ordinary_v1" or event_profile_id != "crystal_encounters": return {}
+	elif id == "ember_crypt":
+		if minimum_depth != 11 or boss_ids != ["furnace_warden", "cinder_liturgist", "ash_sealkeeper"] or encounter_profile_id != "ember_ordinary_v1" or event_profile_id != "ember_encounters": return {}
 	else: return {}
 	var resolved: Dictionary = presentation.snapshot()
 	if resolved.is_empty(): return {}
@@ -39,9 +41,9 @@ static func valid_snapshot(value: Variant) -> bool:
 	if not value is Dictionary or value.size() != SNAPSHOT_KEYS.size(): return false
 	for key: String in SNAPSHOT_KEYS:
 		if not value.has(key): return false
-	if value.id not in ["rootbound_abyss", "crystal_caverns"] or not value.display_name is String or String(value.display_name).strip_edges().is_empty() or String(value.display_name).length() > 64: return false
+	if value.id not in ["rootbound_abyss", "crystal_caverns", "ember_crypt"] or not value.display_name is String or String(value.display_name).strip_edges().is_empty() or String(value.display_name).length() > 64: return false
 	if not Presentation._integer(value.content_version, 1, 1) or not Presentation._integer(value.theme_version, 1, 1): return false
-	var expected: String = Presentation.PROFILE_ID if value.id == "rootbound_abyss" else "crystal_native_v1"
+	var expected: String = Presentation.PROFILE_ID if value.id == "rootbound_abyss" else "crystal_native_v1" if value.id == "crystal_caverns" else "ember_native_v1"
 	return value.presentation_profile_id == expected and value.presentation is Dictionary and value.presentation.get("id") == expected \
 		and Presentation._integer(value.presentation_version, 1, 1) \
 		and Presentation.valid_snapshot(value.presentation)

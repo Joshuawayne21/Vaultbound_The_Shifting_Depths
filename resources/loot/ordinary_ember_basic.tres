@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="VaultLootTable" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/loot_table.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="2"]
+[ext_resource type="Resource" path="res://resources/items/cracked_forge_brick.tres" id="3"]
+[ext_resource type="Resource" path="res://resources/items/slate_iron_nodule.tres" id="4"]
+[ext_resource type="Resource" path="res://resources/items/bronze_scale.tres" id="5"]
+[ext_resource type="Resource" path="res://resources/items/temple_scrap.tres" id="6"]
+
+[resource]
+script = ExtResource("1")
+category = &"common"
+label = "Ember Salvage"
+gold_min = 4
+gold_max = 8
+minimum_rolls = 1
+maximum_rolls = 1
+entries = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")])
+weights = PackedFloat32Array(40.0, 30.0, 20.0, 10.0)
+reward_source = "encounter:ember_basic"

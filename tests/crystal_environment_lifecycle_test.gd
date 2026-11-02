@@ -29,7 +29,7 @@ func _initial() -> bool:
 		hazard = active_crystal_hazard()
 	if not check(is_instance_valid(hazard), "Actual Crystal trap opportunity admits a registered typed lane without Rootbound roots"): return false
 	var issued: Dictionary = hazard.typed_snapshot()
-	check(issued.profile.id == "crystal_resonance_lane" and issued.profile.version == 2 and issued.content_version == 5 \
+	check(issued.profile.id == "crystal_resonance_lane" and issued.profile.version == 2 and issued.content_version == 6 \
 		and issued.source_receipt == "initial_trap_room_%d_crystal_resonance_lane_0" % trap_room \
 		and issued.state == "warning" and is_equal_approx(float(issued.remaining), 2.0), "Initial lane receives its exact private receipt and full authored two-second warning")
 	check(level.registered_hazard_cast_valid(hazard, level.run_generation, String(issued.source_receipt), int(issued.cast_serial)) \

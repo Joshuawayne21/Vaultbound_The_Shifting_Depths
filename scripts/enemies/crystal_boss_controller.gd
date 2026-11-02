@@ -1,14 +1,15 @@
 extends "res://scripts/enemies/boss_controller.gd"
-## Crystal-only finite stages; Rootbound's one-stage clock remains unchanged.
+## Finite stages for reviewed Crystal and Ember leaves; Rootbound keeps its clock.
 const Attack = preload("res://scripts/enemies/boss_attack_definition.gd")
 const Sequence = preload("res://scripts/enemies/boss_sequence.gd")
 const CrystalVisual = preload("res://scripts/enemies/crystal_boss_visual.gd")
 var _sequence := Sequence.new()
 
 func configure(issued: Dictionary, context: Node3D) -> bool:
-	if issued.get("theme_id") != "crystal_caverns" or not super.configure(issued, context): return false
+	if not _accepts_theme(issued) or not super.configure(issued, context): return false
 	modifier_name = "Refracted Pattern" if modifier_id == &"refracted_pattern" else ""
 	return true
+func _accepts_theme(issued: Dictionary) -> bool: return issued.get("theme_id") == "crystal_caverns"
 func _create_visual() -> Node3D: return CrystalVisual.new()
 func _ready() -> void:
 	super._ready()
@@ -110,7 +111,7 @@ func _abort_sequence(duration: float) -> void:
 	if not is_instance_valid(self) or _sequence.serial != sequence_id or state != &"recovery": return
 	_warnings.hide_all()
 func cancel_pending(reason: StringName) -> void:
-	# Retire this Crystal cursor before presentation callbacks can admit another.
+	# Retire this finite cursor before presentation callbacks can admit another.
 	# Historical Rootbound cancellation ordering remains in the original base.
 	if state == &"phase_transition": _phase_restart = true
 	_cast.cancel()

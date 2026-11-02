@@ -1,0 +1,60 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Material" path="res://resources/materials/ember/flower_bud.tres" id="m0"]
+[ext_resource type="Material" path="res://resources/materials/ember/flower.tres" id="m1"]
+
+[sub_resource type="BoxMesh" id="mesh0"]
+size = Vector3(0.07, 0.25, 0.07)
+
+[sub_resource type="BoxMesh" id="mesh1"]
+size = Vector3(0.18, 0.025, 0.34)
+
+[sub_resource type="BoxMesh" id="mesh2"]
+size = Vector3(0.18, 0.025, 0.34)
+
+[sub_resource type="BoxMesh" id="mesh3"]
+size = Vector3(0.18, 0.025, 0.34)
+
+[sub_resource type="BoxMesh" id="mesh4"]
+size = Vector3(0.18, 0.025, 0.34)
+
+[sub_resource type="BoxMesh" id="mesh5"]
+size = Vector3(0.18, 0.025, 0.34)
+
+[node name="IronBloom" type="Node3D"]
+
+[node name="AshShoot" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.125, 0)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh0")
+material_override = ExtResource("m0")
+
+[node name="ForgedPetal0" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.12, 0.24)
+rotation = Vector3(0.12, 0, 0.12)
+mesh = SubResource("mesh1")
+material_override = ExtResource("m1")
+
+[node name="ForgedPetal1" type="MeshInstance3D" parent="."]
+position = Vector3(0.228253564, 0.12, 0.0741640786)
+rotation = Vector3(0.12, 1.25663706, 0.12)
+mesh = SubResource("mesh2")
+material_override = ExtResource("m1")
+
+[node name="ForgedPetal2" type="MeshInstance3D" parent="."]
+position = Vector3(0.141068461, 0.12, -0.194164079)
+rotation = Vector3(0.12, 2.51327412, 0.12)
+mesh = SubResource("mesh3")
+material_override = ExtResource("m1")
+
+[node name="ForgedPetal3" type="MeshInstance3D" parent="."]
+position = Vector3(-0.141068461, 0.12, -0.194164079)
+rotation = Vector3(0.12, 3.76991118, 0.12)
+mesh = SubResource("mesh4")
+material_override = ExtResource("m1")
+
+[node name="ForgedPetal4" type="MeshInstance3D" parent="."]
+position = Vector3(-0.228253564, 0.12, 0.0741640786)
+rotation = Vector3(0.12, 5.02654825, 0.12)
+mesh = SubResource("mesh5")
+material_override = ExtResource("m1")

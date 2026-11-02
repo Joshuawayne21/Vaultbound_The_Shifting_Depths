@@ -1,0 +1,108 @@
+[gd_scene load_steps=14 format=3]
+
+[ext_resource type="Material" path="res://resources/materials/ember/root_shell.tres" id="m0"]
+[ext_resource type="Material" path="res://resources/materials/ember/metal_trim.tres" id="m1"]
+
+[sub_resource type="CylinderMesh" id="mesh0"]
+top_radius = 0.7
+bottom_radius = 0.84
+height = 0.16
+radial_segments = 6
+rings = 1
+
+[sub_resource type="ConvexPolygonShape3D" id="shape0"]
+points = PackedVector3Array(0, -0.08, 0.84, 0.727461339, -0.08, 0.42, 0.727461339, -0.08, -0.42, 1.02870331e-16, -0.08, -0.84, -0.727461339, -0.08, -0.42, -0.727461339, -0.08, 0.42, 0, 0.08, 0.7, 0.606217783, 0.08, 0.35, 0.606217783, 0.08, -0.35, 8.57252759e-17, 0.08, -0.7, -0.606217783, 0.08, -0.35, -0.606217783, 0.08, 0.35)
+
+[sub_resource type="BoxMesh" id="mesh1"]
+size = Vector3(0.28, 0.55, 0.35)
+
+[sub_resource type="BoxShape3D" id="shape1"]
+size = Vector3(0.28, 0.55, 0.35)
+
+[sub_resource type="BoxMesh" id="mesh2"]
+size = Vector3(0.28, 0.8, 0.35)
+
+[sub_resource type="BoxShape3D" id="shape2"]
+size = Vector3(0.28, 0.8, 0.35)
+
+[sub_resource type="BoxMesh" id="mesh3"]
+size = Vector3(0.28, 0.44, 0.35)
+
+[sub_resource type="BoxShape3D" id="shape3"]
+size = Vector3(0.28, 0.44, 0.35)
+
+[sub_resource type="BoxMesh" id="mesh4"]
+size = Vector3(0.96, 0.11, 0.4)
+
+[sub_resource type="BoxShape3D" id="shape4"]
+size = Vector3(0.96, 0.11, 0.4)
+
+[sub_resource type="BoxMesh" id="mesh5"]
+size = Vector3(0.9, 0.035, 0.014)
+
+[node name="SealedVent" type="Node3D"]
+
+[node name="VentFoot" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.08, 0)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh0")
+material_override = ExtResource("m0")
+
+[node name="LeftHousing" type="MeshInstance3D" parent="."]
+position = Vector3(-0.3, 0.435, 0)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh1")
+material_override = ExtResource("m0")
+
+[node name="HighHousing" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.56, -0.02)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh2")
+material_override = ExtResource("m0")
+
+[node name="RightHousing" type="MeshInstance3D" parent="."]
+position = Vector3(0.3, 0.38, 0)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh3")
+material_override = ExtResource("m0")
+
+[node name="SealedCrossbar" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.4, -0.01)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh4")
+material_override = ExtResource("m1")
+
+[node name="ClosedGrille" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.45, -0.212)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh5")
+material_override = ExtResource("m1")
+
+[node name="Solid" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="VentFootCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(0, 0.08, 0)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape0")
+
+[node name="LeftHousingCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(-0.3, 0.435, 0)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape1")
+
+[node name="HighHousingCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(0, 0.56, -0.02)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape2")
+
+[node name="RightHousingCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(0.3, 0.38, 0)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape3")
+
+[node name="SealedCrossbarCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(0, 0.4, -0.01)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape4")

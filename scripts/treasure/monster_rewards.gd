@@ -8,22 +8,36 @@ const DEPTH_POLICY = preload("res://resources/expedition/depth_policy.tres")
 const REGISTERED_SOURCES := {"enemy_basic": "basic", "enemy_stronger": "stronger", "enemy_elite": "elite", "rootwarden_legacy": "boss"}
 const ENCOUNTER_SOURCES := {"thornmarshal": "encounter:thornmarshal", "mycelial_cantor": "encounter:mycelial_cantor", "root_bark_champion": "encounter:root_bark_champion",
 	"prism_conductor": "encounter:prism_conductor", "geode_colossus": "encounter:geode_colossus",
-	"shard_wraith": "encounter:shard_wraith", "crystal_lancekeeper": "encounter:crystal_lancekeeper"}
+	"shard_wraith": "encounter:shard_wraith", "crystal_lancekeeper": "encounter:crystal_lancekeeper",
+	"furnace_warden": "encounter:furnace_warden", "cinder_liturgist": "encounter:cinder_liturgist",
+	"ash_sealkeeper": "encounter:ash_sealkeeper", "cinder_pikewarden": "encounter:cinder_pikewarden"}
 const ENCOUNTER_CATEGORIES := {"thornmarshal": "boss", "mycelial_cantor": "boss", "root_bark_champion": "reinforced",
-	"prism_conductor": "boss", "geode_colossus": "boss", "shard_wraith": "boss", "crystal_lancekeeper": "reinforced"}
+	"prism_conductor": "boss", "geode_colossus": "boss", "shard_wraith": "boss", "crystal_lancekeeper": "reinforced",
+	"furnace_warden": "boss", "cinder_liturgist": "boss", "ash_sealkeeper": "boss", "cinder_pikewarden": "reinforced"}
 ## Shared ordinary reward profiles are not actor, objective or journal IDs.
-const ORDINARY_THEME_SOURCES := {"crystal_basic": "encounter:crystal_basic", "crystal_stronger": "encounter:crystal_stronger", "crystal_elite": "encounter:crystal_elite"}
-const ORDINARY_THEME_CATEGORIES := {"crystal_basic": "common", "crystal_stronger": "common", "crystal_elite": "reinforced"}
+const ORDINARY_THEME_SOURCES := {"crystal_basic": "encounter:crystal_basic", "crystal_stronger": "encounter:crystal_stronger", "crystal_elite": "encounter:crystal_elite",
+	"ember_basic": "encounter:ember_basic", "ember_stronger": "encounter:ember_stronger", "ember_elite": "encounter:ember_elite"}
+const ORDINARY_THEME_CATEGORIES := {"crystal_basic": "common", "crystal_stronger": "common", "crystal_elite": "reinforced",
+	"ember_basic": "common", "ember_stronger": "common", "ember_elite": "reinforced"}
 const ORDINARY_THEME_ITEMS := {
 	"crystal_basic": ["mistglass_sand", "turquoise_crystal_grain", "iron_ore", "emerald_dust"],
 	"crystal_stronger": ["turquoise_crystal_grain", "emerald_dust", "iron_ore", "common_enhancement_stone", "silvervein_filament"],
 	"crystal_elite": ["emerald_dust", "tempered_ingot", "silvervein_filament", "common_enhancement_stone", "turquoise_crystal_grain", "ancient_shard"],
+	"ember_basic": ["cracked_forge_brick", "slate_iron_nodule", "bronze_scale", "temple_scrap"],
+	"ember_stronger": ["obsidian_flake", "ancient_rivet", "iron_ore", "common_enhancement_stone", "tempered_ingot"],
+	"ember_elite": ["tempered_ingot", "obsidian_flake", "ancient_rivet", "common_enhancement_stone", "iron_ore", "ancient_shard"],
 }
 const CRYSTAL_ENCOUNTER_ITEMS := {
 	"prism_conductor": ["turquoise_crystal_grain", "emerald_dust", "common_enhancement_stone", "silvervein_filament", "stone_choir_tuning_fork", "crystaldew_phial", "crystal_cantor_headdress", "choirglass_necklace", "ancient_shard"],
 	"geode_colossus": ["iron_ore", "tempered_ingot", "common_enhancement_stone", "turquoise_crystal_grain", "mistglass_sand", "stonewalker_infusion", "streamstone_sallet", "duskglass_edge", "ancient_shard"],
 	"shard_wraith": ["mistglass_sand", "turquoise_crystal_grain", "emerald_dust", "common_enhancement_stone", "smoky_quartz_shard", "bluecap_opal_chip", "mistveil_crook", "crystal_cadence_boots", "ancient_shard"],
 	"crystal_lancekeeper": ["turquoise_crystal_grain", "mistglass_sand", "common_enhancement_stone", "iron_ore", "silvervein_filament", "stone_choir_tuning_fork", "runic_staff"],
+}
+const EMBER_ENCOUNTER_ITEMS := {
+	"furnace_warden": ["cracked_forge_brick", "tempered_ingot", "common_enhancement_stone", "obsidian_flake", "bronze_scale", "bronze_procession_mirror", "hammerwatch_fists", "anvilward_plate", "ancient_shard"],
+	"cinder_liturgist": ["temple_scrap", "ancient_rivet", "common_enhancement_stone", "bronze_scale", "obsidian_flake", "temple_keeper_draught", "lanternwick_talisman", "temple_pulse_staff", "ancient_shard"],
+	"ash_sealkeeper": ["iron_ore", "slate_iron_nodule", "common_enhancement_stone", "ancient_rivet", "cracked_forge_brick", "bronze_scriptorium_clasp", "forgepath_tassets", "temple_mason_seal", "ancient_shard"],
+	"cinder_pikewarden": ["cracked_forge_brick", "temple_scrap", "common_enhancement_stone", "iron_ore", "obsidian_flake", "temple_mason_seal", "lanternwatch_blade"],
 }
 const EVENT_SOURCES := {"event_root_spore_hive": "encounter:root_spore_hive", "event_root_horde": "encounter:root_horde"}
 const EVENT_ITEMS := {
@@ -189,7 +203,8 @@ func registered_profile_valid(source_profile: Dictionary) -> bool:
 	for item: VaultItemDefinition in all_items:
 		if item.category == "gold" or String(item.id) in ROOTWARDEN_EXCLUSIVE \
 				or not VaultInventory.definition_available(item) \
-				or (CRYSTAL_ENCOUNTER_ITEMS.has(id) and String(item.id) not in CRYSTAL_ENCOUNTER_ITEMS[id]):
+				or (CRYSTAL_ENCOUNTER_ITEMS.has(id) and String(item.id) not in CRYSTAL_ENCOUNTER_ITEMS[id]) \
+				or (EMBER_ENCOUNTER_ITEMS.has(id) and String(item.id) not in EMBER_ENCOUNTER_ITEMS[id]):
 			return false
 	return true
 

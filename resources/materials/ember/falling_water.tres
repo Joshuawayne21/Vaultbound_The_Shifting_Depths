@@ -1,0 +1,11 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+[ext_resource type="Shader" path="res://resources/shaders/living_water.gdshader" id="1"]
+[resource]
+shader = ExtResource("1")
+shader_parameter/deep_color = Color(0.062745098, 0.168627451, 0.207843137, 1)
+shader_parameter/shallow_color = Color(0.258823529, 0.403921569, 0.470588235, 1)
+shader_parameter/flow_speed = 1.15
+shader_parameter/ripple_scale = 12.0
+shader_parameter/bank_width = 0.1
+shader_parameter/falling = 1.0
+shader_parameter/foam_color = Color(0.705882353, 0.780392157, 0.807843137, 1)

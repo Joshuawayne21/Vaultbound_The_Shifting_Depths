@@ -47,19 +47,27 @@ func configure_visuals(expedition_seed: int, room_id: int, capture_inputs: bool 
 	_capture_geometry_for_validation = capture_inputs
 
 func _ready() -> void:
-	# A directly opened native Crystal scene gets its closed cosmetic profile.
+	# A directly opened native Crystal/Ember scene gets its closed cosmetic profile.
 	# This does not enable a theme or issue a run; unknown/mixed scenes cannot
 	# select the default. Existing standalone Rootbound behavior stays exact.
 	if _presentation.is_empty():
 		var catalog := preload("res://scripts/visual/dungeon_presentation_catalog.gd")
-		var entry: Dictionary = catalog.CRYSTAL_MODULES.get(String(module_id), {})
-		if not entry.is_empty() and scene_file_path == entry.scene:
-			var profile := load("res://resources/visual/crystal_presentation.tres") as VaultDungeonPresentation
+		var crystal: Dictionary = catalog.CRYSTAL_MODULES.get(String(module_id), {})
+		var ember: Dictionary = catalog.EMBER_MODULES.get(String(module_id), {})
+		var default_path := ""
+		if not crystal.is_empty() and scene_file_path == crystal.scene:
+			default_path = "res://resources/visual/crystal_presentation.tres"
+		elif not ember.is_empty() and scene_file_path == ember.scene:
+			default_path = "res://resources/visual/ember_presentation.tres"
+		if not default_path.is_empty():
+			var profile := load(default_path) as VaultDungeonPresentation
 			var issued: Dictionary = profile.snapshot()
 			var schema := preload("res://scripts/visual/dungeon_presentation.gd")
 			if not schema.module_instance_valid(issued, self) or not _apply_presentation(issued, schema.build_materials(issued)): return
 	_apply_openings()
-	if _presentation.get("id", "") == "crystal_native_v1":
+	if _presentation.get("id", "") == "ember_native_v1":
+		dressing = preload("res://scripts/visual/ember_decoration.gd").new()
+	elif _presentation.get("id", "") == "crystal_native_v1":
 		dressing = preload("res://scripts/visual/crystal_decoration.gd").new()
 	else:
 		dressing = preload("res://scripts/visual/abyss_decoration.gd").new()
@@ -67,7 +75,7 @@ func _ready() -> void:
 	if not _presentation.is_empty():
 		dressing.configure_materials(_presentation.dressing, _presentation_materials)
 	add_child(dressing)
-	var ambience := preload("res://scripts/visual/visual_style.gd").add_ambience(self, &"crystal" if _presentation.get("id", "") == "crystal_native_v1" else &"abyss", Vector3(18, 2.6, 18), dressing.cosmetic_seed)
+	var ambience := preload("res://scripts/visual/visual_style.gd").add_ambience(self, &"ember" if _presentation.get("id", "") == "ember_native_v1" else &"crystal" if _presentation.get("id", "") == "crystal_native_v1" else &"abyss", Vector3(18, 2.6, 18), dressing.cosmetic_seed)
 	ambience.configure_budget(12)
 	ambient_fauna = preload("res://scripts/visual/ambient_fauna.gd").new()
 	# Hovering corner pockets stay outside combat, doorway and spawn envelopes.

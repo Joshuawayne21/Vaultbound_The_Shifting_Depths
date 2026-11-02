@@ -112,8 +112,12 @@ func _measure_layout(depth: int) -> void:
 				for index in range(targets.size()):
 					readable = readable and safe.encloses(targets[index]) and targets[index].size.x >= 54 and targets[index].size.y >= 54
 					for other in range(index + 1, targets.size()): readable = readable and not targets[index].intersects(targets[other])
-				readable = readable and rect.position.y + 190 + 7 * 32 * panel.ui_scale + 24 < rect.end.y - 94
-				check(readable, "Full pool names and all eight rows fit without ellipsis or footer overlap: depth %d / %s / %d%% / %s" % [depth, extent, percent, inset])
+				var last_baseline: float = rect.position.y + 190 + maxi(0, panel.context.lines.size() - 1) * 32 * panel.ui_scale
+				var row_descent: float = ThemeDB.fallback_font.get_descent(roundi(14 * panel.ui_scale))
+				var notice_ascent: float = ThemeDB.fallback_font.get_ascent(roundi(12 * panel.ui_scale))
+				readable = readable and last_baseline + 24 < rect.end.y - 94 \
+					and last_baseline + row_descent + 8 < rect.end.y - 94 - notice_ascent
+				check(readable, "Full pool names and all information rows fit without ellipsis or native footer overlap: depth %d / %s / %d%% / %s" % [depth, extent, percent, inset])
 	for control: Control in [surface, overlay, panel]:
 		control.size = Vector2(1280, 720)
 		control.apply_visual_settings({"ui_scale_percent": 100})

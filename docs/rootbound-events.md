@@ -2,7 +2,7 @@
 
 This guide describes the accepted **7D.3 Rootbound event batch**, covered by [headless validation](milestone-7d3-validation.md). Physical Android play-testing and rendered art review remain pending.
 
-The batch extends the existing Rootbound world, room modules, shared combat, companions, searchable caches and extraction. It does not add another inventory, change Depthmarks, or turn optional encounters into required floor objectives. The later [7D.5 Crystal theme](glimmering-crystal-abyss.md) has its own resonance hazard; further themes, trap families and Ancient encounters remain later work. The later [7D.4 Return springs](dungeon-return-springs.md) can secure collected event rewards without completing the floor.
+The batch extends the existing Rootbound world, room modules, shared combat, companions, searchable caches and extraction. It does not add another inventory, change Depthmarks, or turn optional encounters into required floor objectives. The later [7D.5 Crystal theme](glimmering-crystal-abyss.md) has its own resonance hazard, and [7D.6 Ember](crimson-ember-temple.md) adds flame vents and one optional dormant mine. Further themes, trap families and Ancient encounters remain later work. The hive/horde rules below apply to Rootbound. The later [7D.4 Return springs](dungeon-return-springs.md) can secure collected event rewards without completing the floor.
 
 ## Selection and readable hazards
 

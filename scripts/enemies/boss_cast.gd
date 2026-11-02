@@ -26,11 +26,13 @@ func configure(owner: Node3D, context: Node3D, payload: Dictionary) -> bool:
 		if not payload[key] is int or int(payload[key]) < 0: return false
 	for key: String in ["theme_id", "encounter_definition_id", "boss_id", "encounter_receipt", "objective_role", "variant_id", "arena_profile_id"]:
 		if not payload[key] is String or String(payload[key]).is_empty() or String(payload[key]).length() > 160: return false
-	var crystal: bool = payload.theme_id == "crystal_caverns" and payload.content_version == 5 \
+	var crystal: bool = payload.theme_id == "crystal_caverns" and payload.content_version in [5, 6] \
 		and payload.boss_id in ["prism_conductor", "geode_colossus", "shard_wraith", "crystal_lancekeeper"]
-	var rootbound: bool = payload.theme_id == "rootbound_abyss" and payload.content_version in [2, 3, 4, 5] \
+	var rootbound: bool = payload.theme_id == "rootbound_abyss" and payload.content_version in [2, 3, 4, 5, 6] \
 		and payload.boss_id in ["thornmarshal", "mycelial_cantor", "root_bark_champion"]
-	if not (crystal or rootbound) or payload.encounter_version != 1 \
+	var ember: bool = payload.theme_id == "ember_crypt" and payload.content_version == 6 \
+		and payload.boss_id in ["furnace_warden", "cinder_liturgist", "ash_sealkeeper", "cinder_pikewarden"]
+	if not (crystal or rootbound or ember) or payload.encounter_version != 1 \
 			or payload.objective_role not in ["required", "optional"] or not payload.profile is Dictionary \
 			or not payload.depth_policy is Dictionary or not Policy.valid_snapshot(payload.depth_policy, int(payload.depth_policy.get("expedition_depth", 0))) \
 			or payload.boss_id != payload.profile.get("id") or payload.encounter_definition_id != payload.boss_id \

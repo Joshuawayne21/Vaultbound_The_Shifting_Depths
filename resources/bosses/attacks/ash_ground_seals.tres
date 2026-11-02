@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="VaultBossAttackDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/enemies/boss_attack_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"ash_ground_seals"
+controller_family = &"brood_keeper"
+pattern_version = 2
+shape = &"circle"
+damage_kind = &"magic"
+warning_time = 2.0
+active_time = 0.25
+recovery_time = 2.0
+damage = 13.0
+stage_count = 1
+stage_gap = 0.0
+parameters = {"radius": 1.1, "count": 2}
+stage_two = {}

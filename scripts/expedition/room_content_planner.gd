@@ -7,8 +7,9 @@ const SLOT_KEYS := ["id", "encounter_definition_id", "room_id", "ordinal", "loca
 static func plan(layout: Dictionary, issued: Dictionary) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var definition := String(issued.get("optional_profile", {}).get("id", ""))
-	if int(issued.get("content_version", 0)) not in [2, 3, 4, 5] or int(issued.get("expedition_depth", 0)) < 6 \
-			or definition not in ["root_bark_champion", "crystal_lancekeeper"]: return result
+	if int(issued.get("content_version", 0)) not in [2, 3, 4, 5, 6] or int(issued.get("expedition_depth", 0)) < 6 \
+			or definition not in ["root_bark_champion", "crystal_lancekeeper", "cinder_pikewarden"]: return result
+	if definition == "cinder_pikewarden" and int(issued.get("expedition_depth", 0)) < 11: return result
 	var reserved := checkpoint_rooms(layout, issued)
 	var candidates: Array[int] = []
 	for room: Dictionary in layout.get("rooms", []):
@@ -16,9 +17,9 @@ static func plan(layout: Dictionary, issued: Dictionary) -> Array[Dictionary]:
 	if candidates.is_empty(): return result
 	var rng := RandomNumberGenerator.new()
 	rng.seed = Streams.seed_for(int(issued.seed), int(issued.expedition_depth), int(issued.depth_policy_version),
-		&"crystal_caverns/optional_encounters" if definition == "crystal_lancekeeper" else &"optional_encounters")
+		&"crystal_caverns/optional_encounters" if definition == "crystal_lancekeeper" else &"ember_crypt/optional_encounters" if definition == "cinder_pikewarden" else &"optional_encounters")
 	var id := candidates[rng.randi_range(0, candidates.size() - 1)]
-	result.append({"id": "optional_lancekeeper" if definition == "crystal_lancekeeper" else "optional_champion", "encounter_definition_id": definition,
+	result.append({"id": "optional_lancekeeper" if definition == "crystal_lancekeeper" else "optional_pikewarden" if definition == "cinder_pikewarden" else "optional_champion", "encounter_definition_id": definition,
 		"room_id": id, "ordinal": 0, "local_position": Vector3(0, 0.15, 0)})
 	return result
 
@@ -28,8 +29,9 @@ static func valid_slots(slots: Array[Dictionary], layout: Dictionary, issued: Di
 	return slots == plan(layout, issued)
 
 static func content_slots(layout: Dictionary, issued: Dictionary) -> Array[Dictionary]:
+	if issued.get("theme_id") == "ember_crypt": return _ember_slots(layout, issued)
 	var result: Array[Dictionary] = []
-	if int(issued.get("content_version", 0)) not in [3, 4, 5] or issued.get("theme_id", "rootbound_abyss") != "rootbound_abyss": return result
+	if int(issued.get("content_version", 0)) not in [3, 4, 5, 6] or issued.get("theme_id", "rootbound_abyss") != "rootbound_abyss": return result
 	var depth := int(issued.expedition_depth)
 	if depth < 2: return result
 	var occupied := checkpoint_rooms(layout, issued)
@@ -88,7 +90,7 @@ static func checkpoint_rooms(layout: Dictionary, issued: Dictionary) -> Dictiona
 
 static func checkpoint_slots(layout: Dictionary, issued: Dictionary) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	if int(issued.get("content_version", 0)) not in [4, 5] or issued.get("checkpoint_policy", {}).get("version") != 1: return result
+	if int(issued.get("content_version", 0)) not in [4, 5, 6] or issued.get("checkpoint_policy", {}).get("version") != 1: return result
 	var count: int = layout.get("rooms", []).size()
 	if count < 10: return result
 	var route: Array = layout.get("main_route", [])
@@ -132,4 +134,21 @@ static func checkpoint_slots(layout: Dictionary, issued: Dictionary) -> Array[Di
 		if layout.rooms[id].kind not in [&"corridor", &"combat", &"trap"] or bool(layout.rooms[id].hidden): return [] as Array[Dictionary]
 		result.append({"id": "checkpoint_room_%d_%d" % [id, ordinal], "room_id": id, "ordinal": ordinal,
 			"local_position": Vector3.ZERO, "checkpoint_policy_version": 1})
+	return result
+
+static func _ember_slots(layout: Dictionary, issued: Dictionary) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if issued.get("content_version") != 6 or int(issued.get("expedition_depth", 0)) < 11: return result
+	var rules: Dictionary = issued.get("room_content_rules", {})
+	if rules.get("version") != 2 or rules.get("mine_limit") != 1 or rules.get("mine_definition_id") != "ember_arcane_mine": return result
+	var occupied := checkpoint_rooms(layout, issued)
+	for slot: Dictionary in plan(layout, issued): occupied[int(slot.room_id)] = true
+	var candidates: Array[int] = []
+	for room: Dictionary in layout.get("rooms", []):
+		if room.kind == &"combat" and not bool(room.main) and not bool(room.hidden) and not occupied.has(int(room.id)): candidates.append(int(room.id))
+	if candidates.is_empty(): return result
+	var rng := RandomNumberGenerator.new()
+	rng.seed = Streams.seed_for(int(issued.seed), int(issued.expedition_depth), int(issued.depth_policy_version), &"ember_crypt/mine_slots")
+	var id := candidates[rng.randi_range(0, candidates.size() - 1)]
+	result.append(_slot(id, "hazard", "ember_arcane_mine", Vector3(-3.8, 0, 0)))
 	return result

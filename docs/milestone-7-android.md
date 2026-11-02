@@ -114,13 +114,25 @@ The [7D.4 headless gate](milestone-7d4-validation.md) passed. These checks still
 
 The [headless gate](milestone-7d5-validation.md) is separate from the following physical Android checks. Back up a test profile and use a legitimately unlocked Depth 6 or higher; record the displayed seed, depth, theme and boss. Do not alter a personal save to force access.
 
-1. Review both weighted theme pools on the blue portal card at 100%, 110% and 120% UI scale. Confirm complete text, obvious Enter/Back controls and notch-safe placement. Enter selected Crystal floors and compare the actual HUD labels.
+1. Review the eligible weighted theme pools on the blue portal card at 100%, 110% and 120% UI scale. Confirm complete text, obvious Enter/Back controls and notch-safe placement. Enter selected Crystal floors and compare the actual HUD labels.
 2. Traverse mineral rooms, streams, temple corridors, secret passages and a long 24-room layout with both companions. Inspect door connections, chest approaches, spring seals and scenery collisions in third-person and isometric views. Capture rendered visibility problems rather than inferring appearance from headless bounds.
 3. Fight Conductor and its Refracted variant. Check each full warning, harmless gap, perpendicular second stage and visible central opening. Fight Colossus through both slams, exposed windows and phase transition. Switch cameras during warnings and damage windows.
 4. Watch Wraith's visible grounded relocation, then the two actual bolts. Step behind scenery and check readable moving corridors, no through-wall hits and no flight surviving recovery. Check the optional Lancekeeper label and confirm its defeat alone cannot unlock final extraction.
 5. Cross resonance lanes between pulses, leave/reenter their room, and observe awareness warnings. Guardian/Mystic should retain reaction delays, route around obstructions and preserve commands. Check that graphics presets do not hide essential telegraphs.
 6. Search ordinary, elite, optional and required-boss caches; take a partial reward, use a safe Return spring, and separately complete a final extraction. Restart and confirm exact collected items/DM, old gear/pets and the correct completion/unlock boundary. Crystal does not award Rootbound pet findings or unfinished boss materials.
 7. Repeat on Low/Medium/High, reduced effects and ambient density settings. Record draw/frame-time spikes, memory, warmth, battery and touchscreen comfort. Native triangle counts and host microsecond observations are not physical-device performance measurements.
+
+## 7D.6 Crimson Ember Temple
+
+The [headless gate](milestone-7d6-validation.md) does not replace these physical Android checks. Back up a test profile with Depth 11 legitimately unlocked. Record the exact build, seed, depth, admitted theme and boss; do not modify a personal save to bypass eligibility.
+
+1. Review the blue portal's Rootbound/Crystal/Ember pools at 100%, 110% and 120% UI scale, including long boss names and selection reasons. Confirm complete text, notch-safe placement and obvious Enter/Back controls. Compare actual HUD theme and boss labels after entry.
+2. Traverse the fourteen Ember room roles and a long floor with Guardian/Mystic and an owned pet. Check six-metre doors, temple arches, chest-front approaches, Return springs and scenery collision in both cameras. Cooling channels and decorative closed grilles are harmless; do not mistake them for active hazards.
+3. Fight Furnace Warden, including a successful charge followed by its separately warned rear Backdraft. Check the Banked Backdraft variant's opposed phase-two stages and harmless gap. Test Liturgist's two-stage lanes/marks and Sealkeeper's finite mixed defenders. Switch cameras during warnings, attacks, gaps, recovery and phase transition.
+4. Fight the optional Cinder Pikewarden. Inspect planted thrust readability and companion escapes, then confirm its defeat alone does not activate final extraction. Check that boss or optional movement stays inside its native arena and does not clip opaque scenery.
+5. Approach a dormant mine and observe a complete 2.2-second warning before its single brief ground attack. Leave and reenter: a shown attempt must not reset. Check initial and awareness vents, including the event warning followed by the vent's own 2.1-second warning. Presets must not hide essential attack footprints. Companions should retain reaction delays and commands.
+6. Partially search ordinary/elite, optional and required-boss caches. Use a clear Return spring on one run and final extraction on another. Restart and check exact collected rewards, the incomplete-versus-complete depth boundary, old gear, roster and pets. Ember must not grant unfinished boss items, Rootwarden-exclusive loot or new pet findings.
+7. Repeat representative rooms and encounters on Low/Medium/High, reduced effects/motion and ambient-density settings. Capture visual artifacts, touch comfort, sustained frame times, memory and thermal/battery behavior. Raw native vertices and host CPU timing are not Android rendering or performance evidence.
 
 ## Capture performance and visual evidence
 

@@ -1,0 +1,138 @@
+[gd_scene load_steps=17 format=3]
+
+[ext_resource type="Material" path="res://resources/materials/ember/root_shell.tres" id="m0"]
+[ext_resource type="Material" path="res://resources/materials/ember/fungal_cap.tres" id="m1"]
+[ext_resource type="Material" path="res://resources/materials/ember/metal_trim.tres" id="m2"]
+
+[sub_resource type="BoxMesh" id="mesh0"]
+size = Vector3(1.3, 0.12, 0.85)
+
+[sub_resource type="BoxShape3D" id="shape0"]
+size = Vector3(1.3, 0.12, 0.85)
+
+[sub_resource type="CylinderMesh" id="mesh1"]
+top_radius = 0.31
+bottom_radius = 0.26
+height = 0.6
+radial_segments = 6
+rings = 1
+
+[sub_resource type="ConvexPolygonShape3D" id="shape1"]
+points = PackedVector3Array(0, -0.3, 0.26, 0.225166605, -0.3, 0.13, 0.225166605, -0.3, -0.13, 3.18408168e-17, -0.3, -0.26, -0.225166605, -0.3, -0.13, -0.225166605, -0.3, 0.13, 0, 0.3, 0.31, 0.268467875, 0.3, 0.155, 0.268467875, 0.3, -0.155, 3.79640508e-17, 0.3, -0.31, -0.268467875, 0.3, -0.155, -0.268467875, 0.3, 0.155)
+
+[sub_resource type="CylinderMesh" id="mesh2"]
+top_radius = 0.22
+bottom_radius = 0.34
+height = 0.16
+radial_segments = 6
+rings = 1
+
+[sub_resource type="ConvexPolygonShape3D" id="shape2"]
+points = PackedVector3Array(0, -0.08, 0.34, 0.294448637, -0.08, 0.17, 0.294448637, -0.08, -0.17, 4.16379912e-17, -0.08, -0.34, -0.294448637, -0.08, -0.17, -0.294448637, -0.08, 0.17, 0, 0.08, 0.22, 0.190525589, 0.08, 0.11, 0.190525589, 0.08, -0.11, 2.69422296e-17, 0.08, -0.22, -0.190525589, 0.08, -0.11, -0.190525589, 0.08, 0.11)
+
+[sub_resource type="CylinderMesh" id="mesh3"]
+top_radius = 0.28
+bottom_radius = 0.22
+height = 0.78
+radial_segments = 6
+rings = 1
+
+[sub_resource type="ConvexPolygonShape3D" id="shape3"]
+points = PackedVector3Array(0, -0.39, 0.22, 0.190525589, -0.39, 0.11, 0.190525589, -0.39, -0.11, 2.69422296e-17, -0.39, -0.22, -0.190525589, -0.39, -0.11, -0.190525589, -0.39, 0.11, 0, 0.39, 0.28, 0.242487113, 0.39, 0.14, 0.242487113, 0.39, -0.14, 3.42901104e-17, 0.39, -0.28, -0.242487113, 0.39, -0.14, -0.242487113, 0.39, 0.14)
+
+[sub_resource type="CylinderMesh" id="mesh4"]
+top_radius = 0.18
+bottom_radius = 0.29
+height = 0.18
+radial_segments = 6
+rings = 1
+
+[sub_resource type="ConvexPolygonShape3D" id="shape4"]
+points = PackedVector3Array(0, -0.09, 0.29, 0.251147367, -0.09, 0.145, 0.251147367, -0.09, -0.145, 3.55147572e-17, -0.09, -0.29, -0.251147367, -0.09, -0.145, -0.251147367, -0.09, 0.145, 0, 0.09, 0.18, 0.155884573, 0.09, 0.09, 0.155884573, 0.09, -0.09, 2.20436424e-17, 0.09, -0.18, -0.155884573, 0.09, -0.09, -0.155884573, 0.09, 0.09)
+
+[sub_resource type="BoxMesh" id="mesh5"]
+size = Vector3(0.2, 0.08, 0.2)
+
+[sub_resource type="BoxShape3D" id="shape5"]
+size = Vector3(0.2, 0.08, 0.2)
+
+[sub_resource type="BoxMesh" id="mesh6"]
+size = Vector3(0.08, 0.23, 0.012)
+
+[node name="AshUrns" type="Node3D"]
+
+[node name="UrnPlatform" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.06, 0)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh0")
+material_override = ExtResource("m0")
+
+[node name="LowUrn" type="MeshInstance3D" parent="."]
+position = Vector3(-0.3, 0.42, 0)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh1")
+material_override = ExtResource("m1")
+
+[node name="LowLid" type="MeshInstance3D" parent="."]
+position = Vector3(-0.3, 0.8, 0)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh2")
+material_override = ExtResource("m2")
+
+[node name="TallUrn" type="MeshInstance3D" parent="."]
+position = Vector3(0.34, 0.51, 0.02)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh3")
+material_override = ExtResource("m1")
+
+[node name="TallLid" type="MeshInstance3D" parent="."]
+position = Vector3(0.34, 0.99, 0.02)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh4")
+material_override = ExtResource("m2")
+
+[node name="LidSeal" type="MeshInstance3D" parent="."]
+position = Vector3(-0.3, 0.92, 0)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh5")
+material_override = ExtResource("m2")
+
+[node name="StampedUrnSeal" type="MeshInstance3D" parent="."]
+position = Vector3(0.34, 0.56, -0.24)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh6")
+material_override = ExtResource("m2")
+
+[node name="Solid" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="UrnPlatformCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(0, 0.06, 0)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape0")
+
+[node name="LowUrnCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(-0.3, 0.42, 0)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape1")
+
+[node name="LowLidCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(-0.3, 0.8, 0)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape2")
+
+[node name="TallUrnCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(0.34, 0.51, 0.02)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape3")
+
+[node name="TallLidCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(0.34, 0.99, 0.02)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape4")
+
+[node name="LidSealCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(-0.3, 0.92, 0)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape5")

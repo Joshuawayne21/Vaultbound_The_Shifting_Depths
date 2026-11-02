@@ -4,6 +4,15 @@ extends Resource
 ## that a controller or encounter is implemented or available for selection.
 
 const PATTERNS := {
+	"furnace_advance": ["sentinel", "capsule", 1.9],
+	"furnace_backdraft": ["sentinel", "sector", 2.0],
+	"furnace_banked_backdraft": ["sentinel", "sector", 2.2],
+	"cinder_closing_jaws": ["conductor", "capsule", 1.9],
+	"cinder_ash_brands": ["conductor", "circle", 2.0],
+	"ash_seal_defenders": ["brood_keeper", "summon", 3.5],
+	"ash_ground_seals": ["brood_keeper", "circle", 2.0],
+	"ash_censer_sweep": ["brood_keeper", "sector", 1.8],
+	"cinder_pike_thrust": ["sentinel", "capsule", 1.8],
 	"sentinel_cleave": ["sentinel", "sector", 1.2],
 	"sentinel_charge": ["sentinel", "capsule", 1.4],
 	"sentinel_stomp": ["sentinel", "circle", 1.3],
@@ -26,6 +35,7 @@ const STAGE_KEYS := ["warning_time", "active_time", "damage", "stagger", "parame
 const V2_KEYS := ["id", "controller_family", "pattern_version", "shape", "damage_kind",
 	"warning_time", "active_time", "recovery_time", "damage", "stagger", "slow_duration",
 	"slow_factor", "stage_count", "stage_gap", "parameters", "stage_two"]
+const EMBER_IDS := ["furnace_advance", "furnace_backdraft", "furnace_banked_backdraft", "cinder_closing_jaws", "cinder_ash_brands", "ash_seal_defenders", "ash_ground_seals", "ash_censer_sweep", "cinder_pike_thrust"]
 const V2_IDS := ["conductor_alternating_lanes", "conductor_sequential_cross", "conductor_refracted_cross", "colossus_cone_swing",
 	"colossus_double_slam", "wraith_marked_relocation", "wraith_aimed_burst", "wraith_exposed_cast", "crystal_lance_thrust"]
 const LANE_KEYS := ["radius", "length", "count", "lateral_offset", "lane_spacing"]
@@ -160,11 +170,11 @@ static func snapshot_errors(value: Variant) -> PackedStringArray:
 	return errors
 
 static func _v2_errors(value: Dictionary) -> PackedStringArray:
-	if not exact_keys(value, V2_KEYS) or not value.pattern_version is int or not V2_IDS.has(value.get("id")):
+	if not exact_keys(value, V2_KEYS) or not value.pattern_version is int or not (V2_IDS.has(value.get("id")) or EMBER_IDS.has(value.get("id"))):
 		return PackedStringArray(["Unknown Crystal attack schema or identity"])
 	if not value.stage_count is int or value.stage_count not in [1, 2] or not value.stage_two is Dictionary:
 		return PackedStringArray(["Crystal attack has invalid stage count"])
-	var staged: bool = value.id in ["conductor_alternating_lanes", "conductor_sequential_cross", "conductor_refracted_cross", "colossus_double_slam"]
+	var staged: bool = value.id in ["conductor_alternating_lanes", "conductor_sequential_cross", "conductor_refracted_cross", "colossus_double_slam", "furnace_banked_backdraft", "cinder_closing_jaws", "cinder_ash_brands"]
 	if value.stage_count != (2 if staged else 1) or value.stage_two.is_empty() != (not staged) \
 			or (staged and not exact_keys(value.stage_two, STAGE_KEYS)) \
 			or (not staged and value.stage_gap != 0.0) or value.slow_duration != 0.0 or value.slow_factor != 1.0:
@@ -186,6 +196,7 @@ static func _v2_errors(value: Dictionary) -> PackedStringArray:
 					or (p.count == 1 and p.lane_spacing != 0.0) \
 					or (p.count == 2 and (p.lateral_offset != 0.0 or float(p.lane_spacing) - float(p.radius) * 2.0 < 2.0)):
 				errors.append("Crystal lane opening is invalid")
+				continue
 			if (index == 0 and (p.count != 1 or p.lateral_offset != 0.0)) \
 					or (value.id == "conductor_alternating_lanes" and index == 1 and (p.count != 1 or p.lateral_offset != 2.8)) \
 					or (value.id in ["conductor_sequential_cross", "conductor_refracted_cross"] and p.lateral_offset != 0.0) \
@@ -193,12 +204,25 @@ static func _v2_errors(value: Dictionary) -> PackedStringArray:
 					or (value.id == "conductor_refracted_cross" and index == 1 and (p.count != 2 or p.lane_spacing != 3.6 or single.warning_time != 2.2)) \
 					or not finite_number(p.length, 0.5, 3.0 if value.id == "crystal_lance_thrust" else 6.0):
 				errors.append("Crystal lane recipe mismatch")
+			if EMBER_IDS.has(value.id) and (p.count != 1 or p.lateral_offset != 0.0 or p.lane_spacing != 0.0): errors.append("Ember lane recipe must remain a single locked lane")
 			single.parameters = {"radius": p.radius, "length": p.length}
+		var stage_errors := snapshot_errors(single)
+		if not stage_errors.is_empty():
+			errors.append_array(stage_errors)
+			continue
 		if value.id == "colossus_double_slam" and single.get("parameters", {}).get("count") != 1:
 			errors.append("Each geode stage has one circle")
 		if value.id == "wraith_aimed_burst" and single.get("parameters", {}).get("angles") != [-deg_to_rad(26.0), deg_to_rad(26.0)]:
 			errors.append("Wraith volley must preserve its actual two-bolt gap")
-		errors.append_array(snapshot_errors(single))
+		if EMBER_IDS.has(value.id):
+			var p: Dictionary = single.parameters
+			if single.shape == "capsule" and (p.length > (3.0 if value.id == "cinder_pike_thrust" else 5.0)):
+				errors.append("Ember lane exceeds its implemented movement or attack envelope")
+			if single.shape == "circle" and p.count != (2 if value.id == "ash_ground_seals" else 1):
+				errors.append("Ember marks have an exact bounded shape count")
+			if value.id == "ash_seal_defenders" and (p.archetypes != ["skeleton", "archer"] or p.maximum_total != 4 or p.minimum_distance != 6.0):
+				errors.append("Sealkeeper uses its exact ordered two-member roster")
+			if single.stagger != 0.0: errors.append("Ember attacks have no unimplemented interruption packet")
 	return errors
 
 static func stage_snapshot(value: Dictionary, index: int = 0) -> Dictionary:

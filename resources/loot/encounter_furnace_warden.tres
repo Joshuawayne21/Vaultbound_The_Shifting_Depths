@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="VaultLootTable" load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/loot_table.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="2"]
+[ext_resource type="Resource" path="res://resources/items/cracked_forge_brick.tres" id="3"]
+[ext_resource type="Resource" path="res://resources/items/tempered_ingot.tres" id="4"]
+[ext_resource type="Resource" path="res://resources/items/common_enhancement_stone.tres" id="5"]
+[ext_resource type="Resource" path="res://resources/items/obsidian_flake.tres" id="6"]
+[ext_resource type="Resource" path="res://resources/items/bronze_scale.tres" id="7"]
+[ext_resource type="Resource" path="res://resources/items/bronze_procession_mirror.tres" id="8"]
+[ext_resource type="Resource" path="res://resources/items/hammerwatch_fists.tres" id="9"]
+[ext_resource type="Resource" path="res://resources/items/anvilward_plate.tres" id="10"]
+[ext_resource type="Resource" path="res://resources/items/ancient_shard.tres" id="11"]
+
+[resource]
+script = ExtResource("1")
+category = &"boss"
+label = "Furnace Warden Reliquary"
+gold_min = 120
+gold_max = 250
+minimum_rolls = 3
+maximum_rolls = 4
+entries = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11")])
+weights = PackedFloat32Array(24.0, 20.0, 18.0, 14.0, 10.0, 8.0, 3.0, 2.0, 1.0)
+guaranteed_item = ExtResource("5")
+reward_source = "encounter:furnace_warden"

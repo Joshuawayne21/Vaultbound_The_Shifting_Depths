@@ -22,6 +22,7 @@ func _run() -> void:
 	dummy.max_health = 10000.0
 	dummy.health = 10000.0
 	_resource_contracts()
+	_collision_target_eligibility()
 	await _sword_combo_and_buffer()
 	await _charged_attack(&"sword")
 	await _defense(&"sword")
@@ -55,6 +56,12 @@ func _resource_contracts() -> void:
 		check(data.max_health > 0.0 and data.damage > 0.0 and data.windup_time > 0.0 and data.recovery_time > 0.0, "Enemy has health, damage and telegraph/recovery timing: " + name)
 		archetypes.append(data.archetype)
 	check(archetypes[0] != archetypes[1] and archetypes[1] != archetypes[2], "All three enemy resources define distinct archetypes")
+
+func _collision_target_eligibility() -> void:
+	check(Rules.party_target_available(player), "The actual living, enabled player remains an eligible party target")
+	var collider := dummy.get_node("TargetCollision") as StaticBody3D
+	check(not Rules.party_target_available(collider), "A real native collider without character fields is safely rejected")
+	check(dummy.health > 0.0 and not Rules.party_target_available(dummy), "A healthy practice target without party controls is safely rejected")
 
 func _prepare(style: StringName, at: Vector3 = Vector3(0, 0.15, 4), target_at: Vector3 = Vector3(0, 0, 2)) -> void:
 	input_hub.reset_controls()

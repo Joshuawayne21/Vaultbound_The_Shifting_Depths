@@ -15,7 +15,7 @@ func _run() -> void:
 			var layout: Dictionary = Generator.generate_for_run(seed_value, depth)
 			var original: Dictionary = Generator.generate_for_depth(seed_value, depth)
 			var slots: Array[Dictionary] = Planner.checkpoint_slots(layout, plan)
-			check(plan.content_version == 5 and slots.size() == _count(layout.rooms.size()) and slots == Planner.checkpoint_slots(layout, plan), "Depth%d seed%d guarantees exact deterministic return count" % [depth, seed_value])
+			check(plan.content_version == 6 and slots.size() == _count(layout.rooms.size()) and slots == Planner.checkpoint_slots(layout, plan), "Depth%d seed%d guarantees exact deterministic return count" % [depth, seed_value])
 			check(layout.rooms == original.rooms and layout.main_route == original.main_route and layout.boss_id == original.boss_id \
 				and layout.extraction_id == original.extraction_id and Generator.validate(layout, Policy.describe_depth(depth), plan).is_empty(), "Depth%d seed%d retains all native roles modules links and objectives" % [depth, seed_value])
 			var reserved := {}

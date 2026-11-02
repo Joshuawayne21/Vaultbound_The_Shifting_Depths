@@ -59,8 +59,14 @@ static func attack_effect_snapshot(source: Node3D, attack_id: int) -> Dictionary
 static func party_target_available(actor: Variant) -> bool:
 	# Both human and AI members use the same damage eligibility. A downed member
 	# leaves enemy selection without losing their roster slot or secured equipment.
-	return is_instance_valid(actor) and actor is Node3D and actor.is_inside_tree() \
-		and float(actor.get("health")) > 0.0 and bool(actor.get("controls_enabled"))
+	# Native collision results also include scenery. Reject non-character fields
+	# before conversion so a wall cannot interrupt an attack's safe retirement.
+	if not is_instance_valid(actor) or not actor is Node3D or not actor.is_inside_tree():
+		return false
+	var health: Variant = actor.get("health")
+	var controls: Variant = actor.get("controls_enabled")
+	return (health is float or health is int) and is_finite(float(health)) \
+		and float(health) > 0.0 and controls is bool and controls
 
 static func party_targets(context: Node) -> Array[Node3D]:
 	var result: Array[Node3D] = []

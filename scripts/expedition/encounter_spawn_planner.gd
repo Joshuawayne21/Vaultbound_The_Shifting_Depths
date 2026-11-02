@@ -25,6 +25,10 @@ static func admit_sockets(world: Node3D, room: Node3D, candidates: Array[Vector3
 		height: float, maximum: int, occupied: Array[Node3D]) -> Array[Vector3]:
 	return _admit(world, room, candidates, radius, height, maximum, occupied, CombatRules.party_targets(world), 2)
 
+static func admit_boss_sockets(world: Node3D, room: Node3D, candidates: Array[Vector3], radius: float,
+		height: float, maximum: int, occupied: Array[Node3D]) -> Array[Vector3]:
+	return _admit(world, room, candidates, radius, height, maximum, occupied, current_party_occupants(world), 2)
+
 static func admit_event_sockets(world: Node3D, room: Node3D, candidates: Array[Vector3], radius: float,
 		height: float, maximum: int, occupied: Array[Node3D]) -> Array[Vector3]:
 	return _admit(world, room, candidates, radius, height, maximum, occupied, current_party_occupants(world), 3)

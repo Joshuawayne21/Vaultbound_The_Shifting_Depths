@@ -6,6 +6,7 @@ const Spawn = preload("res://scripts/expedition/encounter_spawn_planner.gd")
 const Content = preload("res://scripts/expedition/dungeon_content.gd")
 const Director = preload("res://scripts/expedition/dungeon_event_director.gd")
 const Core = preload("res://scripts/expedition/spore_hive.gd")
+const MineRegistry = preload("res://scripts/expedition/dormant_mine_registry.gd")
 const HazardDefinition = preload("res://scripts/expedition/hazard_definition.gd")
 var world: Node3D
 var depth := 1
@@ -21,6 +22,7 @@ var _materials: Dictionary = {}
 var _hazard_poll := 0.0
 var _visits: Dictionary = {}
 var _initial_opportunities: Dictionary = {}
+var _mines: RefCounted
 
 func configure(owner_world: Node3D, plan: Dictionary, materials: Dictionary) -> void:
 	world = owner_world
@@ -28,6 +30,8 @@ func configure(owner_world: Node3D, plan: Dictionary, materials: Dictionary) -> 
 	depth = int(plan.expedition_depth)
 	_materials = materials
 	_slots = Planner.content_slots(world.layout, plan)
+	_mines = MineRegistry.new()
+	_mines.configure(self, world, plan)
 
 func prepare() -> bool:
 	if _prepared: return admission_valid()
@@ -36,6 +40,7 @@ func prepare() -> bool:
 		var room: Node3D = world.rooms[int(slot.room_id)]
 		if slot.kind == "hazard":
 			if not Spawn.hazard_site_clear(world, room, shape_for(slot)): continue
+			if slot.definition_id == "ember_arcane_mine" and not _mines.prepare(slot, room, _materials): return false
 			_admitted.append(slot.duplicate(true))
 			continue
 		if not Spawn.clear_anchor(world, room, slot.local_position, 0.8 if slot.definition_id == "root_spore_hive" else 0.4, 1.8 if slot.definition_id == "root_spore_hive" else 1.9): continue
@@ -60,7 +65,8 @@ func prepare() -> bool:
 	return admission_valid()
 
 func admission_valid() -> bool:
-	if not _prepared or not Planner.valid_content_slots(_admitted, world.layout, _plan): return false
+	if not is_instance_valid(world) or not _prepared or not Planner.valid_content_slots(_admitted, world.layout, _plan) \
+		or (_mines != null and not _mines.admission_valid(_admitted)): return false
 	var count := 0
 	for slot: Dictionary in _admitted:
 		if slot.kind == "event": count += 1
@@ -253,6 +259,8 @@ func enter_room(id: int) -> void:
 
 func tick(delta: float) -> void:
 	if not _prepared: return
+	if _mines != null: _mines.tick(delta)
+	if not is_instance_valid(self) or not is_instance_valid(world) or not world.run_source_context_valid(): return
 	for actor: Node3D in directors(): actor.tick(delta)
 	for id: int in _hazard_records.keys():
 		var actor := _hazard_records[id].actor.get_ref() as Node3D
@@ -264,7 +272,7 @@ func tick(delta: float) -> void:
 	var initial: Dictionary = _initial_opportunities.get(int(world.current_room_id), {})
 	if initial.get("state", "") == "pending": _try_initial_opportunity(int(world.current_room_id))
 	for slot: Dictionary in _admitted:
-		if slot.kind != "hazard" or int(slot.room_id) != int(world.current_room_id) or _hazard_attempts.has(slot.id) or int(_visits.get(int(slot.room_id), 0)) > 2: continue
+		if slot.kind != "hazard" or slot.definition_id == "ember_arcane_mine" or int(slot.room_id) != int(world.current_room_id) or _hazard_attempts.has(slot.id) or int(_visits.get(int(slot.room_id), 0)) > 2: continue
 		_arm_hazard(slot)
 
 func _arm_hazard(slot: Dictionary) -> void:
@@ -402,7 +410,7 @@ func _policy_shape(room_id: int, awareness_cast: bool) -> Dictionary:
 		center = Vector3(clampf(center.x, -4.0, 4.0), 0.0, clampf(center.z, -4.0, 4.0))
 	var rng := RandomNumberGenerator.new()
 	rng.seed = Content.Streams.seed_for(int(_plan.seed), depth, int(_plan.depth_policy_version),
-		StringName("crystal_caverns/%s/%d" % ["awareness_lane" if awareness_cast else "initial_lane", room_id]))
+		StringName("%s/%s/%d" % [String(_plan.theme_id), "awareness_lane" if awareness_cast else "initial_lane", room_id]))
 	var axis := Vector3.RIGHT if rng.randi_range(0, 1) == 0 else Vector3.BACK
 	var half_length := float(profile.axis_length) * 0.5
 	return {"shape": "capsule", "position": room.to_global(center), "start": room.to_global(center - axis * half_length),
@@ -451,7 +459,7 @@ func _issue_policy_hazard(room_id: int, receipt: String, shape: Dictionary, owne
 			_hazard_records.erase(actor_id)
 			return "rejected"
 		if owner_domain == "initial_trap" and _initial_opportunities[room_id].state == "accepting": _initial_opportunities[room_id].state = "accepted"
-		world.notice.emit("Crystal resonance — cross between the warned pulses")
+		world.notice.emit("Flame vent — leave the marked lane" if _plan.theme_id == "ember_crypt" else "Crystal resonance — cross between the warned pulses")
 		return "accepted"
 	return "deferred"
 
@@ -459,13 +467,17 @@ func capture_typed_retirement(actor: Node3D, terminal: Dictionary) -> void:
 	if not is_instance_valid(world) or not world.run_source_context_valid() or not world.owns_environment_hazard(actor) \
 		or terminal != actor.typed_terminal_snapshot(): return
 	var record: Dictionary = _hazard_records.get(actor.get_instance_id(), {})
-	if record.is_empty() or record.actor.get_ref() != actor or record.get("owner_domain") != "initial_trap": return
+	if record.is_empty() or record.actor.get_ref() != actor: return
 	var issued: Dictionary = record.issued
 	var accepted: Dictionary = actor.typed_activation_snapshot()
 	if terminal.size() != 5 or terminal.get("cause") not in ["expired", "cancelled"]: return
 	for key: String in ["run_generation", "room_id", "source_receipt", "cast_serial"]:
 		if terminal.get(key) != issued[key] or accepted.get(key) != issued[key]: return
 	if int(issued.run_generation) != int(world.run_generation): return
+	if record.get("owner_domain") == "room_slot" and issued.profile.id == "ember_arcane_mine":
+		_mines.retired(actor, terminal, issued)
+		return
+	if record.get("owner_domain") != "initial_trap": return
 	var initial: Dictionary = _initial_opportunities.get(int(issued.room_id), {})
 	if initial.is_empty() or initial.issued != issued or initial.actor == null or initial.actor.get_ref() != actor: return
 	initial.terminal = terminal.duplicate(true)
@@ -478,3 +490,50 @@ func initial_opportunity_resolved(room_id: int) -> bool:
 	if initial.state != "resolved" or initial.terminal.is_empty(): return false
 	var actor := initial.actor.get_ref() as Node3D if initial.actor != null else null
 	return not is_instance_valid(actor) or not bool(actor.typed_activation_snapshot().delivery_in_progress)
+
+func mine_slot_snapshot(slot_id: String) -> Dictionary:
+	return _mines.snapshot(slot_id) if _mines != null else {}
+
+func arm_mine(slot: Dictionary) -> String:
+	if not is_instance_valid(world) or not world.run_source_context_valid() or not _admitted.has(slot) \
+			or slot.definition_id != "ember_arcane_mine" or int(world.current_room_id) != int(slot.room_id): return "omitted"
+	var shape := shape_for(slot)
+	var room: Node3D = world.rooms[int(slot.room_id)]
+	if not Spawn.hazard_site_clear(world, room, shape): return "omitted"
+	if not Spawn.hazard_escape_clear(world, room, shape): return "deferred"
+	for actor: Node3D in world.registered_hazard_actors():
+		if bool(actor.active): continue
+		var scheduler: EncounterEventScheduler = world.scheduler
+		var reservation: int = scheduler.reserve_typed_hazard(int(slot.room_id), String(slot.id))
+		if reservation < 0: return "deferred"
+		var issued := {"run_generation": int(world.run_generation), "content_version": int(_plan.content_version), "room_id": int(slot.room_id),
+			"source_receipt": String(slot.id), "cast_serial": int(actor.cast_serial) + 1, "profile": _plan.hazard_profiles[slot.definition_id].duplicate(true),
+			"shape": shape.duplicate(true), "depth_policy": world.issued_depth_policy()}
+		if not _mines.accepting(String(slot.id), actor, issued):
+			scheduler.release_reservation(reservation)
+			return "omitted"
+		var actor_id := actor.get_instance_id()
+		_hazard_records[actor_id] = {"actor": weakref(actor), "issued": issued.duplicate(true), "owner_domain": "room_slot"}
+		var started: bool = actor.trigger_typed(issued, world)
+		if not is_instance_valid(self) or not is_instance_valid(world) or not world.run_source_context_valid():
+			scheduler.release_reservation(reservation)
+			return "omitted"
+		var same: bool = is_instance_valid(actor) and world.owns_environment_hazard(actor) and _hazard_records.get(actor_id, {}).get("issued") == issued
+		if not same:
+			scheduler.release_reservation(reservation)
+			# The old attempt cannot retry or touch a replacement pool owner.
+			_mines.finish_attempt(String(slot.id), actor_id, issued, true)
+			return "accepted"
+		var accepted: Dictionary = actor.typed_activation_snapshot()
+		var was_accepted: bool = accepted.get("cast_serial") == issued.cast_serial and accepted.get("source_receipt") == issued.source_receipt
+		if not started or not scheduler.bind_hazard(reservation, actor):
+			scheduler.release_reservation(reservation)
+			actor.cancel()
+			if not is_instance_valid(self) or not is_instance_valid(world) or not world.run_source_context_valid(): return "omitted"
+			_mines.finish_attempt(String(slot.id), actor_id, issued, was_accepted)
+			if _hazard_records.get(actor_id, {}).get("issued") == issued: _hazard_records.erase(actor_id)
+			return "accepted" if was_accepted else "deferred"
+		_mines.finish_attempt(String(slot.id), actor_id, issued, true)
+		if is_instance_valid(self) and is_instance_valid(world) and world.run_source_context_valid(): world.notice.emit("Arcane mine — leave the warned seal")
+		return "accepted"
+	return "deferred"

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="VaultBossAttackDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/enemies/boss_attack_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"cinder_ash_brands"
+controller_family = &"conductor"
+pattern_version = 2
+shape = &"circle"
+damage_kind = &"magic"
+warning_time = 2.0
+active_time = 0.2
+recovery_time = 2.0
+damage = 12.0
+stage_count = 2
+stage_gap = 0.8
+parameters = {"radius": 1.2, "count": 1}
+stage_two = {"warning_time": 2.0, "active_time": 0.2, "damage": 12.0, "stagger": 0.0, "parameters": {"radius": 1.2, "count": 1}}

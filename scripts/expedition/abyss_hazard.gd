@@ -8,6 +8,7 @@ const TypedCast = preload("res://scripts/expedition/hazard_cast.gd")
 const WarningVisual = preload("res://scripts/enemies/boss_warning_visual.gd")
 const TypedVisual = preload("res://scripts/visual/rootbound_hazard_visual.gd")
 const CrystalVisual = preload("res://scripts/visual/crystal_hazard_visual.gd")
+const EmberVisual = preload("res://scripts/visual/ember_hazard_visual.gd")
 var active := false
 var state: StringName = &"idle"
 var radius := 2.0
@@ -48,7 +49,7 @@ func trigger_typed(issued: Dictionary, context: Node3D) -> bool:
 	# Locals own candidates until all native ready/node_added callbacks return.
 	# A nested accepted cast never sees or inherits this half-built presentation.
 	if owns_visual:
-		visual = CrystalVisual.new() if crystal else TypedVisual.new()
+		visual = EmberVisual.new() if definition_id in [&"ember_flame_vent", &"ember_arcane_mine"] else CrystalVisual.new() if crystal else TypedVisual.new()
 		visual.name = "TypedHazardVisual"
 		var configured: bool = visual.configure(issued.profile, issued.shape, _typed_materials) if crystal else visual.configure(definition_id, _typed_materials)
 		if not configured:

@@ -21,7 +21,7 @@ var _death_blend := 0.0
 
 
 func configure(value: StringName, profile_id: StringName = &"legacy_native") -> bool:
-	if profile_id not in [&"legacy_native", &"crystal_native"]: return false
+	if profile_id not in [&"legacy_native", &"crystal_native", &"ember_native"]: return false
 	cosmetic_profile_id = profile_id
 	archetype = value
 	if is_node_ready():
@@ -47,6 +47,7 @@ func _build() -> void:
 		_:
 			_build_skeleton()
 	if cosmetic_profile_id == &"crystal_native": _apply_crystal_profile()
+	elif cosmetic_profile_id == &"ember_native": _apply_ember_profile()
 	_accent_color = _accent.albedo_color
 
 
@@ -298,3 +299,27 @@ func _apply_crystal_profile() -> void:
 			var plate := _box(_body, Vector3(0.16, 0.38, 0.09), Vector3(side * 0.19, 1.10, -0.19), _skin)
 			plate.name = "CrystalRibLeft" if side < 0 else "CrystalRibRight"
 			plate.rotation.z = side * 0.20
+
+func _apply_ember_profile() -> void:
+	# Reuse actual limbs/weapon sockets; these ceramic/iron accents are cosmetic.
+	_skin_color = Color("8f7b71")
+	_skin.albedo_color = _skin_color
+	_accent.albedo_color = Color("c18a50")
+	if archetype in [&"golem", &"corrupted_golem"]:
+		var seal := _box(_body, Vector3(0.36, 0.26, 0.06), Vector3(0, 1.50, -0.43), _accent)
+		seal.name = "EmberFurnaceSeal"
+		for side: float in [-1.0, 1.0]:
+			var band := _box(_body, Vector3(0.10, 0.72, 0.07), Vector3(side * 0.34, 1.49, -0.41), _skin)
+			band.name = "EmberIronLeft" if side < 0 else "EmberIronRight"
+	elif archetype in [&"archer", &"goblin", &"goblin_archer"]:
+		for side: float in [-1.0, 1.0]:
+			var tab := _box(_head, Vector3(0.11, 0.16, 0.04), Vector3(side * 0.23, 0.19, 0), _accent)
+			tab.name = "EmberCowlLeft" if side < 0 else "EmberCowlRight"
+		var plate := _box(_body, Vector3(0.20, 0.42, 0.08), Vector3(-0.18, 0.92, 0.23), _skin)
+		plate.name = "EmberQuiverPlate"
+	else:
+		var mask := _box(_head, Vector3(0.25, 0.10, 0.025), Vector3(0, 0.12, -0.18), _accent)
+		mask.name = "EmberBrowSeal"
+		for side: float in [-1.0, 1.0]:
+			var plate := _box(_body, Vector3(0.18, 0.30, 0.08), Vector3(side * 0.18, 1.08, -0.18), _skin)
+			plate.name = "EmberRibLeft" if side < 0 else "EmberRibRight"

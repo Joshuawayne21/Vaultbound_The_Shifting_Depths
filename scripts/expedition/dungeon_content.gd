@@ -14,6 +14,8 @@ const ROOM_RULES := {"version": 1, "spike_chance": 0.5, "spike_limit": 2, "spore
 const CHECKPOINT_POLICY := {"version": 1, "minimum_rooms": 10, "two_checkpoint_rooms": 16, "interaction_radius": 3.0, "safety_radius": 4.0}
 const ROOTBOUND = preload("res://resources/biomes/rootbound_abyss.tres")
 const CRYSTAL = preload("res://resources/biomes/crystal_caverns.tres")
+const EMBER = preload("res://resources/biomes/ember_crypt.tres")
+const EMBER_HAZARDS := {"ember_flame_vent": preload("res://resources/hazards/ember_flame_vent.tres"), "ember_arcane_mine": preload("res://resources/hazards/ember_arcane_mine.tres")}
 const CRYSTAL_HAZARD = preload("res://resources/hazards/crystal_resonance_lane.tres")
 const POLICY = preload("res://resources/expedition/depth_policy.tres")
 const REWARDS = preload("res://resources/loot/monster_rewards.tres")
@@ -28,7 +30,7 @@ const ENEMY_NUMBERS := ["max_health", "damage", "armor", "move_speed", "detectio
 	"collision_radius", "collision_height", "label_height"]
 const PLAN_KEYS := ["plan_version", "content_version", "seed", "expedition_depth", "depth_policy_version", "biome_id",
 	"generator_version", "theme_id", "theme_version", "theme", "required_boss_id", "required_boss_version",
-	"variant_id", "boss_seed", "boss", "encounters", "event_profile", "reward_profiles", "pet_profiles", "optional_profile", "selection_rules", "hazard_profiles", "event_definitions", "room_content_rules", "checkpoint_policy", "theme_selection", "ordinary_profile", "trap_policy", "discovery_profile", "arena_profiles"]
+	"variant_id", "boss_seed", "boss", "encounters", "event_profile", "reward_profiles", "pet_profiles", "optional_profile", "selection_rules", "hazard_profiles", "event_definitions", "room_content_rules", "checkpoint_policy", "theme_selection", "ordinary_profile", "trap_policy", "discovery_profile", "arena_profiles", "boss_support_profiles"]
 const SELECTION_RULES := {"version": 1, "required_weights": {"rootwarden": 50, "thornmarshal": 25, "mycelial_cantor": 25},
 	"alternatives_minimum_depth": 2, "ascendant_minimum_depth": 6, "ascendant_denominator": 4,
 	"optional_minimum_depth": 6, "optional_limit": 1, "optional_definition_id": "root_bark_champion"}
@@ -67,7 +69,7 @@ static func resolve_run_plan(seed_value: int, expedition_depth: int) -> Dictiona
 	var root_profile: Dictionary = Bosses.snapshot_for("rootwarden") if theme_id == "rootbound_abyss" else {}
 	if theme.is_empty() or boss.is_empty() or optional.is_empty(): return {}
 	var boss_seed := Streams.seed_for(seed_value, expedition_depth, int(policy.policy_version), _stream(theme_id, "boss"))
-	var result := {"plan_version": 5, "content_version": 5, "seed": seed_value, "expedition_depth": expedition_depth,
+	var result := {"plan_version": 6, "content_version": 6, "seed": seed_value, "expedition_depth": expedition_depth,
 		"depth_policy_version": int(policy.policy_version), "biome_id": "rootbound_abyss", "generator_version": 2,
 		"theme_id": theme_id, "theme_version": int(theme.theme_version), "theme": theme,
 		"required_boss_id": selection.id, "required_boss_version": int(boss.encounter_version),
@@ -78,7 +80,7 @@ static func resolve_run_plan(seed_value: int, expedition_depth: int) -> Dictiona
 		"hazard_profiles": _hazards(theme_id), "event_definitions": _events(theme_id), "room_content_rules": _room_rules(theme_id),
 		"checkpoint_policy": CHECKPOINT_POLICY.duplicate(true), "theme_selection": Themes.SELECTION.duplicate(true),
 		"ordinary_profile": Themes.ordinary(theme_id), "trap_policy": Themes.trap_policy(theme_id), "discovery_profile": Themes.discovery(theme_id),
-		"arena_profiles": _arena_profiles(theme_id, boss, optional, String(selection.variant))}
+		"arena_profiles": _arena_profiles(theme_id, boss, optional, String(selection.variant)), "boss_support_profiles": Themes.support_profiles(theme_id)}
 	return result if valid_run_plan(result, policy) else {}
 
 static func valid_run_plan(value: Variant, issued_depth_policy: Dictionary) -> bool:
@@ -87,7 +89,7 @@ static func valid_run_plan(value: Variant, issued_depth_policy: Dictionary) -> b
 		or int(value.seed) < 0 or int(value.seed) > 2147483647 \
 		or not VaultDepthPolicy.valid_snapshot(issued_depth_policy, int(value.expedition_depth)): return false
 	for key: String in ["plan_version", "content_version"]:
-		if not value[key] is int or int(value[key]) != 5: return false
+		if not value[key] is int or int(value[key]) != 6: return false
 	for key: String in ["depth_policy_version", "theme_version", "required_boss_version"]:
 		if not value[key] is int or int(value[key]) != 1: return false
 	if not value.theme_id is String or not Ids.THEME_IDS.has(value.theme_id): return false
@@ -107,9 +109,10 @@ static func valid_run_plan(value: Variant, issued_depth_policy: Dictionary) -> b
 		or value.required_boss_id != selected.id or not value.boss.allowed_variant_ids.has(value.variant_id): return false
 	if value.checkpoint_policy != CHECKPOINT_POLICY or value.room_content_rules != _room_rules(theme_id) \
 		or not _valid_profiles(value.hazard_profiles, value.event_definitions, theme_id): return false
+	if value.boss_support_profiles != Themes.support_profiles(theme_id): return false
 	if value.reward_profiles != _reward_profiles(theme_id) or value.pet_profiles != _pet_profiles(theme_id) or value.event_profile != _event_profile(theme_id): return false
 	if value.arena_profiles != _arena_profiles(theme_id, value.boss, value.optional_profile, String(value.variant_id)) \
-		or (theme_id == "crystal_caverns" and value.arena_profiles.size() != 2): return false
+		or (theme_id != "rootbound_abyss" and value.arena_profiles.size() != 2): return false
 	var ids := Themes.encounter_ids(theme_id)
 	if not value.encounters is Dictionary or not _keys_match(value.encounters, ids): return false
 	for id: String in ids:
@@ -129,20 +132,21 @@ static func valid_run_plan(value: Variant, issued_depth_policy: Dictionary) -> b
 	return true
 
 static func theme_snapshot(theme_id: String) -> Dictionary:
-	var resource: Resource = ROOTBOUND if theme_id == "rootbound_abyss" else CRYSTAL if theme_id == "crystal_caverns" else null
+	var resource: Resource = ROOTBOUND if theme_id == "rootbound_abyss" else CRYSTAL if theme_id == "crystal_caverns" else EMBER if theme_id == "ember_crypt" else null
 	if resource == null or not resource.available: return {}
 	var result: Dictionary = resource.snapshot()
 	return result.duplicate(true) if Biome.valid_snapshot(result) else {}
 
 static func encounter_snapshot(encounter_definition_id: String) -> Dictionary:
-	var theme := "crystal_caverns" if Themes.CRYSTAL_IDS.has(encounter_definition_id) else "rootbound_abyss"
+	var theme := Themes.theme_for_encounter(encounter_definition_id)
+	if theme.is_empty(): return {}
 	var boss: Dictionary = Bosses.snapshot_for("rootwarden") if theme == "rootbound_abyss" else {}
 	return _encounters(boss, theme).get(encounter_definition_id, {}).duplicate(true)
 
 static func boss_pool_preview(expedition_depth: int) -> Dictionary:
 	# Compatibility preview remains the original Rootbound pool, never a seed roll.
 	var result := {"available": false, "theme_id": "rootbound_abyss", "theme_label": "Rootbound Abyss",
-		"required": [], "stronger_eligible": false, "optional_eligible": false, "content_version": 5}
+		"required": [], "stronger_eligible": false, "optional_eligible": false, "content_version": 6}
 	if not POLICY.supports_depth(expedition_depth) or not _theme_available("rootbound_abyss"): return result
 	var row := _preview_row("rootbound_abyss", expedition_depth, 100)
 	for key: String in row:
@@ -151,13 +155,13 @@ static func boss_pool_preview(expedition_depth: int) -> Dictionary:
 	return result
 
 static func theme_pool_preview(expedition_depth: int) -> Dictionary:
-	var denied := {"available": false, "content_version": 5, "themes": []}
+	var denied := {"available": false, "content_version": 6, "themes": []}
 	if not POLICY.supports_depth(expedition_depth): return denied
 	var rows: Array[Dictionary] = []
 	for theme: String in _eligible_themes(expedition_depth):
 		if not _theme_available(theme): return denied
-		rows.append(_preview_row(theme, expedition_depth, 100 if expedition_depth < 6 else int(Themes.SELECTION.weights[theme])))
-	return {"available": true, "content_version": 5, "themes": rows}
+		rows.append(_preview_row(theme, expedition_depth, Themes.preview_weight(theme, expedition_depth)))
+	return {"available": true, "content_version": 6, "themes": rows}
 
 static func _preview_row(theme: String, depth: int, weight: int) -> Dictionary:
 	var choices: Array[Dictionary] = []
@@ -194,21 +198,25 @@ static func _encounters(boss: Dictionary, theme: String = "rootbound_abyss") -> 
 static func _descriptor(id: String, variant: String) -> Dictionary:
 	if not Ids.ENCOUNTER_IDS.has(id) or not _variants(id).has(variant): return {}
 	var crystal := Themes.CRYSTAL_IDS.has(id)
-	var required: bool = Themes.ROOT_BOSSES.has(id) or Themes.CRYSTAL_BOSSES.has(id)
-	var optional := id in ["root_bark_champion", "crystal_lancekeeper"]
-	var support := id == "rootbound_boss_defender" or id.begins_with("root_event_")
+	var ember := Themes.EMBER_IDS.has(id)
+	var required: bool = Themes.ROOT_BOSSES.has(id) or Themes.CRYSTAL_BOSSES.has(id) or Themes.EMBER_BOSSES.has(id)
+	var optional := id in ["root_bark_champion", "crystal_lancekeeper", "cinder_pikewarden"]
+	var support := id == "rootbound_boss_defender" or id.begins_with("root_event_") or id in ["ember_seal_skeleton", "ember_seal_archer"]
 	var elite := required or optional or variant == "elite"
 	var reward := "rootwarden_legacy" if id == "rootwarden" else id if required or optional else "" if support else "enemy_elite" if elite else "enemy_stronger" if id == "golem" else "enemy_basic"
 	if crystal and not required and not optional: reward = "crystal_elite" if elite else "crystal_stronger" if id == "crystal_golem" else "crystal_basic"
-	var pet := "none" if crystal else "rootwarden_legacy" if id == "rootwarden" else "none" if required or optional or support else "rootbound_elite" if elite else "rootbound_regular"
+	if ember and not required and not optional and not support: reward = "ember_elite" if elite else "ember_stronger" if id == "ember_golem" else "ember_basic"
+	var pet := "none" if crystal or ember else "rootwarden_legacy" if id == "rootwarden" else "none" if required or optional or support else "rootbound_elite" if elite else "rootbound_regular"
 	return {"encounter_definition_id": id, "boss_id": id if required or optional else "",
 		"objective_role": "required" if required else "optional" if optional else "support" if support else "none",
 		"reward_profile_id": reward, "pet_profile_id": pet, "discovery_id": "" if support else id,
-		"content_version": 5, "encounter_version": 1, "variant_id": variant,
+		"content_version": 6, "encounter_version": 1, "variant_id": variant,
 		"archetype": _archetype(id), "elite": elite, "kind": "boss" if required else "elite" if elite else "regular"}
 
 static func _archetype(id: String) -> String:
-	if id in ["root_bark_champion", "rootbound_boss_defender", "crystal_lancekeeper"]: return "skeleton"
+	if id in ["root_bark_champion", "rootbound_boss_defender", "crystal_lancekeeper", "cinder_pikewarden", "ember_seal_skeleton"]: return "skeleton"
+	if id == "ember_seal_archer": return "archer"
+	if id in ["ember_skeleton", "ember_archer", "ember_golem"]: return id.trim_prefix("ember_")
 	if id.begins_with("root_event_"): return id.trim_prefix("root_event_")
 	if id in ["crystal_skeleton", "crystal_archer", "crystal_golem"]: return id.trim_prefix("crystal_")
 	return id
@@ -217,9 +225,20 @@ static func _variants(id: String) -> Array:
 	if id == "rootwarden": return ["none", "thick_bark", "blooming_thorns"]
 	if id == "thornmarshal": return ["none", "ascendant_pattern"]
 	if id == "prism_conductor": return ["none", "refracted_pattern"]
-	return ["none", "elite"] if ENEMY_DATA.has(id) or id in ["crystal_skeleton", "crystal_archer", "crystal_golem"] else ["none"]
+	if id == "furnace_warden": return ["none", "banked_backdraft"]
+	return ["none", "elite"] if ENEMY_DATA.has(id) or id in ["crystal_skeleton", "crystal_archer", "crystal_golem", "ember_skeleton", "ember_archer", "ember_golem"] else ["none"]
 
 static func _boss_selection(seed_value: int, depth: int, policy_version: int, theme: String = "rootbound_abyss") -> Dictionary:
+	if theme == "ember_crypt":
+		var ember_rng := RandomNumberGenerator.new()
+		ember_rng.seed = Streams.seed_for(seed_value, depth, policy_version, &"ember_crypt/boss_selection")
+		var choice := ember_rng.randi_range(0, 99)
+		var id := "furnace_warden" if choice < 34 else "cinder_liturgist" if choice < 67 else "ash_sealkeeper"
+		var variant := "none"
+		if id == "furnace_warden":
+			ember_rng.seed = Streams.seed_for(seed_value, depth, policy_version, &"ember_crypt/boss_variant")
+			if ember_rng.randi_range(0, 3) == 0: variant = "banked_backdraft"
+		return {"id": id, "variant": variant}
 	if theme == "crystal_caverns":
 		var crystal_rng := RandomNumberGenerator.new()
 		crystal_rng.seed = Streams.seed_for(seed_value, depth, policy_version, &"crystal_caverns/boss_selection")
@@ -272,19 +291,20 @@ static func _keys_match(value: Dictionary, keys: Array) -> bool:
 static func _hazards(theme: String = "rootbound_abyss") -> Dictionary:
 	if theme == "crystal_caverns": return {"crystal_resonance_lane": CRYSTAL_HAZARD.snapshot()}
 	var result := {}
-	for id: String in HAZARDS: result[id] = HAZARDS[id].snapshot()
+	var sources: Dictionary = EMBER_HAZARDS if theme == "ember_crypt" else HAZARDS
+	for id: String in sources: result[id] = sources[id].snapshot()
 	return result
 
 static func _events(theme: String = "rootbound_abyss") -> Dictionary:
-	if theme == "crystal_caverns": return {}
+	if theme != "rootbound_abyss": return {}
 	var result := {}
 	for id: String in EVENT_DEFINITIONS: result[id] = EVENT_DEFINITIONS[id].snapshot()
 	return result
 
 static func _valid_profiles(hazards: Variant, events: Variant, theme: String = "rootbound_abyss") -> bool:
 	if not hazards is Dictionary or not events is Dictionary: return false
-	var hazard_ids: Array = ["crystal_resonance_lane"] if theme == "crystal_caverns" else HAZARDS.keys()
-	var event_ids: Array = [] if theme == "crystal_caverns" else EVENT_DEFINITIONS.keys()
+	var hazard_ids: Array = ["crystal_resonance_lane"] if theme == "crystal_caverns" else EMBER_HAZARDS.keys() if theme == "ember_crypt" else HAZARDS.keys()
+	var event_ids: Array = [] if theme != "rootbound_abyss" else EVENT_DEFINITIONS.keys()
 	if not _keys_match(hazards, hazard_ids) or not _keys_match(events, event_ids): return false
 	for id: String in hazard_ids:
 		if not HazardDefinition.valid_snapshot(hazards.get(id)) or hazards[id].id != id: return false
@@ -293,11 +313,11 @@ static func _valid_profiles(hazards: Variant, events: Variant, theme: String = "
 	return true
 
 static func event_source_descriptor(plan: Dictionary, id: String, roster_profile_id: String) -> Dictionary:
-	if int(plan.get("content_version", 0)) != 5 or plan.get("theme_id") != "rootbound_abyss" or not plan.get("event_definitions", {}).has(id): return {}
+	if int(plan.get("content_version", 0)) != 6 or plan.get("theme_id") != "rootbound_abyss" or not plan.get("event_definitions", {}).has(id): return {}
 	var profile: Dictionary = plan.event_definitions[id]
 	if not EventDefinition.valid_snapshot(profile): return {}
 	if (id == "root_spore_hive" and roster_profile_id != "hive_two_waves") or (id == "root_horde" and roster_profile_id not in ["horde_solo", "horde_party"]): return {}
-	return {"encounter_definition_id": id, "content_version": 5, "encounter_version": 1, "objective_role": "optional",
+	return {"encounter_definition_id": id, "content_version": 6, "encounter_version": 1, "objective_role": "optional",
 		"reward_profile_id": String(profile.reward_profile_id), "pet_profile_id": "none", "discovery_id": id, "kind": "elite", "roster_profile_id": roster_profile_id}
 
 static func event_roster_members(plan: Dictionary, id: String, roster: String) -> Array:
@@ -310,11 +330,14 @@ static func event_roster_members(plan: Dictionary, id: String, roster: String) -
 	return result
 
 static func _eligible_themes(depth: int) -> Array:
-	return ["rootbound_abyss"] if depth < 6 else ["rootbound_abyss", "crystal_caverns"]
+	return ["rootbound_abyss"] if depth < 6 else ["rootbound_abyss", "crystal_caverns"] if depth < 11 else ["rootbound_abyss", "crystal_caverns", "ember_crypt"]
 
 static func _theme_selection(seed_value: int, depth: int, policy_version: int) -> String:
 	if depth < 6: return "rootbound_abyss"
 	var rng := RandomNumberGenerator.new()
+	if depth >= 11:
+		rng.seed = Streams.seed_for(seed_value, depth, policy_version, &"theme_ember_selection_v1")
+		if rng.randi_range(0, 99) < 25: return "ember_crypt"
 	rng.seed = Streams.seed_for(seed_value, depth, policy_version, &"theme_selection_v1")
 	return "rootbound_abyss" if rng.randi_range(0, 99) < 60 else "crystal_caverns"
 
@@ -322,19 +345,19 @@ static func _stream(theme: String, purpose: String) -> StringName:
 	return StringName(purpose if theme == "rootbound_abyss" else theme + "/" + purpose)
 
 static func _selection_rules(theme: String) -> Dictionary:
-	return (SELECTION_RULES if theme == "rootbound_abyss" else Themes.CRYSTAL_SELECTION).duplicate(true)
+	return (SELECTION_RULES if theme == "rootbound_abyss" else Themes.CRYSTAL_SELECTION if theme == "crystal_caverns" else Themes.EMBER_SELECTION).duplicate(true)
 
 static func _reward_profiles(theme: String) -> Dictionary:
-	return (REWARD_PROFILES if theme == "rootbound_abyss" else Themes.CRYSTAL_REWARDS).duplicate(true)
+	return (REWARD_PROFILES if theme == "rootbound_abyss" else Themes.CRYSTAL_REWARDS if theme == "crystal_caverns" else Themes.EMBER_REWARDS).duplicate(true)
 
 static func _pet_profiles(theme: String) -> Dictionary:
 	return PET_PROFILES.duplicate(true) if theme == "rootbound_abyss" else {"none": PET_PROFILES.none.duplicate(true)}
 
 static func _event_profile(theme: String) -> Dictionary:
-	return (EVENT_PROFILE if theme == "rootbound_abyss" else Themes.CRYSTAL_EVENTS).duplicate(true)
+	return (EVENT_PROFILE if theme == "rootbound_abyss" else Themes.CRYSTAL_EVENTS if theme == "crystal_caverns" else Themes.EMBER_EVENTS).duplicate(true)
 
 static func _room_rules(theme: String) -> Dictionary:
-	return (ROOM_RULES if theme == "rootbound_abyss" else Themes.CRYSTAL_ROOM_RULES).duplicate(true)
+	return (ROOM_RULES if theme == "rootbound_abyss" else Themes.CRYSTAL_ROOM_RULES if theme == "crystal_caverns" else Themes.EMBER_ROOM_RULES).duplicate(true)
 
 static func _arena_profiles(theme: String, boss: Dictionary, optional: Dictionary, variant: String) -> Dictionary:
 	if theme == "rootbound_abyss": return {}
@@ -348,10 +371,10 @@ static func _theme_available(theme: String) -> bool:
 	for id: String in Themes.boss_ids(theme):
 		for variant: String in _variants(id):
 			if Bosses.snapshot_for(id, variant).is_empty(): return false
-			if theme == "crystal_caverns" and Bosses.native_arena_snapshot(id, variant).is_empty(): return false
+			if theme != "rootbound_abyss" and Bosses.native_arena_snapshot(id, variant).is_empty(): return false
 	var optional := Themes.optional_id(theme)
 	if Bosses.optional_snapshot(optional).is_empty(): return false
-	if theme == "crystal_caverns" and Bosses.native_arena_snapshot(optional).is_empty(): return false
+	if theme != "rootbound_abyss" and Bosses.native_arena_snapshot(optional).is_empty(): return false
 	for reward: Dictionary in _reward_profiles(theme).values():
 		if not REWARDS.registered_profile_valid(reward): return false
 	return _valid_profiles(_hazards(theme), _events(theme), theme)

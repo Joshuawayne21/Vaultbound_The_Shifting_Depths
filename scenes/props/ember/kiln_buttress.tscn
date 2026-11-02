@@ -1,0 +1,126 @@
+[gd_scene load_steps=17 format=3]
+
+[ext_resource type="Material" path="res://resources/materials/ember/root_shell.tres" id="m0"]
+[ext_resource type="Material" path="res://resources/materials/ember/metal_trim.tres" id="m1"]
+[ext_resource type="Material" path="res://resources/materials/ember/emissive.tres" id="m2"]
+
+[sub_resource type="BoxMesh" id="mesh0"]
+size = Vector3(1.55, 0.28, 1.4)
+
+[sub_resource type="BoxShape3D" id="shape0"]
+size = Vector3(1.55, 0.28, 1.4)
+
+[sub_resource type="CylinderMesh" id="mesh1"]
+top_radius = 0.45
+bottom_radius = 0.62
+height = 3.75
+radial_segments = 6
+rings = 1
+
+[sub_resource type="ConvexPolygonShape3D" id="shape1"]
+points = PackedVector3Array(0, -1.875, 0.62, 0.53693575, -1.875, 0.31, 0.53693575, -1.875, -0.31, 7.59281015e-17, -1.875, -0.62, -0.53693575, -1.875, -0.31, -0.53693575, -1.875, 0.31, 0, 1.875, 0.45, 0.389711432, 1.875, 0.225, 0.389711432, 1.875, -0.225, 5.5109106e-17, 1.875, -0.45, -0.389711432, 1.875, -0.225, -0.389711432, 1.875, 0.225)
+
+[sub_resource type="BoxMesh" id="mesh2"]
+size = Vector3(1.08, 0.38, 0.9)
+
+[sub_resource type="BoxShape3D" id="shape2"]
+size = Vector3(1.08, 0.38, 0.9)
+
+[sub_resource type="BoxMesh" id="mesh3"]
+size = Vector3(0.13, 1.45, 0.4)
+
+[sub_resource type="BoxShape3D" id="shape3"]
+size = Vector3(0.13, 1.45, 0.4)
+
+[sub_resource type="BoxMesh" id="mesh4"]
+size = Vector3(0.15, 0.95, 0.42)
+
+[sub_resource type="BoxShape3D" id="shape4"]
+size = Vector3(0.15, 0.95, 0.42)
+
+[sub_resource type="BoxMesh" id="mesh5"]
+size = Vector3(0.68, 0.4, 0.7)
+
+[sub_resource type="BoxShape3D" id="shape5"]
+size = Vector3(0.68, 0.4, 0.7)
+
+[sub_resource type="BoxMesh" id="mesh6"]
+size = Vector3(0.11, 1.9, 0.025)
+
+[node name="KilnButtress" type="Node3D"]
+
+[node name="SteppedFoot" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.14, 0)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh0")
+material_override = ExtResource("m0")
+
+[node name="TaperedKiln" type="MeshInstance3D" parent="."]
+position = Vector3(0, 2.155, 0)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh1")
+material_override = ExtResource("m0")
+
+[node name="BrokenCrown" type="MeshInstance3D" parent="."]
+position = Vector3(0, 4.22, 0)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh2")
+material_override = ExtResource("m0")
+
+[node name="LongFin" type="MeshInstance3D" parent="."]
+position = Vector3(-0.46, 3.65, 0)
+rotation = Vector3(0, 0, 0.1)
+mesh = SubResource("mesh3")
+material_override = ExtResource("m1")
+
+[node name="ShortFin" type="MeshInstance3D" parent="."]
+position = Vector3(0.46, 3.9, 0.02)
+rotation = Vector3(0, 0, -0.12)
+mesh = SubResource("mesh4")
+material_override = ExtResource("m1")
+
+[node name="OffsetChimney" type="MeshInstance3D" parent="."]
+position = Vector3(-0.12, 4.61, 0.08)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh5")
+material_override = ExtResource("m0")
+
+[node name="InsetHeatSlit" type="MeshInstance3D" parent="."]
+position = Vector3(0, 2, -0.47)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh6")
+material_override = ExtResource("m2")
+
+[node name="Solid" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="SteppedFootCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(0, 0.14, 0)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape0")
+
+[node name="TaperedKilnCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(0, 2.155, 0)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape1")
+
+[node name="BrokenCrownCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(0, 4.22, 0)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape2")
+
+[node name="LongFinCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(-0.46, 3.65, 0)
+rotation = Vector3(0, 0, 0.1)
+shape = SubResource("shape3")
+
+[node name="ShortFinCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(0.46, 3.9, 0.02)
+rotation = Vector3(0, 0, -0.12)
+shape = SubResource("shape4")
+
+[node name="OffsetChimneyCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(-0.12, 4.61, 0.08)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape5")

@@ -34,6 +34,6 @@ slot = &""
 aura_profile = &"rare"
 special_effects = Array[String]([])
 crafting_tags = Array[String]([])
-acquisition_sources = Array[String](["chest:reinforced", "chest:ancient", "monster:elite"])
+acquisition_sources = Array[String](["chest:reinforced", "chest:ancient", "monster:elite", "encounter:furnace_warden"])
 icon = ExtResource("2")
 visual_scene = ExtResource("3")
