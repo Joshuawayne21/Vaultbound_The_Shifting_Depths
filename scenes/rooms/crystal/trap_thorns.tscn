@@ -1,0 +1,74 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/props/crystal/crystal_spurs.tscn" id="crystal_0"]
+[ext_resource type="PackedScene" path="res://scenes/props/crystal/crystal_spurs.tscn" id="crystal_1"]
+[ext_resource type="PackedScene" path="res://scenes/props/crystal/crystal_spurs.tscn" id="crystal_2"]
+[ext_resource type="PackedScene" path="res://scenes/props/crystal/obelisk.tscn" id="crystal_3"]
+[ext_resource type="PackedScene" path="res://scenes/props/crystal/geode_fan.tscn" id="crystal_4"]
+[ext_resource type="PackedScene" path="res://scenes/props/abyss_rubble.tscn" id="crystal_5"]
+
+[ext_resource type="PackedScene" path="res://scenes/rooms/abyss_room_base.tscn" id="1"]
+
+
+
+
+
+[ext_resource type="Material" path="res://resources/materials/abyss_ember.tres" id="6"]
+
+[sub_resource type="TorusMesh" id="r1"]
+inner_radius = 0.6
+outer_radius = 0.66
+rings = 24
+ring_segments = 4
+
+[node name="TrapThorns" instance=ExtResource("1")]
+module_id = &"trap_thorns"
+visual_motif = &"fracture_seal"
+room_kind = &"trap"
+
+[node name="Decor00" parent="." instance=ExtResource("crystal_0")]
+position = Vector3(-8, 0, -8)
+
+[node name="Decor01" parent="." instance=ExtResource("crystal_1")]
+position = Vector3(8, 0, -8)
+rotation = Vector3(0, 0.7, 0)
+
+[node name="Decor02" parent="." instance=ExtResource("crystal_2")]
+position = Vector3(-8, 0, 8)
+rotation = Vector3(0, 0.4, 0)
+
+[node name="Decor03" parent="." instance=ExtResource("crystal_3")]
+position = Vector3(8.5, 0, 8)
+rotation = Vector3(0, 3.14159, 0)
+
+[node name="Decor04" parent="." instance=ExtResource("crystal_4")]
+position = Vector3(-9, 0, 3)
+rotation = Vector3(0, 0.4, 0)
+
+[node name="Decor05" parent="." instance=ExtResource("crystal_5")]
+position = Vector3(9, 0, -4.5)
+rotation = Vector3(0, 0.4, 0)
+
+[node name="WarningGlyph0" type="MeshInstance3D" parent="."]
+position = Vector3(2.6163, 0.04, 2.6163)
+mesh = SubResource("r1")
+material_override = ExtResource("6")
+cast_shadow = 0
+
+[node name="WarningGlyph1" type="MeshInstance3D" parent="."]
+position = Vector3(2.6163, 0.04, -2.6163)
+mesh = SubResource("r1")
+material_override = ExtResource("6")
+cast_shadow = 0
+
+[node name="WarningGlyph2" type="MeshInstance3D" parent="."]
+position = Vector3(-2.6163, 0.04, -2.6163)
+mesh = SubResource("r1")
+material_override = ExtResource("6")
+cast_shadow = 0
+
+[node name="WarningGlyph3" type="MeshInstance3D" parent="."]
+position = Vector3(-2.6163, 0.04, 2.6163)
+mesh = SubResource("r1")
+material_override = ExtResource("6")
+cast_shadow = 0

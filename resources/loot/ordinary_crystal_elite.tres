@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="VaultLootTable" load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/loot_table.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/progression/item_definition.gd" id="2"]
+[ext_resource type="Resource" path="res://resources/items/emerald_dust.tres" id="3"]
+[ext_resource type="Resource" path="res://resources/items/tempered_ingot.tres" id="4"]
+[ext_resource type="Resource" path="res://resources/items/silvervein_filament.tres" id="5"]
+[ext_resource type="Resource" path="res://resources/items/common_enhancement_stone.tres" id="6"]
+[ext_resource type="Resource" path="res://resources/items/turquoise_crystal_grain.tres" id="7"]
+[ext_resource type="Resource" path="res://resources/items/ancient_shard.tres" id="8"]
+
+[resource]
+script = ExtResource("1")
+category = &"reinforced"
+label = "Reinforced Crystal Mineral Cache"
+gold_min = 25
+gold_max = 50
+minimum_rolls = 2
+maximum_rolls = 3
+entries = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8")])
+weights = PackedFloat32Array(25.0, 25.0, 20.0, 20.0, 9.0, 1.0)
+reward_source = "encounter:crystal_elite"

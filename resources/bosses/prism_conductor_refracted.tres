@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="VaultBossDefinition" load_steps=7 format=3]
+[ext_resource type="Script" path="res://scripts/enemies/boss_definition.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/bosses/conductor.tscn" id="2"]
+[ext_resource type="Script" path="res://scripts/enemies/boss_attack_definition.gd" id="attack"]
+[ext_resource type="Resource" path="res://resources/bosses/attacks/conductor_alternating_lanes.tres" id="a0"]
+[ext_resource type="Resource" path="res://resources/bosses/attacks/conductor_sequential_cross.tres" id="a1"]
+[ext_resource type="Resource" path="res://resources/bosses/attacks/conductor_refracted_cross.tres" id="a2"]
+[resource]
+script = ExtResource("1")
+id = &"prism_conductor"
+display_name = "Prism Conductor"
+controller_family = &"conductor"
+scene = ExtResource("2")
+available = true
+content_version = 5
+arena_profile_id = &"crystal_conductor_arena"
+reward_profile_id = &"prism_conductor"
+discovery_id = &"prism_conductor"
+visual_profile_id = &"prism_conductor"
+allowed_variant_ids = Array[StringName]([&"none", &"refracted_pattern"])
+stats = {"max_health": 462.0, "armor": 0.06, "move_speed": 1.2, "detection_range": 11.0, "leash_radius": 12.0, "movement_radius": 3.5, "phase_threshold": 0.4, "phase_transition_time": 1.8}
+phase_one_patterns = Array[StringName]([&"conductor_alternating_lanes", &"conductor_sequential_cross"])
+phase_two_patterns = Array[StringName]([&"conductor_alternating_lanes", &"conductor_refracted_cross"])
+attacks = Array[ExtResource("attack")]([ExtResource("a0"), ExtResource("a1"), ExtResource("a2")])

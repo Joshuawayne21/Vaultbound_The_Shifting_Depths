@@ -1,5 +1,6 @@
 class_name VaultHazardCast
 extends RefCounted
+signal retired(record: Dictionary)
 ## Timed typed hazard, with no grant authority and no inherited boss-health contract.
 const Definition = preload("res://scripts/expedition/hazard_definition.gd")
 const Attack = preload("res://scripts/enemies/boss_attack_definition.gd")
@@ -17,6 +18,10 @@ var pulses_delivered := 0
 var next_pulse := 0.0
 var _owner: WeakRef
 var _world: WeakRef
+var _timing: Dictionary = {}
+var _accepted: Dictionary = {}
+var _terminal: Dictionary = {}
+var _delivery_depth := 0
 
 func begin(actor: Node3D, context: Node3D, payload: Dictionary) -> bool:
 	if live or not is_instance_valid(actor) or not actor.is_inside_tree() or actor.is_queued_for_deletion() \
@@ -25,6 +30,7 @@ func begin(actor: Node3D, context: Node3D, payload: Dictionary) -> bool:
 	_owner = weakref(actor)
 	_world = weakref(context)
 	issued = payload.duplicate(true)
+	_timing = Definition.runtime_timing(issued.profile)
 	serial = int(issued.cast_serial)
 	state = &"warning"
 	remaining = float(issued.profile.warning_time)
@@ -33,16 +39,18 @@ func begin(actor: Node3D, context: Node3D, payload: Dictionary) -> bool:
 	pulses_delivered = 0
 	attack_id = CombatRules.next_attack_id()
 	live = true
+	var admitting_serial := serial
 	if not source_current():
-		cancel()
+		if serial == admitting_serial: cancel()
 		return false
+	_accepted = {"run_generation": int(issued.run_generation), "room_id": int(issued.room_id), "source_receipt": String(issued.source_receipt), "cast_serial": int(issued.cast_serial)}
 	return true
 
 static func valid_issued(payload: Variant) -> bool:
 	if not payload is Dictionary or not Attack.exact_keys(payload, KEYS): return false
 	for key: String in ["run_generation", "content_version", "room_id", "cast_serial"]:
 		if not payload[key] is int or int(payload[key]) < 0: return false
-	return payload.content_version in [3, 4] and payload.cast_serial > 0 and payload.source_receipt is String \
+	return payload.content_version in [3, 4, 5] and payload.cast_serial > 0 and payload.source_receipt is String \
 		and not String(payload.source_receipt).is_empty() and String(payload.source_receipt).length() <= 160 \
 		and payload.profile is Dictionary and payload.shape is Dictionary and payload.depth_policy is Dictionary \
 		and Definition.valid_shape(payload.profile, payload.shape) \
@@ -62,6 +70,10 @@ func source_current() -> bool:
 		and not context.is_queued_for_deletion()
 
 func cancel() -> void:
+	_retire("cancelled")
+
+func _retire(cause: String) -> void:
+	var record: Dictionary = _accepted.duplicate(true) if live and _accepted.get("cast_serial", -1) == issued.get("cast_serial", -2) else {}
 	serial += 1
 	live = false
 	state = &"idle"
@@ -69,11 +81,24 @@ func cancel() -> void:
 	active_remaining = 0.0
 	next_pulse = 0.0
 	attack_id = 0
+	if not record.is_empty():
+		record["cause"] = cause
+		_terminal = record
+		retired.emit(record.duplicate(true))
+
+func activation_snapshot() -> Dictionary:
+	var result := _accepted.duplicate(true) if not _accepted.is_empty() else {"run_generation": -1, "room_id": -1, "source_receipt": "", "cast_serial": 0}
+	result["active"] = live and _accepted.get("cast_serial", -1) == issued.get("cast_serial", -2)
+	result["delivery_in_progress"] = _delivery_depth > 0
+	return result
+
+func terminal_snapshot() -> Dictionary: return _terminal.duplicate(true)
 
 func advance(delta: float) -> void:
 	if not live: return
+	var entering_serial := serial
 	if not is_finite(delta) or delta < 0.0 or not source_current():
-		cancel()
+		if serial == entering_serial: cancel()
 		return
 	var actor := _owner.get_ref() as Node3D
 	if CombatRules.party_targets(actor).is_empty():
@@ -83,17 +108,17 @@ func advance(delta: float) -> void:
 		remaining = maxf(0.0, remaining - delta)
 		if remaining > 0.0: return
 		state = &"active"
-		active_remaining = float(issued.profile.active_time)
+		active_remaining = float(_timing.active_time)
 		_pulse()
 		return # A long warning frame never consumes the fresh active window.
 	active_remaining = maxf(0.0, active_remaining - delta)
 	if active_remaining <= 0.0:
-		cancel()
+		_retire("expired")
 		return # Expiry wins over a simultaneously overdue pulse.
-	if issued.profile.id == "root_spike_lane":
+	if _timing.delivery_mode == "contact_once":
 		_deliver(attack_id)
 		return
-	if pulses_delivered >= int(issued.profile.pulse_count): return
+	if pulses_delivered >= int(_timing.pulse_count): return
 	next_pulse = maxf(0.0, next_pulse - delta)
 	if next_pulse <= 0.0: _pulse() # At most one edge; discard accumulated overrun.
 
@@ -103,20 +128,25 @@ func _pulse() -> void:
 	pulses_delivered += 1
 	_deliver(attack_id)
 	if not live or serial != captured or not source_current(): return
-	if issued.profile.id == "root_spore_patch":
-		if pulses_delivered < int(issued.profile.pulse_count):
-			next_pulse = float(issued.profile.pulse_interval)
+	if _timing.delivery_mode == "pulse_edges":
+		if pulses_delivered < int(_timing.pulse_count):
+			next_pulse = float(_timing.pulse_interval)
 			attack_id = CombatRules.next_attack_id()
 		else:
 			next_pulse = 0.0
 			attack_id = 0 # The remaining cloud is harmless and advertises no danger.
 
 func _deliver(committed_id: int) -> void:
+	_delivery_depth += 1
+	_dispatch(committed_id)
+	if is_instance_valid(self): _delivery_depth -= 1
+
+func _dispatch(committed_id: int) -> void:
 	if committed_id <= 0 or not source_current(): return
 	var actor := _owner.get_ref() as Node3D
 	var captured := serial
 	var zone: Dictionary = issued.shape
-	var amount := float(issued.profile.damage) * float(issued.depth_policy.damage_multiplier)
+	var amount := float(_timing.damage) * float(issued.depth_policy.damage_multiplier)
 	for target: Node3D in CombatRules.party_targets(actor):
 		if not live or serial != captured or attack_id != committed_id or not source_current(): return
 		if not CombatRules.party_target_available(target): continue
@@ -132,7 +162,7 @@ func zones() -> Array[Dictionary]:
 	var zone: Dictionary = issued.shape.duplicate(true)
 	zone["kind"] = StringName(issued.profile.id)
 	zone["attack_id"] = attack_id
-	zone["stage_id"] = pulses_delivered if issued.profile.id == "root_spore_patch" else 0
+	zone["stage_id"] = pulses_delivered if _timing.delivery_mode == "pulse_edges" else 0
 	zone["phase"] = state
 	zone["remaining"] = remaining if state == &"warning" else next_pulse
 	zone["active_remaining"] = active_remaining

@@ -6,7 +6,7 @@ Thornmarshal and Mycelial Cantor controllers, an Ascendant Thornmarshal pattern
 and an optional Root Bark Champion to Rootbound. Read the [encounter guide](rootbound-encounters.md)
 for selection rules and mechanics. The [7D.3 event batch](rootbound-events.md)
 adds spike lanes, spore patches, a destructible hive and finite horde. Additional
-biomes, trap families and Ancient encounters remain later work. The [7D.4 Return springs](dungeon-return-springs.md) now provide safe early exits without completing a floor. Headless validation does not
+themes, trap families and Ancient encounters remain later work. [7D.5 Crystal](glimmering-crystal-abyss.md) adds the first additional executable theme. The [7D.4 Return springs](dungeon-return-springs.md) now provide safe early exits without completing a floor. Headless validation does not
 replace physical Android play-testing or rendered visual review.
 
 ## One issued expedition
@@ -17,7 +17,7 @@ The Rootbound progression track keeps its existing `biome_id: rootbound_abyss`. 
 
 Session admits a content run through `begin_content_run`; Abyss independently prepares it through `configure_content`. Game compares both full plans and the separate depth policy during travel. Public getters return detached copies. The original `begin_run`, `begin_depth_run`, `generate` and `generate_for_depth` remain compatibility paths for explicit fixtures; production travel uses the content path. `generate_for_run` adds content metadata without changing configured topology version 2 or the bounded seed mixer.
 
-Content version 4 retains the required boss, hazard, hive and horde profiles and adds the frozen Return spring policy. `RoomContentPlanner` derives optional placement from that plan and
+Content version 5 retains the boss, event and Return spring contracts and freezes theme selection, ordinary encounter composition, trap/discovery policies and native arena profiles. Depths 1–5 remain Rootbound; higher depths use a dedicated seeded 60/40 Rootbound/Crystal draw. Plans contain only the selected theme's actual producers. All eligible pools must validate before preview and admission; unavailable content never silently falls back. `RoomContentPlanner` derives optional placement from that plan and
 the generated layout. The world privately admits the actual room after native
 floor, body and route checks; an unsafe optional slot is omitted. These probes
 exclude the retained previous world's collision and require ground belonging to
@@ -37,7 +37,7 @@ objective. Support actors have no independent reward, pet finding, XP or discove
 grant. The optional Champion uses its own registry and source; its elite cache
 cannot unlock extraction.
 
-Only `rootwarden_legacy` resolves the existing Rootwarden loot and Rootling findings. An unknown boss or profile is rejected rather than falling through to that reward. Ordinary, stronger and elite sources retain their existing tables. Rewards still use the original loot sampler, source restrictions and catalog-value validation; approved results enter the existing one-claim ledger before callbacks. Searching never rolls again. Live catalog/economy hot reload is not supported by this prototype.
+Only `rootwarden_legacy` resolves the existing Rootwarden loot and Rootling findings. An unknown boss or profile is rejected rather than falling through to that reward. Rootbound ordinary, stronger and elite sources retain their existing tables. Crystal uses three separate ordinary tables and four named encounter tables, with no Rootbound-exclusive or pet fallback. Rewards still use the original loot sampler, source restrictions and catalog-value validation; approved results enter the existing one-claim ledger before callbacks. Searching never rolls again. Live catalog/economy hot reload is not supported by this prototype.
 
 The three new encounter tables use explicit `encounter:<definition_id>` sources
 and existing items. Their labels come from admitted source presentation IDs, not
@@ -94,13 +94,21 @@ a nominally safe point from routing through an enemy body. These bounded checks
 run at the existing decision edges, outside the persistent static-geometry cache.
 Ordinary path planning and its throttling remain unchanged.
 
-New encounter projectiles can opt into a five-integer cast identity: run generation, source instance, cast serial, stage and attack ID. The source validates current lifetime and each target's eligibility, arena, height and line of sight. Cancellation makes the projectile inert and hidden before deferred deletion; its reported flight state cannot keep a stale warning corridor alive. Normal recovery can retain an already authorized airborne cast until bounded expiry.
+New encounter projectiles can opt into a five-integer cast identity: run generation, source instance, cast serial, stage and attack ID. The source validates current lifetime and each target's eligibility, arena, height and line of sight. Cancellation makes the projectile inert and hidden before deferred deletion; its reported flight state cannot keep a stale warning corridor alive. The general projectile seam supports bounded flight ownership; the Crystal Wraith specifically retires every owned flight before recovery. Its two actual bolts share one attack ID and do not also deliver ground-lane damage.
 
 The first new Rootbound controllers use melee/ground attacks and summons, not
 boss projectiles. Their active damage authority ends at recovery; a retained
 attack label for presentation or exposed armor does not retain damage authority.
 
 Hit callbacks can end an encounter or remove a world. Guards run again before further damage and projectile feedback. Already delivered damage remains accepted, while removed targets no longer receive feedback through stale references. Empty-token player/staff/archer projectiles retain their existing ray sweep, muzzle-wall correction, splash and lifetime behavior. This is local gameplay authority, not authenticated multiplayer security.
+
+## Crystal stages and hazards
+
+Version-two attack definitions issue each stage explicitly. The first active window retires before a harmless gap, then stage two receives a new attack ID and full independently admitted warning. A pending gap blocks a local Return without inventing an AI danger zone. Cancellation or a changed source removes the pending continuation. Wraith relocation checks its actual capsule along a grounded route and stops at live obstructions.
+
+The typed resonance hazard uses the existing two-wrapper pool. Initial traps and awareness events have distinct private ownership records; an awareness event transfers its already-held reservation after the full event warning. Each hazard then gives its own full warning and finite pulse edges, discarding delayed-frame overrun. A final harmless visual tail remains an unresolved initial opportunity until actual retirement. Terminal identity and damage-dispatch observations prevent old callbacks from authorizing Return or changing a replacement cast.
+
+New Crystal presentation uses fourteen separate native scenes on the retained grid and connection anchors, shared material roles and bounded instanced decoration. Native scene/actor validation checks collision and posed bounds; geometric envelope arithmetic alone is not admission. The static art and room counts are not a claim of rendered beauty or Android frame rate.
 
 ## Save compatibility
 
@@ -110,7 +118,7 @@ Profile v7 adds a small `encounter_records` namespace alongside the existing fou
 Thornmarshal defeat derives one journal-only subset observation alongside its
 base record. Its count and highest depth cannot exceed the base, and its first
 revision cannot precede the base. It is never another kill, reward or objective.
-No historical Ascendant record is inferred from old items or completions. These
+The Crystal Refracted Conductor uses the same derived-only observation rules alongside its base encounter. Neither variant grants a second reward. No historical variant record is inferred from old items or completions. These
 new records are available in the saved profile; their dedicated Hall/journal
 interface remains for 7G.
 

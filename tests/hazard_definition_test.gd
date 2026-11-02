@@ -19,7 +19,8 @@ func _run() -> void:
 			var usage := int(property.get("usage", 0))
 			if (usage & PROPERTY_USAGE_SCRIPT_VARIABLE) != 0 and (usage & PROPERTY_USAGE_STORAGE) != 0:
 				exported[String(property.name)] = true
-		check(exported.size() == Definition.KEYS.size() and Attack.exact_keys(exported, Definition.KEYS), "Frozen profile covers every actual authored export")
+		check(exported.size() == Definition.V2_KEYS.size() and Attack.exact_keys(exported, Definition.V2_KEYS) \
+			and authored.delivery_mode == "" and Attack.exact_keys(profile, Definition.KEYS), "Version-one snapshots retain exact historical fields while the Resource explicitly declares the separate version-two delivery export")
 		for key: String in Definition.KEYS:
 			var missing := profile.duplicate(true)
 			missing.erase(key)

@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="VaultMonsterRewards" load_steps=11 format=3]
+[gd_resource type="Resource" script_class="VaultMonsterRewards" load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://scripts/treasure/monster_rewards.gd" id="1"]
 [ext_resource type="Resource" path="res://resources/loot/common.tres" id="2"]
@@ -13,6 +13,14 @@
 [ext_resource type="Resource" path="res://resources/loot/event_root_spore_hive.tres" id="9"]
 [ext_resource type="Resource" path="res://resources/loot/event_root_horde.tres" id="10"]
 
+[ext_resource type="Resource" path="res://resources/loot/encounter_prism_conductor.tres" id="11"]
+[ext_resource type="Resource" path="res://resources/loot/encounter_geode_colossus.tres" id="12"]
+[ext_resource type="Resource" path="res://resources/loot/encounter_shard_wraith.tres" id="13"]
+[ext_resource type="Resource" path="res://resources/loot/encounter_crystal_lancekeeper.tres" id="14"]
+[ext_resource type="Resource" path="res://resources/loot/ordinary_crystal_basic.tres" id="15"]
+[ext_resource type="Resource" path="res://resources/loot/ordinary_crystal_stronger.tres" id="16"]
+[ext_resource type="Resource" path="res://resources/loot/ordinary_crystal_elite.tres" id="17"]
+
 [resource]
 script = ExtResource("1")
 basic_table = ExtResource("2")
@@ -20,5 +28,6 @@ stronger_table = ExtResource("3")
 elite_table = ExtResource("4")
 boss_table = ExtResource("5")
 source_restrictions = {"rootwarden_heart": ["boss"], "elite_monster_fragment": ["elite"], "rootwarden_essence": ["boss"], "verdant_oathblade": ["boss"], "vaultheart_staff": ["boss"]}
-encounter_tables = {"thornmarshal": ExtResource("6"), "mycelial_cantor": ExtResource("7"), "root_bark_champion": ExtResource("8")}
+encounter_tables = {"thornmarshal": ExtResource("6"), "mycelial_cantor": ExtResource("7"), "root_bark_champion": ExtResource("8"), "prism_conductor": ExtResource("11"), "geode_colossus": ExtResource("12"), "shard_wraith": ExtResource("13"), "crystal_lancekeeper": ExtResource("14")}
 event_tables = {"event_root_spore_hive": ExtResource("9"), "event_root_horde": ExtResource("10")}
+ordinary_theme_tables = {"crystal_basic": ExtResource("15"), "crystal_stronger": ExtResource("16"), "crystal_elite": ExtResource("17")}

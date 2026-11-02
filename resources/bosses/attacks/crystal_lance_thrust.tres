@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="VaultBossAttackDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/enemies/boss_attack_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"crystal_lance_thrust"
+controller_family = &"sentinel"
+pattern_version = 2
+shape = &"capsule"
+damage_kind = &"enemy_melee"
+warning_time = 1.7
+active_time = 0.2
+recovery_time = 1.9
+damage = 15.0
+stage_count = 1
+stage_gap = 0.0
+parameters = {"radius": 0.65, "length": 3.0, "count": 1, "lateral_offset": 0.0, "lane_spacing": 0.0}
+stage_two = {}

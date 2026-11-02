@@ -133,6 +133,9 @@ func configure_content(expedition_seed: int, expedition_depth: int) -> void:
 		_configured_layout = {}
 		validation_errors.assign(["Executable dungeon content is unavailable"])
 		return
+	_boss_seed = int(_content_plan.boss_seed)
+	display_name = String(_content_plan.theme.display_name).to_upper()
+	objective = "Find %s • Defeat the guardian • Extract your treasure" % String(_content_plan.boss.display_name)
 	layout = Generator.generate_for_run(expedition_seed, expedition_depth)
 	_configured_layout = layout.duplicate(true)
 	_room_slots = RoomContent.plan(layout, _content_plan)
@@ -158,16 +161,16 @@ func prepare_combat_admission() -> bool:
 	if _content_plan.is_empty(): return true
 	if _combat_admission_ready: return combat_admission_valid()
 	if not run_source_context_valid() or not validation_errors.is_empty() or _room_slots != RoomContent.plan(layout, _content_plan): return false
-	if _content_plan.required_boss_id != "rootwarden" \
-			and not SpawnPlanner.clear_anchor(self, rooms[int(layout.boss_id)], Vector3(0, 0.15, 0), 0.7, 2.8):
+	if _content_plan.required_boss_id != "rootwarden" and not _required_arena_clear():
 		validation_errors.append("Required boss arena has no safe grounded entry and escape route")
 		return false
 	var admitted: Array[Dictionary] = []
 	for slot: Dictionary in _room_slots:
 		if not SpawnPlanner.clear_anchor(self, rooms[int(slot.room_id)], slot.local_position, 0.4, 1.9): continue
 		var profile: Dictionary = _content_plan.optional_profile
-		var descriptor := Content.source_descriptor(_content_plan, "root_bark_champion", "none")
-		var receipt := "optional_room_%d_root_bark_champion" % int(slot.room_id)
+		var definition := String(slot.encounter_definition_id)
+		var descriptor := Content.source_descriptor(_content_plan, definition, "none")
+		var receipt := "optional_room_%d_%s" % [int(slot.room_id), definition]
 		var actor := _configured_actor(profile, descriptor, int(slot.room_id), receipt, 0)
 		if actor == null:
 			validation_errors.append("Optional encounter could not prepare its registered controller")
@@ -176,6 +179,12 @@ func prepare_combat_admission() -> bool:
 		_optional_records[actor.get_instance_id()] = {"actor": weakref(actor), "room_id": int(slot.room_id),
 			"receipt": receipt, "generation": run_generation, "descriptor": descriptor.duplicate(true)}
 		rooms[int(slot.room_id)].add_child(actor)
+		if not is_instance_valid(self) or not is_instance_valid(actor) or not run_source_context_valid(): return false
+		if _content_plan.theme_id == "crystal_caverns" and not SpawnPlanner.native_arena_clear(self, rooms[int(slot.room_id)], actor, _content_plan.arena_profiles[profile.arena_profile_id]):
+			_optional_records.erase(actor.get_instance_id())
+			actor.get_parent().remove_child(actor)
+			actor.queue_free()
+			continue
 		actor.died.connect(_on_optional_defeated)
 		admitted.append(slot.duplicate(true))
 	_room_slots = admitted
@@ -197,12 +206,14 @@ func combat_admission_valid() -> bool:
 	var required_receipt := "rootwarden_reward" if _content_plan.required_boss_id == "rootwarden" else "boss_room_%d_%s" % [int(layout.boss_id), String(_content_plan.required_boss_id)]
 	if int(_boss_record.generation) != run_generation or _boss_record.receipt != required_receipt \
 			or _boss_record.descriptor != Content.source_descriptor(_content_plan, String(_content_plan.required_boss_id), String(_content_plan.variant_id)): return false
+	if _content_plan.theme_id == "crystal_caverns" and not SpawnPlanner.native_actor_matches(boss, _content_plan.arena_profiles[_content_plan.boss.arena_profile_id]): return false
 	for record: Dictionary in _optional_records.values():
 		var actor := record.actor.get_ref() as Node3D
 		if not is_instance_valid(actor) or actor.get_parent() != rooms.get(int(record.room_id)) \
 				or int(record.generation) != run_generation or not optional_room_reserved(int(record.room_id)) \
-				or record.receipt != "optional_room_%d_root_bark_champion" % int(record.room_id) \
-				or record.descriptor != Content.source_descriptor(_content_plan, "root_bark_champion", "none"): return false
+				or record.receipt != "optional_room_%d_%s" % [int(record.room_id), String(_content_plan.optional_profile.id)] \
+				or record.descriptor != Content.source_descriptor(_content_plan, String(_content_plan.optional_profile.id), "none"): return false
+		if _content_plan.theme_id == "crystal_caverns" and not SpawnPlanner.native_actor_matches(actor, _content_plan.arena_profiles[_content_plan.optional_profile.arena_profile_id]): return false
 	return true
 
 func issued_run_plan() -> Dictionary:
@@ -230,7 +241,7 @@ func validate_generation() -> bool:
 	if seed_value != _issued_seed or layout != _configured_layout:
 		validation_errors.append("Expedition layout changed after configuration")
 	for room: Dictionary in layout.get("rooms", []):
-		var path := "res://scenes/rooms/%s.tscn" % String(room.module)
+		var path := _module_path(StringName(room.module))
 		if not ResourceLoader.exists(path):
 			validation_errors.append("Missing room module: " + path)
 	return validation_errors.is_empty()
@@ -276,7 +287,7 @@ func _ready() -> void:
 	geometry.name = "RoomModules"
 	add_child(geometry)
 	for room: Dictionary in layout.rooms:
-		var scene := load("res://scenes/rooms/%s.tscn" % String(room.module)) as PackedScene
+		var scene := load(_module_path(StringName(room.module))) as PackedScene
 		var instance := scene.instantiate() as Node3D
 		instance.name = "Room_%02d_%s" % [room.id, String(room.module)]
 		instance.position = Generator.room_position(room)
@@ -289,6 +300,10 @@ func _ready() -> void:
 			instance.free()
 			validation_errors.append("Issued room presentation does not match its native module")
 			return
+		if not issued_presentation.is_empty() and not Presentation.module_instance_valid(issued_presentation, instance):
+			instance.free()
+			validation_errors.append("Issued room native scene does not match its presentation")
+			return
 		geometry.add_child(instance)
 		_keep_static_collisions(instance)
 		rooms[int(room.id)] = instance
@@ -297,7 +312,7 @@ func _ready() -> void:
 		_events.name = "RegisteredRoomEvents"
 		_events.configure(self, _content_plan, shared_materials)
 		add_child(_events)
-	if int(_content_plan.get("content_version", 0)) == 4:
+	if int(_content_plan.get("content_version", 0)) in [4, 5]:
 		_checkpoints = Checkpoints.new()
 		_checkpoints.name = "ReturnCheckpoints"
 		_checkpoints.configure(self, shared_materials)
@@ -312,6 +327,7 @@ func _ready() -> void:
 	encounters.enemy_defeated.connect(_on_enemy_defeated)
 	add_child(encounters)
 	awareness = Awareness.new()
+	if not _content_plan.is_empty(): awareness.event_kinds.assign(_content_plan.event_profile.event_ids)
 	if scheduler != null:
 		awareness.warning_admission = _reserve_awareness_warning
 		awareness.warning_cancelled.connect(_cancel_awareness_warning)
@@ -324,6 +340,7 @@ func _ready() -> void:
 		hazard.name = "PooledRoots_%d" % i
 		if not shared_materials.is_empty(): hazard.configure_presentation(shared_materials)
 		hazard.legacy_retired.connect(_on_legacy_hazard_retired.bind(hazard))
+		hazard.typed_retired.connect(_on_typed_hazard_retired.bind(hazard))
 		add_child(hazard)
 		_hazards.append(hazard)
 	_populate_treasure()
@@ -331,7 +348,8 @@ func _ready() -> void:
 	_create_boss()
 	_create_extraction()
 	_create_retreat()
-	_pet_placement_pending.assign(PetDiscoveryLayout.plan(layout, seed_value))
+	if _content_plan.is_empty() or _content_plan.discovery_profile.id == "rootbound_discoveries_v1":
+		_pet_placement_pending.assign(PetDiscoveryLayout.plan(layout, seed_value))
 	_enter_room(int(layout.entrance_id))
 	_refresh_rooms()
 
@@ -424,13 +442,16 @@ func _enter_room(id: int) -> void:
 	var room: Dictionary = layout.rooms[id]
 	if room.kind == &"trap" and not _trap_visited.has(id) and (_events == null or not _events.replaces_roots(id)):
 		_trap_visited[id] = true
-		# Ground is marked in advance and all four entry lanes remain clear.
-		if _checkpoints != null:
-			_initial_traps[id] = {"generation": run_generation, "state": "attempting", "actor": null, "serial": -1}
-		var armed := _arm_roots(id, Vector3.ZERO, 2.4)
-		if _initial_traps.has(id) and _initial_traps[id].state == "attempting" and run_source_context_valid():
-			_initial_traps[id].state = "unproven" if armed else "omitted"
-		notice.emit("Restless roots mark the floor — avoid the amber ring")
+		if not _content_plan.is_empty() and _content_plan.trap_policy.initial.mode == "registered_typed":
+			_events.arm_initial_opportunity(id)
+		else:
+			# Preserve the original once-only Rootbound opportunity and timing.
+			if _checkpoints != null:
+				_initial_traps[id] = {"generation": run_generation, "state": "attempting", "actor": null, "serial": -1}
+			var armed := _arm_roots(id, Vector3.ZERO, 2.4)
+			if _initial_traps.has(id) and _initial_traps[id].state == "attempting" and run_source_context_valid():
+				_initial_traps[id].state = "unproven" if armed else "omitted"
+			notice.emit("Restless roots mark the floor — avoid the amber ring")
 	_refresh_rooms()
 	snapshot_changed.emit(snapshot())
 
@@ -815,7 +836,10 @@ func _on_awareness_event(kind: StringName) -> void:
 		scheduler.cancel_event(event_receipt)
 		notice.emit("The distant hunt passes — the chamber is already occupied")
 		return
-	if kind == &"roots":
+	if kind == &"resonance":
+		if _events == null or not _events.arm_awareness_hazard(current_room_id, event_receipt):
+			notice.emit("The resonance fades — no safe lane is available")
+	elif kind == &"roots":
 		var local_player: Vector3 = rooms[current_room_id].to_local(_player.global_position)
 		local_player.x = clampf(local_player.x, -7.0, 7.0)
 		local_player.z = clampf(local_player.z, -7.0, 7.0)
@@ -872,7 +896,7 @@ func snapshot() -> Dictionary:
 		if bool(actor.combat_active) and float(actor.health) > 0.0:
 			displayed = actor
 			role = "optional"
-			displayed_id = "root_bark_champion"
+			displayed_id = String(_optional_records[actor.get_instance_id()].descriptor.encounter_definition_id)
 			break
 	var boss_state := {"visible": false, "health": 0.0, "max_health": 1.0, "name": required_boss_label(),
 		"phase": 1, "phase_label": "PHASE I", "modifier": "", "id": displayed_id, "role": role}
@@ -980,6 +1004,8 @@ func checkpoint_cache_placement_allowed(at: Vector3, footprint: float) -> bool:
 func initial_trap_resolved(room_id: int) -> bool:
 	if not rooms.has(room_id): return false
 	if layout.rooms[room_id].kind != &"trap": return true
+	if not _content_plan.is_empty() and _content_plan.trap_policy.initial.mode == "registered_typed":
+		return _events != null and _events.initial_opportunity_resolved(room_id)
 	var row: Dictionary = _initial_traps.get(room_id, {})
 	if row.is_empty() or int(row.generation) != run_generation: return false
 	if row.state == "omitted": return true
@@ -1001,3 +1027,32 @@ func checkpoint_hostile_source_owned(actor: Node3D) -> bool:
 	var row: Dictionary = _boss_record if actor == boss else _optional_records.get(actor.get_instance_id(), {})
 	return not row.is_empty() and row.actor.get_ref() == actor and int(row.generation) == run_generation \
 		and actor.get_parent() == rooms.get(int(row.room_id))
+
+func _module_path(module_id: StringName) -> String:
+	return "res://scenes/rooms/%s.tscn" % String(module_id) if _content_plan.is_empty() else Presentation.module_path(_content_plan.theme.presentation, module_id)
+
+func _required_arena_clear() -> bool:
+	if _content_plan.theme_id == "crystal_caverns":
+		return SpawnPlanner.native_arena_clear(self, rooms[int(layout.boss_id)], boss, _content_plan.arena_profiles[_content_plan.boss.arena_profile_id])
+	return SpawnPlanner.clear_anchor(self, rooms[int(layout.boss_id)], Vector3(0, 0.15, 0), 0.7, 2.8)
+
+func registered_arena_profile(actor: Node3D) -> Dictionary:
+	var source := registered_boss_source(actor)
+	if source.is_empty() or _content_plan.get("theme_id") != "crystal_caverns": return {}
+	var profile: Dictionary = _content_plan.boss if actor == boss else _content_plan.optional_profile
+	return _content_plan.arena_profiles.get(profile.arena_profile_id, {}).duplicate(true)
+
+func checkpoint_pending_actor_attack(actor: Node3D, room_id: int, center: Vector3, radius: float) -> bool:
+	if _content_plan.get("theme_id") != "crystal_caverns": return false
+	if actor != boss and (not is_instance_valid(actor) or not _optional_records.has(actor.get_instance_id())): return false
+	var source := registered_boss_source(actor)
+	if source.is_empty(): return true
+	if not actor.has_method("has_pending_attack") or not actor.has_pending_attack(): return false
+	if not is_instance_valid(self) or not is_instance_valid(actor) or not run_source_context_valid(): return true
+	var metadata := registered_arena_profile(actor)
+	if metadata.is_empty() or not rooms.has(int(source.room_id)): return true
+	var origin: Vector3 = rooms[int(source.room_id)].global_position
+	return int(source.room_id) == room_id or (absf(origin.y - center.y) <= 2.5 and Vector2(origin.x - center.x, origin.z - center.z).length() <= radius + float(metadata.attack_envelope_radius))
+
+func _on_typed_hazard_retired(terminal: Dictionary, actor: Node3D) -> void:
+	if _events != null: _events.capture_typed_retirement(actor, terminal)

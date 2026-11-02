@@ -64,10 +64,13 @@ func _spawn_initial(id: int) -> void:
 	var count := rng.randi_range(1, 2) if room.kind == &"trap" else rng.randi_range(2, 3)
 	var points: Array[Vector3] = rooms[id].get_spawn_points()
 	var has_golem := false
+	var composition: Dictionary = _content_plan.get("ordinary_profile", {})
+	var skeleton_threshold := float(composition.get("weights", {}).get("skeleton", 55)) / 100.0
+	var archer_threshold := (float(composition.get("weights", {}).get("skeleton", 55)) + float(composition.get("weights", {}).get("archer", 33))) / 100.0
 	_initial_packs[id] = {"state": "initializing", "expected": mini(count, points.size()), "receipts": []}
 	for index in range(mini(count, points.size())):
 		var roll := rng.randf()
-		var archetype: StringName = &"skeleton" if roll < 0.55 else (&"archer" if roll < 0.88 else &"golem")
+		var archetype: StringName = &"skeleton" if roll < skeleton_threshold else (&"archer" if roll < archer_threshold else &"golem")
 		if archetype == &"golem":
 			if room.depth < 3 or has_golem:
 				archetype = &"skeleton"
@@ -96,7 +99,8 @@ func _spawn(room_id: int, archetype: StringName, local_point: Vector3, elite: bo
 	var data: Resource = enemy.data.duplicate(true)
 	var descriptor: Dictionary = {}
 	if not _content_plan.is_empty():
-		var definition_id := event_definition if not event_definition.is_empty() else String(archetype) if support_receipt.is_empty() else "rootbound_boss_defender"
+		var ordinary_id := String(_content_plan.ordinary_profile.definition_ids[String(archetype)])
+		var definition_id := event_definition if not event_definition.is_empty() else ordinary_id if support_receipt.is_empty() else "rootbound_boss_defender"
 		descriptor = Content.source_descriptor(_content_plan, definition_id, "elite" if elite else "none")
 		if descriptor.is_empty():
 			enemy.free()
@@ -114,6 +118,9 @@ func _spawn(room_id: int, archetype: StringName, local_point: Vector3, elite: bo
 		data.windup_time *= 1.15
 		data.accent_color = Color("c6b46a")
 	enemy.data = data
+	if not _content_plan.is_empty() and not enemy.configure_cosmetic_profile(StringName(_content_plan.ordinary_profile.visual_profile_id)):
+		enemy.free()
+		return null
 	enemy.set_meta("abyss_room", room_id)
 	enemy.set_meta("elite", elite)
 	var ordinal := int(_spawn_ordinals.get(room_id, 0))

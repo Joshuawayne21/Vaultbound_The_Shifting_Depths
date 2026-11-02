@@ -6,6 +6,8 @@ play-testing and rendered art review remain pending. This batch does not
 complete Milestone 7D or add Ancient Bosses, additional biomes, hives, hordes or
 early extraction. The later [7D.3 event batch](rootbound-events.md) adds hives/hordes and hazards, and [7D.4 Return springs](dungeon-return-springs.md) add collected-loot early exits.
 
+The later [7D.5 Crystal theme](glimmering-crystal-abyss.md) shares the same depth ladder. The pool below applies when Rootbound is selected.
+
 ## Selection and progression
 
 Depth 1 keeps the original Rootwarden. From Depth 2, the seeded required-boss

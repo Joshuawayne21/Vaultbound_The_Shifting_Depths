@@ -79,7 +79,7 @@ func _ready() -> void:
 	collision_layer = 4
 	collision_mask = 3
 	for group: StringName in [&"enemies", &"bosses", &"combat_targets", &"combat_telegraphs"]: add_to_group(group)
-	_visual = Visual.new()
+	_visual = _create_visual()
 	_visual.name = "BossVisual"
 	_visual.configure(controller_family())
 	add_child(_visual)
@@ -94,6 +94,9 @@ func _ready() -> void:
 	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	add_child(_label)
 	_update_label()
+
+func _create_visual() -> Node3D:
+	return Visual.new()
 
 func _registered() -> bool:
 	var world := _cast.world()

@@ -1,4 +1,5 @@
 extends "res://tests/test_harness.gd"
+const RootFixtures = preload("res://tests/rootbound_plan_fixture.gd")
 const Content = preload("res://scripts/expedition/dungeon_content.gd")
 const Generator = preload("res://scripts/expedition/dungeon_generator.gd")
 const Rooms = preload("res://scripts/expedition/room_content_planner.gd")
@@ -13,7 +14,9 @@ func _run() -> void:
 	var seen: Dictionary = {}
 	var optional_count := 0
 	for depth: int in [1, 2, 5, 6, 11, 50]:
-		for seed_value in range(100):
+		var seeds: Array[int] = RootFixtures.seeds(depth, 100)
+		if not check(seeds.size() == 100, "Bounded public selection retains 100 Rootbound cases at depth%d" % depth): continue
+		for seed_value: int in seeds:
 			var plan: Dictionary = Content.resolve_run_plan(seed_value, depth)
 			if not check(not plan.is_empty() and Content.valid_run_plan(plan, Policy.describe_depth(depth)), "Depth%d seed%d has complete executable Rootbound content" % [depth, seed_value]): continue
 			var key := String(plan.required_boss_id) + ":" + String(plan.variant_id)
@@ -42,7 +45,11 @@ func _run() -> void:
 	for item: Dictionary in deep.required: weights[String(item.id)] = int(item.weight)
 	check(deep.available and weights == {"rootwarden": 50, "thornmarshal": 25, "mycelial_cantor": 25} \
 		and deep.stronger_eligible and deep.optional_eligible and not deep.has("seed"), "Eligible pool disclosure has approved weights without drawing a run seed")
-	var plan: Dictionary = Content.resolve_run_plan(30, 6)
+	var source_seeds: Array[int] = RootFixtures.seeds(6, 1, 30)
+	if not check(source_seeds.size() == 1, "Named source fixture selects a public Rootbound plan"):
+		finish()
+		return
+	var plan: Dictionary = Content.resolve_run_plan(source_seeds[0], 6)
 	for id: String in ["thornmarshal", "mycelial_cantor", "root_bark_champion"]:
 		var descriptor: Dictionary = Content.source_descriptor(plan, id, "none")
 		check(descriptor.reward_profile_id == id and descriptor.pet_profile_id == "none" and descriptor.discovery_id == id \

@@ -32,6 +32,7 @@ func enter_checkpoint(depth: int = 11, minimum_checkpoints: int = 1) -> bool:
 	var planner: Script = load("res://scripts/expedition/room_content_planner.gd")
 	for seed_value in range(1024):
 		var plan: Dictionary = content.resolve_run_plan(seed_value, depth)
+		if plan.is_empty() or plan.theme_id != "rootbound_abyss": continue
 		var layout: Dictionary = generator.generate_for_depth(seed_value, depth)
 		var slots: Array = planner.checkpoint_slots(layout, plan)
 		if slots.size() < minimum_checkpoints or layout.rooms[int(slots[0].room_id)].kind != &"combat": continue

@@ -23,15 +23,17 @@ var _presentation_materials: Dictionary = {}
 func configure_presentation(issued: Dictionary, shared_materials: Dictionary) -> bool:
 	# Content worlds provide one reconstructed material set before attachment.
 	# Existing standalone/depth fixtures retain their authored native resources.
+	if is_inside_tree() or not _presentation.is_empty(): return false
+	return _apply_presentation(issued, shared_materials)
+
+func _apply_presentation(issued: Dictionary, shared_materials: Dictionary) -> bool:
 	var schema := preload("res://scripts/visual/dungeon_presentation.gd")
-	if is_inside_tree() or not _presentation.is_empty() or not schema.valid_snapshot(issued):
-		return false
+	if not schema.valid_snapshot(issued): return false
 	if not issued.modules.has(String(module_id)) or not schema._keys(shared_materials, schema.ROLE_PATHS.keys()):
 		return false
 	for role: String in schema.ROLE_PATHS:
 		if not shared_materials[role] is Material: return false
-	var module: Dictionary = issued.modules[String(module_id)]
-	if scene_file_path != module.scene or String(visual_motif) != module.motif:
+	if not schema.module_instance_valid(issued, self):
 		return false
 	_presentation = issued.duplicate(true)
 	_presentation_materials = shared_materials.duplicate()
@@ -45,13 +47,27 @@ func configure_visuals(expedition_seed: int, room_id: int, capture_inputs: bool 
 	_capture_geometry_for_validation = capture_inputs
 
 func _ready() -> void:
+	# A directly opened native Crystal scene gets its closed cosmetic profile.
+	# This does not enable a theme or issue a run; unknown/mixed scenes cannot
+	# select the default. Existing standalone Rootbound behavior stays exact.
+	if _presentation.is_empty():
+		var catalog := preload("res://scripts/visual/dungeon_presentation_catalog.gd")
+		var entry: Dictionary = catalog.CRYSTAL_MODULES.get(String(module_id), {})
+		if not entry.is_empty() and scene_file_path == entry.scene:
+			var profile := load("res://resources/visual/crystal_presentation.tres") as VaultDungeonPresentation
+			var issued: Dictionary = profile.snapshot()
+			var schema := preload("res://scripts/visual/dungeon_presentation.gd")
+			if not schema.module_instance_valid(issued, self) or not _apply_presentation(issued, schema.build_materials(issued)): return
 	_apply_openings()
-	dressing = preload("res://scripts/visual/abyss_decoration.gd").new()
+	if _presentation.get("id", "") == "crystal_native_v1":
+		dressing = preload("res://scripts/visual/crystal_decoration.gd").new()
+	else:
+		dressing = preload("res://scripts/visual/abyss_decoration.gd").new()
 	dressing.configure(module_id, visual_motif, cosmetic_seed, cosmetic_room_id, _capture_geometry_for_validation)
 	if not _presentation.is_empty():
 		dressing.configure_materials(_presentation.dressing, _presentation_materials)
 	add_child(dressing)
-	var ambience := preload("res://scripts/visual/visual_style.gd").add_ambience(self, &"abyss", Vector3(18, 2.6, 18), dressing.cosmetic_seed)
+	var ambience := preload("res://scripts/visual/visual_style.gd").add_ambience(self, &"crystal" if _presentation.get("id", "") == "crystal_native_v1" else &"abyss", Vector3(18, 2.6, 18), dressing.cosmetic_seed)
 	ambience.configure_budget(12)
 	ambient_fauna = preload("res://scripts/visual/ambient_fauna.gd").new()
 	# Hovering corner pockets stay outside combat, doorway and spawn envelopes.

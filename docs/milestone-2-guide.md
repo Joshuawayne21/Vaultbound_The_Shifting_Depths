@@ -82,7 +82,7 @@ godot4 --headless --path . --quit-after 180
 
 The import indexes global script classes before the tests run. Test failures exit nonzero. Inspect logs for parser, resource and runtime errors as well. On restricted Linux runners, set `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, and `XDG_CACHE_HOME` to writable temporary directories. Missing Android SDK warnings affect export setup, not project resource validity.
 
-See [the validation report](docs/validation-report.md) for observed results and [the Android test plan](docs/test-plan.md) for manual steps. **No Android device testing is claimed.**
+See [the validation report](validation-report.md) for observed results and [the Android test plan](test-plan.md) for manual steps. **No Android device testing is claimed.**
 
 ## Known limits and performance budget
 

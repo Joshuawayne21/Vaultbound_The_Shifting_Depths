@@ -42,6 +42,12 @@ var _steer_bias: float = 1.0
 var _target_interval := 0.0
 var _aggressor: Node3D
 var _aggression_remaining := 0.0
+var _cosmetic_profile: StringName = &"legacy_native"
+
+func configure_cosmetic_profile(profile_id: StringName) -> bool:
+	if is_inside_tree() or profile_id not in [&"legacy_native", &"crystal_native"]: return false
+	_cosmetic_profile = profile_id
+	return true
 
 
 func _ready() -> void:
@@ -60,7 +66,7 @@ func _ready() -> void:
 	add_to_group("combat_telegraphs")
 	_build_collision()
 	_visual = VisualScript.new()
-	_visual.configure(data.archetype)
+	_visual.configure(data.archetype, _cosmetic_profile)
 	add_child(_visual)
 	_build_feedback()
 	_update_health_label()

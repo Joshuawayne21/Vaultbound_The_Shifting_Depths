@@ -17,6 +17,10 @@ const SOURCE_PRESENTATIONS := {
 	"root_bark_champion": {"kind": "elite", "label": "Root Bark Champion Cache"},
 	"root_spore_hive": {"kind": "elite", "label": "Spore Hive Cache"},
 	"root_horde": {"kind": "elite", "label": "Rootbound Horde Cache"},
+	"prism_conductor": {"kind": "boss", "label": "Prism Conductor Reliquary"},
+	"geode_colossus": {"kind": "boss", "label": "Geode Colossus Reliquary"},
+	"shard_wraith": {"kind": "boss", "label": "Shard Wraith Reliquary"},
+	"crystal_lancekeeper": {"kind": "elite", "label": "Crystal Lancekeeper Cache"},
 }
 
 var _records: Dictionary = {}

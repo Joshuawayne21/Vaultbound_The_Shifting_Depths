@@ -2,6 +2,7 @@ extends Node3D
 ## Cheap authored primitive enemies. Animation is presentation only and cannot
 ## emit damage, change AI state, or move the CharacterBody3D.
 
+var cosmetic_profile_id: StringName = &"legacy_native"
 var archetype: StringName = &"skeleton"
 var _body: Node3D
 var _left_leg: Node3D
@@ -19,13 +20,16 @@ var _slowed := false
 var _death_blend := 0.0
 
 
-func configure(value: StringName) -> void:
+func configure(value: StringName, profile_id: StringName = &"legacy_native") -> bool:
+	if profile_id not in [&"legacy_native", &"crystal_native"]: return false
+	cosmetic_profile_id = profile_id
 	archetype = value
 	if is_node_ready():
 		for child: Node in get_children():
 			remove_child(child)
 			child.queue_free()
 		_build()
+	return true
 
 
 func _ready() -> void:
@@ -42,6 +46,7 @@ func _build() -> void:
 			_build_golem()
 		_:
 			_build_skeleton()
+	if cosmetic_profile_id == &"crystal_native": _apply_crystal_profile()
 	_accent_color = _accent.albedo_color
 
 
@@ -264,3 +269,32 @@ func _mesh(parent: Node3D, mesh: Mesh, at: Vector3, material: Material) -> MeshI
 		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	parent.add_child(instance)
 	return instance
+
+func _apply_crystal_profile() -> void:
+	# The existing rig, sockets, attack poses and weapon families stay intact.
+	# These original native mineral attachments are cosmetic, with no new body,
+	# targeting group, light, material authority or gameplay effect.
+	_skin_color = Color("8babc7")
+	_skin.albedo_color = _skin_color
+	_accent.albedo_color = Color("8addfa")
+	if archetype in [&"golem", &"corrupted_golem"]:
+		var heart := _cylinder(_body, 0.21, 0.21, 0.10, Vector3(0, 1.47, -0.43), _accent, 6)
+		heart.name = "CrystalHeart"
+		heart.rotation.x = PI * 0.5
+		for side: float in [-1.0, 1.0]:
+			var facet := _box(_body, Vector3(0.14, 0.7, 0.08), Vector3(side * 0.37, 1.53, -0.41), _skin)
+			facet.name = "CrystalChestLeft" if side < 0 else "CrystalChestRight"
+			facet.rotation.z = side * -0.21
+	elif archetype in [&"archer", &"goblin", &"goblin_archer"]:
+		for side: float in [-1.0, 1.0]:
+			var pin := _cylinder(_head, 0.0, 0.07, 0.24, Vector3(side * 0.20, 0.12, 0.06), _accent, 6)
+			pin.name = "CrystalCowlLeft" if side < 0 else "CrystalCowlRight"
+		var quiver := _box(_body, Vector3(0.18, 0.5, 0.12), Vector3(-0.18, 0.92, 0.23), _skin)
+		quiver.name = "CrystalQuiver"
+	else:
+		var crest := _cylinder(_head, 0.0, 0.11, 0.25, Vector3(0, 0.20, 0), _accent, 6)
+		crest.name = "CrystalCrest"
+		for side: float in [-1.0, 1.0]:
+			var plate := _box(_body, Vector3(0.16, 0.38, 0.09), Vector3(side * 0.19, 1.10, -0.19), _skin)
+			plate.name = "CrystalRibLeft" if side < 0 else "CrystalRibRight"
+			plate.rotation.z = side * 0.20

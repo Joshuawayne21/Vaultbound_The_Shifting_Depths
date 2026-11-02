@@ -33,5 +33,5 @@ slot = &""
 aura_profile = &"none"
 special_effects = Array[String](["Restores 40 health", "Restores 40 stamina"])
 crafting_tags = Array[String]([])
-acquisition_sources = Array[String](["chest:ancient"])
+acquisition_sources = Array[String](["chest:ancient", "encounter:prism_conductor"])
 icon = ExtResource("2")

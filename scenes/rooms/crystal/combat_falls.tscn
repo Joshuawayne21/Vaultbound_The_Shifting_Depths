@@ -1,0 +1,38 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/props/abyss_falls.tscn" id="crystal_0"]
+[ext_resource type="PackedScene" path="res://scenes/props/abyss_stream.tscn" id="crystal_1"]
+[ext_resource type="PackedScene" path="res://scenes/props/crystal/obelisk.tscn" id="crystal_2"]
+[ext_resource type="PackedScene" path="res://scenes/props/crystal/geode_fan.tscn" id="crystal_3"]
+[ext_resource type="PackedScene" path="res://scenes/props/crystal/mineral_shelf.tscn" id="crystal_4"]
+
+[ext_resource type="PackedScene" path="res://scenes/rooms/abyss_room_base.tscn" id="1"]
+
+
+
+
+
+
+[node name="CombatFalls" instance=ExtResource("1")]
+module_id = &"combat_falls"
+visual_motif = &"blue_cascade"
+room_kind = &"combat"
+
+[node name="Decor00" parent="." instance=ExtResource("crystal_0")]
+position = Vector3(-9, 0, -7.5)
+rotation = Vector3(0, 0.5, 0)
+
+[node name="Decor01" parent="." instance=ExtResource("crystal_1")]
+position = Vector3(-8, 0, 2.5)
+
+[node name="Decor02" parent="." instance=ExtResource("crystal_2")]
+position = Vector3(8.5, 0, -8)
+rotation = Vector3(0, 3.14159, 0)
+
+[node name="Decor03" parent="." instance=ExtResource("crystal_3")]
+position = Vector3(8.4, 0, 8)
+rotation = Vector3(0, 0.3, 0)
+
+[node name="Decor04" parent="." instance=ExtResource("crystal_4")]
+position = Vector3(-8.5, 0, 8.6)
+rotation = Vector3(0, 1, 0)

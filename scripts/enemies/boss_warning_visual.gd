@@ -8,6 +8,7 @@ var _fill: StandardMaterial3D
 var _border: StandardMaterial3D
 var _zones: Array[Dictionary] = []
 var _vertices: Array[PackedVector3Array] = []
+var _revision := 0
 
 func _ready() -> void:
 	top_level = true
@@ -32,7 +33,9 @@ func _material(tint: Color) -> StandardMaterial3D:
 	return material
 
 func show_shapes(zones: Array[Dictionary]) -> void:
+	var revision := _revision + 1
 	hide_all()
+	if not is_instance_valid(self) or _revision != revision: return
 	if zones.size() > 4: return
 	_zones.assign(zones.duplicate(true))
 	for index in range(zones.size()):
@@ -54,6 +57,7 @@ func show_shapes(zones: Array[Dictionary]) -> void:
 		_surface(mesh, edges, _border)
 		_slots[index].mesh = mesh
 		_slots[index].visible = true
+		if not is_instance_valid(self) or _revision != revision: return
 		_vertices.append(vertices)
 
 func _surface(mesh: ArrayMesh, vertices: PackedVector3Array, material: Material) -> void:
@@ -73,9 +77,13 @@ func set_phase(active: bool, progress: float) -> void:
 	_fill.albedo_color = Color(1.0, 0.18 if active else 0.30, 0.06, 0.4 if active else 0.22 + clampf(progress, 0, 1) * 0.18)
 
 func hide_all() -> void:
-	for slot: MeshInstance3D in _slots: slot.visible = false
+	_revision += 1
+	var revision := _revision
 	_zones.clear()
 	_vertices.clear()
+	for slot: MeshInstance3D in _slots:
+		slot.visible = false
+		if not is_instance_valid(self) or _revision != revision: return
 
 func snapshot() -> Dictionary:
 	return {"slots": _slots.size(), "zones": _zones.duplicate(true), "built_vertices": _vertices.duplicate(true), "lift": LIFT}

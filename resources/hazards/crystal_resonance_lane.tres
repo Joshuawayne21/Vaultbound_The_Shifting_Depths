@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="VaultHazardDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/expedition/hazard_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"crystal_resonance_lane"
+version = 2
+shape = &"capsule"
+radius = 0.55
+axis_length = 6.0
+warning_time = 2.0
+active_time = 2.4
+damage = 5.0
+pulse_count = 3
+pulse_interval = 0.9
+height_tolerance = 2.0
+delivery_mode = "pulse_edges"

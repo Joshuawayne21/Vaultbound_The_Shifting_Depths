@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="VaultBossAttackDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/enemies/boss_attack_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"colossus_cone_swing"
+controller_family = &"colossus"
+pattern_version = 2
+shape = &"sector"
+damage_kind = &"enemy_melee"
+warning_time = 1.8
+active_time = 0.25
+recovery_time = 1.8
+damage = 20.0
+stage_count = 1
+stage_gap = 0.0
+parameters = {"radius": 4.2, "half_angle": 1.0471975511965976}
+stage_two = {}

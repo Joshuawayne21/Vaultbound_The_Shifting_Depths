@@ -1,0 +1,186 @@
+extends "res://tests/early_return_fixture.gd"
+## Actual registered Crystal actors, cached source rewards and existing saves.
+const CrystalRewards = preload("res://resources/loot/monster_rewards.tres")
+const CrystalProgress = preload("res://scripts/progression/encounter_progression.gd")
+const CRYSTAL_FORBIDDEN := ["rootwarden_heart", "rootwarden_essence", "verdant_oathblade", "vaultheart_staff", "elite_monster_fragment", "ancient_forged_core", "ancient_heartstone", "crystal_devourer_core", "devourer_prism_shard"]
+var crystal_seed_cursor := 0
+var ordinary_seen: Dictionary = {}
+var retained_rootbound: Dictionary = {}
+
+func prepare_crystal_profile(path: String, fresh: bool) -> bool:
+	if not await prepare_return_profile(path, fresh): return false
+	if fresh:
+		# A genuine pre-tracking profile supplies the old Rootbound history. No
+		# Crystal discovery is inferred from old clears or crystal-named items.
+		var legacy: Dictionary = session.profile.duplicate(true)
+		legacy.version = 6
+		legacy.erase("encounter_records")
+		legacy.monster_discoveries = ["rootwarden"]
+		legacy.depth_progression = {"version": 1, "highest_unlocked_depth": 31, "highest_cleared_depth": 30}
+		var migrated := Store.normalize(legacy)
+		if not check(not migrated.is_empty() and migrated.encounter_records.themes == ["rootbound_abyss"], "Existing Rootbound progression migrates without invented Crystal discoveries"):
+			return false
+		session.profile = migrated
+		if not check(session.store.save_profile(session.profile), "Existing inventory, party, Rootbound history and depth eligibility are saved before Crystal entry"):
+			return false
+	retained_rootbound = session.profile.encounter_records.entries.get("rootwarden", {}).duplicate(true)
+	return true
+
+func enter_crystal_case(boss_id: String, variant: String = "none", depth: int = 31, require_optional: bool = false, require_checkpoint: bool = false) -> bool:
+	if not check(not session.active and game.current_location == &"sanctuary" and not game.transitioning, "Each Crystal scenario begins from a genuinely inactive Sanctuary"):
+		return false
+	game.hud.close_modals()
+	game.hud.close_results()
+	var content: Script = load("res://scripts/expedition/dungeon_content.gd")
+	var generator: Script = load("res://scripts/expedition/dungeon_generator.gd")
+	var planner: Script = load("res://scripts/expedition/room_content_planner.gd")
+	var attempts := 0
+	for seed_value in range(crystal_seed_cursor, crystal_seed_cursor + 4096):
+		var plan: Dictionary = content.resolve_run_plan(seed_value, depth)
+		if plan.is_empty() or plan.theme_id != "crystal_caverns" or plan.required_boss_id != boss_id or plan.variant_id != variant: continue
+		var layout: Dictionary = generator.generate_for_depth(seed_value, depth)
+		if require_optional and planner.plan(layout, plan).is_empty(): continue
+		if require_checkpoint and planner.checkpoint_slots(layout, plan).is_empty(): continue
+		var generation: int = session.run_generation
+		await game.start_expedition(seed_value, depth)
+		if not check(session.active and session.run_generation == generation + 1, "Public seeded selection admits a fresh Crystal generation without a forced profile"):
+			return false
+		if not await arrive(&"rootbound_abyss"): return false
+		level = game.active_world
+		level.awareness.time_rate = 0.0
+		game.party.set_paused(true)
+		crystal_seed_cursor = seed_value + 1
+		if require_optional and level.optional_encounter_slots().is_empty():
+			attempts += 1
+			await game.change_location(&"sanctuary", &"from_abyss")
+			if not await arrive(&"sanctuary"): return false
+			if attempts >= 12: break
+			continue
+		return check(level.issued_run_plan() == session.issued_run_plan() and session.issued_run_plan().theme_id == "crystal_caverns" \
+			and session.issued_run_context().biome_id == "rootbound_abyss" and session.issued_run_plan().required_boss_id == boss_id \
+			and level.pet_discovery_sources().is_empty(), "Crystal uses its frozen selected content, shared depth ladder and no Rootbound pet-source fallback")
+	return check(false, "A bounded reproducible physically admitted Crystal case exists: " + boss_id + "/" + variant)
+
+func defeat_crystal_source(actor: Node3D, expected_id: String, variant: String = "none", partial: bool = false) -> bool:
+	if not check(is_instance_valid(actor) and not session.complete_encounter(level, actor, session.run_generation).ok, "A living actual Crystal source cannot claim a reward"):
+		return false
+	var profile_before: Dictionary = session.profile.duplicate(true)
+	var pets_before: Dictionary = session._pet_pending.duplicate(true)
+	var journal_before: Dictionary = session._pending_encounters.duplicate(true)
+	var kills_before := int(session.kills)
+	var gold_before := int(session.unsecured_gold)
+	var sources_before := int(session._encounter_sources.size())
+	var rows_before := {}
+	for row: Dictionary in session.loot_records(): rows_before[row.id] = row
+	var player_id := player.get_instance_id()
+	actor.set_meta("reward_profile_id", "rootwarden_legacy")
+	actor.set_meta("boss_id", "rootwarden")
+	actor.set_meta("elite", variant != "elite")
+	input_hub.request_action(&"camera_toggle")
+	actor.set_physics_process(false)
+	actor.take_hit(100000.0, player.global_position)
+	var record: Dictionary = level.encounter_death_record(actor)
+	if not check(not record.is_empty() and record.encounter_definition_id == expected_id and record.variant_id == variant, "Actual dead actor retains its admitted Crystal definition and variant despite metadata hints"):
+		return false
+	var plan: Dictionary = session.issued_run_plan()
+	var expected_profile: String = expected_id
+	var ordinary := expected_id in ["crystal_skeleton", "crystal_archer", "crystal_golem"]
+	if ordinary: expected_profile = "crystal_elite" if variant == "elite" else "crystal_stronger" if expected_id == "crystal_golem" else "crystal_basic"
+	check(record.reward_profile_id == expected_profile and record.pet_profile_id == "none", "Frozen actual source selects the correct one of seven profiles and zero pet findings")
+	var reward: Dictionary = CrystalRewards.roll_registered(session.run_seed, String(record.receipt), plan.reward_profiles[expected_profile], int(record.depth), session.issued_run_context().policy)
+	var cache_id: String = session._loot_ledger.source_cache(String(record.receipt))
+	var cache: Dictionary = session.loot_snapshot(cache_id)
+	if not check(not reward.is_empty() and not cache.is_empty() and cache.source_ids.has(record.receipt) and session._encounter_sources.size() == sources_before + 1, "Actual death installs exactly one admitted source in the existing ledger"):
+		return false
+	var old_cache: Dictionary = rows_before.get(cache_id, {"gold": 0, "items": {}})
+	var cache_matches: bool = int(cache.gold) == int(old_cache.gold) + int(reward.gold)
+	var reward_totals: Dictionary = old_cache.items.duplicate(true)
+	for item: Dictionary in reward.items: reward_totals[item.id] = int(reward_totals.get(item.id, 0)) + int(item.quantity)
+	cache_matches = cache_matches and cache.items == reward_totals
+	var kind := "elite" if expected_id == "crystal_lancekeeper" or variant == "elite" else "regular" if ordinary else "boss"
+	var label: String = VaultLootLedger.LABELS[kind] if ordinary else VaultLootLedger.SOURCE_PRESENTATIONS[expected_id].label
+	check(cache_matches and cache.kind == kind and cache.label == label, "Actual source reward uses exact frozen floor scaling, cache kind and honest label")
+	# Even the explicit none profile records its admitted receipt for replay
+	# protection. No ingredient, memory seed or statistic may change with it.
+	var expected_pet_pending := pets_before.duplicate(true)
+	expected_pet_pending.sources[String(record.receipt)] = true
+	check(CRYSTAL_FORBIDDEN.all(func(id: String) -> bool: return not cache.items.has(id)) and session._pet_pending == expected_pet_pending \
+		and session._pet_pending.ingredients == pets_before.ingredients and session._pet_pending.weave_seeds == pets_before.weave_seeds \
+		and session._pet_pending.statistics == pets_before.statistics and session.profile == profile_before, "Crystal deaths preserve secured ownership and grant no Rootbound-exclusive, future Ancient or pet findings")
+	var required: bool = not ordinary and expected_id != "crystal_lancekeeper"
+	check(session.kills == kills_before + (0 if required else 1) and (not required or session.boss_defeated), "Only selected required victory completes the objective; ordinary and optional kills retain existing XP accounting")
+	var expected_journal := journal_before.duplicate(true)
+	if not ordinary:
+		expected_journal = CrystalProgress.append_source_pending(journal_before, String(record.receipt), expected_id, variant, "crystal_caverns", int(session.issued_run_context().expedition_depth))
+	check(session._pending_encounters == expected_journal and (not ordinary or session._run_monsters.has(String(record.archetype))), "One named source adds only its base/derived journal evidence; ordinary loot retains actual species without named history")
+	var rows: Array = session.loot_records()
+	input_hub.request_action(&"camera_toggle")
+	actor.died.emit(actor)
+	check(not session.complete_encounter(level, actor, session.run_generation).ok and not session.complete_encounter(level, actor, session.run_generation - 1).ok \
+		and session.loot_records() == rows and session._pending_encounters == expected_journal and session._pet_pending == expected_pet_pending \
+		and player.get_instance_id() == player_id, "Repeated actual death, stale generation and both cameras cannot duplicate damage rewards or journal evidence")
+	if not required: check(not session.boss_defeated, "Ordinary and optional Crystal enemies do not complete the required objective")
+	if not check(await eventually(func() -> bool: return level.loot_caches.view_for(cache_id) != null), "Existing bounded cache pool presents actual Crystal loot on native terrain"):
+		return false
+	var view: Node3D = level.loot_caches.view_for(cache_id)
+	player.reset_for_spawn(Transform3D(Basis.IDENTITY, view.global_position + Vector3(0, 0.15, 1.5)))
+	game.camera_rig.reset_position()
+	await frames(3)
+	if not check(session.open_loot(view, player), "Nearby actual Crystal cache opens through existing Search source checks"):
+		return false
+	if partial:
+		var dm: Dictionary = session.quote_loot_take(VaultLootLedger.CURRENCY_ROW, 1)
+		if not check(dm.ok and session.commit_loot_take(dm) and not session.commit_loot_take(dm), "Actual partial Take secures one pending Depthmark once"):
+			return false
+		var item_ids: Array = cache.items.keys()
+		item_ids.sort()
+		if not check(not item_ids.is_empty(), "Actual Crystal reward contains a genuine item for partial Take"):
+			return false
+		var item_quote: Dictionary = session.quote_loot_take(String(item_ids[0]), 1)
+		if not check(item_quote.ok and session.commit_loot_take(item_quote) and not session.commit_loot_take(item_quote), "Actual partial item Take is source-bound and cannot be repeated"):
+			return false
+		check(not session.loot_snapshot(cache_id).empty and session.unsecured_gold == gold_before + 1, "Untaken Crystal reward remains outside the pending bag")
+	else:
+		var quote: Dictionary = session.quote_loot_take()
+		if not check(quote.ok and session.commit_loot_take(quote), "Take All transfers the actual Crystal cache through the unchanged inventory capacity rules"):
+			return false
+		check(session.unsecured_gold == gold_before + int(cache.gold) and session.loot_snapshot(cache_id).empty and not session.commit_loot_take(quote), "One actual Crystal cache transfers its exact Depthmarks once")
+	game.hud.close_modals()
+	return true
+
+func collect_missing_ordinary() -> bool:
+	for room: Dictionary in level.layout.rooms:
+		if room.kind not in [&"combat", &"trap"] or level.optional_room_reserved(int(room.id)): continue
+		if not await move_to_room(int(room.id), Vector3(0, 0.15, 0)): return false
+		var actors: Array = level.encounters.actors_by_room.get(int(room.id), []).duplicate()
+		for value: Variant in actors:
+			if not is_instance_valid(value) or float(value.health) <= 0.0: continue
+			var actor: Node3D = value
+			# Presentation metadata is only a bounded search hint. The following
+			# death assertion independently verifies the private owner descriptor.
+			var id := "crystal_" + String(actor.data.archetype)
+			var variant := "elite" if bool(actor.get_meta("elite", false)) else "none"
+			var key := id + "/" + variant
+			if ordinary_seen.has(key): continue
+			if not await defeat_crystal_source(actor, id, variant): return false
+			ordinary_seen[key] = true
+		if ordinary_seen.size() == 6: return true
+	return true
+
+func crystal_early_case(path: String, simulate_failure: bool = false) -> bool:
+	if not await enter_crystal_case("prism_conductor", "none", 11, true, true): return false
+	var before: Dictionary = session.profile.duplicate(true)
+	var slots: Array = level.optional_encounter_slots()
+	if not await move_to_room(int(slots[0].room_id)): return false
+	var actual: Array = level.registered_optional_encounters()
+	if not check(actual.size() == 1, "Actual Crystal optional socket contains one admitted Lancekeeper"):
+		return false
+	if not await defeat_crystal_source(actual[0], "crystal_lancekeeper", "none", true): return false
+	if not await reach_checkpoint(): return false
+	if not await clear_checkpoint(): return false
+	if not await take_partial_cache(): return false
+	if not await commit_return(path, simulate_failure): return false
+	return check(session.profile.encounter_records.themes.has("crystal_caverns") \
+		and session.profile.encounter_records.entries.crystal_lancekeeper.secured_defeats == int(before.encounter_records.entries.get("crystal_lancekeeper", {}).get("secured_defeats", 0)) + 1 \
+		and session.profile.encounter_records.entries.rootwarden == retained_rootbound and session.profile.statistics.completed == before.statistics.completed \
+		and session.profile.depth_progression == before.depth_progression, "Actual optional Crystal evidence secures theme discovery without normal completion, next depth or old Rootbound history loss")

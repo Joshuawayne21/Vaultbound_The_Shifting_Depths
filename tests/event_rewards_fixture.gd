@@ -23,7 +23,7 @@ func enter_event(id: String, depth: int, party_size: int) -> bool:
 	var attempts := 0
 	for seed_value in range(4096):
 		var plan: Dictionary = content.resolve_run_plan(seed_value, depth)
-		if plan.is_empty() or plan.required_boss_id != "thornmarshal" or plan.variant_id != "none": continue
+		if plan.is_empty() or plan.theme_id != "rootbound_abyss" or plan.required_boss_id != "thornmarshal" or plan.variant_id != "none": continue
 		var slots: Array = planner.content_slots(generator.generate_for_depth(seed_value, depth), plan)
 		if not slots.any(func(slot: Dictionary) -> bool: return slot.kind == "event" and slot.definition_id == id): continue
 		await game.start_expedition(seed_value, depth)

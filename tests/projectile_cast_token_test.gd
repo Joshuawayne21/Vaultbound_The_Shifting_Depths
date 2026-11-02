@@ -29,6 +29,7 @@ func _run() -> void:
 	_build_arena()
 	await frames(3)
 	await _token_admission()
+	await _spawn_attachment_callbacks()
 	await _legacy_and_camera_flight()
 	await _copies_and_reconfiguration()
 	await _cancellation_edges()
@@ -320,6 +321,55 @@ func _cancellation_edges() -> void:
 	check(detached_handle.get_ref() == null and members[0].health == members[0].max_health,
 		"Detached cancelled projectile reaches actual deferred deletion without leaking a handle")
 
+func _spawn_attachment_callbacks() -> void:
+	for guarded: bool in [false, true]:
+		var cases: Array[String] = ["cancel", "queued", "world_changed"]
+		if guarded: cases.append_array(["source_revoked", "replacement_cast"])
+		for reason: String in cases:
+			await _prepare()
+			var other_world := Node3D.new()
+			root.add_child(other_world)
+			var token: Dictionary = source.issue() if guarded else {}
+			var observation := {"seen": false, "handle": null, "position": Vector3.INF, "replacement": {}}
+			var on_added: Callable = func(node: Node) -> void:
+				if bool(observation.seen) or node.get_script() != Projectile: return
+				observation.seen = true
+				observation.handle = weakref(node)
+				observation.position = (node as Node3D).position
+				match reason:
+					"cancel": node.cancel_cast()
+					"queued": node.queue_free()
+					"world_changed": current_scene = other_world
+					"source_revoked": source.run_generation += 1
+					"replacement_cast": observation.replacement = source.issue()
+			node_added.connect(on_added)
+			var before: float = members[0].health
+			var bursts := get_nodes_in_group("combat_visual_bursts").size()
+			var bolt := _bolt(token)
+			node_added.disconnect(on_added)
+			current_scene = arena
+			check(bool(observation.seen) and bolt == null,
+				"Native attachment cannot return a stale projectile handle: %s / guarded=%s" % [reason, guarded])
+			var handle: WeakRef = observation.handle as WeakRef
+			var retired: Node3D = handle.get_ref() as Node3D if handle != null else null
+			check(is_instance_valid(retired) and not retired.is_flight_active() and not retired.visible \
+				and retired.position == observation.position,
+				"Attachment retirement happens before pose assignment and keeps the exact bolt inert: " + reason)
+			var retirement_deadline := Time.get_ticks_msec() + 1000
+			while handle != null and handle.get_ref() != null and Time.get_ticks_msec() < retirement_deadline:
+				await process_frame
+			check(handle != null and handle.get_ref() == null and members[0].health == before \
+				and get_nodes_in_group("combat_visual_bursts").size() == bursts,
+				"Rejected attached bolt is deleted without damage or impact feedback: " + reason)
+			if reason == "replacement_cast":
+				var replacement := _bolt(observation.replacement)
+				check(is_instance_valid(replacement) and replacement.is_flight_active(),
+					"Retiring old attachment preserves the separately issued replacement cast")
+				if is_instance_valid(replacement):
+					_step(replacement)
+					check(members[0].health == before - 20.0, "Replacement cast still delivers one actual player hit")
+			other_world.queue_free()
+
 func _fan_and_reentrant_receipts() -> void:
 	await _prepare()
 	var token: Dictionary = source.issue()
@@ -410,6 +460,18 @@ func _target_rules_and_walls() -> void:
 		check(bolt.global_position.z < 0.5, "Offset muzzle remains on the source side of a wall in both modes")
 		_step(bolt, 0.1)
 		check(members[0].health == members[0].max_health, "Corrected muzzle cannot deliver damage from beyond the thin wall")
+		await _prepare()
+		var stationary: StaticBody3D = _add_wall(Vector3(0, 1.5, 0.5), Vector3(3, 3, 0.06))
+		stationary.collision_layer = 16
+		await frames(2)
+		token = source.issue() if guarded else {}
+		bolt = _bolt(token, 100.0, 1.1, Vector3(0, 1, 0.9))
+		check(is_instance_valid(bolt), "Stationary-body muzzle test creates a real bolt in guarded and legacy modes")
+		if not is_instance_valid(bolt): continue
+		check(bolt.global_position.z < 0.5, "Mask16 stationary encounter body keeps the offset muzzle on the source side")
+		_step(bolt, 0.1)
+		check(members[0].health == members[0].max_health and bolt.global_position.z < 0.5,
+			"Stationary encounter cover blocks both corrected muzzle and subsequent swept flight")
 
 func _removed_target_and_world() -> void:
 	for remove_world: bool in [false, true]:

@@ -1,0 +1,84 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Material" path="res://resources/materials/crystal/flower_bud.tres" id="m0"]
+[ext_resource type="Material" path="res://resources/materials/crystal/crystal.tres" id="m1"]
+
+[sub_resource type="CylinderMesh" id="mesh0"]
+top_radius = 0
+bottom_radius = 0.13
+height = 0.43
+radial_segments = 6
+rings = 1
+
+[sub_resource type="CylinderMesh" id="mesh1"]
+top_radius = 0
+bottom_radius = 0.1
+height = 0.24
+radial_segments = 6
+rings = 1
+
+[sub_resource type="CylinderMesh" id="mesh2"]
+top_radius = 0
+bottom_radius = 0.1
+height = 0.24
+radial_segments = 6
+rings = 1
+
+[sub_resource type="CylinderMesh" id="mesh3"]
+top_radius = 0
+bottom_radius = 0.1
+height = 0.24
+radial_segments = 6
+rings = 1
+
+[sub_resource type="CylinderMesh" id="mesh4"]
+top_radius = 0
+bottom_radius = 0.1
+height = 0.24
+radial_segments = 6
+rings = 1
+
+[sub_resource type="CylinderMesh" id="mesh5"]
+top_radius = 0
+bottom_radius = 0.1
+height = 0.24
+radial_segments = 6
+rings = 1
+
+[node name="PrismBloom" type="Node3D"]
+
+[node name="Heart" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.215, 0)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh0")
+material_override = ExtResource("m0")
+
+[node name="Petal0" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.12, 0.29)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh1")
+material_override = ExtResource("m1")
+
+[node name="Petal1" type="MeshInstance3D" parent="."]
+position = Vector3(0.2758064, 0.12, 0.08961493)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh2")
+material_override = ExtResource("m1")
+
+[node name="Petal2" type="MeshInstance3D" parent="."]
+position = Vector3(0.1704577, 0.12, -0.2346149)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh3")
+material_override = ExtResource("m1")
+
+[node name="Petal3" type="MeshInstance3D" parent="."]
+position = Vector3(-0.1704577, 0.12, -0.2346149)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh4")
+material_override = ExtResource("m1")
+
+[node name="Petal4" type="MeshInstance3D" parent="."]
+position = Vector3(-0.2758064, 0.12, 0.08961493)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh5")
+material_override = ExtResource("m1")

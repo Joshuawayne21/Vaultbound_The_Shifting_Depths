@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="VaultBossAttackDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/enemies/boss_attack_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"wraith_aimed_burst"
+controller_family = &"wraith"
+pattern_version = 2
+shape = &"projectile_fan"
+damage_kind = &"magic"
+warning_time = 1.8
+active_time = 1.05
+recovery_time = 1.8
+damage = 12.0
+stage_count = 1
+stage_gap = 0.0
+parameters = {"angles": [-0.4537856055185257, 0.4537856055185257], "speed": 5.0, "lifetime": 1.0, "corridor_radius": 0.65}
+stage_two = {}

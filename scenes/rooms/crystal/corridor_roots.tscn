@@ -1,0 +1,61 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/props/crystal/obelisk.tscn" id="crystal_0"]
+[ext_resource type="PackedScene" path="res://scenes/props/crystal/obelisk.tscn" id="crystal_1"]
+[ext_resource type="PackedScene" path="res://scenes/props/crystal/mineral_shelf.tscn" id="crystal_2"]
+[ext_resource type="PackedScene" path="res://scenes/props/crystal/mineral_shelf.tscn" id="crystal_3"]
+[ext_resource type="PackedScene" path="res://scenes/props/crystal/mineral_shelf.tscn" id="crystal_4"]
+
+[ext_resource type="PackedScene" path="res://scenes/rooms/abyss_room_base.tscn" id="1"]
+
+
+
+
+[ext_resource type="Material" path="res://resources/materials/abyss_stone_light.tres" id="5"]
+
+[sub_resource type="BoxMesh" id="r1"]
+size = Vector3(2.8, 0.025, 1.6)
+
+[node name="CorridorRoots" instance=ExtResource("1")]
+module_id = &"corridor_roots"
+visual_motif = &"fault_walk"
+room_kind = &"corridor"
+
+[node name="Decor00" parent="." instance=ExtResource("crystal_0")]
+position = Vector3(-8, 0, -7.5)
+
+[node name="Decor01" parent="." instance=ExtResource("crystal_1")]
+position = Vector3(8, 0, 7.5)
+rotation = Vector3(0, 3.14159, 0)
+
+[node name="Decor02" parent="." instance=ExtResource("crystal_2")]
+position = Vector3(-8, 0, 7.5)
+rotation = Vector3(0, 0.7, 0)
+
+[node name="Decor03" parent="." instance=ExtResource("crystal_3")]
+position = Vector3(8, 0, -7.7)
+rotation = Vector3(0, 1, 0)
+
+[node name="Decor04" parent="." instance=ExtResource("crystal_4")]
+position = Vector3(-9.3, 0, -4.8)
+rotation = Vector3(0, 0.5, 0)
+
+[node name="Waystone0" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.03, -7.5)
+mesh = SubResource("r1")
+material_override = ExtResource("5")
+
+[node name="Waystone1" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.03, -2.5)
+mesh = SubResource("r1")
+material_override = ExtResource("5")
+
+[node name="Waystone2" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.03, 2.5)
+mesh = SubResource("r1")
+material_override = ExtResource("5")
+
+[node name="Waystone3" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.03, 7.5)
+mesh = SubResource("r1")
+material_override = ExtResource("5")

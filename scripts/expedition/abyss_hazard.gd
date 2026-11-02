@@ -3,9 +3,11 @@ extends Node3D
 ## Two reusable hazards per expedition. A generous ground telegraph precedes damage.
 signal finished
 signal legacy_retired(record: Dictionary)
+signal typed_retired(record: Dictionary)
 const TypedCast = preload("res://scripts/expedition/hazard_cast.gd")
 const WarningVisual = preload("res://scripts/enemies/boss_warning_visual.gd")
 const TypedVisual = preload("res://scripts/visual/rootbound_hazard_visual.gd")
+const CrystalVisual = preload("res://scripts/visual/crystal_hazard_visual.gd")
 var active := false
 var state: StringName = &"idle"
 var radius := 2.0
@@ -38,47 +40,114 @@ func trigger_typed(issued: Dictionary, context: Node3D) -> bool:
 	_typed_mode = true
 	if not _typed.begin(self, context, issued): return false
 	var definition_id := StringName(issued.profile.id)
-	if _typed_visual == null or _typed_visual_id != definition_id:
-		if is_instance_valid(_typed_visual):
-			remove_child(_typed_visual)
-			_typed_visual.queue_free()
-		_typed_visual = TypedVisual.new()
-		_typed_visual.name = "TypedHazardVisual"
-		if not _typed_visual.configure(definition_id, _typed_materials):
-			_typed_visual.free()
-			_typed_visual = null
-			cancel()
+	var crystal: bool = issued.profile.version == 2
+	var visual: Node3D = _typed_visual
+	var warning: Node3D = _typed_warning
+	var owns_visual := visual == null or _typed_visual_id != definition_id or crystal
+	var owns_warning := warning == null
+	# Locals own candidates until all native ready/node_added callbacks return.
+	# A nested accepted cast never sees or inherits this half-built presentation.
+	if owns_visual:
+		visual = CrystalVisual.new() if crystal else TypedVisual.new()
+		visual.name = "TypedHazardVisual"
+		var configured: bool = visual.configure(issued.profile, issued.shape, _typed_materials) if crystal else visual.configure(definition_id, _typed_materials)
+		if not configured:
+			visual.free()
+			if _typed_admission_current(issued): cancel()
 			return false
-		add_child(_typed_visual)
-		_typed_visual_id = definition_id
-	if _typed_warning == null:
-		_typed_warning = WarningVisual.new()
-		_typed_warning.name = "TypedHazardWarning"
-		add_child(_typed_warning)
+		add_child(visual)
+		if not _typed_admission_current(issued):
+			_discard_candidate(visual)
+			return false
+	if owns_warning:
+		warning = WarningVisual.new()
+		warning.name = "TypedHazardWarning"
+		add_child(warning)
+		if not _typed_admission_current(issued):
+			_discard_candidate(warning)
+			if owns_visual: _discard_candidate(visual)
+			return false
+	if not _typed_admission_current(issued):
+		if owns_visual: _discard_candidate(visual)
+		if owns_warning: _discard_candidate(warning)
+		return false
+	var old_visual := _typed_visual
+	_typed_visual = visual
+	_typed_warning = warning
+	_typed_visual_id = definition_id
+	if owns_visual and is_instance_valid(old_visual): _discard_candidate(old_visual)
+	if not _typed_admission_current(issued): return false
 	global_position = issued.shape.position
 	rotation = Vector3.ZERO
-	_typed_visual.rotation = Vector3.ZERO
-	_typed_visual.scale = Vector3.ONE
+	if not crystal:
+		visual.rotation = Vector3.ZERO
+		visual.scale = Vector3.ONE
 	if definition_id == &"root_spike_lane":
 		var axis: Vector3 = issued.shape.end - issued.shape.start
-		_typed_visual.rotation.y = -atan2(axis.z, axis.x)
-		_typed_visual.scale.x = axis.length() / 6.0
+		visual.rotation.y = -atan2(axis.z, axis.x)
+		visual.scale.x = axis.length() / 6.0
 	room_id = int(issued.room_id)
 	radius = float(issued.profile.radius)
 	damage = float(issued.profile.damage) * float(issued.depth_policy.damage_multiplier)
 	_ring.visible = false
+	if not _typed_admission_current(issued): return false
 	_thorns.visible = false
+	if not _typed_admission_current(issued): return false
 	active = true
 	visible = true
-	_typed_warning.show_shapes(_typed.zones())
+	if not _typed_admission_current(issued): return false
+	var zones := _typed.zones()
+	if not _typed_admission_current(issued): return false
+	warning.show_shapes(zones)
+	if not _typed_admission_current(issued): return false
 	_sync_typed_visuals()
-	if not _typed.source_current():
-		cancel()
-		return false
-	return true
+	return _typed_admission_current(issued)
+
+func _typed_admission_current(issued: Dictionary) -> bool:
+	if not is_instance_valid(self) or not is_inside_tree() or is_queued_for_deletion() or not _typed_mode \
+			or not _typed.live or _typed.serial != int(issued.cast_serial) or _typed.issued != issued: return false
+	var allowed := _typed.source_current()
+	return is_instance_valid(self) and allowed and is_inside_tree() and not is_queued_for_deletion() \
+		and _typed_mode and _typed.live and _typed.serial == int(issued.cast_serial) and _typed.issued == issued
+
+func _discard_candidate(node: Node3D) -> void:
+	if not is_instance_valid(node) or node == _typed_visual or node == _typed_warning: return
+	node.hide()
+	if is_instance_valid(node) and not node.is_queued_for_deletion(): node.queue_free()
 
 func typed_snapshot() -> Dictionary:
 	return _typed.snapshot() if _typed_mode else {}
+
+func typed_activation_snapshot() -> Dictionary:
+	var result := _typed.activation_snapshot()
+	result.active = bool(result.active) and _typed_mode and active
+	return result
+
+func typed_terminal_snapshot() -> Dictionary: return _typed.terminal_snapshot()
+
+func _typed_terminal_current(record: Dictionary) -> bool:
+	if not is_instance_valid(self) or _typed.live or record != _typed.terminal_snapshot(): return false
+	var identity := _typed.activation_snapshot()
+	for key: String in ["run_generation", "room_id", "source_receipt", "cast_serial"]:
+		if record.get(key) != identity.get(key): return false
+	return _typed_mode
+
+func _on_typed_retired(record: Dictionary) -> void:
+	if not _typed_terminal_current(record): return
+	active = false
+	state = &"idle"
+	# Publish the actual terminal identity before presentation observers can reuse
+	# the wrapper. Every later presentation write still belongs to this identity.
+	typed_retired.emit(record.duplicate(true))
+	if not _typed_terminal_current(record): return
+	visible = false
+	if not _typed_terminal_current(record): return
+	if is_instance_valid(_typed_warning): _typed_warning.hide_all()
+	if not _typed_terminal_current(record): return
+	if is_instance_valid(_typed_visual):
+		_typed_visual.update_pose(&"idle", 0.0, 0)
+		if not _typed_terminal_current(record): return
+		_typed_visual.visible = false
 
 func legacy_activation_snapshot() -> Dictionary:
 	return {"serial": _legacy_serial, "room_id": _legacy_room_id,
@@ -88,6 +157,7 @@ func legacy_terminal_snapshot() -> Dictionary:
 	return _legacy_terminal.duplicate(true)
 
 func _ready() -> void:
+	_typed.retired.connect(_on_typed_retired)
 	add_to_group("abyss_hazards")
 	add_to_group("combat_telegraphs")
 	_material = StandardMaterial3D.new()
@@ -150,7 +220,10 @@ func cancel() -> void:
 func _retire(cause: StringName) -> void:
 	var legacy_live := active and not _typed_mode
 	var terminal := {"serial": _legacy_serial, "room_id": _legacy_room_id, "cause": String(cause)}
-	if _typed.live: _typed.cancel()
+	if _typed.live:
+		_typed.cancel()
+		return # The exact retired identity owns all typed cleanup, including callbacks.
+	if _typed_mode: return
 	if is_instance_valid(_typed_warning): _typed_warning.hide_all()
 	if is_instance_valid(_typed_visual):
 		_typed_visual.update_pose(&"idle", 0.0, 0)
@@ -168,9 +241,11 @@ func _physics_process(delta: float) -> void:
 	if not active:
 		return
 	if _typed_mode:
+		var accepted: Dictionary = _typed.activation_snapshot()
 		_typed.advance(delta)
+		if not is_instance_valid(self) or not is_inside_tree() or is_queued_for_deletion(): return
+		if _typed.activation_snapshot().cast_serial != accepted.cast_serial or not _typed_mode: return
 		if not _typed.live:
-			cancel()
 			finished.emit()
 		else:
 			_sync_typed_visuals()
@@ -214,6 +289,8 @@ func get_danger_zones() -> Array[Dictionary]:
 	return zones
 
 func _sync_typed_visuals() -> void:
+	var accepted: Dictionary = _typed.issued.duplicate(true)
+	if not _typed_admission_current(accepted): return
 	state = _typed.state
 	_remaining = _typed.remaining if state == &"warning" else _typed.active_remaining
 	_windup = float(_typed.issued.profile.warning_time)
@@ -221,11 +298,13 @@ func _sync_typed_visuals() -> void:
 	var duration := _windup if state == &"warning" else float(_typed.issued.profile.active_time)
 	var progress := 1.0 - _remaining / duration
 	_typed_visual.visible = true
-	_typed_visual.update_pose(state, clampf(progress, 0.0, 1.0), _typed.pulses_delivered)
-	if _typed.attack_id <= 0:
-		_typed_warning.hide_all()
-	else:
-		_typed_warning.set_phase(state == &"active", progress)
+	if not _typed_admission_current(accepted): return
+	if _typed.issued.profile.version == 2:
+		_typed_visual.update_pose(state, clampf(progress, 0.0, 1.0), _typed.pulses_delivered, _typed.next_pulse)
+	else: _typed_visual.update_pose(state, clampf(progress, 0.0, 1.0), _typed.pulses_delivered)
+	if not _typed_admission_current(accepted): return
+	if _typed.attack_id <= 0: _typed_warning.hide_all()
+	else: _typed_warning.set_phase(state == &"active", progress)
 
 func _exit_tree() -> void:
 	if _typed_mode: cancel()

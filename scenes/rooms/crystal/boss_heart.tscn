@@ -1,0 +1,98 @@
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/props/crystal/obelisk.tscn" id="crystal_0"]
+[ext_resource type="PackedScene" path="res://scenes/props/crystal/obelisk.tscn" id="crystal_1"]
+[ext_resource type="PackedScene" path="res://scenes/props/crystal/obelisk.tscn" id="crystal_2"]
+[ext_resource type="PackedScene" path="res://scenes/props/crystal/obelisk.tscn" id="crystal_3"]
+[ext_resource type="PackedScene" path="res://scenes/props/crystal/geode_fan.tscn" id="crystal_4"]
+[ext_resource type="PackedScene" path="res://scenes/props/crystal/geode_fan.tscn" id="crystal_5"]
+
+[ext_resource type="PackedScene" path="res://scenes/rooms/abyss_room_base.tscn" id="1"]
+
+
+
+[ext_resource type="Material" path="res://resources/materials/abyss_gold.tres" id="4"]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_glow.tres" id="5"]
+
+[sub_resource type="TorusMesh" id="r1"]
+inner_radius = 6.72
+outer_radius = 6.8
+rings = 24
+ring_segments = 4
+
+[sub_resource type="TorusMesh" id="r2"]
+inner_radius = 3.7
+outer_radius = 3.76
+rings = 24
+ring_segments = 4
+
+[sub_resource type="BoxMesh" id="r3"]
+size = Vector3(0.13, 0.025, 0.7)
+
+[node name="BossHeart" instance=ExtResource("1")]
+module_id = &"boss_heart"
+visual_motif = &"resonant_conclave"
+room_kind = &"boss"
+
+[node name="Decor00" parent="." instance=ExtResource("crystal_0")]
+position = Vector3(-8.5, 0, -8.5)
+rotation = Vector3(0, 0.2, 0)
+
+[node name="Decor01" parent="." instance=ExtResource("crystal_1")]
+position = Vector3(8.5, 0, -8.5)
+rotation = Vector3(0, 2.94159, 0)
+
+[node name="Decor02" parent="." instance=ExtResource("crystal_2")]
+position = Vector3(-8.5, 0, 8.5)
+rotation = Vector3(0, -0.3, 0)
+
+[node name="Decor03" parent="." instance=ExtResource("crystal_3")]
+position = Vector3(8.5, 0, 8.5)
+rotation = Vector3(0, 3.44159, 0)
+
+[node name="Decor04" parent="." instance=ExtResource("crystal_4")]
+position = Vector3(-9, 0, 4)
+
+[node name="Decor05" parent="." instance=ExtResource("crystal_5")]
+position = Vector3(9, 0, -4)
+
+[node name="SanctumRing" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.04, 0)
+mesh = SubResource("r1")
+material_override = ExtResource("4")
+cast_shadow = 0
+
+[node name="InnerOath" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.042, 0)
+mesh = SubResource("r2")
+material_override = ExtResource("5")
+cast_shadow = 0
+
+[node name="Rune0" type="MeshInstance3D" parent="."]
+position = Vector3(4.24264, 0.04, 4.24264)
+mesh = SubResource("r3")
+material_override = ExtResource("5")
+rotation = Vector3(0, 0.7854, 0)
+cast_shadow = 0
+
+[node name="Rune1" type="MeshInstance3D" parent="."]
+position = Vector3(4.24264, 0.04, -4.24264)
+mesh = SubResource("r3")
+material_override = ExtResource("5")
+rotation = Vector3(0, 2.35619, 0)
+cast_shadow = 0
+
+[node name="Rune2" type="MeshInstance3D" parent="."]
+position = Vector3(-4.24264, 0.04, -4.24264)
+mesh = SubResource("r3")
+material_override = ExtResource("5")
+rotation = Vector3(0, 3.92699, 0)
+cast_shadow = 0
+
+[node name="Rune3" type="MeshInstance3D" parent="."]
+position = Vector3(-4.24264, 0.04, 4.24264)
+mesh = SubResource("r3")
+material_override = ExtResource("5")
+rotation = Vector3(0, 5.49779, 0)
+cast_shadow = 0

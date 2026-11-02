@@ -19,10 +19,13 @@ const SNAPSHOT_KEYS := ["id", "display_name", "content_version", "theme_version"
 @export var presentation: Resource
 
 func snapshot() -> Dictionary:
-	if not available or id != "rootbound_abyss" or minimum_depth != 1 or selection_weight < 1 or selection_weight > 100 \
-			or boss_ids != ["rootwarden"] or encounter_profile_id != "rootbound_legacy" or event_profile_id != "rootbound_legacy" \
-			or not presentation is VaultDungeonPresentation:
+	if not available or selection_weight < 1 or selection_weight > 100 or not presentation is VaultDungeonPresentation:
 		return {}
+	if id == "rootbound_abyss":
+		if minimum_depth != 1 or boss_ids != ["rootwarden"] or encounter_profile_id != "rootbound_legacy" or event_profile_id != "rootbound_legacy": return {}
+	elif id == "crystal_caverns":
+		if minimum_depth != 6 or boss_ids != ["prism_conductor", "geode_colossus", "shard_wraith"] or encounter_profile_id != "crystal_ordinary_v1" or event_profile_id != "crystal_encounters": return {}
+	else: return {}
 	var resolved: Dictionary = presentation.snapshot()
 	if resolved.is_empty(): return {}
 	var result := {"id": id, "display_name": display_name, "content_version": content_version,
@@ -36,8 +39,9 @@ static func valid_snapshot(value: Variant) -> bool:
 	if not value is Dictionary or value.size() != SNAPSHOT_KEYS.size(): return false
 	for key: String in SNAPSHOT_KEYS:
 		if not value.has(key): return false
-	if value.id != "rootbound_abyss" or not value.display_name is String or String(value.display_name).strip_edges().is_empty() or String(value.display_name).length() > 64: return false
+	if value.id not in ["rootbound_abyss", "crystal_caverns"] or not value.display_name is String or String(value.display_name).strip_edges().is_empty() or String(value.display_name).length() > 64: return false
 	if not Presentation._integer(value.content_version, 1, 1) or not Presentation._integer(value.theme_version, 1, 1): return false
-	return value.presentation_profile_id == Presentation.PROFILE_ID \
+	var expected: String = Presentation.PROFILE_ID if value.id == "rootbound_abyss" else "crystal_native_v1"
+	return value.presentation_profile_id == expected and value.presentation is Dictionary and value.presentation.get("id") == expected \
 		and Presentation._integer(value.presentation_version, 1, 1) \
 		and Presentation.valid_snapshot(value.presentation)

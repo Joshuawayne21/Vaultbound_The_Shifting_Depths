@@ -34,6 +34,6 @@ slot = &""
 aura_profile = &"none"
 special_effects = Array[String]([])
 crafting_tags = Array[String]([])
-acquisition_sources = Array[String](["chest:common", "chest:reinforced", "monster:stronger"])
+acquisition_sources = Array[String](["chest:common", "chest:reinforced", "monster:stronger", "encounter:prism_conductor", "encounter:crystal_lancekeeper"])
 icon = ExtResource("2")
 visual_scene = ExtResource("3")

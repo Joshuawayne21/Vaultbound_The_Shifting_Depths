@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="VaultBiomeDefinition" load_steps=3 format=3]
+[ext_resource type="Script" path="res://scripts/expedition/biome_definition.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/visual/crystal_presentation.tres" id="2"]
+[resource]
+script = ExtResource("1")
+id = "crystal_caverns"
+display_name = "Glimmering Crystal Abyss"
+available = true
+content_version = 1
+theme_version = 1
+minimum_depth = 6
+selection_weight = 40
+boss_ids = Array[String](["prism_conductor", "geode_colossus", "shard_wraith"])
+encounter_profile_id = "crystal_ordinary_v1"
+event_profile_id = "crystal_encounters"
+presentation = ExtResource("2")

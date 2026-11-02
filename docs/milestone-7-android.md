@@ -110,6 +110,18 @@ The [7D.4 headless gate](milestone-7d4-validation.md) passed. These checks still
 5. Background/resume the app around a Return tap and scene fade. Confirm controls, party and cameras recover and no duplicate grant appears. Controlled save/load failure injection is covered by automation; do not corrupt a personal save to simulate it on-device.
 6. Repeat on Low/Medium/High and reduced motion, including long floors, paired Search/Return prompts, phone cutouts, notch-safe UI and thermal/frame-time observation. Capture rendered spring readability and transition video where available.
 
+## 7D.5 Glimmering Crystal Abyss
+
+The [headless gate](milestone-7d5-validation.md) is separate from the following physical Android checks. Back up a test profile and use a legitimately unlocked Depth 6 or higher; record the displayed seed, depth, theme and boss. Do not alter a personal save to force access.
+
+1. Review both weighted theme pools on the blue portal card at 100%, 110% and 120% UI scale. Confirm complete text, obvious Enter/Back controls and notch-safe placement. Enter selected Crystal floors and compare the actual HUD labels.
+2. Traverse mineral rooms, streams, temple corridors, secret passages and a long 24-room layout with both companions. Inspect door connections, chest approaches, spring seals and scenery collisions in third-person and isometric views. Capture rendered visibility problems rather than inferring appearance from headless bounds.
+3. Fight Conductor and its Refracted variant. Check each full warning, harmless gap, perpendicular second stage and visible central opening. Fight Colossus through both slams, exposed windows and phase transition. Switch cameras during warnings and damage windows.
+4. Watch Wraith's visible grounded relocation, then the two actual bolts. Step behind scenery and check readable moving corridors, no through-wall hits and no flight surviving recovery. Check the optional Lancekeeper label and confirm its defeat alone cannot unlock final extraction.
+5. Cross resonance lanes between pulses, leave/reenter their room, and observe awareness warnings. Guardian/Mystic should retain reaction delays, route around obstructions and preserve commands. Check that graphics presets do not hide essential telegraphs.
+6. Search ordinary, elite, optional and required-boss caches; take a partial reward, use a safe Return spring, and separately complete a final extraction. Restart and confirm exact collected items/DM, old gear/pets and the correct completion/unlock boundary. Crystal does not award Rootbound pet findings or unfinished boss materials.
+7. Repeat on Low/Medium/High, reduced effects and ambient density settings. Record draw/frame-time spikes, memory, warmth, battery and touchscreen comfort. Native triangle counts and host microsecond observations are not physical-device performance measurements.
+
 ## Capture performance and visual evidence
 
 Record at least ten minutes covering plaza/perimeter traversal, crowded district views, portals, combat and a representative dungeon. Compare cold start and warmed-up play; note frame-time spikes, thermal throttling, touch comfort and battery drain. Use the metrics display/profiler where available. Native mesh counts and cloud CPU timings cannot establish device FPS.

@@ -57,6 +57,7 @@ func tick(delta: float, events_allowed: bool) -> void:
 		match pending_kind:
 			&"patrol": warning = "A hunting patrol stirs — keep the center clear"
 			&"roots": warning = "Restless roots gather — leave the marked ground"
+			&"resonance": warning = "Crystal resonance gathers — watch for the pulsing lane"
 			&"elite": warning = "An ancient sentinel awakens — prepare for an elite"
 		warning_changed.emit(warning)
 		changed.emit()

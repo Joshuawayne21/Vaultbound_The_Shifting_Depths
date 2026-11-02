@@ -700,7 +700,7 @@ func extract() -> bool:
 func secure_early(world: Node3D, source: Node3D, generation: int) -> Dictionary:
 	var rejected := {"ok": false, "generation": generation, "still_current": false,
 		"outcome": "", "error": "This Return spring is unavailable.", "return_token": {}}
-	if not run_context_valid(world, generation) or int(_issued_content_plan.get("content_version", 0)) != 4 \
+	if not run_context_valid(world, generation) or int(_issued_content_plan.get("content_version", 0)) != EncounterProgress.Ids.CONTENT_VERSION \
 			or _issued_content_plan.get("checkpoint_policy", {}).get("version", 0) != 1 \
 			or not is_instance_valid(source) or not source.is_inside_tree() or source.is_queued_for_deletion() \
 			or not world.has_method("early_exit_record") or not world.has_method("completed_early_exit_matches") \

@@ -1,0 +1,86 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Material" path="res://resources/materials/crystal/stone.tres" id="m0"]
+[ext_resource type="Material" path="res://resources/materials/crystal/crystal.tres" id="m1"]
+
+[sub_resource type="BoxMesh" id="mesh0"]
+size = Vector3(1.2, 0.16, 0.8)
+
+[sub_resource type="BoxShape3D" id="shape0"]
+size = Vector3(1.2, 0.16, 0.8)
+
+[sub_resource type="BoxMesh" id="mesh1"]
+size = Vector3(0.94, 0.18, 0.64)
+
+[sub_resource type="BoxShape3D" id="shape1"]
+size = Vector3(0.94, 0.18, 0.64)
+
+[sub_resource type="CylinderMesh" id="mesh2"]
+top_radius = 0
+bottom_radius = 0.16
+height = 0.68
+radial_segments = 6
+rings = 1
+
+[sub_resource type="ConvexPolygonShape3D" id="shape2"]
+points = PackedVector3Array(0, -0.34, 0.16, 0.138564065, -0.34, 0.08, 0.138564065, -0.34, -0.08, 1.95943488e-17, -0.34, -0.16, -0.138564065, -0.34, -0.08, -0.138564065, -0.34, 0.08, 0, 0.34, 0, 0, 0.34, 0, 0, 0.34, -0, 0, 0.34, -0, -0, 0.34, -0, -0, 0.34, 0)
+
+[sub_resource type="CylinderMesh" id="mesh3"]
+top_radius = 0
+bottom_radius = 0.13
+height = 0.47
+radial_segments = 6
+rings = 1
+
+[sub_resource type="ConvexPolygonShape3D" id="shape3"]
+points = PackedVector3Array(0, -0.235, 0.13, 0.112583302, -0.235, 0.065, 0.112583302, -0.235, -0.065, 1.59204084e-17, -0.235, -0.13, -0.112583302, -0.235, -0.065, -0.112583302, -0.235, 0.065, 0, 0.235, 0, 0, 0.235, 0, 0, 0.235, -0, 0, 0.235, -0, -0, 0.235, -0, -0, 0.235, 0)
+
+[node name="MineralShelf" type="Node3D"]
+
+[node name="LowerSlate" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.08, 0)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh0")
+material_override = ExtResource("m0")
+
+[node name="UpperSlate" type="MeshInstance3D" parent="."]
+position = Vector3(-0.06, 0.25, 0.02)
+rotation = Vector3(0, 0.17, 0)
+mesh = SubResource("mesh1")
+material_override = ExtResource("m0")
+
+[node name="NeedleA" type="MeshInstance3D" parent="."]
+position = Vector3(-0.23, 0.68, 0.04)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh2")
+material_override = ExtResource("m1")
+
+[node name="NeedleB" type="MeshInstance3D" parent="."]
+position = Vector3(0.22, 0.575, -0.12)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh3")
+material_override = ExtResource("m1")
+
+[node name="Solid" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="LowerSlateCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(0, 0.08, 0)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape0")
+
+[node name="UpperSlateCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(-0.06, 0.25, 0.02)
+rotation = Vector3(0, 0.17, 0)
+shape = SubResource("shape1")
+
+[node name="NeedleACollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(-0.23, 0.68, 0.04)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape2")
+
+[node name="NeedleBCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(0.22, 0.575, -0.12)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape3")

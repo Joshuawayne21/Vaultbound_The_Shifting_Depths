@@ -33,5 +33,5 @@ slot = &""
 aura_profile = &"none"
 special_effects = Array[String](["Restores 90 stamina"])
 crafting_tags = Array[String]([])
-acquisition_sources = Array[String](["chest:reinforced", "monster:stronger"])
+acquisition_sources = Array[String](["chest:reinforced", "monster:stronger", "encounter:geode_colossus"])
 icon = ExtResource("2")

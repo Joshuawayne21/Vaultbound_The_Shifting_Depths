@@ -71,7 +71,8 @@ func select_active_ordinary(candidates: Array[Node3D]) -> Array[Node3D]:
 func reserve_hazard(room_id: int, event_receipt: String) -> int:
 	_prune()
 	var owns_event_cast: bool = not _event.is_empty() and _event.get("state") == "executing" \
-		and _event.get("definition_id") == "roots" and _event.get("receipt") == event_receipt \
+		and _event.get("definition_id") == _plan.trap_policy.awareness.event_id and _event.get("receipt") == event_receipt \
+		and int(_event.get("room_id", -1)) == room_id \
 		and int(_event.get("reserved_hazards", 0)) == 1
 	if not _current() or _boss() != null or event_receipt.is_empty() or event_receipt.length() > 160 \
 			or _event_owner() != null or (not _event.is_empty() and not owns_event_cast) or not _room_allowed(room_id) \
@@ -91,7 +92,7 @@ func bind_hazard(reservation_id: int, hazard: Node3D) -> bool:
 			or not world.owns_environment_hazard(hazard) or not bool(hazard.get("active")) \
 			or int(hazard.get("room_id")) != int(record.room_id) or not _room_allowed(int(record.room_id)):
 		return false
-	_hazards[hazard.get_instance_id()] = {"hazard": weakref(hazard), "room_id": record.room_id, "receipt": record.receipt}
+	_hazards[hazard.get_instance_id()] = {"hazard": weakref(hazard), "room_id": record.room_id, "receipt": record.receipt, "typed": bool(record.get("typed", false))}
 	_reservations.erase(reservation_id)
 	return true
 
@@ -105,10 +106,13 @@ func request_event(room_id: int, definition_id: String, event_receipt: String) -
 			or event_receipt != "awareness_" + definition_id \
 			or not _plan.event_profile.event_ids.has(definition_id) or not _hazards.is_empty() or not _reservations.is_empty():
 		return false
-	var needed := 0 if definition_id == "roots" else 1
+	var environmental: bool = definition_id == _plan.trap_policy.awareness.event_id
+	var typed: bool = environmental and _plan.trap_policy.awareness.mode == "registered_typed"
+	var needed := 0 if environmental else 1
+	if typed and _active_ordinary() + _core_count() > 3: return false
 	if _active_ordinary() + _reserved_enemies() + _core_count() + needed > int(_plan.event_profile.enemy_limit): return false
 	_event = {"room_id": room_id, "definition_id": definition_id, "receipt": event_receipt, "reserved_enemies": needed,
-		"reserved_hazards": 1 if definition_id == "roots" else 0, "state": "warning", "remaining": float(_plan.event_profile.warning_seconds)}
+		"reserved_hazards": 1 if environmental else 0, "typed": typed, "state": "warning", "remaining": float(_plan.event_profile.warning_seconds)}
 	return true
 
 func commit_event(room_id: int, definition_id: String, event_receipt: String) -> bool:
@@ -326,8 +330,22 @@ func reserve_typed_hazard(room_id: int, receipt: String) -> int:
 	if result >= 0: _reservations[result]["typed"] = true
 	return result
 
+func reserve_typed_event_hazard(room_id: int, event_receipt: String) -> int:
+	# Transfer only the exact already-warned environmental reservation. The held
+	# warning budget becomes this typed cast's budget; it is never booked twice.
+	_prune()
+	if not _current() or _event.is_empty() or not bool(_event.get("typed", false)) \
+		or _event.get("state") != "executing" or _event.get("receipt") != event_receipt \
+		or int(_event.get("room_id", -1)) != room_id or int(_event.get("reserved_hazards", 0)) != 1 \
+		or _plan.trap_policy.awareness.mode != "registered_typed" \
+		or _event.definition_id != _plan.trap_policy.awareness.event_id \
+		or _active_ordinary() + _core_count() > 3: return -1
+	var reservation := reserve_hazard(room_id, event_receipt)
+	if reservation >= 0: _reservations[reservation]["typed"] = true
+	return reservation
+
 func _typed_hazard_count() -> int:
-	var count := 0
+	var count := 1 if bool(_event.get("typed", false)) and int(_event.get("reserved_hazards", 0)) == 1 else 0
 	for record: Dictionary in _hazards.values():
 		var actor := record.hazard.get_ref() as Node3D
 		if is_instance_valid(actor) and actor.has_method("typed_snapshot") and not actor.typed_snapshot().is_empty(): count += 1

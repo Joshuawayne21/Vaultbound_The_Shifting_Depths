@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="VaultBossDefinition" load_steps=7 format=3]
+[ext_resource type="Script" path="res://scripts/enemies/boss_definition.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/bosses/wraith.tscn" id="2"]
+[ext_resource type="Script" path="res://scripts/enemies/boss_attack_definition.gd" id="attack"]
+[ext_resource type="Resource" path="res://resources/bosses/attacks/wraith_aimed_burst.tres" id="a0"]
+[ext_resource type="Resource" path="res://resources/bosses/attacks/wraith_marked_relocation.tres" id="a1"]
+[ext_resource type="Resource" path="res://resources/bosses/attacks/wraith_exposed_cast.tres" id="a2"]
+[resource]
+script = ExtResource("1")
+id = &"shard_wraith"
+display_name = "Shard Wraith"
+controller_family = &"wraith"
+scene = ExtResource("2")
+available = true
+content_version = 5
+arena_profile_id = &"crystal_wraith_arena"
+reward_profile_id = &"shard_wraith"
+discovery_id = &"shard_wraith"
+visual_profile_id = &"shard_wraith"
+allowed_variant_ids = Array[StringName]([&"none"])
+stats = {"max_health": 380.0, "armor": 0.04, "move_speed": 1.6, "detection_range": 11.0, "leash_radius": 12.0, "movement_radius": 4.5, "phase_threshold": 0.4, "phase_transition_time": 1.8}
+phase_one_patterns = Array[StringName]([&"wraith_aimed_burst", &"wraith_marked_relocation", &"wraith_exposed_cast"])
+phase_two_patterns = Array[StringName]([&"wraith_aimed_burst", &"wraith_marked_relocation", &"wraith_exposed_cast"])
+attacks = Array[ExtResource("attack")]([ExtResource("a0"), ExtResource("a1"), ExtResource("a2")])

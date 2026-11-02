@@ -138,7 +138,10 @@ static func snapshot_errors(value: Variant) -> PackedStringArray:
 	# authorable family data cannot enable an arbitrary scene through this flag.
 	if value.available:
 		var executable := {"thornmarshal": ["sentinel", "rootbound_sentinel_arena"],
-			"mycelial_cantor": ["brood_keeper", "rootbound_brood_arena"]}
+			"mycelial_cantor": ["brood_keeper", "rootbound_brood_arena"],
+			"prism_conductor": ["conductor", "crystal_conductor_arena"],
+			"geode_colossus": ["colossus", "crystal_colossus_arena"],
+			"shard_wraith": ["wraith", "crystal_wraith_arena"]}
 		if not executable.has(value.id):
 			errors.append("Boss has no executable controller profile")
 		elif value.controller_family != executable[value.id][0] or value.arena_profile_id != executable[value.id][1] \
@@ -146,6 +149,13 @@ static func snapshot_errors(value: Variant) -> PackedStringArray:
 				or value.visual_profile_id != value.id or value.reward_profile_id != value.id or value.discovery_id != value.id \
 				or value.pet_profile_id != "none" or value.trophy_item_id != "" or not value.objective_eligible:
 			errors.append("Executable boss profile does not match its actual scene/source")
+		if value.id in ["prism_conductor", "geode_colossus", "shard_wraith"]:
+			if value.content_version != 5 or value.encounter_version != 1 \
+					or value.allowed_variant_ids != (["none", "refracted_pattern"] if value.id == "prism_conductor" else ["none"]):
+				errors.append("Crystal boss version or variant mismatch")
+			for attack: Variant in value.attacks:
+				if not attack is Dictionary or attack.get("pattern_version") != 2:
+					errors.append("Crystal boss requires actual v2 patterns")
 	if value.id == "rootwarden" or value.scene_path == ROOT_SCENE or not value.rootwarden_data.is_empty() \
 			or value.reward_profile_id == "rootwarden_legacy" or value.pet_profile_id == "rootwarden_legacy" \
 			or value.discovery_id == "rootwarden" or value.trophy_item_id == "rootwarden_heart":

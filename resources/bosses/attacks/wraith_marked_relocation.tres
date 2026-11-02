@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="VaultBossAttackDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/enemies/boss_attack_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"wraith_marked_relocation"
+controller_family = &"wraith"
+pattern_version = 2
+shape = &"relocation"
+damage_kind = &"magic"
+warning_time = 1.4
+active_time = 1.5
+recovery_time = 0.7
+damage = 0.0
+stage_count = 1
+stage_gap = 0.0
+parameters = {"anchor_count": 3, "minimum_party_distance": 3.0, "speed": 4.0, "duration": 1.5}
+stage_two = {}

@@ -1,0 +1,134 @@
+[gd_scene load_steps=18 format=3]
+
+[ext_resource type="Material" path="res://resources/materials/crystal/stone.tres" id="m0"]
+[ext_resource type="Material" path="res://resources/materials/crystal/crystal.tres" id="m1"]
+[ext_resource type="Material" path="res://resources/materials/crystal/metal_trim.tres" id="m2"]
+
+[sub_resource type="BoxMesh" id="mesh0"]
+size = Vector3(1.6, 0.25, 0.6)
+
+[sub_resource type="BoxShape3D" id="shape0"]
+size = Vector3(1.6, 0.25, 0.6)
+
+[sub_resource type="BoxMesh" id="mesh1"]
+size = Vector3(0.24, 1.15, 0.35)
+
+[sub_resource type="BoxShape3D" id="shape1"]
+size = Vector3(0.24, 1.15, 0.35)
+
+[sub_resource type="BoxMesh" id="mesh2"]
+size = Vector3(0.24, 1.15, 0.35)
+
+[sub_resource type="BoxShape3D" id="shape2"]
+size = Vector3(0.24, 1.15, 0.35)
+
+[sub_resource type="BoxMesh" id="mesh3"]
+size = Vector3(0.9, 0.22, 0.35)
+
+[sub_resource type="BoxShape3D" id="shape3"]
+size = Vector3(0.9, 0.22, 0.35)
+
+[sub_resource type="BoxMesh" id="mesh4"]
+size = Vector3(0.72, 0.22, 0.35)
+
+[sub_resource type="BoxShape3D" id="shape4"]
+size = Vector3(0.72, 0.22, 0.35)
+
+[sub_resource type="CylinderMesh" id="mesh5"]
+top_radius = 0
+bottom_radius = 0.18
+height = 0.55
+radial_segments = 6
+rings = 1
+
+[sub_resource type="ConvexPolygonShape3D" id="shape5"]
+points = PackedVector3Array(0, -0.275, 0.18, 0.155884573, -0.275, 0.09, 0.155884573, -0.275, -0.09, 2.20436424e-17, -0.275, -0.18, -0.155884573, -0.275, -0.09, -0.155884573, -0.275, 0.09, 0, 0.275, 0, 0, 0.275, 0, 0, 0.275, -0, 0, 0.275, -0, -0, 0.275, -0, -0, 0.275, 0)
+
+[sub_resource type="BoxMesh" id="mesh6"]
+size = Vector3(0.12, 0.65, 0.08)
+
+[sub_resource type="BoxShape3D" id="shape6"]
+size = Vector3(0.12, 0.65, 0.08)
+
+[node name="BrokenLens" type="Node3D"]
+
+[node name="Foot" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.125, 0)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh0")
+material_override = ExtResource("m0")
+
+[node name="LeftJamb" type="MeshInstance3D" parent="."]
+position = Vector3(-0.65, 0.825, 0)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh1")
+material_override = ExtResource("m0")
+
+[node name="RightJamb" type="MeshInstance3D" parent="."]
+position = Vector3(0.65, 0.825, 0)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh2")
+material_override = ExtResource("m0")
+
+[node name="BrokenArcLeft" type="MeshInstance3D" parent="."]
+position = Vector3(-0.38, 1.55, 0)
+rotation = Vector3(0, 0, -0.45)
+mesh = SubResource("mesh3")
+material_override = ExtResource("m0")
+
+[node name="BrokenArcRight" type="MeshInstance3D" parent="."]
+position = Vector3(0.41, 1.51, 0)
+rotation = Vector3(0, 0, 0.45)
+mesh = SubResource("mesh4")
+material_override = ExtResource("m0")
+
+[node name="Pointer" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.52, 0)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh5")
+material_override = ExtResource("m1")
+
+[node name="Scale" type="MeshInstance3D" parent="."]
+position = Vector3(-0.65, 0.96, -0.2)
+rotation = Vector3(0, 0, 0)
+mesh = SubResource("mesh6")
+material_override = ExtResource("m2")
+
+[node name="Solid" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="FootCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(0, 0.125, 0)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape0")
+
+[node name="LeftJambCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(-0.65, 0.825, 0)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape1")
+
+[node name="RightJambCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(0.65, 0.825, 0)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape2")
+
+[node name="BrokenArcLeftCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(-0.38, 1.55, 0)
+rotation = Vector3(0, 0, -0.45)
+shape = SubResource("shape3")
+
+[node name="BrokenArcRightCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(0.41, 1.51, 0)
+rotation = Vector3(0, 0, 0.45)
+shape = SubResource("shape4")
+
+[node name="PointerCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(0, 0.52, 0)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape5")
+
+[node name="ScaleCollision" type="CollisionShape3D" parent="Solid"]
+position = Vector3(-0.65, 0.96, -0.2)
+rotation = Vector3(0, 0, 0)
+shape = SubResource("shape6")

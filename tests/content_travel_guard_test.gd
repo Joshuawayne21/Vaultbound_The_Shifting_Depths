@@ -72,7 +72,7 @@ func _run() -> void:
 	await _late_successful_extraction()
 	session.changed.disconnect(_session_changed)
 	game.world_root.child_entered_tree.disconnect(_candidate_entered)
-	finish()
+	await _finish_with_audio_retirement()
 
 func _candidate_entered(candidate: Node) -> void:
 	if candidate.get_script() == null or candidate.get_script().resource_path != "res://scripts/expedition/abyss_level.gd": return
@@ -285,3 +285,35 @@ func _frozen_content_and_touch_entry() -> void:
 	check(overlay.results_snapshot.theme_label == old_theme_name and overlay.results_snapshot.required_boss_name == old_boss_name and overlay.results_snapshot.outcome == "abandoned", "Existing results preserve actual content labels without fabricated completion")
 	game.hud.close_modals()
 	safe_world = game.active_world
+
+
+func _finish_with_audio_retirement() -> void:
+	# Native playback can retain its WAV after the last hit node is already gone.
+	# Observe actual ownership; no arbitrary delay or relaxed exit filtering.
+	var references := _retire_game_audio()
+	var deadline := Time.get_ticks_msec() + 3000
+	while (is_instance_valid(game) or not _audio_retired(references)) and Time.get_ticks_msec() < deadline:
+		await process_frame
+	check(not is_instance_valid(game) and _audio_retired(references), "Travel fixture retires Game and observed native hit-sound resources before exit")
+	finish()
+
+
+func _retire_game_audio() -> Array[WeakRef]:
+	# Keep strong native Resource temporaries outside the awaiting frame.
+	var references: Array[WeakRef] = []
+	for node: Node in game.find_children("*", "AudioStreamPlayer3D", true, false):
+		var sound := node as AudioStreamPlayer3D
+		if sound.stream != null: references.append(weakref(sound.stream))
+		if sound.has_stream_playback(): references.append(weakref(sound.get_stream_playback()))
+	if has_meta("vaultbound_combat_sound"):
+		var state: Dictionary = get_meta("vaultbound_combat_sound")
+		if state.get("tone") is AudioStreamWAV: references.append(weakref(state.tone))
+		remove_meta("vaultbound_combat_sound")
+	game.queue_free()
+	return references
+
+
+func _audio_retired(references: Array[WeakRef]) -> bool:
+	for reference: WeakRef in references:
+		if is_instance_valid(reference.get_ref()): return false
+	return true

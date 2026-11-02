@@ -132,9 +132,14 @@ static func hazard_site_clear(world: Node3D, room: Node3D, shape: Dictionary) ->
 	if not geometry.validate(shape).is_empty(): return false
 	var excluded := _foreign_colliders(world)
 	var center: Vector3 = shape.position
-	var extent: float = float(shape.radius) + (3.0 if shape.shape == "capsule" else 0.0)
-	for x in range(-ceili(extent / 0.35), ceili(extent / 0.35) + 1):
-		for z in range(-ceili(float(shape.radius) / 0.35), ceili(float(shape.radius) / 0.35) + 1):
+	var extent_x := float(shape.radius)
+	var extent_z := float(shape.radius)
+	if shape.shape == "capsule":
+		var half_axis: Vector3 = (Vector3(shape.end) - Vector3(shape.start)) * 0.5
+		extent_x += absf(half_axis.x)
+		extent_z += absf(half_axis.z)
+	for x in range(-ceili(extent_x / 0.35), ceili(extent_x / 0.35) + 1):
+		for z in range(-ceili(extent_z / 0.35), ceili(extent_z / 0.35) + 1):
 			var point := center + Vector3(x * 0.35, 0, z * 0.35)
 			if not geometry.contains(shape, point): continue
 			var floor_point := _floor(world, point, room, excluded)
@@ -181,3 +186,64 @@ static func checkpoint_anchor_clear(world: Node3D, room: Node3D) -> bool:
 	sight.hit_from_inside = true
 	if not world.get_world_3d().direct_space_state.intersect_ray(sight).is_empty(): return false
 	return true
+
+static func native_actor_matches(actor: Node3D, metadata: Dictionary) -> bool:
+	if not is_instance_valid(actor) or metadata.is_empty() or actor.basis != Basis.IDENTITY: return false
+	var bodies: Array[CollisionShape3D] = []
+	for child: Node in actor.get_children():
+		if child is CollisionShape3D and not child.disabled: bodies.append(child)
+	if bodies.size() != 1 or not bodies[0].shape is CapsuleShape3D: return false
+	var body := bodies[0]
+	var center: Array = metadata.body_center
+	# Shape properties use native real_t precision. Canonicalize both exact pairs
+	# without a tolerance or allocating a temporary native Shape on hot checks.
+	var actual_size := Vector2(body.shape.radius, body.shape.height)
+	var issued_size := Vector2(float(metadata.body_radius), float(metadata.body_height))
+	return body.basis == Basis.IDENTITY and body.position == Vector3(float(center[0]), float(center[1]), float(center[2])) \
+		and actual_size == issued_size
+
+static func native_arena_clear(world: Node3D, room: Node3D, actor: Node3D, metadata: Dictionary) -> bool:
+	if not _valid(world, room, float(metadata.get("body_radius", 0.0)), float(metadata.get("body_height", 0.0))) \
+		or not native_actor_matches(actor, metadata) or actor.get_parent() != room or actor.position != Vector3(0, 0.15, 0): return false
+	var excluded := _foreign_colliders(world)
+	var origin := actor.global_position
+	var body: CollisionShape3D
+	for child: Node in actor.get_children():
+		if child is CollisionShape3D and not child.disabled: body = child
+	var space := world.get_world_3d().direct_space_state
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = body.shape
+	query.transform = actor.global_transform * body.transform
+	query.exclude = excluded
+	query.collision_mask = 1 | 16
+	query.collide_with_areas = false
+	query.margin = 0.005
+	if not _floor(world, origin, room, excluded).is_finite() or not space.intersect_shape(query, 1).is_empty(): return false
+	var movement := float(metadata.movement_radius)
+	# Survey the actual body and bounded home movement, not the outer attack disk.
+	# Individual casts still prove their precise shapes and party escape routes.
+	for index in range(8):
+		var direction := Vector3(cos(index * TAU / 8.0), 0, sin(index * TAU / 8.0))
+		var offset := direction * movement
+		query.motion = offset
+		var motion := space.cast_motion(query)
+		if motion.size() < 2 or motion[0] < 0.995: return false
+		for step in range(1, maxi(2, ceili(movement / 0.6)) + 1):
+			var point := origin + offset * float(step) / maxi(2, ceili(movement / 0.6))
+			if not _floor(world, point, room, excluded).is_finite(): return false
+		if not _pose_clear(world, origin + offset, metadata, excluded): return false
+	if not _pose_clear(world, origin, metadata, excluded): return false
+	return clear_anchor(world, room, actor.position, float(metadata.body_radius), float(metadata.body_height))
+
+static func _pose_clear(world: Node3D, origin: Vector3, metadata: Dictionary, excluded: Array[RID]) -> bool:
+	var shape := CylinderShape3D.new()
+	shape.radius = float(metadata.pose_radius)
+	shape.height = float(metadata.pose_height)
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = shape
+	query.transform = Transform3D(Basis.IDENTITY, origin + Vector3.UP * shape.height * 0.5)
+	query.collision_mask = 1 | 16
+	query.collide_with_areas = false
+	query.exclude = excluded
+	query.margin = 0.005
+	return world.get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty()

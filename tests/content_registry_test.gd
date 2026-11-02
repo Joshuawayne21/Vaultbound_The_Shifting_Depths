@@ -1,4 +1,5 @@
 extends "res://tests/test_harness.gd"
+const RootFixtures = preload("res://tests/rootbound_plan_fixture.gd")
 const Content = preload("res://scripts/expedition/dungeon_content.gd")
 const Generator = preload("res://scripts/expedition/dungeon_generator.gd")
 const Policy = preload("res://resources/expedition/depth_policy.tres")
@@ -13,7 +14,9 @@ func _initialize() -> void:
 
 func _run() -> void:
 	for depth: int in [1, 10, 50]:
-		for seed_value in range(20):
+		var seeds: Array[int] = RootFixtures.seeds(depth, 20)
+		if not check(seeds.size() == 20, "Bounded public selection retains 20 Rootbound cases at depth%d" % depth): continue
+		for seed_value: int in seeds:
 			var plan: Dictionary = Content.resolve_run_plan(seed_value, depth)
 			if not check(Content.valid_run_plan(plan, Policy.describe_depth(depth)), "Depth%d seed%d resolves only complete existing executable content" % [depth, seed_value]): continue
 			check(plan == Content.resolve_run_plan(seed_value, depth) and plan.theme_id == "rootbound_abyss" and (depth != 1 or plan.required_boss_id == "rootwarden"), "Depth%d seed%d content identities and selected modifier reproduce" % [depth, seed_value])

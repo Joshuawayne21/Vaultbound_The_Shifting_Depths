@@ -10,6 +10,7 @@ const PATTERNS := {
 	"conductor_alternating_lanes": ["conductor", "capsule", 1.3],
 	"conductor_gap_fan": ["conductor", "projectile_fan", 1.4],
 	"conductor_sequential_cross": ["conductor", "capsule", 1.4],
+	"conductor_refracted_cross": ["conductor", "capsule", 1.8],
 	"brood_ground_patches": ["brood_keeper", "circle", 1.5],
 	"brood_defender_channel": ["brood_keeper", "summon", 3.5],
 	"brood_core_pulse": ["brood_keeper", "circle", 1.4],
@@ -19,7 +20,15 @@ const PATTERNS := {
 	"colossus_cone_swing": ["colossus", "sector", 1.5],
 	"colossus_double_slam": ["colossus", "circle", 1.5],
 	"colossus_sector_sweep": ["colossus", "annular_sector", 1.6],
+	"crystal_lance_thrust": ["sentinel", "capsule", 1.7],
 }
+const STAGE_KEYS := ["warning_time", "active_time", "damage", "stagger", "parameters"]
+const V2_KEYS := ["id", "controller_family", "pattern_version", "shape", "damage_kind",
+	"warning_time", "active_time", "recovery_time", "damage", "stagger", "slow_duration",
+	"slow_factor", "stage_count", "stage_gap", "parameters", "stage_two"]
+const V2_IDS := ["conductor_alternating_lanes", "conductor_sequential_cross", "conductor_refracted_cross", "colossus_cone_swing",
+	"colossus_double_slam", "wraith_marked_relocation", "wraith_aimed_burst", "wraith_exposed_cast", "crystal_lance_thrust"]
+const LANE_KEYS := ["radius", "length", "count", "lateral_offset", "lane_spacing"]
 const SNAPSHOT_KEYS := ["id", "controller_family", "pattern_version", "shape", "damage_kind",
 	"warning_time", "active_time", "recovery_time", "damage", "stagger", "slow_duration",
 	"slow_factor", "stage_count", "stage_gap", "parameters"]
@@ -48,6 +57,7 @@ const PARAMETER_KEYS := {
 @export var stage_count := 1
 @export var stage_gap := 0.0
 @export var parameters: Dictionary = {}
+@export var stage_two: Dictionary = {}
 
 func snapshot() -> Dictionary:
 	var value := _values()
@@ -60,17 +70,21 @@ func validation_errors() -> PackedStringArray:
 	return snapshot_errors(_values())
 
 func _values() -> Dictionary:
-	return {"id": String(id), "controller_family": String(controller_family), "pattern_version": pattern_version,
+	var result := {"id": String(id), "controller_family": String(controller_family), "pattern_version": pattern_version,
 		"shape": String(shape), "damage_kind": String(damage_kind), "warning_time": warning_time,
 		"active_time": active_time, "recovery_time": recovery_time, "damage": damage, "stagger": stagger,
 		"slow_duration": slow_duration, "slow_factor": slow_factor, "stage_count": stage_count,
 		"stage_gap": stage_gap, "parameters": parameters.duplicate(true)}
+	if pattern_version == 2: result["stage_two"] = stage_two.duplicate(true)
+	return result
 
 static func valid_snapshot(value: Variant) -> bool:
 	return snapshot_errors(value).is_empty()
 
 static func snapshot_errors(value: Variant) -> PackedStringArray:
 	var errors := PackedStringArray()
+	if value is Dictionary and value.get("pattern_version") == 2:
+		return _v2_errors(value)
 	if not value is Dictionary or not exact_keys(value, SNAPSHOT_KEYS):
 		return PackedStringArray(["Attack snapshot fields do not match schema 1"])
 	for key: String in ["id", "controller_family", "shape", "damage_kind"]:
@@ -144,6 +158,56 @@ static func snapshot_errors(value: Variant) -> PackedStringArray:
 					or not finite_number(p.duration, 0.1, 1.6):
 				errors.append("Relocation must use bounded clear anchors and grounded movement")
 	return errors
+
+static func _v2_errors(value: Dictionary) -> PackedStringArray:
+	if not exact_keys(value, V2_KEYS) or not value.pattern_version is int or not V2_IDS.has(value.get("id")):
+		return PackedStringArray(["Unknown Crystal attack schema or identity"])
+	if not value.stage_count is int or value.stage_count not in [1, 2] or not value.stage_two is Dictionary:
+		return PackedStringArray(["Crystal attack has invalid stage count"])
+	var staged: bool = value.id in ["conductor_alternating_lanes", "conductor_sequential_cross", "conductor_refracted_cross", "colossus_double_slam"]
+	if value.stage_count != (2 if staged else 1) or value.stage_two.is_empty() != (not staged) \
+			or (staged and not exact_keys(value.stage_two, STAGE_KEYS)) \
+			or (not staged and value.stage_gap != 0.0) or value.slow_duration != 0.0 or value.slow_factor != 1.0:
+		return PackedStringArray(["Crystal stage fields or unsupported status mismatch"])
+	var errors := PackedStringArray()
+	for index in range(int(value.stage_count)):
+		var single := value.duplicate(true)
+		single.erase("stage_two")
+		single.pattern_version = 1
+		if index == 1:
+			for key: String in STAGE_KEYS: single[key] = value.stage_two[key]
+		if single.get("shape") == "capsule":
+			var p: Variant = single.get("parameters")
+			if not p is Dictionary or not exact_keys(p, LANE_KEYS):
+				errors.append("Crystal lane fields are incomplete")
+				continue
+			if not finite_number(p.radius, 0.25, 1.5) or not p.count is int or p.count not in [1, 2] or not finite_number(p.lateral_offset, 0.0, 2.8) \
+					or not finite_number(p.lane_spacing, 0.0, 4.0) \
+					or (p.count == 1 and p.lane_spacing != 0.0) \
+					or (p.count == 2 and (p.lateral_offset != 0.0 or float(p.lane_spacing) - float(p.radius) * 2.0 < 2.0)):
+				errors.append("Crystal lane opening is invalid")
+			if (index == 0 and (p.count != 1 or p.lateral_offset != 0.0)) \
+					or (value.id == "conductor_alternating_lanes" and index == 1 and (p.count != 1 or p.lateral_offset != 2.8)) \
+					or (value.id in ["conductor_sequential_cross", "conductor_refracted_cross"] and p.lateral_offset != 0.0) \
+					or (value.id == "conductor_sequential_cross" and p.count != 1) \
+					or (value.id == "conductor_refracted_cross" and index == 1 and (p.count != 2 or p.lane_spacing != 3.6 or single.warning_time != 2.2)) \
+					or not finite_number(p.length, 0.5, 3.0 if value.id == "crystal_lance_thrust" else 6.0):
+				errors.append("Crystal lane recipe mismatch")
+			single.parameters = {"radius": p.radius, "length": p.length}
+		if value.id == "colossus_double_slam" and single.get("parameters", {}).get("count") != 1:
+			errors.append("Each geode stage has one circle")
+		if value.id == "wraith_aimed_burst" and single.get("parameters", {}).get("angles") != [-deg_to_rad(26.0), deg_to_rad(26.0)]:
+			errors.append("Wraith volley must preserve its actual two-bolt gap")
+		errors.append_array(snapshot_errors(single))
+	return errors
+
+static func stage_snapshot(value: Dictionary, index: int = 0) -> Dictionary:
+	if not valid_snapshot(value) or index < 0 or index >= int(value.stage_count) \
+			or (index > 0 and value.pattern_version != 2): return {}
+	if index == 1: return value.stage_two.duplicate(true)
+	var result := {}
+	for key: String in STAGE_KEYS: result[key] = value[key]
+	return result.duplicate(true)
 
 static func exact_keys(value: Dictionary, keys: Array) -> bool:
 	if value.size() != keys.size():

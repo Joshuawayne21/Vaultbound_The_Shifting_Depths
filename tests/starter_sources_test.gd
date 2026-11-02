@@ -75,7 +75,14 @@ func _run() -> void:
 		encounter_tables_valid = encounter_tables_valid and encounters.registered_profile_valid(profile)
 		if table != null:
 			_record_table(table, table.source_tag())
-	check(encounter_tables_valid, "Configured encounter and event source tables remain valid")
+	for profile_id: String in VaultMonsterRewards.ORDINARY_THEME_SOURCES:
+		var profile := {"id": profile_id, "version": 1,
+			"source": VaultMonsterRewards.ORDINARY_THEME_SOURCES[profile_id]}
+		var table := encounters.ordinary_theme_tables.get(profile_id) as VaultLootTable
+		encounter_tables_valid = encounter_tables_valid and encounters.registered_profile_valid(profile)
+		if table != null:
+			_record_table(table, table.source_tag())
+	check(encounter_tables_valid, "Configured encounter, event and ordinary-theme source tables remain valid")
 	for source: String in VaultMonsterRewards.SOURCES:
 		_record_table(encounters._table(source), "monster:" + source, encounters)
 		var valid := true

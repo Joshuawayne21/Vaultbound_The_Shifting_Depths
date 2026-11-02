@@ -1566,10 +1566,51 @@ func _draw_boss() -> void:
 	draw_rect(Rect2(track.position, Vector2(track.size.x * clampf(current / maximum, 0, 1), 7)), TEAL if int(dungeon_snapshot.get("boss_phase", 1)) == 1 else WARNING)
 
 
-func _draw_dungeon_map() -> void:
+func minimap_title_lines() -> PackedStringArray:
+	var label := String(dungeon_snapshot.get("theme_label", session_snapshot.get("theme_label", "Rootbound Abyss"))).to_upper()
+	var pixels := roundi(9 * ui_scale)
+	if _font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, pixels).x <= 145.0:
+		return PackedStringArray([label])
+	# Keep the complete issued name and the user's font size. Current registered
+	# themes fit two complete-word lines; no ellipsis conceals their identity.
+	var words := label.split(" ", false)
+	var result := PackedStringArray([label])
+	var best := INF
+	for boundary in range(1, words.size()):
+		var left := " ".join(words.slice(0, boundary))
+		var right := " ".join(words.slice(boundary))
+		var width := maxf(_font.get_string_size(left, HORIZONTAL_ALIGNMENT_LEFT, -1, pixels).x,
+			_font.get_string_size(right, HORIZONTAL_ALIGNMENT_LEFT, -1, pixels).x)
+		if width <= 145.0 and width < best:
+			result = PackedStringArray([left, right])
+			best = width
+	return result
+
+
+func minimap_layout(has_returns: bool) -> Dictionary:
 	var rect := Rect2(size.x - 190 - _safe().x, 29 + _safe().y, 157, 157)
+	var title := minimap_title_lines()
+	var wrapped := title.size() > 1
+	var line_height := ceilf(_font.get_height(roundi(9 * ui_scale))) + 2.0
+	var center := rect.get_center() + Vector2(0, 7 if has_returns else 2)
+	var extent := 92.0 if has_returns else 105.0
+	var legend := 31.0
+	if wrapped:
+		center.y = rect.position.y + (98.0 if has_returns else 92.0)
+		extent = 60.0 if has_returns else 72.0
+		legend = 18.0 + line_height + 17.0
+	return {"rect": rect, "title": title, "title_baseline": 18.0, "line_height": line_height,
+		"center": center, "extent": extent, "legend_baseline": legend, "footer_baseline": rect.size.y - 11.0}
+
+
+func _draw_dungeon_map() -> void:
+	var returns := minimap_return_markers()
+	var layout := minimap_layout(not returns.is_empty())
+	var rect: Rect2 = layout.rect
 	_panel(rect, PANEL)
-	_text(String(dungeon_snapshot.get("theme_label", session_snapshot.get("theme_label", "Rootbound Abyss"))).to_upper(), rect.position + Vector2(rect.size.x * 0.5, 18), 9, GOLD, true)
+	var title: PackedStringArray = layout.title
+	for line in range(title.size()):
+		_text(title[line], rect.position + Vector2(rect.size.x * 0.5, float(layout.title_baseline) + line * float(layout.line_height)), 9, GOLD, true)
 	var positions := minimap_room_positions()
 	if positions.is_empty():
 		return
@@ -1579,11 +1620,10 @@ func _draw_dungeon_map() -> void:
 		minimum = minimum.min(cell)
 		maximum = maximum.max(cell)
 	var span := maximum - minimum + Vector2.ONE
-	var returns := minimap_return_markers()
-	var spacing := minf(25, (92.0 if not returns.is_empty() else 105.0) / maxf(span.x, span.y))
-	var center := rect.get_center() + Vector2(0, 7 if not returns.is_empty() else 2)
+	var spacing := minf(25, float(layout.extent) / maxf(span.x, span.y))
+	var center: Vector2 = layout.center
 	if not returns.is_empty():
-		_text("R RETURN · E EXTRACT", rect.position + Vector2(rect.size.x * 0.5, 31), 8, MUTED, true)
+		_text("R RETURN · E EXTRACT", rect.position + Vector2(rect.size.x * 0.5, float(layout.legend_baseline)), 8, MUTED, true)
 	var midpoint := (minimum + maximum) * 0.5
 	var room_data: Dictionary = {}
 	for room: Dictionary in dungeon_snapshot.get("rooms", []):
@@ -1616,7 +1656,7 @@ func _draw_dungeon_map() -> void:
 			_text("R", position + Vector2(0, 3), 8, IVORY, true)
 		elif kind == "extraction" and not returns.is_empty():
 			_text("E", position + Vector2(0, 3), 8, GOLD, true)
-	_text("%d ROOMS DISCOVERED" % positions.size(), rect.position + Vector2(rect.size.x * 0.5, rect.size.y - 11), 8, MUTED, true)
+	_text("%d ROOMS DISCOVERED" % positions.size(), rect.position + Vector2(rect.size.x * 0.5, float(layout.footer_baseline)), 8, MUTED, true)
 
 
 func minimap_return_markers() -> Dictionary:

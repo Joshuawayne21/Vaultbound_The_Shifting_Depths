@@ -20,6 +20,7 @@ var _revision := 0
 var _materials: Dictionary = {}
 var _hazard_poll := 0.0
 var _visits: Dictionary = {}
+var _initial_opportunities: Dictionary = {}
 
 func configure(owner_world: Node3D, plan: Dictionary, materials: Dictionary) -> void:
 	world = owner_world
@@ -241,6 +242,9 @@ func ordinary_clear(room: int) -> bool:
 func enter_room(id: int) -> void:
 	_visits[id] = int(_visits.get(id, 0)) + 1
 	_hazard_poll = 0.0
+	for room_id: int in _initial_opportunities:
+		var opportunity: Dictionary = _initial_opportunities[room_id]
+		if room_id != id and opportunity.state == "pending": opportunity.state = "omitted"
 	for actor: Node3D in directors():
 		if int(_records[actor.get_instance_id()].slot.room_id) != id:
 			actor.pause()
@@ -257,6 +261,8 @@ func tick(delta: float) -> void:
 	_hazard_poll -= delta
 	if _hazard_poll > 0.0: return
 	_hazard_poll = 0.25
+	var initial: Dictionary = _initial_opportunities.get(int(world.current_room_id), {})
+	if initial.get("state", "") == "pending": _try_initial_opportunity(int(world.current_room_id))
 	for slot: Dictionary in _admitted:
 		if slot.kind != "hazard" or int(slot.room_id) != int(world.current_room_id) or _hazard_attempts.has(slot.id) or int(_visits.get(int(slot.room_id), 0)) > 2: continue
 		_arm_hazard(slot)
@@ -266,17 +272,26 @@ func _arm_hazard(slot: Dictionary) -> void:
 	if not Spawn.hazard_escape_clear(world, world.rooms[int(slot.room_id)], shape): return
 	for actor: Node3D in world.registered_hazard_actors():
 		if bool(actor.active): continue
-		var reservation: int = world.scheduler.reserve_typed_hazard(int(slot.room_id), String(slot.id))
+		var scheduler: EncounterEventScheduler = world.scheduler
+		var reservation: int = scheduler.reserve_typed_hazard(int(slot.room_id), String(slot.id))
 		if reservation < 0: return
 		var serial := int(actor.cast_serial) + 1
 		var issued := {"run_generation": int(world.run_generation), "content_version": int(_plan.content_version), "room_id": int(slot.room_id),
 			"source_receipt": String(slot.id), "cast_serial": serial, "profile": _plan.hazard_profiles[slot.definition_id].duplicate(true),
 			"shape": shape, "depth_policy": world.issued_depth_policy()}
-		_hazard_records[actor.get_instance_id()] = {"actor": weakref(actor), "issued": issued.duplicate(true)}
-		if not actor.trigger_typed(issued, world) or not world.scheduler.bind_hazard(reservation, actor):
-			_hazard_records.erase(actor.get_instance_id())
-			world.scheduler.release_reservation(reservation)
+		var actor_id := actor.get_instance_id()
+		_hazard_records[actor_id] = {"actor": weakref(actor), "issued": issued.duplicate(true), "owner_domain": "room_slot"}
+		var started: bool = actor.trigger_typed(issued, world)
+		if not is_instance_valid(self) or not is_instance_valid(world) or not world.run_source_context_valid():
+			scheduler.release_reservation(reservation)
+			return
+		if not is_instance_valid(actor) or not world.owns_environment_hazard(actor) or _hazard_records.get(actor_id, {}).get("issued") != issued:
+			scheduler.release_reservation(reservation)
+			return
+		if not started or not scheduler.bind_hazard(reservation, actor):
+			scheduler.release_reservation(reservation)
 			actor.cancel()
+			if is_instance_valid(self) and _hazard_records.get(actor_id, {}).get("issued") == issued: _hazard_records.erase(actor_id)
 			return
 		_hazard_attempts[slot.id] = true
 		world.notice.emit("Spikes rise — leave the marked lane" if slot.definition_id == "root_spike_lane" else "Spores stir — leave the violet patch")
@@ -344,3 +359,122 @@ func member_owner(body: Node3D) -> Node3D:
 		for member: Dictionary in record.members.values():
 			if not bool(member.dead) and member.actor.get_ref() == body and world.encounters.owns_live_actor(body): return owner
 	return null
+
+func arm_initial_opportunity(room_id: int) -> bool:
+	if not _prepared or not world.run_source_context_valid() or _plan.trap_policy.initial.mode != "registered_typed" \
+		or not world.rooms.has(room_id) or world.layout.rooms[room_id].kind != &"trap" or _initial_opportunities.has(room_id): return false
+	var definition := String(_plan.trap_policy.initial.definition_id)
+	var receipt := "initial_trap_room_%d_%s_0" % [room_id, definition]
+	_initial_opportunities[room_id] = {"state": "pending", "generation": int(world.run_generation), "receipt": receipt,
+		"actor": null, "issued": {}, "terminal": {}, "shape": _policy_shape(room_id, false)}
+	return _try_initial_opportunity(room_id)
+
+func _try_initial_opportunity(room_id: int) -> bool:
+	var row: Dictionary = _initial_opportunities.get(room_id, {})
+	if row.get("state", "") != "pending" or not world.run_source_context_valid() or int(world.current_room_id) != room_id: return false
+	var shape: Dictionary = row.shape
+	if shape.is_empty() or not Spawn.hazard_site_clear(world, world.rooms[room_id], shape):
+		row.state = "omitted"
+		return false
+	if not Spawn.hazard_escape_clear(world, world.rooms[room_id], shape): return false
+	var result := _issue_policy_hazard(room_id, String(row.receipt), shape, "initial_trap")
+	if result == "rejected" and row.state == "pending": row.state = "omitted"
+	return result == "accepted"
+
+func arm_awareness_hazard(room_id: int, event_receipt: String) -> bool:
+	if not world.run_source_context_valid() or _plan.trap_policy.awareness.mode != "registered_typed" \
+		or event_receipt != "awareness_" + String(_plan.trap_policy.awareness.event_id): return false
+	var shape := _policy_shape(room_id, true)
+	if shape.is_empty() or not Spawn.hazard_site_clear(world, world.rooms[room_id], shape) \
+		or not Spawn.hazard_escape_clear(world, world.rooms[room_id], shape): return false
+	return _issue_policy_hazard(room_id, event_receipt, shape, "awareness") == "accepted"
+
+func _policy_shape(room_id: int, awareness_cast: bool) -> Dictionary:
+	if not world.rooms.has(room_id): return {}
+	var policy: Dictionary = _plan.trap_policy.awareness if awareness_cast else _plan.trap_policy.initial
+	var profile: Dictionary = _plan.hazard_profiles.get(policy.definition_id, {})
+	if not HazardDefinition.valid_snapshot(profile) or profile.shape != "capsule": return {}
+	var room: Node3D = world.rooms[room_id]
+	var center := Vector3.ZERO
+	if awareness_cast:
+		if not is_instance_valid(world._player): return {}
+		center = room.to_local(world._player.global_position)
+		center = Vector3(clampf(center.x, -4.0, 4.0), 0.0, clampf(center.z, -4.0, 4.0))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = Content.Streams.seed_for(int(_plan.seed), depth, int(_plan.depth_policy_version),
+		StringName("crystal_caverns/%s/%d" % ["awareness_lane" if awareness_cast else "initial_lane", room_id]))
+	var axis := Vector3.RIGHT if rng.randi_range(0, 1) == 0 else Vector3.BACK
+	var half_length := float(profile.axis_length) * 0.5
+	return {"shape": "capsule", "position": room.to_global(center), "start": room.to_global(center - axis * half_length),
+		"end": room.to_global(center + axis * half_length), "radius": float(profile.radius), "height_tolerance": float(profile.height_tolerance)}
+
+func _issue_policy_hazard(room_id: int, receipt: String, shape: Dictionary, owner_domain: String) -> String:
+	if not world.run_source_context_valid() or int(world.current_room_id) != room_id: return "rejected"
+	for actor: Node3D in world.registered_hazard_actors():
+		if bool(actor.active): continue
+		var scheduler: EncounterEventScheduler = world.scheduler
+		var reservation: int = scheduler.reserve_typed_event_hazard(room_id, receipt) if owner_domain == "awareness" \
+			else scheduler.reserve_typed_hazard(room_id, receipt)
+		if reservation < 0: return "deferred"
+		var policy: Dictionary = _plan.trap_policy.awareness if owner_domain == "awareness" else _plan.trap_policy.initial
+		var issued := {"run_generation": int(world.run_generation), "content_version": int(_plan.content_version), "room_id": room_id,
+			"source_receipt": receipt, "cast_serial": int(actor.cast_serial) + 1, "profile": _plan.hazard_profiles[policy.definition_id].duplicate(true),
+			"shape": shape.duplicate(true), "depth_policy": world.issued_depth_policy()}
+		var actor_id := actor.get_instance_id()
+		_hazard_records[actor_id] = {"actor": weakref(actor), "issued": issued.duplicate(true), "owner_domain": owner_domain}
+		if owner_domain == "initial_trap":
+			var initial: Dictionary = _initial_opportunities[room_id]
+			initial.actor = weakref(actor)
+			initial.issued = issued.duplicate(true)
+			initial.state = "accepting"
+		var started: bool = actor.trigger_typed(issued, world)
+		if not is_instance_valid(self) or not is_instance_valid(world) or not world.run_source_context_valid():
+			scheduler.release_reservation(reservation)
+			return "rejected"
+		var same: bool = is_instance_valid(actor) and world.owns_environment_hazard(actor) \
+			and _hazard_records.get(actor_id, {}).get("issued") == issued
+		if not same:
+			scheduler.release_reservation(reservation)
+			return "rejected"
+		if not started or not scheduler.bind_hazard(reservation, actor):
+			scheduler.release_reservation(reservation)
+			actor.cancel()
+			# Retirement observers may replace the world or reuse the pool actor.
+			# Only this captured attempt is ours to clean up after that callback.
+			if not is_instance_valid(self) or not is_instance_valid(world) or not world.run_source_context_valid() \
+				or not is_instance_valid(actor) or _hazard_records.get(actor_id, {}).get("issued") != issued: return "rejected"
+			if owner_domain == "initial_trap":
+				var initial: Dictionary = _initial_opportunities[room_id]
+				if initial.issued == issued and initial.state == "accepting":
+					var accepted: Dictionary = actor.typed_activation_snapshot()
+					initial.state = "unproven" if accepted.get("cast_serial") == issued.cast_serial and accepted.get("source_receipt") == receipt else "omitted"
+			_hazard_records.erase(actor_id)
+			return "rejected"
+		if owner_domain == "initial_trap" and _initial_opportunities[room_id].state == "accepting": _initial_opportunities[room_id].state = "accepted"
+		world.notice.emit("Crystal resonance — cross between the warned pulses")
+		return "accepted"
+	return "deferred"
+
+func capture_typed_retirement(actor: Node3D, terminal: Dictionary) -> void:
+	if not is_instance_valid(world) or not world.run_source_context_valid() or not world.owns_environment_hazard(actor) \
+		or terminal != actor.typed_terminal_snapshot(): return
+	var record: Dictionary = _hazard_records.get(actor.get_instance_id(), {})
+	if record.is_empty() or record.actor.get_ref() != actor or record.get("owner_domain") != "initial_trap": return
+	var issued: Dictionary = record.issued
+	var accepted: Dictionary = actor.typed_activation_snapshot()
+	if terminal.size() != 5 or terminal.get("cause") not in ["expired", "cancelled"]: return
+	for key: String in ["run_generation", "room_id", "source_receipt", "cast_serial"]:
+		if terminal.get(key) != issued[key] or accepted.get(key) != issued[key]: return
+	if int(issued.run_generation) != int(world.run_generation): return
+	var initial: Dictionary = _initial_opportunities.get(int(issued.room_id), {})
+	if initial.is_empty() or initial.issued != issued or initial.actor == null or initial.actor.get_ref() != actor: return
+	initial.terminal = terminal.duplicate(true)
+	initial.state = "resolved"
+
+func initial_opportunity_resolved(room_id: int) -> bool:
+	var initial: Dictionary = _initial_opportunities.get(room_id, {})
+	if initial.is_empty() or int(initial.generation) != int(world.run_generation): return false
+	if initial.state == "omitted": return true
+	if initial.state != "resolved" or initial.terminal.is_empty(): return false
+	var actor := initial.actor.get_ref() as Node3D if initial.actor != null else null
+	return not is_instance_valid(actor) or not bool(actor.typed_activation_snapshot().delivery_in_progress)

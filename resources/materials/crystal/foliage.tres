@@ -1,0 +1,6 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+[ext_resource type="Shader" path="res://resources/shaders/living_foliage.gdshader" id="1"]
+[resource]
+shader = ExtResource("1")
+shader_parameter/leaf_color = Color(0.46, 0.60, 0.74, 1)
+shader_parameter/sway = 0.0

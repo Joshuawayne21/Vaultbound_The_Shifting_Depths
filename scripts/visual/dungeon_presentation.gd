@@ -2,196 +2,12 @@ class_name VaultDungeonPresentation
 extends Resource
 ## Closed native presentation profile. Issued DTOs contain detached numeric data;
 ## reconstruction never rereads mutable material/environment tuning resources.
+const Catalog = preload("res://scripts/visual/dungeon_presentation_catalog.gd")
 const PROFILE_ID := "rootbound_native_v1"
-const ROLE_PATHS := {
-	"soil": "res://resources/materials/abyss_soil.tres",
-	"paving": "res://resources/materials/abyss_paving.tres",
-	"stone": "res://resources/materials/abyss_stone.tres",
-	"stone_light": "res://resources/materials/abyss_stone_light.tres",
-	"root_shell": "res://resources/materials/abyss_bark.tres",
-	"root_detail": "res://resources/materials/abyss_bark_light.tres",
-	"metal_trim": "res://resources/materials/abyss_gold.tres",
-	"foliage": "res://resources/materials/abyss_leaf.tres",
-	"moss": "res://resources/materials/abyss_moss.tres",
-	"crystal": "res://resources/materials/abyss_crystal.tres",
-	"emissive": "res://resources/materials/abyss_glow.tres",
-	"flower": "res://resources/materials/abyss_flower.tres",
-	"flower_bud": "res://resources/materials/abyss_ember.tres",
-	"fungal_cap": "res://resources/materials/abyss_mushroom.tres",
-	"water": "res://resources/materials/abyss_water.tres",
-	"water_deep": "res://resources/materials/abyss_dark_water.tres",
-	"falling_water": "res://resources/materials/abyss_falling_water.tres",
-	"foam": "res://resources/materials/abyss_foam.tres"
-}
-const MODULES := {
-	"boss_heart": {
-		"scene": "res://scenes/rooms/boss_heart.tscn",
-		"motif": "warden_oath",
-		"native_slots": {
-			"Decor00": "root",
-			"Decor01": "root",
-			"Decor02": "root",
-			"Decor03": "root",
-			"Decor04": "crystals",
-			"Decor05": "crystals"
-		}
-	},
-	"combat_crystal": {
-		"scene": "res://scenes/rooms/combat_crystal.tscn",
-		"motif": "prism_grotto",
-		"native_slots": {
-			"Decor00": "crystals",
-			"Decor01": "crystals",
-			"Decor02": "crystals",
-			"Decor03": "column",
-			"Decor04": "root",
-			"Decor05": "flowers"
-		}
-	},
-	"combat_falls": {
-		"scene": "res://scenes/rooms/combat_falls.tscn",
-		"motif": "cascade_court",
-		"native_slots": {
-			"Decor00": "falls",
-			"Decor01": "stream",
-			"Decor02": "root",
-			"Decor03": "crystals",
-			"Decor04": "mushrooms"
-		}
-	},
-	"combat_grove": {
-		"scene": "res://scenes/rooms/combat_grove.tscn",
-		"motif": "fern_court",
-		"native_slots": {
-			"Decor00": "root",
-			"Decor01": "root",
-			"Decor02": "mushrooms",
-			"Decor03": "flowers",
-			"Decor04": "sprawl"
-		}
-	},
-	"combat_temple": {
-		"scene": "res://scenes/rooms/combat_temple.tscn",
-		"motif": "fallen_court",
-		"native_slots": {
-			"Decor00": "arch",
-			"Decor01": "column",
-			"Decor02": "column",
-			"Decor03": "rubble",
-			"Decor04": "crystals",
-			"Decor05": "flowers"
-		}
-	},
-	"corridor_roots": {
-		"scene": "res://scenes/rooms/corridor_roots.tscn",
-		"motif": "root_walk",
-		"native_slots": {
-			"Decor00": "root",
-			"Decor01": "root",
-			"Decor02": "sprawl",
-			"Decor03": "mushrooms",
-			"Decor04": "mushrooms"
-		}
-	},
-	"corridor_stream": {
-		"scene": "res://scenes/rooms/corridor_stream.tscn",
-		"motif": "lost_aqueduct",
-		"native_slots": {
-			"Decor00": "stream",
-			"Decor01": "stream",
-			"Decor02": "root",
-			"Decor03": "mushrooms",
-			"Decor04": "flowers",
-			"Decor05": "rubble"
-		}
-	},
-	"entrance_grove": {
-		"scene": "res://scenes/rooms/entrance_grove.tscn",
-		"motif": "pilgrim_grove",
-		"native_slots": {
-			"Decor00": "root",
-			"Decor01": "root",
-			"Decor02": "mushrooms",
-			"Decor03": "mushrooms",
-			"Decor04": "flowers",
-			"Decor05": "arch"
-		}
-	},
-	"entrance_temple": {
-		"scene": "res://scenes/rooms/entrance_temple.tscn",
-		"motif": "pilgrim_gate",
-		"native_slots": {
-			"Decor00": "arch",
-			"Decor01": "column",
-			"Decor02": "column",
-			"Decor03": "sprawl",
-			"Decor04": "flowers",
-			"Decor05": "crystals"
-		}
-	},
-	"extraction_spring": {
-		"scene": "res://scenes/rooms/extraction_spring.tscn",
-		"motif": "spring_seal",
-		"native_slots": {
-			"Decor00": "falls",
-			"Decor01": "stream",
-			"Decor02": "arch",
-			"Decor03": "flowers",
-			"Decor04": "mushrooms",
-			"Decor05": "crystals"
-		}
-	},
-	"secret_hollow": {
-		"scene": "res://scenes/rooms/secret_hollow.tscn",
-		"motif": "secret_orchid",
-		"native_slots": {
-			"Decor00": "root",
-			"Decor01": "root",
-			"Decor02": "mushrooms",
-			"Decor03": "mushrooms",
-			"Decor04": "flowers",
-			"Decor05": "crystals"
-		}
-	},
-	"trap_thorns": {
-		"scene": "res://scenes/rooms/trap_thorns.tscn",
-		"motif": "thorn_seal",
-		"native_slots": {
-			"Decor00": "thorns",
-			"Decor01": "thorns",
-			"Decor02": "thorns",
-			"Decor03": "root",
-			"Decor04": "crystals",
-			"Decor05": "rubble"
-		}
-	},
-	"treasure_garden": {
-		"scene": "res://scenes/rooms/treasure_garden.tscn",
-		"motif": "moon_garden",
-		"native_slots": {
-			"Decor00": "root",
-			"Decor01": "stream",
-			"Decor02": "mushrooms",
-			"Decor03": "flowers",
-			"Decor04": "flowers",
-			"Decor05": "crystals"
-		}
-	},
-	"treasure_vault": {
-		"scene": "res://scenes/rooms/treasure_vault.tscn",
-		"motif": "gilded_vault",
-		"native_slots": {
-			"Decor00": "arch",
-			"Decor01": "column",
-			"Decor02": "column",
-			"Decor03": "crystals",
-			"Decor04": "rubble",
-			"Decor05": "flowers"
-		}
-	}
-}
-const DRESSING_ROLES := {"stone": "stone_light", "rock": "stone", "moss": "moss", "leaf": "foliage", "bark": "root_detail", "gold": "metal_trim", "glow": "emissive", "flower": "flower", "mushroom": "fungal_cap"}
-const BUDGETS := {"dressing_batches": 8, "dressing_instances": 512, "story_instances": 64, "room_motes": 12, "room_fauna": 4}
+const ROLE_PATHS := Catalog.ROLE_PATHS
+const MODULES := Catalog.MODULES
+const DRESSING_ROLES := Catalog.DRESSING_ROLES
+const BUDGETS := Catalog.BUDGETS
 const ENVIRONMENT_PATH := "res://resources/environments/abyss.tres"
 const TEXTURE_PATHS := ["res://resources/textures/stone_grain.tres", "res://resources/textures/bark_grain.tres"]
 const SHADER_PATHS := {"foliage": "res://resources/shaders/living_foliage.gdshader", "water": "res://resources/shaders/living_water.gdshader", "falling_water": "res://resources/shaders/living_water.gdshader", "foam": "res://resources/shaders/soft_foam.gdshader"}
@@ -209,14 +25,15 @@ const SNAPSHOT_KEYS := ["id", "version", "material_roles", "environment", "modul
 @export var modules: Dictionary = {}
 
 func snapshot() -> Dictionary:
-	if id != PROFILE_ID or version != 1 or not _keys(material_roles, ROLE_PATHS.keys()) or modules != MODULES or environment == null or environment.resource_path != ENVIRONMENT_PATH:
+	var metadata: Dictionary = Catalog.profile(id)
+	if metadata.is_empty() or version != 1 or not _keys(material_roles, metadata.roles.keys()) or modules != metadata.modules or environment == null or environment.resource_path != metadata.environment:
 		return {}
 	var frozen: Dictionary = {}
 	for role: String in ROLE_PATHS:
 		var material: Variant = material_roles[role]
-		if not material is Material or material.resource_path != ROLE_PATHS[role]:
+		if not material is Material or material.resource_path != metadata.roles[role]:
 			return {}
-		var entry := _snapshot_material(material, role)
+		var entry := _snapshot_material(material, role, metadata.roles)
 		if entry.is_empty():
 			return {}
 		frozen[role] = entry
@@ -226,18 +43,20 @@ func snapshot() -> Dictionary:
 	return result if valid_snapshot(result) else {}
 
 static func valid_snapshot(value: Variant) -> bool:
-	if not _keys(value, SNAPSHOT_KEYS) or value.id != PROFILE_ID or not _integer(value.version, 1, 1):
+	if not _keys(value, SNAPSHOT_KEYS) or not value.id is String or not _integer(value.version, 1, 1):
 		return false
-	if value.modules != MODULES or value.dressing != DRESSING_ROLES or value.budgets != BUDGETS or not _keys(value.material_roles, ROLE_PATHS.keys()):
+	var metadata: Dictionary = Catalog.profile(value.id)
+	if metadata.is_empty(): return false
+	if value.modules != metadata.modules or value.dressing != DRESSING_ROLES or value.budgets != BUDGETS or not _keys(value.material_roles, ROLE_PATHS.keys()):
 		return false
 	if not _valid_environment(value.environment):
 		return false
 	for role: String in ROLE_PATHS:
-		if not _valid_material(value.material_roles[role], role):
+		if not _valid_material(value.material_roles[role], role, metadata.roles):
 			return false
 	return true
 
-static func _snapshot_material(material: Material, role: String) -> Dictionary:
+static func _snapshot_material(material: Material, role: String, paths: Dictionary = ROLE_PATHS) -> Dictionary:
 	if SHADER_PATHS.has(role):
 		if not material is ShaderMaterial or material.shader == null or material.shader.resource_path != SHADER_PATHS[role]:
 			return {}
@@ -251,14 +70,14 @@ static func _snapshot_material(material: Material, role: String) -> Dictionary:
 			# representation as explicit material colors, not double Array values.
 			if resolved is Array: resolved = _as_color(resolved)
 			parameters[key] = _plain(resolved)
-		return {"path": ROLE_PATHS[role], "kind": "shader", "shader": SHADER_PATHS[role], "parameters": parameters}
+		return {"path": paths[role], "kind": "shader", "shader": SHADER_PATHS[role], "parameters": parameters}
 	if not material is StandardMaterial3D:
 		return {}
 	var standard := material as StandardMaterial3D
 	var texture := _snapshot_texture(standard.albedo_texture)
 	if standard.albedo_texture != null and texture.is_empty():
 		return {}
-	return {"path": ROLE_PATHS[role], "kind": "standard", "values": _properties(standard, STANDARD_FIELDS), "texture": texture}
+	return {"path": paths[role], "kind": "standard", "values": _properties(standard, STANDARD_FIELDS), "texture": texture}
 
 static func _snapshot_texture(texture: Texture2D) -> Dictionary:
 	if texture == null:
@@ -279,9 +98,9 @@ static func _snapshot_texture(texture: Texture2D) -> Dictionary:
 		"noise": _properties(grain.noise, NOISE_FIELDS), "colors": colors, "offsets": offsets,
 		"interpolation_mode": grain.color_ramp.interpolation_mode, "interpolation_color_space": grain.color_ramp.interpolation_color_space}
 
-static func _valid_material(value: Variant, role: String) -> bool:
+static func _valid_material(value: Variant, role: String, paths: Dictionary = ROLE_PATHS) -> bool:
 	if SHADER_PATHS.has(role):
-		if not _keys(value, ["path", "kind", "shader", "parameters"]) or value.path != ROLE_PATHS[role] or value.kind != "shader" or value.shader != SHADER_PATHS[role]:
+		if not _keys(value, ["path", "kind", "shader", "parameters"]) or value.path != paths[role] or value.kind != "shader" or value.shader != SHADER_PATHS[role]:
 			return false
 		var defaults: Dictionary = FOLIAGE_DEFAULTS if role == "foliage" else {} if role == "foam" else WATER_DEFAULTS
 		if not _keys(value.parameters, defaults.keys()):
@@ -301,7 +120,7 @@ static func _valid_material(value: Variant, role: String) -> bool:
 			elif not _number(parameter, 0.0, 2.0):
 				return false
 		return true
-	if not _keys(value, ["path", "kind", "values", "texture"]) or value.path != ROLE_PATHS[role] or value.kind != "standard" or not _keys(value.values, STANDARD_FIELDS):
+	if not _keys(value, ["path", "kind", "values", "texture"]) or value.path != paths[role] or value.kind != "standard" or not _keys(value.values, STANDARD_FIELDS):
 		return false
 	var tuning: Dictionary = value.values
 	if not _color(tuning.albedo_color) or not _color(tuning.emission) or not tuning.emission_enabled is bool or not _vector(tuning.uv1_scale, 0.01, 8.0):
@@ -385,7 +204,7 @@ static func apply_materials(node: Node, resolved: Dictionary) -> void:
 		var old: Material = node.material_override
 		if old != null:
 			for role: String in ROLE_PATHS:
-				if old.resource_path == ROLE_PATHS[role]:
+				if old.resource_path == ROLE_PATHS[role] or old.resource_path == Catalog.CRYSTAL_ROLE_PATHS[role]:
 					node.material_override = resolved[role]
 					break
 	for child: Node in node.get_children(): apply_materials(child, resolved)
@@ -428,3 +247,26 @@ static func _vector(value: Variant, minimum: float, maximum: float) -> bool:
 
 static func _color(value: Variant) -> bool:
 	return value is Array and value.size() == 4 and _number(value[0], 0, 1) and _number(value[1], 0, 1) and _number(value[2], 0, 1) and _number(value[3], 0, 1)
+
+static func module_path(issued: Dictionary, module_id: StringName) -> String:
+	if not valid_snapshot(issued) or not issued.modules.has(String(module_id)): return ""
+	return String(issued.modules[String(module_id)].scene)
+
+static func module_instance_valid(issued: Dictionary, room: Node3D) -> bool:
+	if not is_instance_valid(room) or room.is_queued_for_deletion() or not valid_snapshot(issued): return false
+	var script: Script = room.get_script() as Script
+	if script == null or script.resource_path != "res://scripts/world/abyss_room.gd": return false
+	var logical_id: String = String(room.get("module_id"))
+	if not issued.modules.has(logical_id): return false
+	var entry: Dictionary = issued.modules[logical_id]
+	if room.scene_file_path != entry.scene or String(room.get("visual_motif")) != entry.motif: return false
+	var metadata: Dictionary = Catalog.profile(String(issued.id))
+	var found: Dictionary = {}
+	for child: Node in room.get_children():
+		if String(child.name).begins_with("Decor"):
+			var key := String(child.name)
+			if not entry.native_slots.has(key): return false
+			var alias: String = entry.native_slots[key]
+			if not metadata.props.has(alias) or child.scene_file_path != metadata.props[alias]: return false
+			found[key] = true
+	return _keys(found, entry.native_slots.keys())

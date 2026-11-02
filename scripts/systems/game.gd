@@ -36,6 +36,7 @@ var _inspected_companion_id := ""
 var _city_waypoint: Dictionary = {}
 var _city_portal_source: WeakRef
 var _city_portal_route: Dictionary = {}
+var _city_content_advisory: Dictionary = {}
 var _city_review_epoch := 0
 var _application_focused := true
 var _pet_selection: Dictionary = {}
@@ -113,7 +114,7 @@ func _process(delta: float) -> void:
 		_publish_city_snapshot()
 		if _city_portal_source != null and hud.expedition_overlay.mode == &"sanctuary":
 			var source := _city_portal_source.get_ref() as Node3D
-			var admission := _city_portal_admission(source)
+			var admission := _city_portal_advisory(source)
 			hud.expedition_overlay.sanctuary_panel.set_entry_available(bool(admission.ok), String(admission.reason))
 
 func _notification(what: int) -> void:
@@ -122,6 +123,7 @@ func _notification(what: int) -> void:
 		_city_review_epoch += 1
 		_city_portal_source = null
 		_city_portal_route.clear()
+		_city_content_advisory.clear()
 		if is_node_ready() and is_instance_valid(hud):
 			hud.expedition_overlay.sanctuary_panel.set_entry_available(false, "Entry canceled when focus changed. Reopen this portal to review it.")
 	elif what in [NOTIFICATION_APPLICATION_FOCUS_IN, NOTIFICATION_APPLICATION_RESUMED]:
@@ -238,6 +240,7 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	_city_waypoint.clear()
 	_city_portal_source = null
 	_city_portal_route.clear()
+	_city_content_advisory.clear()
 	hud.set_sanctuary_snapshot({})
 	ExpeditionSession.close_service()
 	if is_instance_valid(demo_exchange): demo_exchange.close_service()
@@ -776,6 +779,7 @@ func _on_portal_information(source: Node3D) -> void:
 	if not LEVELS.has(destination): return
 	_city_review_epoch += 1
 	_city_portal_source = weakref(source)
+	_city_content_advisory.clear()
 	_city_portal_route = {"destination": destination, "entry_id": StringName(source.get("entry_id"))}
 	if destination == &"rootbound_abyss":
 		_city_portal_route.expedition_depth = 1
@@ -793,6 +797,7 @@ func _on_portal_depth_selected(depth: int) -> void:
 	var maximum: int = maxi(DEPTH_POLICY.supported_maximum_depth, mini(int(baseline.highest_unlocked_depth), DEPTH_POLICY.supported_maximum_depth + 1))
 	if depth < 1 or depth > maximum: return
 	_city_review_epoch += 1
+	_city_content_advisory.clear()
 	_city_portal_route.expedition_depth = depth
 	_city_portal_route.depth_policy_version = DEPTH_POLICY.policy_version
 	hud.expedition_overlay.sanctuary_panel.update_portal_details(_portal_details(source))
@@ -815,6 +820,31 @@ func _portal_details(source: Node3D) -> Dictionary:
 
 
 func _city_portal_admission(source: Node3D) -> Dictionary:
+	# Actual confirmation always validates executable content afresh. The
+	# remembered value below is only the button's last reviewed availability.
+	var status := _city_portal_local_status(source)
+	if not bool(status.ok): return status
+	if _city_portal_route.destination == &"rootbound_abyss":
+		var available := bool(DUNGEON_CONTENT.theme_pool_preview(int(_city_portal_route.expedition_depth)).get("available", false))
+		_city_content_advisory = {"source_id": source.get_instance_id(), "route": _city_portal_route.duplicate(true), "available": available}
+		if not available: return {"ok": false, "reason": "This depth's encounters are unavailable. Review the portal again."}
+	return status
+
+
+func _city_portal_advisory(source: Node3D) -> Dictionary:
+	# Reach, focus, current source and earned depth stay live at the regular HUD
+	# cadence. Full content validation belongs to review/ENTER/deferred entry.
+	var status := _city_portal_local_status(source)
+	if not bool(status.ok): return status
+	if _city_portal_route.destination == &"rootbound_abyss":
+		if _city_content_advisory.get("source_id") != source.get_instance_id() or _city_content_advisory.get("route") != _city_portal_route:
+			return {"ok": false, "reason": "Reopen this portal to review its encounters."}
+		if not bool(_city_content_advisory.get("available", false)):
+			return {"ok": false, "reason": "This depth's encounters are unavailable. Review the portal again."}
+	return status
+
+
+func _city_portal_local_status(source: Node3D) -> Dictionary:
 	if not _city_source_valid(source) or not _city_portal_route_matches(source):
 		return {"ok": false, "reason": "Move back within sight and reach of this portal."}
 	if _city_portal_route.destination == &"rootbound_abyss":
@@ -822,8 +852,6 @@ func _city_portal_admission(source: Node3D) -> Dictionary:
 				or _city_portal_route.get("depth_policy_version") != DEPTH_POLICY.policy_version:
 			return {"ok": false, "reason": "Depth rules changed. Reopen this portal to review them."}
 		var status: Dictionary = ExpeditionSession.depth_entry_status(int(_city_portal_route.expedition_depth))
-		if bool(status.ok) and not bool(DUNGEON_CONTENT.boss_pool_preview(int(status.depth)).get("available", false)):
-			return {"ok": false, "reason": "This depth's encounters are unavailable. Review the portal again."}
 		return {"ok": bool(status.ok), "reason": String(status.reason)}
 	return {"ok": true, "reason": ""}
 
@@ -847,6 +875,7 @@ func _on_portal_enter() -> void:
 	var reviewed_epoch := _city_review_epoch
 	_city_portal_source = null
 	_city_portal_route.clear()
+	_city_content_advisory.clear()
 	hud.close_modals()
 	_travel_from_city_portal.call_deferred(weakref(source), destination, entry_id, depth, policy_version, reviewed_epoch)
 
@@ -863,7 +892,7 @@ func _travel_from_city_portal(reference: WeakRef, destination: StringName, entry
 		if policy_version != DEPTH_POLICY.policy_version or not bool(status.ok):
 			hud.show_message(String(status.reason) if not bool(status.ok) else "Depth rules changed. Reopen the portal.")
 			return
-		if not bool(DUNGEON_CONTENT.boss_pool_preview(depth).get("available", false)):
+		if not bool(DUNGEON_CONTENT.theme_pool_preview(depth).get("available", false)):
 			hud.show_message("This depth's encounters are unavailable. Review the portal again.")
 			return
 	change_location(destination, entry_id, -1, depth)
@@ -877,14 +906,16 @@ func _portal_information_lines(destination: StringName, depth_status: Dictionary
 		var depth := int(depth_status.depth)
 		var policy: Dictionary = depth_status.policy
 		# This is an eligible pool, never a fabricated selected run or seed.
-		var preview: Dictionary = DUNGEON_CONTENT.boss_pool_preview(depth)
+		var theme_preview: Dictionary = DUNGEON_CONTENT.theme_pool_preview(depth)
+		var choices: Array = theme_preview.get("themes", [])
+		var preview: Dictionary = choices[0] if not choices.is_empty() else {}
 		var possible: PackedStringArray = []
 		for entry: Dictionary in preview.get("required", []): possible.append(String(entry.label))
 		var boss_line := "Possible bosses: " + " · ".join(possible)
-		if not bool(preview.get("available", false)):
+		if not bool(theme_preview.get("available", false)):
 			boss_line = "Your saved unlock is preserved. Encounters are unavailable for this depth."
 		var extras: PackedStringArray = []
-		if bool(preview.get("available", false)):
+		if bool(theme_preview.get("available", false)):
 			if bool(preview.get("stronger_eligible", false)): extras.append("Ascendant variant possible")
 			if bool(preview.get("optional_eligible", false)): extras.append("optional champion possible")
 		var eligibility := " · ".join(extras) if not extras.is_empty() else "Existing item drop tables"
@@ -894,6 +925,14 @@ func _portal_information_lines(destination: StringName, depth_status: Dictionary
 			"Defeat the boss and extract to unlock the next depth. Loss forfeits unsecured finds.",
 			"Highest unlocked: %d · Build: 1–%d · %s." % [int(depth_status.highest_unlocked_depth), DEPTH_POLICY.supported_maximum_depth, eligibility],
 			"Seed on entry · Modifiers not known before generation · Root hazards, awareness, mixed foes."]
+		if choices.size() > 1:
+			# The depth ladder stays Rootbound. Neither weighted theme row is an
+			# issued choice, and no preview dictionary participates in admission.
+			lines = ["ROOTBOUND DEPTHS · Depth %d · %s · %d–%d rooms · Highest unlocked %d · Build 1–%d" % [depth, String(policy.tier_label), int(policy.minimum_rooms), int(policy.maximum_rooms), int(depth_status.highest_unlocked_depth), DEPTH_POLICY.supported_maximum_depth],
+				_theme_boss_line(choices[0]), _theme_boss_line(choices[1]),
+				"Health ×%.2f · Damage ×%.2f · Encounter DM / extraction XP ×%.2f" % [float(policy.health_multiplier), float(policy.damage_multiplier), float(policy.reward_multiplier)],
+				"Boss + final extraction unlocks the next depth. Early Return secures loot only. Death loses unsecured finds.",
+				"Seed on entry · Modifiers not known before generation · Stronger variant / optional encounter possible."]
 		if debug_expedition_seed >= 0: lines[5] = "Developer seed: %d · layout and modifiers are generated on entry." % debug_expedition_seed
 	elif destination == &"combat_arena":
 		lines = ["PROVING GROUNDS · Existing combat practice area", "Practice Sword/Shield and Staff combat with the current enemies and targets.", "This is a local training destination, not a player-versus-player match."]
@@ -904,6 +943,12 @@ func _portal_information_lines(destination: StringName, depth_status: Dictionary
 	lines.append("Party: 1 local human + %d AI companion%s · No remote players." % [ai_count, "" if ai_count == 1 else "s"])
 	lines.append("Matchmaking unavailable · Enter starts this local destination.")
 	return lines
+
+
+func _theme_boss_line(theme: Dictionary) -> String:
+	var names := PackedStringArray()
+	for entry: Dictionary in theme.get("required", []): names.append(String(entry.label))
+	return "Possible bosses · %s %d%%: %s" % [String(theme.theme_label), int(theme.weight), " · ".join(names)]
 
 func _keep_world_collision(node: Node) -> void:
 	# Modals pause scripts/animation while retaining floor and obstacle queries.
@@ -983,6 +1028,7 @@ func _on_modal_changed(open: bool) -> void:
 		_inspected_companion_id = ""
 		_city_portal_source = null
 		_city_portal_route.clear()
+		_city_content_advisory.clear()
 		ExpeditionSession.close_service()
 		player.process_mode = _player_process_mode
 		if is_instance_valid(active_world):

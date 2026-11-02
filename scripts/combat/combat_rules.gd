@@ -194,6 +194,7 @@ static func spawn_projectile(source: Node3D, origin: Vector3, direction: Vector3
 		damage: float, speed: float, lifetime: float, attack_id: int,
 		target_group: StringName, color: Color, splash_radius: float = 0.0,
 		stagger: float = 0.0, cast_token: Dictionary = {}) -> Node3D:
+	if not is_instance_valid(source) or not source.is_inside_tree() or source.is_queued_for_deletion(): return null
 	if not cast_token.is_empty():
 		if not projectile_cast_token_valid(source, attack_id, cast_token): return null
 		if not origin.is_finite() or not direction.is_finite() or direction.length_squared() < 0.000001: return null
@@ -203,7 +204,9 @@ static func spawn_projectile(source: Node3D, origin: Vector3, direction: Vector3
 			if not is_finite(value) or value < 0.0: return null
 	# An offset muzzle cannot start on the far side of a wall next to its owner.
 	var safe_origin := origin
-	var ray := PhysicsRayQueryParameters3D.create(source.global_position + Vector3.UP, origin, 1)
+	# Match flight and targeting occlusion: stationary encounter bodies block an
+	# offset muzzle too, so it cannot start beyond a hive or similar solid actor.
+	var ray := PhysicsRayQueryParameters3D.create(source.global_position + Vector3.UP, origin, 1 | 16)
 	ray.hit_from_inside = true
 	var obstruction := source.get_world_3d().direct_space_state.intersect_ray(ray)
 	if not obstruction.is_empty():
@@ -216,9 +219,26 @@ static func spawn_projectile(source: Node3D, origin: Vector3, direction: Vector3
 	if not configured:
 		projectile.free()
 		return null
-	_effect_parent(source).add_child(projectile)
+	var parent := _effect_parent(source)
+	var source_parent := source.get_parent()
+	parent.add_child(projectile)
+	if not is_instance_valid(projectile): return null
+	# Native attachment/ready observers may cancel this bolt, revoke its cast or
+	# replace the world. Inspect this exact handle again before writing its pose.
+	var owned := _projectile_spawn_matches(source, source_parent, parent, projectile)
+	var active: bool = owned and projectile.is_flight_active()
+	if not is_instance_valid(projectile): return null
+	if not active or not _projectile_spawn_matches(source, source_parent, parent, projectile):
+		projectile.cancel_cast()
+		return null
 	projectile.global_position = safe_origin
 	return projectile
+
+static func _projectile_spawn_matches(source: Node3D, source_parent: Node, parent: Node, projectile: Node3D) -> bool:
+	return is_instance_valid(source) and source.is_inside_tree() and not source.is_queued_for_deletion() \
+		and source.get_parent() == source_parent and is_instance_valid(parent) and parent.is_inside_tree() \
+		and not parent.is_queued_for_deletion() and is_instance_valid(projectile) and projectile.is_inside_tree() \
+		and not projectile.is_queued_for_deletion() and projectile.get_parent() == parent and _effect_parent(source) == parent
 
 static func effect(origin: Vector3, color: Color, radius: float, duration: float, parent: Node) -> Node3D:
 	if not is_instance_valid(parent) or not parent.is_inside_tree():

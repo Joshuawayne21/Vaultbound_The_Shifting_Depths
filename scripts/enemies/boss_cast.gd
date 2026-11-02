@@ -14,6 +14,8 @@ var attack: Dictionary = {}
 var shapes: Array[Dictionary] = []
 var live := false
 var damage_live := false
+var stage_id := 0
+var _stage: Dictionary = {}
 var _owner: WeakRef
 var _world: WeakRef
 
@@ -24,7 +26,11 @@ func configure(owner: Node3D, context: Node3D, payload: Dictionary) -> bool:
 		if not payload[key] is int or int(payload[key]) < 0: return false
 	for key: String in ["theme_id", "encounter_definition_id", "boss_id", "encounter_receipt", "objective_role", "variant_id", "arena_profile_id"]:
 		if not payload[key] is String or String(payload[key]).is_empty() or String(payload[key]).length() > 160: return false
-	if payload.theme_id != "rootbound_abyss" or payload.content_version not in [2, 3, 4] or payload.encounter_version != 1 \
+	var crystal: bool = payload.theme_id == "crystal_caverns" and payload.content_version == 5 \
+		and payload.boss_id in ["prism_conductor", "geode_colossus", "shard_wraith", "crystal_lancekeeper"]
+	var rootbound: bool = payload.theme_id == "rootbound_abyss" and payload.content_version in [2, 3, 4, 5] \
+		and payload.boss_id in ["thornmarshal", "mycelial_cantor", "root_bark_champion"]
+	if not (crystal or rootbound) or payload.encounter_version != 1 \
 			or payload.objective_role not in ["required", "optional"] or not payload.profile is Dictionary \
 			or not payload.depth_policy is Dictionary or not Policy.valid_snapshot(payload.depth_policy, int(payload.depth_policy.get("expedition_depth", 0))) \
 			or payload.boss_id != payload.profile.get("id") or payload.encounter_definition_id != payload.boss_id \
@@ -49,12 +55,19 @@ func source_current() -> bool:
 		and actor.get("state") not in [&"dead", &"return"] \
 		and bool(context.registered_combat_source_valid(actor, int(issued.run_generation), String(issued.encounter_receipt)))
 
-func begin(definition: Dictionary, geometry: Array[Dictionary]) -> bool:
+func begin(definition: Dictionary, geometry: Array[Dictionary], stage_index: int = 0) -> bool:
 	if not source_current() or not Attack.valid_snapshot(definition) or geometry.size() > 4: return false
+	var values := Attack.stage_snapshot(definition, stage_index)
+	if values.is_empty(): return false
+	if definition.pattern_version == 2:
+		var authored: Array = issued.profile.get("attacks", [issued.profile.get("attack", {})])
+		if not authored.has(definition): return false
 	for zone: Dictionary in geometry:
 		if not Geometry.validate(zone).is_empty(): return false
 	cancel()
 	attack = definition.duplicate(true)
+	_stage = values
+	stage_id = stage_index
 	attack_id = CombatRules.next_attack_id()
 	shapes.assign(geometry.duplicate(true))
 	live = true
@@ -66,6 +79,11 @@ func cancel() -> void:
 	damage_live = false
 	shapes.clear()
 	attack.clear()
+	_stage.clear()
+	stage_id = 0
+
+func stage_snapshot() -> Dictionary:
+	return _stage.duplicate(true) if live else {}
 
 func clear_shapes() -> void:
 	shapes.clear()
@@ -76,7 +94,7 @@ func activate() -> void:
 func token() -> Dictionary:
 	var actor := owner()
 	return {"run_generation": int(issued.get("run_generation", -1)), "source_instance_id": actor.get_instance_id() if actor != null else 0,
-		"cast_serial": serial, "stage_id": 0, "attack_id": attack_id}
+		"cast_serial": serial, "stage_id": stage_id, "attack_id": attack_id}
 
 func valid_token(value: Dictionary) -> bool:
 	return live and source_current() and value == token() and Attack.exact_keys(value, CombatRules.PROJECTILE_CAST_KEYS) \
@@ -93,17 +111,17 @@ func zones(phase: StringName, remaining: float, active_remaining: float) -> Arra
 		zone["phase"] = phase
 		zone["kind"] = StringName(attack.id)
 		zone["attack_id"] = attack_id
-		zone["stage_id"] = 0
+		zone["stage_id"] = stage_id
 		result.append(zone)
 	return result
 
 func deliver(geometry: Array[Dictionary] = []) -> void:
-	if not live or not damage_live or not source_current() or float(attack.get("damage", 0.0)) <= 0.0: return
+	if not live or not damage_live or not source_current() or float(_stage.get("damage", 0.0)) <= 0.0: return
 	var actor := owner()
 	var committed := token()
 	var areas: Array[Dictionary] = shapes if geometry.is_empty() else geometry
-	var amount := float(attack.damage) * float(issued.depth_policy.damage_multiplier)
-	var stagger := float(attack.stagger)
+	var amount := float(_stage.damage) * float(issued.depth_policy.damage_multiplier)
+	var stagger := float(_stage.stagger)
 	var kind := StringName(attack.damage_kind)
 	for target: Node3D in CombatRules.party_targets(actor):
 		if not valid_token(committed): return

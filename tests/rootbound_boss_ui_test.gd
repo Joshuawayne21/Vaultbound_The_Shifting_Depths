@@ -80,14 +80,15 @@ func _preview_and_layout() -> void:
 			check(not panel.entry_enabled and not preview.available and "unavailable" in String(lines[1]) \
 				and session.profile.depth_progression.highest_unlocked_depth == 51, "Unsupported earned depth stays saved and cannot advertise available encounters")
 		else:
-			check(panel.entry_enabled and String(lines[1]).begins_with("Possible bosses: "), "Pre-entry card identifies an eligible pool rather than a selected boss")
+			check(panel.entry_enabled and String(lines[1]).begins_with("Possible bosses"), "Pre-entry card identifies an eligible pool rather than a selected boss")
 			var expected_names: Array[String] = ["Rootwarden"]
 			if depth != 1: expected_names.assign(["Rootwarden", "Thornmarshal", "Mycelial Cantor"])
 			var exact_names := true
 			for name: String in expected_names: exact_names = exact_names and name in String(lines[1])
 			check(exact_names and preview.required.size() == expected_names.size(), "Pool card lists only the actual eligible required controllers at depth " + str(depth))
-			check(("Ascendant variant possible" in String(lines[4])) == (depth >= 6) \
-				and ("optional champion possible" in String(lines[4])) == (depth >= 6), "Additional variant and optional encounter are possibilities only at eligible depths")
+			var variant_possible: bool = "Stronger variant" in String(lines[5])
+			var optional_possible: bool = "optional encounter possible" in String(lines[5])
+			check(variant_possible == (depth >= 6) and optional_possible == (depth >= 6), "Additional variant and optional encounter are possibilities only at eligible depths")
 		_measure_layout(depth)
 	check(not session.active and FileAccess.get_file_as_bytes(PROFILE) == saved, "Reading every pool neither starts a run nor spends or saves rewards")
 	game._on_portal_depth_selected(1)
@@ -250,7 +251,8 @@ func _optional_presentation() -> void:
 	# unsafe geometry; this candidate does not stand in for a registered actor.
 	var chosen := -1
 	for candidate in range(2400, 2450):
-		if not RoomPlanner.plan(Generator.generate_for_run(candidate, 6), Content.resolve_run_plan(candidate, 6)).is_empty():
+		var plan: Dictionary = Content.resolve_run_plan(candidate, 6)
+		if plan.get("theme_id") == "rootbound_abyss" and not RoomPlanner.plan(Generator.generate_for_run(candidate, 6), plan).is_empty():
 			chosen = candidate
 			break
 	if not check(chosen >= 0, "Deterministic authored layouts provide an optional encounter slot"):

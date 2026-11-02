@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="VaultBossAttackDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/enemies/boss_attack_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"colossus_double_slam"
+controller_family = &"colossus"
+pattern_version = 2
+shape = &"circle"
+damage_kind = &"enemy_melee"
+warning_time = 1.9
+active_time = 0.2
+recovery_time = 2.0
+damage = 16.0
+stage_count = 2
+stage_gap = 0.7
+parameters = {"radius": 1.4, "count": 1}
+stage_two = {"warning_time": 1.9, "active_time": 0.2, "damage": 16.0, "stagger": 0.0, "parameters": {"radius": 1.4, "count": 1}}

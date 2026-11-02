@@ -24,6 +24,8 @@ static func evaluate(world: Node3D, room_id: int, center: Vector3, radius: float
 		var health_value: Variant = actor.get("health")
 		if not (health_value is float or health_value is int) or not is_finite(float(health_value)): return _blocked("Local encounter state unavailable")
 		if float(health_value) <= 0.0: continue
+		if world.checkpoint_pending_actor_attack(actor, room_id, center, radius): return _blocked("An attack sequence is still resolving")
+		if not is_instance_valid(world) or not world.run_source_context_valid() or not is_instance_valid(actor): return _blocked("Local encounter state unavailable")
 		var origin := actor.global_position
 		if not origin.is_finite(): return _blocked("Local encounter state unavailable")
 		if actor.has_method("get_danger_zones"):
@@ -58,6 +60,11 @@ static func evaluate(world: Node3D, room_id: int, center: Vector3, radius: float
 	for value: Variant in world.registered_hazard_actors():
 		if not is_instance_valid(value) or not value is Node3D: continue
 		var hazard := value as Node3D
+		if hazard.has_method("typed_activation_snapshot"):
+			var typed: Dictionary = hazard.typed_activation_snapshot()
+			if bool(typed.get("delivery_in_progress", false)) and (int(typed.get("room_id", -1)) == room_id \
+				or hazard.global_position.distance_to(center) <= radius + float(hazard.radius)):
+				return _blocked("A magical pulse is still resolving")
 		if hazard.has_method("legacy_activation_snapshot") and bool(hazard.legacy_activation_snapshot().get("delivery_in_progress", false)) \
 			and (int(hazard.room_id) == room_id or hazard.global_position.distance_to(center) <= radius + float(hazard.radius)):
 			return _blocked("A roots strike is still resolving")

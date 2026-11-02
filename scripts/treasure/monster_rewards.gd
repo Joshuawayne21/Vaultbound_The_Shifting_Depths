@@ -6,7 +6,25 @@ extends Resource
 const SOURCES := ["basic", "stronger", "elite", "boss"]
 const DEPTH_POLICY = preload("res://resources/expedition/depth_policy.tres")
 const REGISTERED_SOURCES := {"enemy_basic": "basic", "enemy_stronger": "stronger", "enemy_elite": "elite", "rootwarden_legacy": "boss"}
-const ENCOUNTER_SOURCES := {"thornmarshal": "encounter:thornmarshal", "mycelial_cantor": "encounter:mycelial_cantor", "root_bark_champion": "encounter:root_bark_champion"}
+const ENCOUNTER_SOURCES := {"thornmarshal": "encounter:thornmarshal", "mycelial_cantor": "encounter:mycelial_cantor", "root_bark_champion": "encounter:root_bark_champion",
+	"prism_conductor": "encounter:prism_conductor", "geode_colossus": "encounter:geode_colossus",
+	"shard_wraith": "encounter:shard_wraith", "crystal_lancekeeper": "encounter:crystal_lancekeeper"}
+const ENCOUNTER_CATEGORIES := {"thornmarshal": "boss", "mycelial_cantor": "boss", "root_bark_champion": "reinforced",
+	"prism_conductor": "boss", "geode_colossus": "boss", "shard_wraith": "boss", "crystal_lancekeeper": "reinforced"}
+## Shared ordinary reward profiles are not actor, objective or journal IDs.
+const ORDINARY_THEME_SOURCES := {"crystal_basic": "encounter:crystal_basic", "crystal_stronger": "encounter:crystal_stronger", "crystal_elite": "encounter:crystal_elite"}
+const ORDINARY_THEME_CATEGORIES := {"crystal_basic": "common", "crystal_stronger": "common", "crystal_elite": "reinforced"}
+const ORDINARY_THEME_ITEMS := {
+	"crystal_basic": ["mistglass_sand", "turquoise_crystal_grain", "iron_ore", "emerald_dust"],
+	"crystal_stronger": ["turquoise_crystal_grain", "emerald_dust", "iron_ore", "common_enhancement_stone", "silvervein_filament"],
+	"crystal_elite": ["emerald_dust", "tempered_ingot", "silvervein_filament", "common_enhancement_stone", "turquoise_crystal_grain", "ancient_shard"],
+}
+const CRYSTAL_ENCOUNTER_ITEMS := {
+	"prism_conductor": ["turquoise_crystal_grain", "emerald_dust", "common_enhancement_stone", "silvervein_filament", "stone_choir_tuning_fork", "crystaldew_phial", "crystal_cantor_headdress", "choirglass_necklace", "ancient_shard"],
+	"geode_colossus": ["iron_ore", "tempered_ingot", "common_enhancement_stone", "turquoise_crystal_grain", "mistglass_sand", "stonewalker_infusion", "streamstone_sallet", "duskglass_edge", "ancient_shard"],
+	"shard_wraith": ["mistglass_sand", "turquoise_crystal_grain", "emerald_dust", "common_enhancement_stone", "smoky_quartz_shard", "bluecap_opal_chip", "mistveil_crook", "crystal_cadence_boots", "ancient_shard"],
+	"crystal_lancekeeper": ["turquoise_crystal_grain", "mistglass_sand", "common_enhancement_stone", "iron_ore", "silvervein_filament", "stone_choir_tuning_fork", "runic_staff"],
+}
 const EVENT_SOURCES := {"event_root_spore_hive": "encounter:root_spore_hive", "event_root_horde": "encounter:root_horde"}
 const EVENT_ITEMS := {
 	"event_root_spore_hive": ["glow_spore", "root_fiber", "emerald_dust", "common_enhancement_stone", "resonant_root_sap", "bloomheart_nectar"],
@@ -19,6 +37,7 @@ const ROOTWARDEN_EXCLUSIVE := ["rootwarden_heart", "rootwarden_essence", "verdan
 @export var boss_table: VaultLootTable
 ## Explicit actual encounter sources; never fall back to the Rootwarden table.
 @export var encounter_tables: Dictionary = {}
+@export var ordinary_theme_tables: Dictionary = {}
 ## One aggregate reward after actual terminal event proof, never per defender.
 @export var event_tables: Dictionary = {}
 @export var currency_ranges: Dictionary = {
@@ -132,7 +151,11 @@ func roll_registered(seed_value: int, receipt: String, source_profile: Dictionar
 		return roll_for_depth(seed_value, receipt, String(source_profile.source), room_distance, int(depth), issued_depth_policy)
 	if receipt.is_empty() or receipt.length() > 160 or room_distance < 0 or not VaultDepthPolicy.valid_snapshot(issued_depth_policy, int(depth)):
 		return {}
-	var table: VaultLootTable = event_tables[source_profile.id] if EVENT_SOURCES.has(source_profile.id) else encounter_tables[source_profile.id]
+	var table: VaultLootTable
+	if ORDINARY_THEME_SOURCES.has(source_profile.id):
+		table = ordinary_theme_tables[source_profile.id]
+	else:
+		table = event_tables[source_profile.id] if EVENT_SOURCES.has(source_profile.id) else encounter_tables[source_profile.id]
 	var reward := table.roll(seed_value ^ int(String(source_profile.source).hash()), receipt)
 	if reward.is_empty():
 		return {}
@@ -143,19 +166,21 @@ func roll_registered(seed_value: int, receipt: String, source_profile: Dictionar
 
 func registered_profile_valid(source_profile: Dictionary) -> bool:
 	if source_profile.size() != 3 or not source_profile.get("id") is String \
-			or not source_profile.get("version") is int or source_profile.version != 1:
+			or not source_profile.get("version") is int or source_profile.version != 1 or not source_profile.get("source") is String:
 		return false
 	var id: String = source_profile.id
 	if REGISTERED_SOURCES.has(id):
 		return source_profile.get("source") == REGISTERED_SOURCES[id] and is_valid()
 	if EVENT_SOURCES.has(id):
 		return _event_profile_valid(source_profile)
+	if ORDINARY_THEME_SOURCES.has(id):
+		return _ordinary_theme_profile_valid(source_profile)
 	if not ENCOUNTER_SOURCES.has(id) or source_profile.get("source") != ENCOUNTER_SOURCES[id] \
 			or not encounter_tables.get(id) is VaultLootTable:
 		return false
 	var table: VaultLootTable = encounter_tables[id]
 	if table.source_tag() != ENCOUNTER_SOURCES[id] or not table.is_valid() or table.gold_max > 1000000 \
-			or String(table.category) != ("reinforced" if id == "root_bark_champion" else "boss"):
+			or String(table.category) != ENCOUNTER_CATEGORIES[id]:
 		return false
 	var all_items: Array[VaultItemDefinition] = table.entries.duplicate()
 	all_items.append_array(table.guaranteed_items)
@@ -163,7 +188,22 @@ func registered_profile_valid(source_profile: Dictionary) -> bool:
 		all_items.append(table.guaranteed_item)
 	for item: VaultItemDefinition in all_items:
 		if item.category == "gold" or String(item.id) in ROOTWARDEN_EXCLUSIVE \
-				or not VaultInventory.definition_available(item):
+				or not VaultInventory.definition_available(item) \
+				or (CRYSTAL_ENCOUNTER_ITEMS.has(id) and String(item.id) not in CRYSTAL_ENCOUNTER_ITEMS[id]):
+			return false
+	return true
+
+func _ordinary_theme_profile_valid(source_profile: Dictionary) -> bool:
+	var id: String = source_profile.id
+	if source_profile.get("source") != ORDINARY_THEME_SOURCES[id] or not ordinary_theme_tables.get(id) is VaultLootTable:
+		return false
+	var table: VaultLootTable = ordinary_theme_tables[id]
+	if table.source_tag() != ORDINARY_THEME_SOURCES[id] or not table.is_valid() or table.gold_max > 1000000 \
+			or String(table.category) != ORDINARY_THEME_CATEGORIES[id] \
+			or table.guaranteed_item != null or not table.guaranteed_items.is_empty():
+		return false
+	for item: VaultItemDefinition in table.entries:
+		if item.category != "material" or String(item.id) not in ORDINARY_THEME_ITEMS[id] or not VaultInventory.definition_available(item):
 			return false
 	return true
 

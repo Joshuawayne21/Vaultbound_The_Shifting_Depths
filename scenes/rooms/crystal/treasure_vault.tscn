@@ -1,0 +1,86 @@
+[gd_scene load_steps=12 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/props/abyss_arch.tscn" id="crystal_0"]
+[ext_resource type="PackedScene" path="res://scenes/props/abyss_column.tscn" id="crystal_1"]
+[ext_resource type="PackedScene" path="res://scenes/props/abyss_column.tscn" id="crystal_2"]
+[ext_resource type="PackedScene" path="res://scenes/props/crystal/geode_fan.tscn" id="crystal_3"]
+[ext_resource type="PackedScene" path="res://scenes/props/abyss_rubble.tscn" id="crystal_4"]
+[ext_resource type="PackedScene" path="res://scenes/props/crystal/prism_bloom.tscn" id="crystal_5"]
+
+[ext_resource type="PackedScene" path="res://scenes/rooms/abyss_room_base.tscn" id="1"]
+
+
+
+
+
+
+[ext_resource type="Material" path="res://resources/materials/abyss_gold.tres" id="7"]
+
+[ext_resource type="Material" path="res://resources/materials/abyss_glow.tres" id="8"]
+
+[sub_resource type="TorusMesh" id="r1"]
+inner_radius = 3.72
+outer_radius = 3.8
+rings = 24
+ring_segments = 4
+
+[sub_resource type="BoxMesh" id="r2"]
+size = Vector3(0.13, 0.025, 0.7)
+
+[node name="TreasureVault" instance=ExtResource("1")]
+module_id = &"treasure_vault"
+visual_motif = &"lapidary_vault"
+room_kind = &"treasure"
+
+[node name="Decor00" parent="." instance=ExtResource("crystal_0")]
+position = Vector3(0, 0, -8)
+
+[node name="Decor01" parent="." instance=ExtResource("crystal_1")]
+position = Vector3(-8, 0, 8)
+
+[node name="Decor02" parent="." instance=ExtResource("crystal_2")]
+position = Vector3(8.6, 0, 8.6)
+
+[node name="Decor03" parent="." instance=ExtResource("crystal_3")]
+position = Vector3(-8.5, 0, -8)
+
+[node name="Decor04" parent="." instance=ExtResource("crystal_4")]
+position = Vector3(-8, 0, 4.5)
+rotation = Vector3(0, 0.8, 0)
+
+[node name="Decor05" parent="." instance=ExtResource("crystal_5")]
+position = Vector3(8.8, 0, -6.8)
+
+[node name="SanctumRing" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.04, 0)
+mesh = SubResource("r1")
+material_override = ExtResource("7")
+cast_shadow = 0
+
+[node name="Rune0" type="MeshInstance3D" parent="."]
+position = Vector3(2.12132, 0.04, 2.12132)
+mesh = SubResource("r2")
+material_override = ExtResource("8")
+rotation = Vector3(0, 0.7854, 0)
+cast_shadow = 0
+
+[node name="Rune1" type="MeshInstance3D" parent="."]
+position = Vector3(2.12132, 0.04, -2.12132)
+mesh = SubResource("r2")
+material_override = ExtResource("8")
+rotation = Vector3(0, 2.35619, 0)
+cast_shadow = 0
+
+[node name="Rune2" type="MeshInstance3D" parent="."]
+position = Vector3(-2.12132, 0.04, -2.12132)
+mesh = SubResource("r2")
+material_override = ExtResource("8")
+rotation = Vector3(0, 3.92699, 0)
+cast_shadow = 0
+
+[node name="Rune3" type="MeshInstance3D" parent="."]
+position = Vector3(-2.12132, 0.04, 2.12132)
+mesh = SubResource("r2")
+material_override = ExtResource("8")
+rotation = Vector3(0, 5.49779, 0)
+cast_shadow = 0
