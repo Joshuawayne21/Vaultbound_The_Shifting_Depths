@@ -12,7 +12,7 @@ func _clean() -> void:
 	DirAccess.make_dir_recursive_absolute(PATH.get_base_dir())
 	for file: String in DirAccess.open(PATH.get_base_dir()).get_files():
 		DirAccess.remove_absolute(PATH.get_base_dir().path_join(file))
-	for suffix: String in [".tmp", ".pre-v8.bak.tmp", ".bak.tmp"]:
+	for suffix: String in [".tmp", ".pre-v9.bak.tmp", ".bak.tmp"]:
 		if DirAccess.dir_exists_absolute(PATH + suffix): DirAccess.remove_absolute(PATH + suffix)
 
 func _write(path: String, bytes: String) -> void:
@@ -22,7 +22,7 @@ func _write(path: String, bytes: String) -> void:
 	file.close()
 
 func _run() -> void:
-	check(Store.VERSION == 8 and Home.VERSION == 1, "Profile v8 and home namespace v1 are independent of dungeon content versions")
+	check(Store.VERSION == 9 and Home.VERSION == 2, "Current profile and home namespace are independent of dungeon content versions")
 	for version in range(1, 8): _migration(version)
 	_schema()
 	_preservation()
@@ -39,7 +39,7 @@ func _migration(version: int) -> void:
 	for prior in range(4, 8): _write(PATH + ".pre-v%d.bak" % prior, "historical_%d_bytes" % prior)
 	var store := Store.new(PATH)
 	var loaded := store.load_profile()
-	if not check(not store.read_only and not loaded.is_empty() and loaded.version == 8,
+	if not check(not store.read_only and not loaded.is_empty() and loaded.version == Store.VERSION,
 		"Version%d migrates through the existing profile normalization" % version): return
 	check(loaded.home == Home.empty_fields() and Store.normalize(loaded) == loaded,
 		"Version%d migration allocates no home identity or visit record" % version)
@@ -56,10 +56,10 @@ func _migration(version: int) -> void:
 	if version >= 5: check(loaded.pets == old.pets, "Version%d preserves every owned pet appearance and creation record" % version)
 	if version >= 6: check(loaded.depth_progression == old.depth_progression, "Version%d preserves exact deeper unlocks" % version)
 	if version >= 7: check(loaded.encounter_records == old.encounter_records, "Version7 preserves exact secured encounter evidence")
-	check(FileAccess.get_file_as_string(PATH) == original and not FileAccess.file_exists(PATH + ".pre-v8.bak"),
+	check(FileAccess.get_file_as_string(PATH) == original and not FileAccess.file_exists(PATH + ".pre-v9.bak"),
 		"Version%d load writes no files or migration backup" % version)
-	check(store.save_profile(loaded) and FileAccess.get_file_as_string(PATH + ".pre-v8.bak") == original,
-		"Version%d first explicit save retains exact pre-v8 bytes" % version)
+	check(store.save_profile(loaded) and FileAccess.get_file_as_string(PATH + ".pre-v9.bak") == original,
+		"Version%d first explicit save retains exact pre-v9 bytes" % version)
 	for prior in range(4, 8): check(FileAccess.get_file_as_string(PATH + ".pre-v%d.bak" % prior) == "historical_%d_bytes" % prior,
 		"Version%d migration preserves historical pre-v%d bytes" % [version, prior])
 	var expected := Store.normalize(JSON.parse_string(JSON.stringify(loaded, "", true, true)))
@@ -72,6 +72,7 @@ func _schema() -> void:
 	var candidate := Home.plan_initialization(valid, Fixtures.ID, int(valid.revision))
 	var expected := valid.duplicate(true)
 	expected.home.id = Fixtures.ID
+	expected.home.unlocked_rooms = Home.BASE_ROOMS.duplicate()
 	expected.revision += 1
 	check(candidate == expected and valid == before, "Pure home planning changes only identity and one revision on a copy")
 	check(Home.plan_initialization(candidate, Fixtures.ID, int(candidate.revision)).is_empty()
@@ -92,9 +93,9 @@ func _schema() -> void:
 	check(Store.normalize(absent).is_empty(), "A current profile must contain its complete home namespace")
 	var recognized := Fixtures.legacy(7)
 	recognized.home = {"version": 1, "id": Fixtures.ID}
-	check(Store.normalize(recognized).home == recognized.home, "A recognized older home identity is preserved rather than discarded or regenerated")
-	check(Home.empty_fields() == {"version": 1, "id": ""} and Store.empty_profile().home == Home.empty_fields(),
-		"Defaults have no visit, room, theme, cosmetic ownership or inventory extension")
+	check(Store.normalize(recognized).home.id == recognized.home.id and Store.normalize(recognized).home.unlocked_rooms == Home.BASE_ROOMS, "A recognized older home identity is preserved rather than discarded or regenerated")
+	check(Home.empty_fields().id.is_empty() and Home.empty_fields().unlocked_rooms.is_empty() and Store.empty_profile().home == Home.empty_fields(),
+		"Unallocated defaults have no visit, room milestones or extra inventory")
 
 func _preservation() -> void:
 	var valid := Fixtures.owned()
@@ -102,9 +103,9 @@ func _preservation() -> void:
 		_clean()
 		var unknown := valid.duplicate(true)
 		match kind:
-			"future_profile": unknown.version = 9
-			"future_home": unknown.home.version = 2
-			"future_field": unknown.home.theme_id = "future_theme"
+			"future_profile": unknown.version = 10
+			"future_home": unknown.home.version = 3
+			"future_field": unknown.home.theme_variant = "future_theme"
 			"legacy_unknown":
 				unknown.version = 7
 				unknown.home = {"legacy_house": "keep_this_progress"}
@@ -142,7 +143,7 @@ func _preservation() -> void:
 		"Transaction-time disk recheck protects a future home replacement")
 
 func _failures() -> void:
-	for suffix: String in [".tmp", ".pre-v8.bak.tmp", ".bak.tmp"]:
+	for suffix: String in [".tmp", ".pre-v9.bak.tmp", ".bak.tmp"]:
 		_clean()
 		var old := Fixtures.legacy(7)
 		var bytes := JSON.stringify(old, "  ", false, true)
@@ -156,5 +157,5 @@ func _failures() -> void:
 			"Interrupted %s leaves the candidate and original secured primary unchanged" % suffix)
 		DirAccess.remove_absolute(PATH + suffix)
 		check(store.save_profile(candidate) and Store.new(PATH).load_profile().home.id == Fixtures.ID
-			and FileAccess.get_file_as_string(PATH + ".pre-v8.bak") == bytes,
+			and FileAccess.get_file_as_string(PATH + ".pre-v9.bak") == bytes,
 			"Retry after %s preserves exact migration bytes and one identity" % suffix)

@@ -1,10 +1,10 @@
-; Vaultbound: The Shifting Depths — Personal Sanctuary entrance foundation.
+; Vaultbound: The Shifting Depths — Grand Foyer prototype.
 ; Import this file with Godot 4.6.3 (Compatibility renderer).
 config_version=5
 
 [application]
 config/name="Vaultbound: The Shifting Depths"
-config/version="0.7.0-home2"
+config/version="0.7.0-home3"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://assets/icon.svg"

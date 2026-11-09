@@ -31,7 +31,7 @@ func _read_actual(path: String) -> void:
 	if not check(FileAccess.file_exists(path + ".expected.json"), "Home reader requires the successful writer's actual expected state"): return
 	var expected := Store.normalize(JSON.parse_string(FileAccess.get_file_as_string(path + ".expected.json")))
 	if not check(not expected.is_empty() and session.profile == expected and Home.valid_id(expected.home.id, false)
-		and expected.version == 8, "Independent process restores exact home identity, currency, items, gear, pets, roster and progress"): return
+		and expected.version == Store.VERSION, "Independent process restores exact home identity, currency, items, gear, pets, roster and progress"): return
 	var bytes := FileAccess.get_file_as_bytes(path)
 	await game.change_location(&"personal_sanctuary")
 	if not await arrive(&"personal_sanctuary"): return

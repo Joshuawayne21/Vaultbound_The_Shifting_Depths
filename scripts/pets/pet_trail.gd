@@ -154,7 +154,12 @@ func validated_step(from: Vector3, target: Vector3) -> Vector3:
 		return Vector3.INF
 	if absf(end.y - from.y) > Vector2(end.x - from.x, end.z - from.z).length() * 0.23 + 0.025:
 		return Vector3.INF
-	return end if clearance(from, end) else Vector3.INF
+	# A straight chord across a flat-to-slope crest can cut the supported
+	# surface even when both endpoints are clear. Advance to the already
+	# sampled midpoint first; retain the same full capsule sweep and query cap.
+	# Flat paths keep their ordinary step length. No raised collision clearance.
+	var step := middle if middle.y - lerpf(from.y, end.y, 0.5) > 0.005 else end
+	return step if clearance(from, step) else Vector3.INF
 
 func clearance(from: Vector3, to: Vector3) -> bool:
 	if not valid() or queries + 2 > MAX_QUERIES:

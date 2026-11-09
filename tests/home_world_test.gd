@@ -1,6 +1,7 @@
 extends "res://tests/home_world_fixture.gd"
 ## Native arrival, actual touch travel, physical followers and camera obstruction.
-## This ground-floor foundation does not test or claim a two-story Grand Foyer.
+## Core home regression retained across foyer expansion. Dedicated foyer suites
+## add actual stairs, upper-gallery collision, followers and camera coverage.
 const PATH := "/tmp/vaultbound-home-world/profile.json"
 var home_world: Node3D
 var camera_frames := 0
@@ -232,7 +233,15 @@ func _cameras() -> void:
 	for quality in range(3):
 		check(settings.set_options(quality, 60), "The home supports existing quality tier " + str(quality))
 		for point: Vector3 in points:
-			player.reset_for_spawn(Transform3D(Basis.IDENTITY, point))
+			# This retained X/Z sample now lies on the real rising main flight.
+			# Resolve its actual tagged floor; never place the player inside a plinth.
+			var ray := PhysicsRayQueryParameters3D.create(point + Vector3.UP * 6.0, point - Vector3.UP * 2.0, 1)
+			ray.collide_with_areas = false
+			var floor_hit := home_world.get_world_3d().direct_space_state.intersect_ray(ray)
+			if not check(not floor_hit.is_empty() and floor_hit.collider.is_in_group("city_navigation_surfaces")
+				and home_world.is_ancestor_of(floor_hit.collider), "Retained camera sample has actual home floor support at " + str(point)): return
+			var grounded: Vector3 = floor_hit.position + Vector3.UP * 0.15
+			player.reset_for_spawn(Transform3D(Basis.IDENTITY, grounded))
 			await frames(3)
 			for heading: float in [0.0, PI / 2.0]:
 				rig.is_isometric = false

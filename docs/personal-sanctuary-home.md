@@ -1,36 +1,58 @@
-# Personal Sanctuary — home-entry foundation
+# Personal Sanctuary — Grand Foyer
 
-Build `0.7.0-home2` introduces the entrance and persistence boundary for an offline personal home. This is Stage 2 of the [Sanctuary and home plan](personal-sanctuary-plan.md), not the complete Grand Foyer or city redesign. The final regression passed 46,230 checks across 234 runtime processes; development runs are excluded from that total. The [Stage 2 validation report](personal-sanctuary-m2-validation.md) and [per-process results](personal-sanctuary-m2-test-results.json) record the accepted evidence and its limits.
+Build `0.7.0-home3` implements the functional Grand Foyer checkpoint in Stage 3 of the [Sanctuary and home plan](personal-sanctuary-plan.md). Its scoped validation passed **6,081 checks across 60 runtime modes**, including native navigation, cameras, touch UI and restart. The [Stage 3 report](personal-sanctuary-m3-validation.md) records the exact scope. Rendered art composition and physical Android acceptance remain pending; the entire city/home overhaul is not complete.
 
-## Playable route
+## Route and architecture
 
-Use the southeast **Personal Sanctuary** gate in district D of the existing city. Its mobile entry card explains the local destination and requires an explicit **ENTER** confirmation. The portal occupies the former Collection Hall gate's position; its internal `CollectionHallGate` node and `collection_hall` map POI remain stable for compatibility.
+Use the southeast **Personal Sanctuary** gate in district D of the existing city. Review its local destination card and confirm **ENTER**. Its position, internal `CollectionHallGate` node and `collection_hall` map POI remain stable. The city has not yet been rearranged to the supplied Prismheart blueprint.
 
-The home currently contains a 30 × 28 m ground-floor arrival room, ivory and royal-blue prototype stonework, gold floor inlays, decorative window reliefs and two functioning doors:
+The authored foyer occupies 30 × 32 m. Ivory stone, royal-blue cloth and gold inlays frame a tall vaulted atrium, twin sweeping stairways, a 3.4 m upper gallery, arched window reliefs, a floating crystal chandelier and central translucent House Sigil. Original native meshes are prototype artwork, not imported premium castle assets. Stair art uses horizontal treads over continuous collision ramps. Galleries sit on closed solid plinths; there is no traversable lower room beneath them. The construction deliberately fits the existing navigation model. Small overlaps between internal turn-collision wedges prevent coincident-edge floor-ray misses without opening a new route.
 
-- **TROPHY HALL · YOUR COLLECTION** opens the existing Collection Hall. That visit's return arch leads back to the home.
-- **RETURN TO SANCTUARY** returns to the city using the existing Hall return spawn.
+- **TROPHY HALL · YOUR COLLECTION** opens the existing Collection Hall. That visit's return arch leads back home.
+- **RETURN TO SANCTUARY** returns to the existing city return spawn.
+- The **Home Management** lectern near the central aisle opens the appearance and room-milestone menu. Its available Trophy Hall and city routes use the existing travel system.
 
-A legacy direct Collection Hall visit still returns to the city. Return context belongs to that loaded Hall instance and cannot leak into a later visit. The original Sanctuary, practice dungeon, Proving Grounds, Rootbound expedition and Collection Hall destinations remain registered; the home is an additional scene.
+A legacy direct Collection Hall visit still returns to the city. Loaded Hall instances keep their own return context. The persistent player, both cameras, Guardian/Mystic and selected cosmetic pet continue using their existing controllers. Destination admission checks floor support and clearance before retiring the previous world; obstruction should retain the previous location and restore controls. The foyer integration resolves companion formation on the leader's walkable level and advances cosmetic pets through sampled stair crests with the existing capsule-clearance/query limits. Native tests exercised the complete route with both companions and ground/flying pets without recovery relocation.
 
-The persistent player, cameras, recruited Guardian/Mystic and selected cosmetic pet use their existing systems. Native home admission checks actual floor support and clearance for the player plus both companion formation slots before retiring the prior world. An obstructed arrival retains the prior location and restores controls with an explanation.
+## Home Management
 
-## Saved identity and ownership
+Approach the lectern and use the normal interaction control. **APPEARANCE** shows theme and sigil choices with their actual secured-progress requirements. **RECORD EARNED UNLOCKS** reviews already-earned styles and room milestones; **CONFIRM & SAVE** records them. Then select an unlocked theme/sigil, choose **REVIEW APPEARANCE**, and confirm the save. Previewing or cancelling does not recolor the world or alter saved progress. Applying the already-selected appearance performs no new save. Choices are free cosmetic changes; they grant no items, currency or combat benefits.
 
-Profile v8 adds only `home = {version: 1, id: ""}`. Loading an older profile does not write a file or create a random home. The first valid city-to-home entry creates an opaque ID through the existing verified save service. Later visits reuse it without changing the home identity, inventory or progression revision.
+| Theme | Paired sigil | Requirement |
+| --- | --- | --- |
+| Royal Azure | Vault Diamond | Enter your Personal Sanctuary |
+| Enchanted Forest | Root Crown | Own one Spiritweaving pet |
+| Runic Obsidian | Runic Seal | Complete one expedition |
+| Celestial Violet | Crystal Star | Clear dungeon depth three |
 
-The identity is prepared before physical arrival. If the destination is then obstructed, that identity can already be saved; a retry uses it again. It is not a visit record, unlock reward, separate currency account or second inventory. Read-only save states cannot initialize or enter the home.
+Unlocked themes and sigils can be mixed. Claimed milestones remain recorded permanently. Theme changes affect home-local materials, not shared equipment or city materials. Reduced motion pauses ornamental motion; reduced effects lowers the Sigil intensity.
 
-The existing eight equipment stands, four relic pedestals, discovery journals and Rootwarden display remain in the Collection Hall. Saved assignments continue to reference the same owned item UIDs in `profile.displays`; travel neither moves nor duplicates those items. Pet and companion ownership, equipment, loadouts, enhancements, Depthmarks, talents, depth unlocks and encounter records remain in their existing profile fields.
+**ROOM MILESTONES** distinguishes earned progression from content availability. Only the Foyer and existing Trophy Hall are open in this checkpoint. Sealed future doorways show requirements; recording their milestone does not open an unfinished room or create a destination.
 
-Versions 1–7 migrate in memory. The first explicit migrated write retains exact original bytes in `.pre-v8.bak`, preserving earlier migration snapshots; restoring a different older record uses the existing content-addressed backup behavior. Writes still validate the full candidate, verify a temporary file and atomically replace the primary. Unsupported future profile/home versions or home fields are preserved read-only before fallback to an older backup. A malformed current record can recover an existing valid backup. Do not delete a player save to resolve a scene or import problem.
+| Room | Requirement | Current access |
+| --- | --- | --- |
+| Grand Foyer | Personal home | Open |
+| Trophy Hall | Personal home | Existing Hall open |
+| Pet Conservatory | Own one Spiritweaving pet | Not open |
+| Armory | Character level 3 | Not open |
+| Companion Hall | Recruit one adventurer | Not open |
+| Relic Library | Complete one expedition | Not open |
+| Personal Chamber | Character level 5 | Not open |
+| Wardrobe | Earn Abyss Explorer through three completed expeditions | Not open |
+| Rooftop Garden | Clear dungeon depth three | Not open |
 
-## Scope and performance limits
+## Saves and ownership
 
-The initial home uses the existing static architecture batcher, one WorldEnvironment, one directional key and bounded ambience. Low/Medium/High, reduced motion and ambient density remain available. Headless collision and scene tests do not establish rendered art quality, draw-call performance on a phone or sustained 30/60 FPS.
+Profile v9 uses home namespace v2: `version`, `id`, `theme_id`, `sigil_id`, `unlocked_rooms` and `unlocked_styles`. Existing home IDs survive migration. A new profile receives an opaque ID only through its first valid, successfully saved city entry. Migration/loading neither invents an ID nor claims earned milestones. An identity can already be saved if subsequent physical arrival is obstructed; retry reuses it without a reward grant.
 
-The two-story Grand Foyer, staircases, balcony, floating chandelier/House Sigil, Home Management, additional home rooms, room unlocks and decoration choices are not implemented in this stage. The supplied Prismheart blueprint now permits the subsequent architectural work, but the current public city has not been rearranged to that plan.
+The first explicit migrated write retains exact original bytes in `.pre-v9.bak`, preserving earlier snapshots and the existing content-addressed backup behavior. Whole-profile validation, temporary-write verification and atomic replacement remain the save authority. Future or unavailable home data is protected read-only. Never delete a player profile to fix a scene/import error.
 
-Homes are local to the saved offline profile. Online visiting, guest permissions, guild creation, banking, live trading, real cosmetic purchases and ranked PvP are not introduced here. The existing Ring Exchange remains **DEMO / NOT LIVE**. No new items, loot tables, combat mechanics or dungeon rules are added by the home entrance.
+Read-only profiles cannot initialize or newly enter a home from the city. If storage becomes read-only while the player is already visiting a valid home, appearance saving is disabled, but existing Hall/home/city return routes remain usable without writing or allocating an identity. This does not allow a legacy Hall visit to create a home.
 
-Use the [Android checklist](personal-sanctuary-android.md) for the complete round trip, saved ownership comparison and manual visual review.
+The existing eight equipment stands, four relic pedestals, journals and Rootwarden display remain in the Collection Hall. Assignments reference the original owned item UIDs in `profile.displays`; travel and decoration do not transfer or duplicate possessions. Pets, companions, loadouts, enhancements, Depthmarks, talents, depth unlocks and encounter records remain in their established profile fields.
+
+## Limits and next stages
+
+The foyer uses static architecture batching, one environment, one directional key and bounded ambience. Low/Medium/High, reduced motion and ambient density remain available. Native headless checks cannot establish rendered art quality, Android draw calls, touch comfort or sustained 30/60 FPS. Follow the [Android checklist](personal-sanctuary-android.md) for rendered and physical-device acceptance.
+
+The Trophy Hall expansion, pet display habitat, Armory, other connected rooms, further decorations and city/sky/landscape overhaul remain later stages. This local profile home has no online visitors, guest permissions, bank, guild creation, live market or real billing. Ring Exchange remains **DEMO / NOT LIVE**. No new combat, loot or dungeon rules are introduced by the foyer.

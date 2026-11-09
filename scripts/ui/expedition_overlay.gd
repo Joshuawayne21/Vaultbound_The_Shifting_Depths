@@ -74,6 +74,7 @@ var social_snapshot: Dictionary = {}
 var chat_panel: Control
 var social_panel: Control
 var pet_panel: Control
+var home_panel: Control
 var pet_name_panel: Control
 var pet_preview: Control
 var demo_exchange: Node
@@ -131,6 +132,12 @@ func _ready() -> void:
 	add_child(chat_panel)
 	chat_panel.close_requested.connect(close_modal)
 	chat_panel.emotes_requested.connect(open_emotes)
+	home_panel = preload("res://scripts/ui/home_panel.gd").new()
+	home_panel.name = "HomePanel"
+	home_panel.input_owner = self
+	add_child(home_panel)
+	home_panel.close_requested.connect(close_modal)
+	home_panel.pointers_canceled.connect(_retain_home_pointer_tails)
 	pet_panel = preload("res://scripts/ui/pet_panel.gd").new()
 	pet_panel.name = "PetPanel"
 	add_child(pet_panel)
@@ -338,6 +345,7 @@ func open_city_information(kind: StringName, context: Dictionary) -> void:
 
 func bind_progression_session(session: Node) -> void:
 	progression_session = session
+	if is_instance_valid(home_panel): home_panel.bind_session(session)
 	if is_instance_valid(pet_panel): pet_panel.bind_session(session)
 	if is_instance_valid(pet_name_panel): pet_name_panel.bind_session(session)
 	if is_instance_valid(rpg_panel):
@@ -349,6 +357,10 @@ func bind_progression_session(session: Node) -> void:
 
 
 func open_service(kind: StringName, context: Dictionary = {}) -> void:
+	if kind == &"home":
+		if mode not in [&"none", &"home"] or not is_instance_valid(progression_session): return
+		if _open_modal(&"home") and mode == &"home": home_panel.open_panel()
+		return
 	if kind == &"pets":
 		if mode not in [&"none", &"pets"] or not is_instance_valid(progression_session): return
 		if _open_modal(&"pets"): pet_panel.open_panel()
@@ -396,7 +408,7 @@ func apply_visual_settings(settings: Dictionary) -> void:
 		var receiver := _native_panel()
 		_cancel_native_pointers()
 		receiver.cancel_for_focus_loss()
-	for panel: Control in [pet_panel, pet_name_panel, pet_preview, exchange_panel, exchange_text_panel]:
+	for panel: Control in [pet_panel, pet_name_panel, pet_preview, exchange_panel, exchange_text_panel, home_panel]:
 		if is_instance_valid(panel): panel.apply_visual_settings(settings)
 	queue_redraw()
 
@@ -642,6 +654,12 @@ func _open_modal(value: StringName) -> bool:
 		if generation != _modal_epoch: return false
 	if value != &"exchange_text" and is_instance_valid(exchange_text_panel) and exchange_text_panel.visible:
 		exchange_text_panel.hide_panel()
+	if mode == &"home" and value != &"home" and is_instance_valid(progression_session):
+		progression_session.close_service()
+		if generation != _modal_epoch: return false
+	if value != &"home" and is_instance_valid(home_panel) and home_panel.visible:
+		home_panel.hide_panel()
+		if generation != _modal_epoch: return false
 	if mode in [&"pets", &"pet_name"] and value not in [&"pets", &"pet_name"] and is_instance_valid(progression_session):
 		progression_session.close_service()
 		if generation != _modal_epoch: return false
@@ -678,10 +696,12 @@ func _open_modal(value: StringName) -> bool:
 func close_modal() -> void:
 	if mode == &"none":
 		return
+	var close_owner: WeakRef = weakref(self)
 	_modal_epoch += 1
 	var generation := _modal_epoch
 	var was_results := mode == &"results"
 	var was_pet := mode in [&"pets", &"pet_name"]
+	var was_home := mode == &"home"
 	var was_exchange := mode in [&"exchange", &"exchange_text"]
 	if is_instance_valid(_native_panel()):
 		_stop_native_panel()
@@ -693,6 +713,10 @@ func close_modal() -> void:
 	if generation != _modal_epoch: return
 	if is_instance_valid(exchange_text_panel) and exchange_text_panel.visible: exchange_text_panel.hide_panel()
 	if was_exchange and is_instance_valid(demo_exchange): demo_exchange.close_service()
+	if generation != _modal_epoch: return
+	if is_instance_valid(home_panel): home_panel.hide_panel()
+	if generation != _modal_epoch: return
+	if was_home and is_instance_valid(progression_session): progression_session.close_service()
 	if generation != _modal_epoch: return
 	if is_instance_valid(pet_panel): pet_panel.hide_panel()
 	if generation != _modal_epoch: return
@@ -715,9 +739,22 @@ func close_modal() -> void:
 	if is_instance_valid(source_surface):
 		source_surface.modal_blocked = false
 	modal_changed.emit(false)
+	# A close observer may synchronously retire this HUD or the entire Game.
+	var live_overlay := close_owner.get_ref() as Control
+	if not is_instance_valid(live_overlay) or live_overlay.is_queued_for_deletion(): return
 	if was_results:
 		results_closed.emit()
+		live_overlay = close_owner.get_ref() as Control
+		if not is_instance_valid(live_overlay) or live_overlay.is_queued_for_deletion(): return
 	queue_redraw()
+
+
+func _retain_home_pointer_tails(ids: Array[int]) -> void:
+	# The panel retires its input epoch before source/modal callbacks. Keep the
+	# abandoned fingers until release so they cannot become gameplay gestures.
+	for id: int in ids:
+		if id >= 0: _owned_touches[id] = true
+		else: _owned_mouse = true
 
 
 func _input(event: InputEvent) -> void:
@@ -751,6 +788,9 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		if is_instance_valid(exchange_panel) and exchange_panel.visible:
 			exchange_panel.handle_event(event)
+			return
+		if is_instance_valid(home_panel) and home_panel.visible:
+			home_panel.handle_event(event)
 			return
 		if is_instance_valid(pet_panel) and pet_panel.visible:
 			pet_panel.handle_event(event)

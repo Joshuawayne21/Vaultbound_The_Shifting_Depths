@@ -1,6 +1,6 @@
 extends Node3D
-## Ground-floor arrival foundation. Existing collection ownership and travel
-## remain in their existing systems; this scene builds no progression records.
+## Two-level single-height-field foyer. Progression owns every unlock/change;
+## this scene reads committed appearance and retains existing travel contracts.
 
 const Architecture = preload("res://scripts/world/architecture.gd")
 const Dressing = preload("res://scripts/visual/sanctuary_dressing.gd")
@@ -11,6 +11,10 @@ const IVORY = preload("res://resources/materials/home_ivory.tres")
 const FLOOR = preload("res://resources/materials/home_floor.tres")
 const ROYAL_BLUE = preload("res://resources/materials/home_royal_blue.tres")
 const WINDOW = preload("res://resources/materials/home_window.tres")
+const Layout = preload("res://scripts/home/home_foyer_layout.gd")
+const Builder = preload("res://scripts/home/home_foyer_builder.gd")
+const HomeStyle = preload("res://scripts/home/home_visual_style.gd")
+const Station = preload("res://scripts/home/home_management_station.gd")
 const ENTRY_IDS := [&"default", &"from_sanctuary", &"from_trophy_hall"]
 # Match the existing player/companion scene capsules and VaultParty formation.
 # Arrival tests independently compare these checks with the actual actor shapes.
@@ -22,21 +26,46 @@ const FORMATION_TRAIL := 2.2
 var display_name := "PERSONAL SANCTUARY"
 var objective := "Welcome home · Visit the Trophy Hall or return to the city"
 var _floor_body: StaticBody3D
+var _management_station: Node3D
+var _session: Node
+var _palette: Dictionary = {}
+var _sigil_holder: Node3D
+var _sigil_forms: Dictionary = {}
+var _sigil_material: StandardMaterial3D
+var _chandelier: Node3D
+var _motion_scale := 1.0
+var _animation_time := 0.0
+var _last_theme := ""
+var _last_sigil := ""
 
 func _ready() -> void:
+	add_to_group("visual_quality")
 	var kit := Architecture.new(self)
-	kit.palette["light_stone"] = IVORY
-	kit.palette["stone"] = FLOOR
-	kit.palette["cloth"] = ROYAL_BLUE
-	kit.palette["path"] = ROYAL_BLUE
-	kit.palette["window"] = WINDOW
+	# Mutable themes never tint shared cached world/item materials.
+	kit.palette["gold"] = kit.palette.gold.duplicate()
+	kit.palette["light_stone"] = IVORY.duplicate()
+	kit.palette["stone"] = FLOOR.duplicate()
+	kit.palette["cloth"] = ROYAL_BLUE.duplicate()
+	kit.palette["path"] = kit.palette.cloth
+	kit.palette["window"] = WINDOW.duplicate()
+	_palette = kit.palette
 	_build_environment()
-	_build_floor_and_shell(kit)
-	_build_wall_details(kit)
-	_build_sigil(kit)
+	_floor_body = Builder.build(self, kit)
+	_build_floor_sigil(kit)
+	_build_floating_sigil()
+	_build_chandelier(kit)
+	_build_management_station(kit)
 	_build_portals()
-	Style.add_ambience(self, &"hall", Vector3(20, 3.5, 18), 621)
-	Batcher.bake(self, 8.0)
+	Style.add_ambience(self, &"hall", Vector3(20, 5, 20), 621)
+	_session = get_node_or_null("/root/ExpeditionSession")
+	if is_instance_valid(_session):
+		_session.changed.connect(_on_profile_changed)
+	_refresh_saved_appearance()
+	# The enclosed foyer benefits from slightly larger static batches.
+	# Keep cells local to each wing; collision and animated art stay independent.
+	Batcher.bake(self, 12.0)
+	var settings := get_node_or_null("/root/VisualSettings")
+	if settings != null: apply_visual_settings(settings.snapshot())
 
 func _build_environment() -> void:
 	var environment := Style.apply_environment(self, &"hall")
@@ -50,64 +79,7 @@ func _build_environment() -> void:
 	key.light_energy = 0.95
 	key.rotation_degrees = Vector3(-56, -28, 0)
 
-func _build_floor_and_shell(kit: Architecture) -> void:
-	var floor_mesh := kit.box(Vector3(0, -0.3, 0), Vector3(30, 0.6, 28), "stone", true)
-	floor_mesh.name = "FoyerFloor"
-	_floor_body = floor_mesh.get_child(0) as StaticBody3D
-	_floor_body.name = "ArrivalFloorBody"
-	# Broad paths stay at y=0. There is no stacked floor or implied upper route.
-	for side: float in [-1.0, 1.0]:
-		var wall := kit.box(Vector3(side * 14.7, 3.2, 0), Vector3(0.6, 6.4, 28), "light_stone", true)
-		wall.name = "WestWall" if side < 0 else "EastWall"
-		kit.box(Vector3(side * 14.62, 0.28, 0), Vector3(0.76, 0.56, 28), "dark_stone", true)
-		kit.box(Vector3(side * 14.62, 6.35, 0), Vector3(0.76, 0.22, 28), "gold", true)
-		var end_wall := kit.box(Vector3(0, 3.2, side * 13.7), Vector3(28.8, 6.4, 0.6), "light_stone", true)
-		end_wall.name = "NorthWall" if side < 0 else "SouthWall"
-		kit.box(Vector3(0, 0.28, side * 13.62), Vector3(28.8, 0.56, 0.76), "dark_stone", true)
-		kit.box(Vector3(0, 6.35, side * 13.62), Vector3(28.8, 0.22, 0.76), "gold", true)
-		for z: float in [-8.0, 0.0, 8.0]:
-			var column := Node3D.new()
-			column.name = ("West" if side < 0 else "East") + "Pilaster_%d" % int(z + 8)
-			column.position = Vector3(side * 13.35, 0, z)
-			add_child(column)
-			kit.box(Vector3(0, 0.16, 0), Vector3(1.2, 0.32, 1.2), "dark_stone", true, column)
-			kit.cylinder(Vector3(0, 2.98, 0), 0.43, 5.64, "light_stone", true, 10, column)
-			kit.box(Vector3(0, 5.86, 0), Vector3(1.2, 0.24, 1.2), "gold", true, column)
-			kit.box(Vector3(0, 6.08, 0), Vector3(1.4, 0.20, 1.4), "light_stone", true, column)
-	# Low inlaid runners and borders are visual only; the native floor stays flat.
-	for z in range(-11, 12, 2):
-		kit.box(Vector3(0, 0.012, z), Vector3(4.4, 0.018, 1.92), "path")
-		for side: float in [-1.0, 1.0]:
-			kit.box(Vector3(side * 2.25, 0.025, z), Vector3(0.055, 0.012, 1.92), "gold")
-	for side: float in [-1.0, 1.0]:
-		kit.box(Vector3(side * 9.8, 0.012, 0), Vector3(0.045, 0.018, 23.8), "gold")
-
-func _build_wall_details(kit: Architecture) -> void:
-	var art := Dressing.new(self, kit.palette)
-	for side: float in [-1.0, 1.0]:
-		for z: float in [-4.0, 4.0]:
-			# Glazed reliefs sit on existing solid walls, not inaccessible doors.
-			var at := Vector3(side * 14.35, 3.1, z)
-			art.box(at, Vector3(0.055, 3.1, 2.2), "dark_stone")
-			art.box(at + Vector3(-side * 0.035, 0, 0), Vector3(0.035, 2.84, 1.92), "window")
-			for offset: float in [-1.1, 0.0, 1.1]:
-				art.box(at + Vector3(-side * 0.065, 0, offset), Vector3(0.04, 3.14, 0.055), "gold")
-			for offset: float in [-1.58, 1.58]:
-				art.box(at + Vector3(-side * 0.065, offset, 0), Vector3(0.04, 0.055, 2.25), "gold")
-		for z: float in [-11.8, 11.8]:
-			art.fern(Vector3(side * 12.6, 0.04, z), 1.0, z)
-			art.blossom(Vector3(side * 12.35, 0.25, z), 1.1)
-		for x: float in [-8.0, 8.0]:
-			art.box(Vector3(x, 3.5, side * 13.34), Vector3(1.6, 3.4, 0.06), "cloth")
-			art.box(Vector3(x, 5.23, side * 13.28), Vector3(1.9, 0.12, 0.12), "gold")
-			art.facet(Vector3(x, 3.7, side * 13.24), Vector3(0.52, 1.1, 0.06), "gold")
-			art.facet(Vector3(x, 3.7, side * 13.18), Vector3(0.24, 0.55, 0.05), "crystal")
-	art.flush("FoyerRelief")
-	var welcome := kit.label("PERSONAL SANCTUARY", Vector3(0, 5.65, -13.2), 35, Color("eadab0"))
-	welcome.name = "FoyerWelcome"
-	welcome.pixel_size = 0.005
-
-func _build_sigil(kit: Architecture) -> void:
+func _build_floor_sigil(kit: Architecture) -> void:
 	kit.cylinder(Vector3(0, 0.035, 0), 3.2, 0.025, "dark_stone", false, 48)
 	kit.ring(Vector3(0, 0.055, 0), 3.05, 3.12, "gold")
 	kit.ring(Vector3(0, 0.056, 0), 2.4, 2.44, "crystal")
@@ -119,6 +91,173 @@ func _build_sigil(kit: Architecture) -> void:
 	art.box(Vector3(0, 0.062, 0), Vector3(1.42, 0.012, 1.42), "gold", Basis(Vector3.UP, PI / 4.0))
 	art.box(Vector3(0, 0.077, 0), Vector3(1.14, 0.012, 1.14), "crystal", Basis(Vector3.UP, PI / 4.0))
 	art.flush("FoyerSigil")
+
+func _build_management_station(kit: Architecture) -> void:
+	var station := Station.new()
+	station.name = "HomeManagementStation"
+	station.position = Vector3(-3.1, 0, 1.2)
+	station.rotation.y = PI / 2.0
+	if not station.configure(self):
+		station.free()
+		return
+	_management_station = station
+	add_child(station)
+	kit.cylinder(Vector3(0, 0.1, 0), 0.58, 0.2, "dark_stone", true, 10, station)
+	kit.cylinder(Vector3(0, 0.6, 0), 0.28, 1.0, "light_stone", true, 10, station)
+	kit.box(Vector3(0, 1.13, 0), Vector3(1.0, 0.12, 0.7), "gold", true, station)
+	kit.box(Vector3(0, 1.21, 0), Vector3(0.86, 0.05, 0.57), "window", false, station)
+
+func home_management_station() -> Node3D:
+	return _management_station if is_instance_valid(_management_station) else null
+
+func get_companion_navigation_profile() -> Dictionary:
+	# This world uses an identity root. There is no traversable lower floor under
+	# a gallery: solid plinths retain the existing single-height-field contract.
+	return {"mode": &"terraced_city", "floor_min": global_position.y, "floor_max": global_position.y + Layout.UPPER_HEIGHT}
+
+func get_companion_navigation_graph() -> Dictionary:
+	var graph := Layout.navigation_graph()
+	var points: PackedVector3Array = graph.points
+	for index in range(points.size()): points[index] = to_global(points[index])
+	graph.points = points
+	return graph
+
+func _build_floating_sigil() -> void:
+	_sigil_holder = Node3D.new()
+	_sigil_holder.name = "CentralHouseSigil"
+	_sigil_holder.position = Vector3(0, 6.8, 0)
+	_sigil_holder.rotation.y = PI / 4.0
+	_sigil_holder.set_meta("dynamic_visual", true)
+	add_child(_sigil_holder)
+	_sigil_material = StandardMaterial3D.new()
+	_sigil_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_sigil_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_sigil_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_sigil_material.albedo_color = Color(0.5, 0.9, 1.0, 0.43)
+	# This is a translucent hologram, not opaque structure: no body or light.
+	for id: String in HomeStyle.SIGILS:
+		var node := MeshInstance3D.new()
+		node.name = String(id).to_pascal_case()
+		node.mesh = _motif_mesh(HomeStyle.sigil_outline(id))
+		node.material_override = _sigil_material
+		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		node.visible = false
+		_sigil_holder.add_child(node)
+		_sigil_forms[id] = node
+	var ring := TorusMesh.new()
+	ring.inner_radius = 1.65
+	ring.outer_radius = 1.72
+	ring.rings = 24
+	ring.ring_segments = 4
+	for index in range(2):
+		var node := MeshInstance3D.new()
+		node.name = "HologramOrbit%d" % index
+		node.mesh = ring
+		node.material_override = _sigil_material
+		node.rotation_degrees = Vector3(28 if index == 0 else -28, 0, 18 if index == 0 else -18)
+		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_sigil_holder.add_child(node)
+
+func _motif_mesh(outline: PackedVector2Array) -> ArrayMesh:
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for index in range(outline.size() - 1):
+		var a := outline[index] * 1.3
+		var b := outline[index + 1] * 1.3
+		var normal := Vector2(-(b - a).y, (b - a).x).normalized() * 0.045
+		var corners := [a - normal, b - normal, b + normal, a + normal]
+		for corner: int in [0, 1, 2, 0, 2, 3]:
+			var point: Vector2 = corners[corner]
+			surface.set_normal(Vector3.FORWARD)
+			surface.add_vertex(Vector3(point.x, point.y, 0))
+	return surface.commit()
+
+func _build_chandelier(kit: Architecture) -> void:
+	_chandelier = Node3D.new()
+	_chandelier.name = "FoyerChandelier"
+	_chandelier.position = Vector3(0, 20.5, 0)
+	_chandelier.set_meta("dynamic_visual", true)
+	add_child(_chandelier)
+	kit.ring(Vector3.ZERO, 1.9, 2.05, "gold", _chandelier)
+	kit.ring(Vector3(0, 1.1, 0), 0.65, 0.74, "gold", _chandelier)
+	for index in range(8):
+		var angle := float(index) * TAU / 8.0
+		var at := Vector3(sin(angle) * 1.95, -0.35, cos(angle) * 1.95)
+		kit.cylinder(at, 0.045, 0.7, "gold", false, 6, _chandelier)
+		kit.cone(at + Vector3.DOWN * 0.55, 0.18, 0.65, "crystal", _chandelier)
+	var blocker := StaticBody3D.new()
+	blocker.name = "ChandelierCameraOccluder"
+	blocker.position = Vector3(0, 20.5, 0)
+	blocker.collision_layer = 8
+	blocker.collision_mask = 0
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(4.5, 3.4, 4.5)
+	var collider := CollisionShape3D.new()
+	collider.shape = shape
+	blocker.add_child(collider)
+	add_child(blocker)
+
+func apply_visual_settings(settings: Dictionary) -> void:
+	_motion_scale = clampf(float(settings.get("decorative_motion_scale", 0.0 if settings.get("reduced_motion", false) else 1.0)), 0.0, 1.0)
+	if is_instance_valid(_sigil_material):
+		var color := _sigil_material.albedo_color
+		color.a = 0.25 if bool(settings.get("reduced_effects", false)) else 0.43
+		_sigil_material.albedo_color = color
+
+func _process(delta: float) -> void:
+	if _motion_scale <= 0.0 or not is_visible_in_tree(): return
+	_animation_time += minf(maxf(delta, 0.0), 0.1) * _motion_scale
+	if is_instance_valid(_sigil_holder):
+		_sigil_holder.position.y = 6.8 + sin(_animation_time * 0.8) * 0.12
+		_sigil_holder.rotation.y = PI / 4.0 + sin(_animation_time * 0.25) * 0.16
+	if is_instance_valid(_chandelier):
+		_chandelier.position.y = 20.5 + sin(_animation_time * 0.4) * 0.045
+		_chandelier.rotation.y = sin(_animation_time * 0.18) * 0.035
+
+func _on_profile_changed(_data: Dictionary) -> void:
+	_refresh_saved_appearance()
+
+func _refresh_saved_appearance() -> void:
+	if not is_inside_tree() or is_queued_for_deletion(): return
+	if is_instance_valid(_session) and _session.has_method("home_snapshot"):
+		apply_home_presentation(_session.home_snapshot())
+		_refresh_room_plaques()
+	else:
+		apply_home_presentation({"theme_id": "royal_azure", "sigil_id": "vault_diamond"})
+
+func _refresh_room_plaques() -> void:
+	# Read-only progress display. The catalog and Session alone own eligibility;
+	# a claimed milestone never turns an unfinished door into a destination.
+	if not is_instance_valid(_session) or not _session.has_method("home_management_snapshot"): return
+	var snapshot: Dictionary = _session.home_management_snapshot()
+	for row: Dictionary in snapshot.get("rooms", []):
+		var frame := get_node_or_null("FutureDoor_" + String(row.get("id", "")))
+		if frame == null: continue
+		var plaque := frame.get_node_or_null("RequirementPlaque") as Label3D
+		if plaque == null: continue
+		var status := "MILESTONE EARNED" if bool(row.get("unlocked", false)) else "MILESTONE READY" if bool(row.get("eligible", false)) else "LOCKED"
+		plaque.text = "%s\n%s · %s\n%s · NOT YET OPEN" % [String(row.get("label", "Room")).to_upper(), String(row.get("requirement", "")), String(row.get("progress", "")), status]
+
+func apply_home_presentation(snapshot: Dictionary) -> void:
+	var theme := String(snapshot.get("theme_id", "royal_azure"))
+	var sigil := String(snapshot.get("sigil_id", "vault_diamond"))
+	if not HomeStyle.THEMES.has(theme): theme = "royal_azure"
+	if sigil not in HomeStyle.SIGILS: sigil = "vault_diamond"
+	if theme != _last_theme:
+		var colors := HomeStyle.theme_colors(theme)
+		for key: String in {"light_stone": "ivory", "stone": "floor", "cloth": "cloth", "window": "window", "gold": "gold"}:
+			var source: String = {"light_stone": "ivory", "stone": "floor", "cloth": "cloth", "window": "window", "gold": "gold"}[key]
+			var material := _palette[key] as StandardMaterial3D
+			material.albedo_color = colors[source]
+			if material.emission_enabled: material.emission = colors[source]
+		if is_instance_valid(_sigil_material):
+			var color: Color = colors.hologram
+			color.a = _sigil_material.albedo_color.a
+			_sigil_material.albedo_color = color
+		_last_theme = theme
+	if sigil != _last_sigil:
+		for id: String in _sigil_forms: _sigil_forms[id].visible = id == sigil
+		_last_sigil = sigil
 
 func _build_portals() -> void:
 	var return_portal := Portal.instantiate()

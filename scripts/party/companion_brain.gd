@@ -114,7 +114,8 @@ func _decide() -> void:
 	if order == &"retreat":
 		actor.select_target(null)
 		actor.combat.release_controls()
-		_go_to(party.formation_position(actor), &"retreat", 1.0)
+		var formation: Vector3 = actor.navigator.formation_destination(party.leader.global_position, party.formation_position(actor))
+		_go_to(formation, &"retreat", 1.0)
 		return
 	if order == &"revive":
 		if _try_revive(true):
@@ -375,7 +376,8 @@ func _hold_or_follow(order: StringName) -> void:
 		return
 	var distance: float = actor.global_position.distance_to(actor.party.leader.global_position)
 	var next_state: StringName = &"return_to_party" if distance > 11.0 else &"follow" if distance > 3.5 else &"formation"
-	_go_to(actor.party.formation_position(actor), next_state, 0.8)
+	var formation: Vector3 = actor.navigator.formation_destination(actor.party.leader.global_position, actor.party.formation_position(actor))
+	_go_to(formation, next_state, 0.8)
 
 func _go_to(point: Vector3, next_state: StringName, stopping_distance: float) -> void:
 	destination = point

@@ -63,6 +63,8 @@ var _issued_content_plan: Dictionary = {}
 var _pending_encounters: Dictionary = {}
 var _completed_early_return: Dictionary = {}
 var _home_preparing := false
+var _home_mutating := false
+var _home_quotes: Dictionary = {}
 
 func _ready() -> void:
 	profile = store.load_profile()
@@ -1081,6 +1083,129 @@ func _wear_equipped(candidate: Dictionary, amount: int) -> void:
 		if not entry.is_empty():
 			entry.durability = maxi(0, int(entry.durability) - amount)
 
+func _home_service_source_valid(source: Node3D, actor: Node) -> bool:
+	if active or _location != &"personal_sanctuary" or actor != _player or not is_instance_valid(actor) or not actor is VaultPlayer \
+		or not actor.is_inside_tree() or actor.is_queued_for_deletion() or actor.downed or actor.eliminated or not _actor_ready(): return false
+	if not is_instance_valid(_world) or not _world.is_inside_tree() or _world.is_queued_for_deletion() \
+		or _world.get_script() == null or _world.get_script().resource_path != "res://scripts/home/personal_sanctuary.gd": return false
+	var game := actor.get_parent()
+	if not is_instance_valid(game) or game.get_script() == null or game.get_script().resource_path != "res://scripts/systems/game.gd" \
+		or not game.is_inside_tree() or game.is_queued_for_deletion() or game.get("transitioning") \
+		or not bool(game.get("_application_focused")) \
+		or game.get("player") != actor or game.get("active_world") != _world or game.get("current_location") != _location \
+		or _world.get_parent() != game.get("world_root") or _world.get_viewport() != actor.get_viewport() \
+		or _world.get_world_3d() != actor.get_world_3d(): return false
+	if not is_instance_valid(source) or not source.is_inside_tree() or source.is_queued_for_deletion() \
+		or not source.is_visible_in_tree() or not _world.is_ancestor_of(source) \
+		or source.get_script() == null or source.get_script().resource_path != "res://scripts/home/home_management_station.gd" \
+		or not _world.has_method("home_management_station") or _world.home_management_station() != source \
+		or source.get_viewport() != actor.get_viewport() or source.get_world_3d() != actor.get_world_3d(): return false
+	return HomeProgress.valid_id(home_snapshot().get("id"), false) \
+		and actor.global_position.distance_to(source.global_position) <= float(source.get("interaction_radius")) \
+		and _service_visible(source)
+
+func open_home_service(source: Node3D, actor: Node = null) -> bool:
+	if actor == null: actor = _player
+	if _home_mutating or not _home_service_source_valid(source, actor) or not actor.controls_enabled or not InputHub.controls_enabled: return false
+	close_service()
+	_service = source
+	_service_kind = &"home"
+	ui_requested.emit(&"home", home_management_snapshot())
+	return true
+
+func home_management_snapshot() -> Dictionary:
+	var result := HomeProgress.snapshot(profile)
+	if result.is_empty(): return {}
+	result.read_only = store.read_only
+	var available := _service_kind == &"home" and _home_service_source_valid(_service, _player)
+	result.service_available = available and not store.read_only
+	# Returning through an existing scene route does not write secured progress.
+	result.navigation_available = available and not _home_mutating
+	return result
+
+func home_navigation_status(route_id: StringName, source: Node3D, actor: Node) -> Dictionary:
+	var denied := {"ok": false, "destination": &"", "entry_id": &"", "reason": "Approach your Home Management lectern to travel."}
+	# Pure admission is intentionally usable after the trusted Game closes the
+	# modal and clears _service. It never grants a general travel capability.
+	if _home_mutating or not _home_service_source_valid(source, actor): return denied
+	if route_id == &"sanctuary":
+		return {"ok": true, "destination": &"sanctuary", "entry_id": &"from_hall", "reason": ""}
+	if route_id == &"trophy_hall":
+		var home := home_snapshot()
+		var definition: Dictionary = HomeProgress.CATALOG.rooms[HomeProgress.CATALOG.ROOM_IDS.find("trophy_hall")]
+		if "trophy_hall" in home.unlocked_rooms and bool(definition.available) and definition.destination == "collection_hall":
+			return {"ok": true, "destination": &"collection_hall", "entry_id": &"from_home", "reason": ""}
+	denied.reason = "That room is not available from Home Management."
+	return denied
+
+func request_home_navigation(route_id: StringName) -> bool:
+	if _home_mutating or _service_kind != &"home": return false
+	var admitted := home_navigation_status(route_id, _service, _player)
+	if not bool(admitted.ok): return false
+	# Nodes and destination mapping come from the current canonical service,
+	# never panel-supplied identities or unchecked destination dictionaries.
+	var game := _player.get_parent()
+	return bool(game.request_home_navigation(_service, _player, route_id))
+
+func _home_action_error() -> String:
+	if store.read_only: return "Home management cannot save while secured progress is read-only."
+	if _service_kind != &"home" or not _home_service_source_valid(_service, _player): return "Approach your Home Management lectern to make changes."
+	if VaultProfileStore.normalize(profile).is_empty(): return "Existing home progress could not be validated. No changes were made."
+	return ""
+
+func quote_home_action(action: StringName, arguments: Dictionary) -> Dictionary:
+	if _home_mutating: return {"ok": false, "error": "A home change is already being completed."}
+	var error := _home_action_error()
+	if not error.is_empty(): return {"ok": false, "error": error}
+	var preview := HomeProgress.preview(profile, action, arguments)
+	if not bool(preview.get("ok", false)): return preview
+	_quote_sequence += 1
+	var request_id := "home_%d_%d_%d" % [int(profile.revision), Time.get_ticks_usec(), _quote_sequence]
+	_home_quotes[request_id] = {"action": action, "arguments": arguments.duplicate(true), "revision": int(profile.revision),
+		"source": _service.get_instance_id(), "world": _world.get_instance_id(), "catalog_version": int(HomeProgress.CATALOG.version)}
+	if _home_quotes.size() > 24: _home_quotes.erase(_home_quotes.keys()[0])
+	return {"ok": true, "request_id": request_id, "expected_revision": int(profile.revision), "preview": preview.duplicate(true)}
+
+func cancel_home_action(confirmation: Dictionary) -> bool:
+	return _home_quotes.erase(String(confirmation.get("request_id", "")))
+
+func commit_home_action(confirmation: Dictionary) -> bool:
+	if _home_mutating: return false
+	var request_id := String(confirmation.get("request_id", ""))
+	if not _home_quotes.has(request_id): return false
+	var trusted: Dictionary = _home_quotes[request_id]
+	_home_quotes.erase(request_id)
+	_home_mutating = true
+	var accepted := _commit_home_action(trusted)
+	if is_instance_valid(self): _home_mutating = false
+	return accepted
+
+func _commit_home_action(trusted: Dictionary) -> bool:
+	var error := _home_action_error()
+	if not error.is_empty():
+		notice.emit(error)
+		return false
+	if trusted.source != _service.get_instance_id() or trusted.world != _world.get_instance_id() \
+		or int(trusted.catalog_version) != int(HomeProgress.CATALOG.version): return false
+	var plan := HomeProgress.plan(profile, trusted.action, trusted.arguments, int(trusted.revision))
+	if not bool(plan.get("ok", false)):
+		notice.emit(String(plan.get("error", "Home change unavailable.")))
+		return false
+	if not bool(plan.changed): return true
+	if not store.save_profile(plan.profile):
+		storage_error = store.last_error
+		notice.emit("Could not save home changes. Your appearance and progress were preserved. " + storage_error)
+		return false
+	profile = plan.profile
+	storage_error = ""
+	_quotes.clear()
+	_pet_quotes.clear()
+	_home_quotes.clear()
+	var revision := int(profile.revision)
+	_emit_changed()
+	if is_instance_valid(self) and int(profile.revision) == revision: notice.emit(String(plan.message))
+	return true
+
 func home_snapshot() -> Dictionary:
 	return HomeProgress.normalize(profile.get("home"))
 
@@ -1118,13 +1243,21 @@ func prepare_home_entry(source_world: Node3D, actor: Node) -> bool:
 func _prepare_home_entry(source_world: Node3D, actor: Node) -> bool:
 	if not _home_entry_source_valid(source_world, actor):
 		return false
+	var validated := VaultProfileStore.normalize(profile)
+	if validated.is_empty():
+		return false
+	var home: Dictionary = validated.home
 	if store.read_only:
+		# A Hall reached from this already allocated home may return without
+		# changing any saved state. The canonical source guard above has checked
+		# the actual Game, actor, Hall script and private home-origin route.
+		# Sanctuary entry, legacy Hall visits and identity creation stay denied.
+		if _location == &"collection_hall" and source_world.is_home_origin_visit() \
+			and HomeProgress.valid_id(home.id, false) and home.id == home_snapshot().get("id"):
+			return true
 		storage_error = store.last_error
 		notice.emit("Home entry is unavailable while secured progress is read-only. " + storage_error)
 		return false
-	if VaultProfileStore.normalize(profile).is_empty():
-		return false
-	var home := home_snapshot()
 	if not String(home.id).is_empty():
 		return true
 	# Only a real Sanctuary entry can allocate; Hall returns reuse an existing ID.
@@ -1153,6 +1286,7 @@ func bind_game_context(player: Node, location: StringName, world: Node3D = null)
 	close_service()
 
 func close_service() -> void:
+	_home_quotes.clear()
 	_service = null
 	_service_kind = &""
 	_service_context.clear()

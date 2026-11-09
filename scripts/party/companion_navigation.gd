@@ -244,6 +244,28 @@ func _refresh_context() -> void:
 		_cache.signature = signature
 		_replan_remaining = 0.0
 
+## Resolve a formation offset on the leader's continuous walked surface.
+## A projected offset behind a retaining wall must not send a ground follower
+## to an upper balcony. The brain receives this resolved target too, so settling
+## at it cannot falsely accumulate stuck time against an unreachable raw offset.
+## Called only at the existing brain decision interval, never each physics tick.
+func formation_destination(anchor: Vector3, desired: Vector3) -> Vector3:
+	if not _valid_context() or not anchor.is_finite() or not desired.is_finite(): return desired
+	_refresh_context()
+	if not _city_surface: return desired
+	var origin := _sample_floor(anchor)
+	if not origin.is_finite() or absf(origin.y - anchor.y) > 0.5: return desired
+	# Bounded shrink of the ordinary offset keeps the pair's left/right intent.
+	# Every accepted point is connected to the leader by the same floor/slope
+	# checks as walking; no upper-floor snap, new path search or relocation.
+	for fraction: float in [1.0, 0.75, 0.5, 0.25, 0.0]:
+		var grounded := _sample_floor(anchor.lerp(desired, fraction))
+		if not grounded.is_finite() or not _body_clear(grounded): continue
+		if _city_surface_points(origin, grounded).is_empty(): continue
+		if _crosses_danger(origin, grounded): continue
+		return grounded
+	return anchor
+
 func _route_goal(start: Vector3, destination: Vector3) -> Vector3:
 	if _city_surface:
 		return _city_route_goal(start, destination)

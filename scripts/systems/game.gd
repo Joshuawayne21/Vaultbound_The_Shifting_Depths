@@ -46,6 +46,8 @@ var _pet_presenter: WeakRef
 var _travel_retained_world: Node3D
 var _travel_serial := 0
 var _return_focus_suspend: Dictionary = {}
+# One pending Home Management request, invalidated by focus loss or a newer request.
+var _home_navigation_epoch := 0
 
 func _ready() -> void:
 	InputHub.controls_enabled = false
@@ -121,6 +123,7 @@ func _process(delta: float) -> void:
 func _notification(what: int) -> void:
 	if what in [NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED]:
 		_application_focused = false
+		_home_navigation_epoch += 1
 		_city_review_epoch += 1
 		_city_portal_source = null
 		_city_portal_route.clear()
@@ -1012,6 +1015,90 @@ func _travel_if_context_current(destination: StringName, entry_id: StringName, r
 	if world != active_world or not is_instance_valid(world) or world.is_queued_for_deletion() or generation != ExpeditionSession.run_generation or was_active != ExpeditionSession.active:
 		return
 	change_location(destination, entry_id)
+
+func request_home_navigation(source: Node3D, actor: Node, route_id: StringName) -> bool:
+	# Session supplies its actual canonical lectern/player, never UI Node references
+	# or destination strings. Existing travel remains the sole world/party owner.
+	if not is_inside_tree() or is_queued_for_deletion() or transitioning or not _application_focused \
+		or current_location != &"personal_sanctuary" or not _modal_open or actor != player \
+		or not is_instance_valid(hud) or not hud.is_inside_tree() or hud.is_queued_for_deletion() or not is_instance_valid(hud.expedition_overlay) \
+		or not hud.expedition_overlay.is_inside_tree() or hud.expedition_overlay.is_queued_for_deletion() \
+		or not is_instance_valid(party) or not party.is_inside_tree() or party.is_queued_for_deletion() or ExpeditionSession.active:
+		return false
+	var overlay: Control = hud.expedition_overlay
+	var panel: Control = overlay.home_panel
+	if overlay.mode != &"home" or not is_instance_valid(panel) or not panel.is_inside_tree() or not panel.visible or panel.is_queued_for_deletion() \
+		or not bool(ExpeditionSession.home_management_snapshot().get("navigation_available", false)):
+		return false
+	var status: Dictionary = ExpeditionSession.home_navigation_status(route_id, source, actor)
+	if not bool(status.get("ok", false)): return false
+	_home_navigation_epoch += 1
+	var context := {"owner": weakref(self), "world": weakref(active_world), "source": weakref(source),
+		"actor": weakref(player), "party": weakref(party), "overlay": weakref(overlay), "panel": weakref(panel),
+		"route_id": route_id, "destination": status.destination, "entry_id": status.entry_id,
+		"home_id": String(ExpeditionSession.home_snapshot().id), "revision": int(ExpeditionSession.profile.revision),
+		"generation": int(ExpeditionSession.run_generation), "travel_serial": _travel_serial,
+		"request_epoch": _home_navigation_epoch, "modal_epoch": int(overlay._modal_epoch) + 1}
+	var request_owner: WeakRef = context.owner
+	hud.close_modals()
+	# Modal observers are synchronous and may replace or free this entire Game.
+	var live_game := request_owner.get_ref() as Node3D
+	if not is_instance_valid(live_game) or live_game.is_queued_for_deletion(): return false
+	if not live_game._home_navigation_context_valid(context):
+		live_game._home_navigation_expired(context)
+		return false
+	live_game._travel_from_home_management.call_deferred(context)
+	return true
+
+
+func _home_navigation_context_valid(context: Dictionary) -> bool:
+	if not is_inside_tree() or is_queued_for_deletion() or transitioning or _modal_open or not _application_focused \
+		or current_location != &"personal_sanctuary" or ExpeditionSession.active:
+		return false
+	for key: String in ["owner", "world", "source", "actor", "party", "overlay", "panel"]:
+		var reference := context.get(key) as WeakRef
+		var node := reference.get_ref() as Node if reference != null else null
+		if not is_instance_valid(node) or not node.is_inside_tree() or node.is_queued_for_deletion():
+			return false
+	var world := context.world.get_ref() as Node3D
+	var source := context.source.get_ref() as Node3D
+	var actor := context.actor.get_ref() as Node3D
+	var overlay := context.overlay.get_ref() as Control
+	var panel := context.panel.get_ref() as Control
+	if context.owner.get_ref() != self or world != active_world or actor != player or context.party.get_ref() != party \
+		or not is_instance_valid(hud) or not hud.is_inside_tree() or hud.is_queued_for_deletion() \
+		or hud.expedition_overlay != overlay or overlay.home_panel != panel \
+		or overlay.mode != &"none" or panel.visible or int(overlay._modal_epoch) != int(context.get("modal_epoch", -1)) \
+		or int(context.get("request_epoch", -1)) != _home_navigation_epoch or int(context.get("travel_serial", -1)) != _travel_serial \
+		or int(context.get("generation", -1)) != int(ExpeditionSession.run_generation) \
+		or int(context.get("revision", -1)) != int(ExpeditionSession.profile.revision) \
+		or String(context.get("home_id", "")) != String(ExpeditionSession.home_snapshot().get("id", "")) \
+		or not player.controls_enabled or not InputHub.controls_enabled:
+		return false
+	var status: Dictionary = ExpeditionSession.home_navigation_status(StringName(context.get("route_id", "")), source, actor)
+	return bool(status.get("ok", false)) and status.get("destination") == context.get("destination") \
+		and status.get("entry_id") == context.get("entry_id")
+
+
+func _home_navigation_expired(context: Dictionary) -> void:
+	if not is_inside_tree() or is_queued_for_deletion(): return
+	var reference := context.get("world") as WeakRef
+	if reference != null and reference.get_ref() == active_world and not transitioning and is_instance_valid(hud) \
+		and hud.is_inside_tree() and not hud.is_queued_for_deletion() and is_instance_valid(hud.expedition_overlay) \
+		and hud.expedition_overlay.is_inside_tree() and not hud.expedition_overlay.is_queued_for_deletion() \
+		and hud.expedition_overlay.mode == &"none":
+		hud.show_message("Home travel expired. Approach the lectern and choose the passage again.")
+
+
+func _travel_from_home_management(context: Dictionary) -> void:
+	# Repeat every source/lifetime check after the input/physics callback. A
+	# modal reopened and closed before this boundary still changes its epoch.
+	if not _home_navigation_context_valid(context):
+		_home_navigation_expired(context)
+		return
+	_home_navigation_epoch += 1 # Consume before existing travel emits callbacks.
+	change_location(StringName(context.destination), StringName(context.entry_id))
+
 
 func _on_respawn() -> void:
 	if not transitioning and current_location != &"":
