@@ -184,7 +184,7 @@ func get_prompt() -> String:
 		&"combat_arena": return "Enter the Proving Grounds"
 		&"rootbound_abyss": return "Begin a Rootbound Abyss expedition"
 		&"collection_hall": return "Enter your Collection Hall"
-		&"personal_sanctuary": return "Return to Personal Sanctuary" if entry_id in [&"from_trophy_hall", &"from_conservatory"] else "Enter your Personal Sanctuary"
+		&"personal_sanctuary": return "Return to Personal Sanctuary" if entry_id in [&"from_trophy_hall", &"from_conservatory", &"from_armory", &"from_companion_hall", &"from_relic_library", &"from_personal_chamber", &"from_wardrobe", &"from_rooftop_garden"] else "Enter your Personal Sanctuary"
 		&"dungeon": return "Return to the Sunken Vault" if entry_id == &"from_arena" else "Enter the Sunken Vault"
 	return "Use the passage"
 

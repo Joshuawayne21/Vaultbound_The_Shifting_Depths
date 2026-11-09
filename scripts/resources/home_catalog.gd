@@ -9,6 +9,7 @@ extends Resource
 const STYLE_IDS := ["royal_azure", "enchanted_forest", "runic_obsidian", "celestial_violet"]
 const SIGIL_IDS := ["vault_diamond", "root_crown", "runic_seal", "crystal_star"]
 const ROOM_IDS := ["foyer", "trophy_hall", "pet_conservatory", "armory", "companion_hall", "relic_library", "personal_chamber", "wardrobe", "rooftop_garden"]
+const ROOM_DESTINATIONS := ["personal_sanctuary", "collection_hall", "home_conservatory", "home_armory", "home_companion_hall", "home_relic_library", "home_personal_chamber", "home_wardrobe", "home_rooftop_garden"]
 const KINDS := ["home", "owned_pets", "completed", "cleared_depth", "level", "recruits", "abyss_explorer"]
 
 func valid() -> bool:
@@ -25,7 +26,7 @@ func valid() -> bool:
 		var row: Dictionary = rooms[index]
 		if not _keys(row, ["id", "label", "requirement", "kind", "minimum", "available", "destination"]) \
 			or row.id != ROOM_IDS[index] or not _rule(row) or not row.available is bool or not row.destination is String: return false
-		if row.available != (index < 3) or row.destination != ("personal_sanctuary" if index == 0 else "collection_hall" if index == 1 else "home_conservatory" if index == 2 else ""): return false
+		if not row.available or row.destination != ROOM_DESTINATIONS[index]: return false
 	return true
 
 func _rule(row: Dictionary) -> bool:

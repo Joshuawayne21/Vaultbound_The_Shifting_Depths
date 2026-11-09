@@ -318,11 +318,13 @@ static func _future_doors(root: Node3D, kit: Architecture) -> void:
 		var label: Label3D = local_kit.label(String(row.label) + "\nNOT YET OPEN", Vector3(0, 5.05, 0.2), 24, Color("d0d8e6"))
 		label.name = "RequirementPlaque"
 		label.pixel_size = 0.004
-		if row.id == "pet_conservatory":
-			var door := RoomDoor.new()
-			door.name = "ConservatoryDoor"
-			door.position = Vector3(0, 0, 0.35)
+		var door := RoomDoor.new()
+		door.name = "ConservatoryDoor" if row.id == "pet_conservatory" else "RoomDoor_" + String(row.id)
+		door.position = Vector3(0, 0, 0.35)
+		if door.configure(root, StringName(row.id)):
 			frame.add_child(door)
+		else:
+			door.free()
 
 static func _ornament(root: Node3D, kit: Architecture) -> void:
 	var art := Dressing.new(root, kit.palette)

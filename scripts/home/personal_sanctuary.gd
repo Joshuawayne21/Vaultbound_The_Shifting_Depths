@@ -15,7 +15,7 @@ const Layout = preload("res://scripts/home/home_foyer_layout.gd")
 const Builder = preload("res://scripts/home/home_foyer_builder.gd")
 const HomeStyle = preload("res://scripts/home/home_visual_style.gd")
 const Station = preload("res://scripts/home/home_management_station.gd")
-const ENTRY_IDS := [&"default", &"from_sanctuary", &"from_trophy_hall", &"from_conservatory"]
+const ENTRY_IDS := [&"default", &"from_sanctuary", &"from_trophy_hall", &"from_conservatory", &"from_armory", &"from_companion_hall", &"from_relic_library", &"from_personal_chamber", &"from_wardrobe", &"from_rooftop_garden"]
 # Match the existing player/companion scene capsules and VaultParty formation.
 # Arrival tests independently compare these checks with the actual actor shapes.
 const ACTOR_RADIUS := 0.34
@@ -24,7 +24,7 @@ const FORMATION_SIDE := 1.6
 const FORMATION_TRAIL := 2.2
 
 var display_name := "PERSONAL SANCTUARY"
-var objective := "Welcome home · Trophy Hall, Pet Conservatory and Home Management"
+var objective := "Welcome home · Nine connected rooms · Home Management"
 var _floor_body: StaticBody3D
 var _management_station: Node3D
 var _session: Node
@@ -238,7 +238,7 @@ func _refresh_room_plaques() -> void:
 		var status := "MILESTONE EARNED" if bool(row.get("earned", row.get("unlocked", false))) else "MILESTONE READY" if bool(row.get("eligible", false)) else "LOCKED"
 		if bool(snapshot.get("tester_access", false)) and bool(row.get("available", false)) and not bool(row.get("earned", false)):
 			status = "TEST ACCESS"
-		var implemented := String(row.get("id", "")) == "pet_conservatory"
+		var implemented := bool(row.get("implemented", false))
 		var availability := "ENTER · USE" if bool(row.get("available", false)) else "RECORD AT HOME MANAGEMENT" if implemented and bool(row.get("eligible", false)) else "LOCKED" if implemented else "NOT YET OPEN"
 		frame.set_meta("room_available", bool(row.get("available", false)))
 		plaque.text = "%s\n%s · %s\n%s · %s" % [String(row.get("label", "Room")).to_upper(), String(row.get("requirement", "")), String(row.get("progress", "")), status, availability]
@@ -282,6 +282,13 @@ func _build_portals() -> void:
 	add_child(trophy_portal)
 
 func get_spawn_transform(entry_id: StringName) -> Transform3D:
+	var ground_returns := {&"from_armory": Vector3(4.2, 0.15, -4), &"from_companion_hall": Vector3(-4.2, 0.15, 4), &"from_relic_library": Vector3(-4.2, 0.15, -4)}
+	if ground_returns.has(entry_id):
+		var at: Vector3 = ground_returns[entry_id]
+		return global_transform * Transform3D(Basis(Vector3.UP, PI / 2.0 if at.x > 0 else -PI / 2.0), at)
+	var upper_returns := {&"from_personal_chamber": -6.0, &"from_wardrobe": 0.0, &"from_rooftop_garden": 6.0}
+	if upper_returns.has(entry_id):
+		return global_transform * Transform3D(Basis(Vector3.UP, PI), Vector3(float(upper_returns[entry_id]), Layout.UPPER_HEIGHT + 0.15, -13.8))
 	if entry_id == &"from_conservatory":
 		return global_transform * Transform3D(Basis(Vector3.UP, PI / 2.0), Vector3(4.2, 0.15, 4))
 	if entry_id == &"from_trophy_hall":
@@ -319,7 +326,7 @@ func validate_home_arrival(entry_id: StringName) -> bool:
 			ray.exclude = excluded
 			ray.collide_with_areas = false
 			var hit := space.intersect_ray(ray)
-			if hit.is_empty() or hit.collider != _floor_body or Vector3(hit.normal).dot(Vector3.UP) < 0.98:
+			if hit.is_empty() or not _arrival_surface_valid(hit.collider, entry_id) or Vector3(hit.normal).dot(Vector3.UP) < 0.98:
 				return false
 			if absf(Vector3(hit.position).y - (spawn.origin.y - 0.15)) > 0.025:
 				return false
@@ -333,3 +340,12 @@ func validate_home_arrival(entry_id: StringName) -> bool:
 		if not space.intersect_shape(query, 1).is_empty():
 			return false
 	return true
+
+func _arrival_surface_valid(body: Object, entry_id: StringName) -> bool:
+	if entry_id not in [&"from_personal_chamber", &"from_wardrobe", &"from_rooftop_garden"]:
+		return body == _floor_body
+	# Only authored gallery floors and their coplanar upper landings support arrivals.
+	# Physics may return either collider where the original landing overlaps a gallery.
+	# Other props or retained sibling levels must never admit a transition.
+	if not body is StaticBody3D or body.get_parent() != self: return false
+	return body.name in [&"WestGalleryCollision", &"RearGalleryCollision", &"EastGalleryCollision", &"WestUpperLandingCollision", &"EastUpperLandingCollision"]

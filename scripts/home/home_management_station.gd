@@ -7,7 +7,7 @@ var _home: WeakRef
 func configure(home: Node3D) -> bool:
 	if is_inside_tree() or _home != null or not is_instance_valid(home) or home.is_queued_for_deletion():
 		return false
-	if home.get_script() == null or home.get_script().resource_path not in ["res://scripts/home/personal_sanctuary.gd", "res://scripts/home/pet_conservatory.gd"]:
+	if home.get_script() == null or home.get_script().resource_path not in ["res://scripts/home/personal_sanctuary.gd", "res://scripts/home/pet_conservatory.gd", "res://scripts/home/home_room.gd"]:
 		return false
 	_home = weakref(home)
 	return true

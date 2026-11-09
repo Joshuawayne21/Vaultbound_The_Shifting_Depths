@@ -121,7 +121,10 @@ func _touch_preview_and_scroll() -> void:
 	check(panel.selected_room == "rooftop_garden", "The last room milestone remains reachable through touch scrolling")
 	var text := ""
 	for row: Dictionary in panel.detail_lines(): text += String(row.text) + " "
-	check(text.contains("ROOM NOT OPEN") and not bool(panel._row("rooms", "rooftop_garden").available), "Earned future room milestone is explicitly unavailable, with no fabricated destination service")
+	var rooftop: Dictionary = panel._row("rooms", "rooftop_garden")
+	check(text.contains("EARNED · RECORD TO OPEN") and rooftop.implemented and rooftop.eligible
+		and not rooftop.earned and not rooftop.available and not panel.room_navigation_available(),
+		"Implemented rooftop explains its earned but unrecorded milestone and refuses premature navigation")
 	_tap(panel.tab_rect(0).get_center())
 
 func _record_and_apply() -> void:
@@ -142,8 +145,9 @@ func _record_and_apply() -> void:
 	var available := 0
 	for room: Dictionary in panel.data.rooms:
 		if bool(room.available): available += 1
-	check(available == 3 and game.active_world.get_node_or_null("TrophyHallDoor") != null \
-		and bool(panel._row("rooms", "pet_conservatory").available), "Recorded milestones open the implemented Pet Conservatory alongside the Foyer and Trophy Hall; remaining rooms stay sealed")
+	check(available == 9 and game.active_world.get_node_or_null("TrophyHallDoor") != null \
+		and panel.data.rooms.all(func(room: Dictionary) -> bool: return room.implemented and room.earned and not String(room.destination).is_empty()),
+		"Recorded earned milestones open all nine implemented home rooms without inventing progression")
 	if not _select("themes", "enchanted_forest") or not _select("sigils", "root_crown"): return
 	var saved := FileAccess.get_file_as_bytes(PATH)
 	_tap(panel.primary_rect().get_center())
@@ -208,10 +212,10 @@ func _navigation_cases() -> void:
 	var camera_mode: bool = game.camera_rig.is_isometric
 	if not _open_actual(): return
 	_tap(panel.tab_rect(1).get_center())
-	if not _select("rooms", "rooftop_garden"): return
+	if not _select("rooms", "foyer"): return
 	_tap(panel.primary_rect().get_center())
 	check(overlay.mode == &"home" and game.active_world == original_world and not panel.room_navigation_available(),
-		"A recorded but unbuilt room has no actionable navigation button")
+		"The implemented current foyer has no actionable self-navigation button")
 	# The request closes the real modal first, then crosses one deferred boundary.
 	_tap(panel.return_rect().get_center())
 	game._notification(MainLoop.NOTIFICATION_APPLICATION_FOCUS_OUT)

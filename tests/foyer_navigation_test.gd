@@ -266,10 +266,15 @@ func _lower_edge_orders() -> void:
 		route_phase = "lower edge heading " + str(heading)
 		var angle := float(heading) * TAU / 8.0
 		player._facing = Vector3(sin(angle), 0, cos(angle))
-		check(game.party.issue_command(&"follow" if heading % 2 == 0 else &"retreat"), "Lower-edge command accepts heading %d" % heading)
-		check(await _wait_for(func() -> bool: return _all_ground(), 8.0), "Followers remain on the leader's actual ground storey at heading %d" % heading)
-		# Keep observing after an initially successful predicate: the old projection
-		# bug could issue an upstairs detour only at a later decision interval.
+		var order: StringName = &"follow" if heading % 2 == 0 else &"retreat"
+		check(game.party.issue_command(order), "Lower-edge command accepts heading %d" % heading)
+		var transition := await _settle_lower_edge_formation(order, heading)
+		check(transition.ground and transition.recovery_unchanged, "Followers remain on the actual ground storey without recovery throughout heading %d" % heading)
+		check(transition.converged, "Followers regroup within five metres and stop in formation within eight seconds at heading %d" % heading)
+		# Retain the original 90-frame ground/six-metre invariant after actual
+		# settling. A new order has a reaction delay, and the retained Trophy Hall
+		# pillars can require a ground detour outside that radius while in transit.
+		# Proximity alone before the next decision cannot establish formation.
 		var stayed_ground := true
 		var reported: Dictionary = {}
 		for index in range(90):
@@ -285,3 +290,49 @@ func _lower_edge_orders() -> void:
 							"resolved_goal": actor.brain.destination, "path": str(actor.navigator.path)}))
 					stayed_ground = stayed_ground and within_ground
 		check(stayed_ground, "Highest-floor sampling cannot send a ground follower onto the rear gallery at heading %d" % heading)
+
+func _settle_lower_edge_formation(order: StringName, heading: int) -> Dictionary:
+	var maximum_reaction := 0.0
+	var peaks: Dictionary = {}
+	for actor: Node3D in actors:
+		if actor == player: continue
+		maximum_reaction = maxf(maximum_reaction, actor.data.decision_interval + actor.data.reaction_jitter)
+		peaks[actor.name] = actor.global_position.distance_to(player.global_position)
+	# The current Guardian/Mystic settings require 32 consecutive settled frames.
+	# Observe at least a full decision window plus the original 90-frame sample,
+	# so a delayed intention cannot make the previous heading look successful.
+	var stable_frames_needed := ceili(maximum_reaction * Engine.physics_ticks_per_second)
+	var minimum_observation_frames := stable_frames_needed + 90
+	var stable_frames := 0
+	var result := {"heading": heading, "elapsed_frames": 0, "peaks": peaks, "ground": true, "recovery_unchanged": true, "converged": false}
+	for index in range(8 * Engine.physics_ticks_per_second):
+		await physics_frame
+		_sample_motion()
+		result.elapsed_frames = index + 1
+		var settled := true
+		for actor: Node3D in actors:
+			if actor == player: continue
+			var distance: float = actor.global_position.distance_to(player.global_position)
+			peaks[actor.name] = maxf(float(peaks[actor.name]), distance)
+			result.ground = result.ground and actor.global_position.y < 0.3
+			result.recovery_unchanged = result.recovery_unchanged and actor.recovery_count == initial_recoveries[actor.name]
+			var speed := Vector2(actor.velocity.x, actor.velocity.z).length()
+			var offset: Vector3 = actor.global_position - actor.brain.destination
+			var stopping_distance := 1.0 if order == &"retreat" else 0.8
+			var frame_travel: float = actor.data.move_speed / float(Engine.physics_ticks_per_second)
+			settled = settled and distance < 5.0 and Vector2(offset.x, offset.z).length() <= stopping_distance + frame_travel \
+				and speed < 0.1 and not actor.brain.wants_movement and actor.brain.state == &"formation"
+		stable_frames = stable_frames + 1 if settled else 0
+		if index + 1 >= minimum_observation_frames and stable_frames >= stable_frames_needed:
+			result.converged = true
+			break
+	print("FOYER LOWER EDGE CONVERGENCE: ", JSON.stringify(result))
+	if not result.ground or not result.recovery_unchanged or not result.converged:
+		for actor: Node3D in actors:
+			if actor == player: continue
+			print("FOYER LOWER EDGE TRANSIT FAILURE: ", JSON.stringify({"heading": heading, "actor": actor.name,
+				"position": actor.global_position, "leader": player.global_position, "resolved_goal": actor.brain.destination,
+				"velocity": actor.velocity, "state": actor.brain.state, "moving": actor.brain.wants_movement,
+				"path": str(actor.navigator.path), "city_route": str(actor.navigator._city_route), "city_index": actor.navigator._city_route_index,
+				"recoveries": actor.recovery_count, "decision_remaining": actor.brain.decision_remaining, "rng_state": str(actor.brain._rng.state)}))
+	return result

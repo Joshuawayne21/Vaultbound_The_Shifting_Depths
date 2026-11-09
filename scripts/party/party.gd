@@ -115,8 +115,8 @@ func _on_profile_changed(_data: Dictionary) -> void:
 	_sync_roster()
 
 func recruit(id: String) -> bool:
-	if location != &"sanctuary" or _session == null or _session.active:
-		notice.emit("Recruit companions at the Sanctuary Tavern")
+	if not _recruitment_location_valid() or _session == null or _session.active:
+		notice.emit("Recruit companions at the Tavern or your Companion Hall")
 		return false
 	if members.has(id) or members.size() >= CAPACITY:
 		return false
@@ -127,8 +127,8 @@ func recruit(id: String) -> bool:
 	return true
 
 func dismiss(id: String) -> bool:
-	if location != &"sanctuary" or id == leader_id or not members.has(id):
-		notice.emit("Companions can be dismissed safely at the Tavern")
+	if not _recruitment_location_valid() or id == leader_id or not members.has(id):
+		notice.emit("Companions can be dismissed at the Tavern or your Companion Hall")
 		return false
 	var display := _member_name(id)
 	if not _session.set_companion_recruited(id, false):
@@ -138,8 +138,24 @@ func dismiss(id: String) -> bool:
 	return true
 
 func open_recruitment() -> void:
-	if location == &"sanctuary" and is_instance_valid(leader) and leader.health > 0.0:
+	if _recruitment_location_valid() and is_instance_valid(leader) and leader.health > 0.0:
 		recruitment_requested.emit()
+
+func _recruitment_location_valid() -> bool:
+	if location == &"sanctuary": return true # Retain the existing Tavern contract.
+	if location != &"home_companion_hall" or not is_instance_valid(_session) or _session.active or not _session.home_room_accessible(&"companion_hall") \
+		or not is_instance_valid(world) or not world.is_inside_tree() or world.is_queued_for_deletion() \
+		or world.get_script() == null or world.get_script().resource_path != "res://scripts/home/home_room.gd" \
+		or world.get("room_id") != "companion_hall" or not world.is_home_origin_visit() \
+		or world.home_identity() != String(_session.home_snapshot().get("id", "")) \
+		or not is_instance_valid(leader) or not leader.is_inside_tree() or leader.is_queued_for_deletion() \
+		or leader.health <= 0.0 or leader.downed or leader.eliminated or leader.combat.state != &"idle": return false
+	var game := get_parent()
+	return is_instance_valid(game) and game.get_script() != null and game.get_script().resource_path == "res://scripts/systems/game.gd" \
+		and game.is_inside_tree() and not game.is_queued_for_deletion() and game.party == self and game.player == leader \
+		and leader.get_parent() == game and game.active_world == world and game.current_location == location \
+		and world.get_parent() == game.world_root and not game.transitioning and game._application_focused \
+		and world.get_viewport() == game.get_viewport() and leader.get_viewport() == game.get_viewport()
 
 func enter_world(value: Node3D, destination: StringName) -> void:
 	world = value

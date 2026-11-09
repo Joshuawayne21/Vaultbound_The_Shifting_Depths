@@ -328,7 +328,10 @@ func detail_lines() -> Array[Dictionary]:
 			var enough := int(cost.get("owned", 0)) >= int(cost.get("required", 0))
 			_add_lines(lines, "%s: %d / %d" % [String(cost.get("label", cost.get("id", "Ingredient"))), int(cost.get("owned", 0)), int(cost.get("required", 0))], UI.IVORY if enough else UI.WARNING)
 		for requirement: Dictionary in recipe.get("requirements", []):
-			_add_lines(lines, "%s: %d / %d%s" % [String(requirement.get("label", "Achievement")), int(requirement.get("current", 0)), int(requirement.get("target", 0)), " · met" if bool(requirement.get("met", false)) else " · locked"], UI.TEAL if bool(requirement.get("met", false)) else UI.WARNING)
+			var met := bool(requirement.get("met", false))
+			var test_access := bool(requirement.get("test_access", false))
+			var state := " · met" if met else " · TEST ACCESS" if test_access else " · locked"
+			_add_lines(lines, "%s: %d / %d%s" % [String(requirement.get("label", "Achievement")), int(requirement.get("current", 0)), int(requirement.get("target", 0)), state], UI.TEAL if met or test_access else UI.WARNING)
 		if not String(recipe.get("reason", "")).is_empty(): _add_lines(lines, String(recipe.reason), UI.MUTED)
 		_add_lines(lines, "Earn materials in Rootbound. Extract to keep them.", UI.MUTED)
 	else:

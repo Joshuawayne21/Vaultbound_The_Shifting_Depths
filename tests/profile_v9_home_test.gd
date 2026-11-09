@@ -68,7 +68,7 @@ func _models() -> void:
 	var original := profile.duplicate(true)
 	var shown := Home.snapshot(profile)
 	check(shown.themes.size() == 4 and shown.sigils.size() == 4 and shown.rooms.size() == 9 \
-		and shown.claimable_count == 10, "Rich existing ownership exposes three earned styles and seven future room milestones")
+		and shown.claimable_count == 10, "Rich existing ownership exposes three earned styles and seven unrecorded room milestones")
 	check(not Home.preview(profile, &"set_appearance", {"theme_id": "enchanted_forest", "sigil_id": "root_crown"}).ok,
 		"Eligible appearance cannot bypass the explicit free unlock transaction")
 	var claimed := Home.plan(profile, &"claim_home_milestones", {}, int(profile.revision))
@@ -79,8 +79,9 @@ func _models() -> void:
 	expected.revision += 1
 	check(claimed.profile == expected, "Unlocks change only the home milestone lists and one revision")
 	for row: Dictionary in Home.snapshot(claimed.profile).rooms:
-		check(row.available == (row.id in ["foyer", "trophy_hall", "pet_conservatory"]) and (row.destination.is_empty() if not row.available else not row.destination.is_empty()),
-			"Earned room milestone does not invent an implemented room: " + row.id)
+		var destination := "personal_sanctuary" if row.id == "foyer" else "collection_hall" if row.id == "trophy_hall" else "home_conservatory" if row.id == "pet_conservatory" else "home_" + String(row.id)
+		check(row.available and row.implemented and row.earned and row.destination == destination,
+			"Recorded earned room milestone exposes only its exact implemented destination: " + row.id)
 	var duplicate := Home.plan(claimed.profile, &"claim_home_milestones", {}, int(claimed.profile.revision))
 	check(duplicate.ok and not duplicate.changed and duplicate.profile == claimed.profile, "Repeated milestone claim is a complete no-op")
 	for theme: String in Home.CATALOG.STYLE_IDS:

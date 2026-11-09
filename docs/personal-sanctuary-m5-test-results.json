@@ -1,0 +1,1412 @@
+{
+  "stage": "Personal Sanctuary Stage 5 \u2014 six remaining home rooms",
+  "status": "Focused native automated validation passed; rendered review and physical Android acceptance are separate",
+  "checked_at_utc": "2026-11-09T23:12:51.695514+00:00",
+  "engine": "Godot 4.6.3.stable.official.7d41c59c4",
+  "renderer": "GL Compatibility; headless native physics/input gate, not a rendered performance test",
+  "build": "0.7.0-home5",
+  "android_version_code": 27,
+  "base_commit": "3e9e65a23d2fd8dac759160bb6eb5e73142bdfc0",
+  "source_sha256": "cf5b40bd0c3132256ca15fa8344318da47402eb9c314f89c2fbdc948a7c30f68",
+  "semantic_file_count": 1199,
+  "source_manifest": {
+    "path": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source.json",
+    "sha256": "ee8915842468fb04ebe515ff39a341c06d4f1bd43ca05490f81f9466ae858346",
+    "semantic_files": 1199
+  },
+  "source_scope": "scripts/resources/scenes/assets/tests excluding .uid/.import, plus project.godot/export_presets.cfg; documentation excluded",
+  "accepted_gate": {
+    "path": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq",
+    "checks": 5313,
+    "runtime_modes": 40,
+    "suites": 37,
+    "new_modes": 5,
+    "new_checks": 1138,
+    "retained_modes": 35,
+    "retained_checks": 4175,
+    "strict_loads": 36,
+    "startup_frames": 120,
+    "runtime_host_seconds": 507.542,
+    "independent_readers": [
+      "home_displays_restart_test:read",
+      "party_persistence_test:read"
+    ],
+    "note": "All accepted modes ran against one final frozen source snapshot; earlier failed/diagnostic runs are excluded from accepted totals."
+  },
+  "setup": [
+    {
+      "mode": "import",
+      "exit_code": 0,
+      "checks": 0,
+      "seconds": 6.988,
+      "errors": [],
+      "environment_notices": [
+        "ERROR: Condition \"_sock == -1\" is true. Returning: FAILED",
+        "ERROR: Condition \"err != OK\" is true. Returning: ERR_CANT_CREATE",
+        "ERROR: Condition \"_sock == -1\" is true. Returning: FAILED",
+        "ERROR: Condition \"err != OK\" is true. Returning: ERR_CANT_CREATE",
+        "Unable to open Android 'build-tools' directory."
+      ],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/import.log",
+      "sha256": "470e4d7227ca2b8fb80147860d000149707dfc490c179240f2545b025d314200",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--editor",
+        "--import",
+        "--quit"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "strict-loads",
+      "exit_code": 0,
+      "checks": 0,
+      "seconds": 1.87,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/strict-loads.log",
+      "sha256": "6f4c06eb3319621ac033ab0abac5cf4e7d6dd9716924e9ea4a59ee3ebd57ef4e",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/preflight.gd",
+        "--",
+        "res://scripts/party/companion.gd",
+        "res://scripts/player/player.gd",
+        "res://scripts/resources/home_catalog.gd",
+        "res://tests/test_harness.gd",
+        "res://tests/pet_test_fixtures.gd",
+        "res://tests/home_test_fixtures.gd",
+        "res://tests/rootbound_rewards_fixture.gd",
+        "res://tests/home_world_fixture.gd",
+        "res://tests/home_management_fixture.gd",
+        "res://tests/foyer_native_fixture.gd",
+        "res://scripts/home/home_foyer_builder.gd",
+        "res://scripts/home/home_management_station.gd",
+        "res://scripts/home/home_private_builder.gd",
+        "res://scripts/home/home_room.gd",
+        "res://scripts/home/home_room_door.gd",
+        "res://scripts/home/home_room_service.gd",
+        "res://scripts/home/home_workroom_builder.gd",
+        "res://scripts/home/personal_sanctuary.gd",
+        "res://scripts/party/party.gd",
+        "res://scripts/pets/pet_progression.gd",
+        "res://scripts/progression/expedition_session.gd",
+        "res://scripts/systems/game.gd",
+        "res://scripts/ui/home_panel.gd",
+        "res://scripts/ui/pet_panel.gd",
+        "res://scripts/world/portal.gd",
+        "res://tests/foyer_navigation_test.gd",
+        "res://tests/foyer_surfaces_test.gd",
+        "res://tests/home_expansion_camera_test.gd",
+        "res://tests/home_expansion_fixture.gd",
+        "res://tests/home_expansion_integration_test.gd",
+        "res://tests/home_expansion_world_test.gd",
+        "res://tests/home_management_test.gd",
+        "res://tests/home_management_ui_test.gd",
+        "res://tests/home_room_services_test.gd",
+        "res://tests/profile_v9_home_test.gd",
+        "res://tests/tester_spiritweaving_test.gd"
+      ],
+      "ok": true,
+      "loaded": [
+        "res://scripts/party/companion.gd",
+        "res://scripts/player/player.gd",
+        "res://scripts/resources/home_catalog.gd",
+        "res://tests/test_harness.gd",
+        "res://tests/pet_test_fixtures.gd",
+        "res://tests/home_test_fixtures.gd",
+        "res://tests/rootbound_rewards_fixture.gd",
+        "res://tests/home_world_fixture.gd",
+        "res://tests/home_management_fixture.gd",
+        "res://tests/foyer_native_fixture.gd",
+        "res://scripts/home/home_foyer_builder.gd",
+        "res://scripts/home/home_management_station.gd",
+        "res://scripts/home/home_private_builder.gd",
+        "res://scripts/home/home_room.gd",
+        "res://scripts/home/home_room_door.gd",
+        "res://scripts/home/home_room_service.gd",
+        "res://scripts/home/home_workroom_builder.gd",
+        "res://scripts/home/personal_sanctuary.gd",
+        "res://scripts/party/party.gd",
+        "res://scripts/pets/pet_progression.gd",
+        "res://scripts/progression/expedition_session.gd",
+        "res://scripts/systems/game.gd",
+        "res://scripts/ui/home_panel.gd",
+        "res://scripts/ui/pet_panel.gd",
+        "res://scripts/world/portal.gd",
+        "res://tests/foyer_navigation_test.gd",
+        "res://tests/foyer_surfaces_test.gd",
+        "res://tests/home_expansion_camera_test.gd",
+        "res://tests/home_expansion_fixture.gd",
+        "res://tests/home_expansion_integration_test.gd",
+        "res://tests/home_expansion_world_test.gd",
+        "res://tests/home_management_test.gd",
+        "res://tests/home_management_ui_test.gd",
+        "res://tests/home_room_services_test.gd",
+        "res://tests/profile_v9_home_test.gd",
+        "res://tests/tester_spiritweaving_test.gd"
+      ]
+    },
+    {
+      "mode": "startup",
+      "exit_code": 0,
+      "checks": 0,
+      "seconds": 5.881,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/startup.log",
+      "sha256": "a9912b85473f126d3f4f63ec824170c828df3473a292f866dde86cafda5b66da",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--quit-after",
+        "120"
+      ],
+      "ok": true
+    }
+  ],
+  "results": [
+    {
+      "mode": "home_expansion_world_test",
+      "exit_code": 0,
+      "checks": 314,
+      "seconds": 5.031,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/home_expansion_world_test.log",
+      "sha256": "6e919dc923857762e7ef0cf2770540e7ce83eff57c9ce8221ac04f0406111b24",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/home_expansion_world_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "home_expansion_camera_test",
+      "exit_code": 0,
+      "checks": 525,
+      "seconds": 35.877,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/home_expansion_camera_test.log",
+      "sha256": "0d54c584c7ca5ac84f4826f81da52faaceb856ac37be81533eb5eb8a2fcf1732",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/home_expansion_camera_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "home_expansion_integration_test",
+      "exit_code": 0,
+      "checks": 223,
+      "seconds": 19.827,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/home_expansion_integration_test.log",
+      "sha256": "005d665e038f97c1118978e948ed39411f085079906845ff6cf0cbbe58a6c0c4",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/home_expansion_integration_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "home_room_services_test",
+      "exit_code": 0,
+      "checks": 48,
+      "seconds": 5.982,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/home_room_services_test.log",
+      "sha256": "8c0dc0ad641196fb2f33a0d3f57ca001293bdb8954696c3eae5999f09350f3f3",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/home_room_services_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "tester_spiritweaving_test",
+      "exit_code": 0,
+      "checks": 28,
+      "seconds": 1.218,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/tester_spiritweaving_test.log",
+      "sha256": "d3a5e8bc38aa2e3baa526726b11499376613dcedd2bfef8a00a82e45a3da3de7",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/tester_spiritweaving_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "tester_access_session_test",
+      "exit_code": 0,
+      "checks": 41,
+      "seconds": 5.933,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/tester_access_session_test.log",
+      "sha256": "c481636115594d4015995fedbeabe302316481555e69a21247e5e07fce4897ba",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/tester_access_session_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "tester_access_ui_test",
+      "exit_code": 0,
+      "checks": 42,
+      "seconds": 2.422,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/tester_access_ui_test.log",
+      "sha256": "5750054060f09730270e86364a56d7fb22362bc7606358eb1da8c651c247173f",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/tester_access_ui_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "profile_v9_home_test",
+      "exit_code": 0,
+      "checks": 81,
+      "seconds": 1.97,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/profile_v9_home_test.log",
+      "sha256": "e14dff0ad579e2b35a35761295f1e7c0397fb03caec4a0db56ac99c85e9e2e15",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/profile_v9_home_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "profile_v10_home_test",
+      "exit_code": 0,
+      "checks": 72,
+      "seconds": 2.171,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/profile_v10_home_test.log",
+      "sha256": "b3a69b0a3776900d1d13e7012b07079cf38f7944cd26ee853441a9de842b6fb5",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/profile_v10_home_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "home_session_test",
+      "exit_code": 0,
+      "checks": 50,
+      "seconds": 8.84,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/home_session_test.log",
+      "sha256": "35e3701d4ada98fcb6a02743c52458d9bb7cc9724dadbcbb3ed4378d31569552",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/home_session_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "home_world_test",
+      "exit_code": 0,
+      "checks": 118,
+      "seconds": 35.727,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/home_world_test.log",
+      "sha256": "6c6be6cc2ddbb08969b351dc4d192dcae8fd584b53dc18c841c48fe280bed640",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/home_world_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "home_management_test",
+      "exit_code": 0,
+      "checks": 126,
+      "seconds": 11.449,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/home_management_test.log",
+      "sha256": "8085d5f88e00ac092639ea227cf209f77a5fa0d2b2a92d8d4e80c02f940fef57",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/home_management_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "home_management_ui_test",
+      "exit_code": 0,
+      "checks": 126,
+      "seconds": 9.19,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/home_management_ui_test.log",
+      "sha256": "b22d648cc0325e92451b4967db77e14ae566738357f86cb471ec2e933838a9e7",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/home_management_ui_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "home_display_ui_test",
+      "exit_code": 0,
+      "checks": 53,
+      "seconds": 3.273,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/home_display_ui_test.log",
+      "sha256": "246cdfabbb0a88b95d80a92ea2d7ee744dc17143d88ccf45779c9b14fb12f85a",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/home_display_ui_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "home_displays_restart_test:write",
+      "exit_code": 0,
+      "checks": 25,
+      "seconds": 4.076,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/home_displays_restart_test_write.log",
+      "sha256": "f46bb555798073fcd224082b075c85b7c51079ba52dad6a07b43cedbb610c116",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/home_displays_restart_test.gd",
+        "--",
+        "--write",
+        "/tmp/vaultbound-home5-focused-79g8htlq/home_displays_restart_test/profile.json"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "home_displays_restart_test:read",
+      "exit_code": 0,
+      "checks": 25,
+      "seconds": 3.926,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/home_displays_restart_test_read.log",
+      "sha256": "c4ad6943d445c2f7165403a0d2b6e00ca1596b4523483581c2e720bf1de1ca39",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/home_displays_restart_test.gd",
+        "--",
+        "--read",
+        "/tmp/vaultbound-home5-focused-79g8htlq/home_displays_restart_test/profile.json"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "trophy_hall_world_test",
+      "exit_code": 0,
+      "checks": 48,
+      "seconds": 3.274,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/trophy_hall_world_test.log",
+      "sha256": "d0a6543c1bd2696f64cdefa78eeed68a9fdb06c2ac348148b8cbab62177b1c54",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/trophy_hall_world_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "conservatory_world_test",
+      "exit_code": 0,
+      "checks": 63,
+      "seconds": 1.569,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/conservatory_world_test.log",
+      "sha256": "f42b16ffdd34cc860da95946c7c9b08727ad82e8d495649ab94bb118fe07a3b3",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/conservatory_world_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "home_rooms_integration_test",
+      "exit_code": 0,
+      "checks": 78,
+      "seconds": 16.362,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/home_rooms_integration_test.log",
+      "sha256": "8b4ea3998f0545abb8c98da259a25bb71810a6bd7b9e1191acdc228d9aab8c39",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/home_rooms_integration_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "foyer_surfaces_test",
+      "exit_code": 0,
+      "checks": 71,
+      "seconds": 5.131,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/foyer_surfaces_test.log",
+      "sha256": "5aa2e7776f936b7af2a7db012d5695f895ea9202150ca116f5711f7356690bf8",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/foyer_surfaces_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "foyer_navigation_test",
+      "exit_code": 0,
+      "checks": 207,
+      "seconds": 109.163,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/foyer_navigation_test.log",
+      "sha256": "a33f90e08f41a375a606009e14b1ed3a104b41d98ea839673639dcadc4473f4b",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/foyer_navigation_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "foyer_camera_test",
+      "exit_code": 0,
+      "checks": 132,
+      "seconds": 95.452,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/foyer_camera_test.log",
+      "sha256": "6f133bcf4f5bfcdd73730e15bfc42d28943301c3b971d77d2e745de098950562",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/foyer_camera_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "collection_world_test",
+      "exit_code": 0,
+      "checks": 37,
+      "seconds": 1.519,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/collection_world_test.log",
+      "sha256": "5903687a616722ff6d06770b6c57135e8e78bb0a00c8edafe54adff3f7635cab",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/collection_world_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "hall_inspection_ui_test",
+      "exit_code": 0,
+      "checks": 73,
+      "seconds": 4.177,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/hall_inspection_ui_test.log",
+      "sha256": "45208206b78335cb8a792e1fa7281add41d227107bff24a0fe7347fdb7814b22",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/hall_inspection_ui_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "sanctuary_world_test",
+      "exit_code": 0,
+      "checks": 235,
+      "seconds": 14.615,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/sanctuary_world_test.log",
+      "sha256": "9d584dd3dfd309f3a7c0bbef046a897315ac4abffb6aff9cc0caa1173c4a8521",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/sanctuary_world_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "pet_progression_test",
+      "exit_code": 0,
+      "checks": 62,
+      "seconds": 1.117,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/pet_progression_test.log",
+      "sha256": "877c10663d5b7c407befcb6f1507c3fcf45ae28cafc7999e9bb5f317ad26e6fb",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/pet_progression_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "pet_session_test",
+      "exit_code": 0,
+      "checks": 37,
+      "seconds": 2.873,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/pet_session_test.log",
+      "sha256": "a5b64586d708cf11fc5e63bff8b2ed2e9cda19c06f2ce52f89af5bc8a5cd8876",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/pet_session_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "pet_ui_test",
+      "exit_code": 0,
+      "checks": 72,
+      "seconds": 4.278,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/pet_ui_test.log",
+      "sha256": "18d15e0b9ae39a070a82bd4f90d534f07f7fb7d4208fc214a29af61e39bb03ab",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/pet_ui_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "pet_follow_test",
+      "exit_code": 0,
+      "checks": 86,
+      "seconds": 29.753,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/pet_follow_test.log",
+      "sha256": "7db23e44d68ce4b6ed8a684bd4d14f11e268274477abc8c034bef27be4dd2346",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/pet_follow_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "party_test",
+      "exit_code": 0,
+      "checks": 88,
+      "seconds": 16.47,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/party_test.log",
+      "sha256": "4d8c79739195ee25950776dfd02ad1180fb52e966289b20f9b7e55320a0dc7ec",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/party_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "party_ui_test",
+      "exit_code": 0,
+      "checks": 137,
+      "seconds": 3.375,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/party_ui_test.log",
+      "sha256": "6b84e7674172f59029a8adc3987703c76416f6edfa46e67cf1d3a59c249a7ae1",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/party_ui_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "party_persistence_test",
+      "exit_code": 0,
+      "checks": 70,
+      "seconds": 1.519,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/party_persistence_test.log",
+      "sha256": "22eb2e53e18e487d09a0b3f7010a466cf70e224abc3b3197eaf1ca6c69ca00ed",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/party_persistence_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "party_persistence_test:write",
+      "exit_code": 0,
+      "checks": 5,
+      "seconds": 1.017,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/party_persistence_test_write.log",
+      "sha256": "bb7edd8b04c17229e1976240ff3f8b6623d91ffc01db4567b59325ccc4883102",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/party_persistence_test.gd",
+        "--",
+        "--write",
+        "/tmp/vaultbound-home5-focused-79g8htlq/party_persistence_test/profile.json"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "party_persistence_test:read",
+      "exit_code": 0,
+      "checks": 8,
+      "seconds": 1.117,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/party_persistence_test_read.log",
+      "sha256": "240528567a9fe2a2a4d478d8a406ad488f31828e4d6a335fbfbc53301228e26a",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/party_persistence_test.gd",
+        "--",
+        "--read",
+        "/tmp/vaultbound-home5-focused-79g8htlq/party_persistence_test/profile.json"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "mobile_ui_integration_test",
+      "exit_code": 0,
+      "checks": 152,
+      "seconds": 3.224,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/mobile_ui_integration_test.log",
+      "sha256": "e5871f7aec91af3d91b44c8d197e20b5491ad77f1cc7ad3aa6408e1cd7b0424f",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/mobile_ui_integration_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "ui_layout_test",
+      "exit_code": 0,
+      "checks": 247,
+      "seconds": 1.569,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/ui_layout_test.log",
+      "sha256": "69e85ebf3aaad1eff0fae6bbe0fad4f84f1a9bd4f39af318c87a1508db0878f0",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/ui_layout_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "visual_settings_test",
+      "exit_code": 0,
+      "checks": 54,
+      "seconds": 1.569,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/visual_settings_test.log",
+      "sha256": "9d79ff262ccc6fb1db8aa8b89de2cf025570d9f1f3d1a6f5c1ff0cbf8623401c",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/visual_settings_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "depth_travel_guard_test",
+      "exit_code": 0,
+      "checks": 60,
+      "seconds": 4.628,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/depth_travel_guard_test.log",
+      "sha256": "acf4d9ebea0636d89fa4d99970321f119047a65c0ab89ccbfa92efff3b28d81d",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/depth_travel_guard_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "early_return_travel_test",
+      "exit_code": 0,
+      "checks": 349,
+      "seconds": 18.219,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/early_return_travel_test.log",
+      "sha256": "2931dcc09bd1135efaae09bc015bb97de104593fa244e078ce50ec69367bec15",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/early_return_travel_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "smoke_test",
+      "exit_code": 0,
+      "checks": 1045,
+      "seconds": 8.64,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/logs/smoke_test.log",
+      "sha256": "c65b127dc694c22b9f646eefdd58a8d80160d6c49bd466a5e1728ce9771e4eb5",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/source",
+        "--script",
+        "res://tests/smoke_test.gd"
+      ],
+      "ok": true
+    }
+  ],
+  "native_metrics": {
+    "world": {
+      "floor_capsule_samples": 1438,
+      "rooms": {
+        "armory": {
+          "environments": 1,
+          "keys": 1,
+          "local_lights": 0,
+          "mesh_nodes": 155,
+          "multimesh_nodes": 6,
+          "static_batch": {
+            "batch_meshes": 39,
+            "draws_saved": 176,
+            "eligible_meshes": 241,
+            "source_meshes": 215
+          },
+          "triangles": 17588
+        },
+        "companion_hall": {
+          "environments": 1,
+          "keys": 1,
+          "local_lights": 0,
+          "mesh_nodes": 203,
+          "multimesh_nodes": 2,
+          "static_batch": {
+            "batch_meshes": 39,
+            "draws_saved": 143,
+            "eligible_meshes": 212,
+            "source_meshes": 182
+          },
+          "triangles": 18690
+        },
+        "personal_chamber": {
+          "environments": 1,
+          "keys": 1,
+          "local_lights": 0,
+          "mesh_nodes": 93,
+          "multimesh_nodes": 15,
+          "static_batch": {
+            "batch_meshes": 33,
+            "draws_saved": 64,
+            "eligible_meshes": 119,
+            "source_meshes": 97
+          },
+          "triangles": 7030
+        },
+        "relic_library": {
+          "environments": 1,
+          "keys": 1,
+          "local_lights": 0,
+          "mesh_nodes": 90,
+          "multimesh_nodes": 7,
+          "static_batch": {
+            "batch_meshes": 35,
+            "draws_saved": 172,
+            "eligible_meshes": 234,
+            "source_meshes": 207
+          },
+          "triangles": 12766
+        },
+        "rooftop_garden": {
+          "environments": 1,
+          "keys": 1,
+          "local_lights": 0,
+          "mesh_nodes": 111,
+          "multimesh_nodes": 24,
+          "static_batch": {
+            "batch_meshes": 17,
+            "draws_saved": 23,
+            "eligible_meshes": 88,
+            "source_meshes": 40
+          },
+          "triangles": 16758
+        },
+        "wardrobe": {
+          "environments": 1,
+          "keys": 1,
+          "local_lights": 0,
+          "mesh_nodes": 146,
+          "multimesh_nodes": 18,
+          "static_batch": {
+            "batch_meshes": 28,
+            "draws_saved": 65,
+            "eligible_meshes": 111,
+            "source_meshes": 93
+          },
+          "triangles": 14108
+        }
+      }
+    },
+    "camera": {
+      "minimum_distance": 0.896520018577576,
+      "rooms": {
+        "armory": {
+          "minimum_distance": 1.24505603313446,
+          "positions": 30,
+          "static_poses": 450,
+          "transition_frames": 336
+        },
+        "companion_hall": {
+          "minimum_distance": 1.24505603313446,
+          "positions": 30,
+          "static_poses": 450,
+          "transition_frames": 336
+        },
+        "personal_chamber": {
+          "minimum_distance": 1.43868768215179,
+          "positions": 14,
+          "static_poses": 210,
+          "transition_frames": 336
+        },
+        "relic_library": {
+          "minimum_distance": 1.24505603313446,
+          "positions": 31,
+          "static_poses": 465,
+          "transition_frames": 336
+        },
+        "rooftop_garden": {
+          "minimum_distance": 0.896520018577576,
+          "positions": 15,
+          "static_poses": 225,
+          "transition_frames": 336
+        },
+        "wardrobe": {
+          "minimum_distance": 1.43868768215179,
+          "positions": 14,
+          "static_poses": 210,
+          "transition_frames": 336
+        }
+      },
+      "samples": 4026,
+      "transition_frames": 2016
+    },
+    "actual_game": {
+      "character_level": 1,
+      "rooms": 6,
+      "same_party_actors": 3,
+      "services": 6,
+      "upper_gallery_returns": 3
+    },
+    "note": "Mesh/triangle/static batch counts are geometry estimates. Host duration, batch draws_saved and headless tests are not Android GPU measurements or FPS."
+  },
+  "preservation": {
+    "source_unchanged": true,
+    "workspace_matches_source": true,
+    "protected_unchanged": true,
+    "protected_files": 899,
+    "protected_manifest": {
+      "path": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/protected.json",
+      "sha256": "184af11a0aff9b312e191abcb789e9820721efb9feef68571eca6b40d71a0d61"
+    },
+    "authorized_protected_changes": {
+      "scripts/party/party.gd": {
+        "before": "4c5828a987bfa02a5045abc1d2d447a21b6178a93dc09f90af9368c0dc9f88be",
+        "after": "f4d4cfac71cc5580ae08a80225705a30372520d2f374ad4c0588cc5083a16088",
+        "authorization": "Root authorized only canonical Personal Home Companion Hall recruitment, dismissal and UI context integration."
+      },
+      "scripts/pets/pet_progression.gd": {
+        "before": "a64c2f4b9af7758adbf8a2d74cd069e36710a0bd175dbbd262f8e2a1b435a875",
+        "after": "cfcd860f40150ecd15ebe4b54947d6706d26e78369fd372495052b1557c20fde",
+        "authorization": "Root authorized TEST ACCESS achievement eligibility while preserving actual ingredients, costs, ownership and provenance."
+      }
+    },
+    "existing_profiles_touched": false,
+    "isolation": "Separate source copy, XDG namespaces and synthetic fixture paths; one serialized engine lock"
+  },
+  "independent_review": {
+    "ok": true,
+    "run": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq",
+    "source_sha256": "cf5b40bd0c3132256ca15fa8344318da47402eb9c314f89c2fbdc948a7c30f68",
+    "base_commit": "3e9e65a23d2fd8dac759160bb6eb5e73142bdfc0",
+    "checks": 5313,
+    "modes": 40,
+    "strict_loads": 36,
+    "protected_files": 899,
+    "logs": [
+      {
+        "mode": "import",
+        "sha256": "470e4d7227ca2b8fb80147860d000149707dfc490c179240f2545b025d314200"
+      },
+      {
+        "mode": "strict-loads",
+        "sha256": "6f4c06eb3319621ac033ab0abac5cf4e7d6dd9716924e9ea4a59ee3ebd57ef4e"
+      },
+      {
+        "mode": "startup",
+        "sha256": "a9912b85473f126d3f4f63ec824170c828df3473a292f866dde86cafda5b66da"
+      },
+      {
+        "mode": "home_expansion_world_test",
+        "sha256": "6e919dc923857762e7ef0cf2770540e7ce83eff57c9ce8221ac04f0406111b24"
+      },
+      {
+        "mode": "home_expansion_camera_test",
+        "sha256": "0d54c584c7ca5ac84f4826f81da52faaceb856ac37be81533eb5eb8a2fcf1732"
+      },
+      {
+        "mode": "home_expansion_integration_test",
+        "sha256": "005d665e038f97c1118978e948ed39411f085079906845ff6cf0cbbe58a6c0c4"
+      },
+      {
+        "mode": "home_room_services_test",
+        "sha256": "8c0dc0ad641196fb2f33a0d3f57ca001293bdb8954696c3eae5999f09350f3f3"
+      },
+      {
+        "mode": "tester_spiritweaving_test",
+        "sha256": "d3a5e8bc38aa2e3baa526726b11499376613dcedd2bfef8a00a82e45a3da3de7"
+      },
+      {
+        "mode": "tester_access_session_test",
+        "sha256": "c481636115594d4015995fedbeabe302316481555e69a21247e5e07fce4897ba"
+      },
+      {
+        "mode": "tester_access_ui_test",
+        "sha256": "5750054060f09730270e86364a56d7fb22362bc7606358eb1da8c651c247173f"
+      },
+      {
+        "mode": "profile_v9_home_test",
+        "sha256": "e14dff0ad579e2b35a35761295f1e7c0397fb03caec4a0db56ac99c85e9e2e15"
+      },
+      {
+        "mode": "profile_v10_home_test",
+        "sha256": "b3a69b0a3776900d1d13e7012b07079cf38f7944cd26ee853441a9de842b6fb5"
+      },
+      {
+        "mode": "home_session_test",
+        "sha256": "35e3701d4ada98fcb6a02743c52458d9bb7cc9724dadbcbb3ed4378d31569552"
+      },
+      {
+        "mode": "home_world_test",
+        "sha256": "6c6be6cc2ddbb08969b351dc4d192dcae8fd584b53dc18c841c48fe280bed640"
+      },
+      {
+        "mode": "home_management_test",
+        "sha256": "8085d5f88e00ac092639ea227cf209f77a5fa0d2b2a92d8d4e80c02f940fef57"
+      },
+      {
+        "mode": "home_management_ui_test",
+        "sha256": "b22d648cc0325e92451b4967db77e14ae566738357f86cb471ec2e933838a9e7"
+      },
+      {
+        "mode": "home_display_ui_test",
+        "sha256": "246cdfabbb0a88b95d80a92ea2d7ee744dc17143d88ccf45779c9b14fb12f85a"
+      },
+      {
+        "mode": "home_displays_restart_test:write",
+        "sha256": "f46bb555798073fcd224082b075c85b7c51079ba52dad6a07b43cedbb610c116"
+      },
+      {
+        "mode": "home_displays_restart_test:read",
+        "sha256": "c4ad6943d445c2f7165403a0d2b6e00ca1596b4523483581c2e720bf1de1ca39"
+      },
+      {
+        "mode": "trophy_hall_world_test",
+        "sha256": "d0a6543c1bd2696f64cdefa78eeed68a9fdb06c2ac348148b8cbab62177b1c54"
+      },
+      {
+        "mode": "conservatory_world_test",
+        "sha256": "f42b16ffdd34cc860da95946c7c9b08727ad82e8d495649ab94bb118fe07a3b3"
+      },
+      {
+        "mode": "home_rooms_integration_test",
+        "sha256": "8b4ea3998f0545abb8c98da259a25bb71810a6bd7b9e1191acdc228d9aab8c39"
+      },
+      {
+        "mode": "foyer_surfaces_test",
+        "sha256": "5aa2e7776f936b7af2a7db012d5695f895ea9202150ca116f5711f7356690bf8"
+      },
+      {
+        "mode": "foyer_navigation_test",
+        "sha256": "a33f90e08f41a375a606009e14b1ed3a104b41d98ea839673639dcadc4473f4b"
+      },
+      {
+        "mode": "foyer_camera_test",
+        "sha256": "6f133bcf4f5bfcdd73730e15bfc42d28943301c3b971d77d2e745de098950562"
+      },
+      {
+        "mode": "collection_world_test",
+        "sha256": "5903687a616722ff6d06770b6c57135e8e78bb0a00c8edafe54adff3f7635cab"
+      },
+      {
+        "mode": "hall_inspection_ui_test",
+        "sha256": "45208206b78335cb8a792e1fa7281add41d227107bff24a0fe7347fdb7814b22"
+      },
+      {
+        "mode": "sanctuary_world_test",
+        "sha256": "9d584dd3dfd309f3a7c0bbef046a897315ac4abffb6aff9cc0caa1173c4a8521"
+      },
+      {
+        "mode": "pet_progression_test",
+        "sha256": "877c10663d5b7c407befcb6f1507c3fcf45ae28cafc7999e9bb5f317ad26e6fb"
+      },
+      {
+        "mode": "pet_session_test",
+        "sha256": "a5b64586d708cf11fc5e63bff8b2ed2e9cda19c06f2ce52f89af5bc8a5cd8876"
+      },
+      {
+        "mode": "pet_ui_test",
+        "sha256": "18d15e0b9ae39a070a82bd4f90d534f07f7fb7d4208fc214a29af61e39bb03ab"
+      },
+      {
+        "mode": "pet_follow_test",
+        "sha256": "7db23e44d68ce4b6ed8a684bd4d14f11e268274477abc8c034bef27be4dd2346"
+      },
+      {
+        "mode": "party_test",
+        "sha256": "4d8c79739195ee25950776dfd02ad1180fb52e966289b20f9b7e55320a0dc7ec"
+      },
+      {
+        "mode": "party_ui_test",
+        "sha256": "6b84e7674172f59029a8adc3987703c76416f6edfa46e67cf1d3a59c249a7ae1"
+      },
+      {
+        "mode": "party_persistence_test",
+        "sha256": "22eb2e53e18e487d09a0b3f7010a466cf70e224abc3b3197eaf1ca6c69ca00ed"
+      },
+      {
+        "mode": "party_persistence_test:write",
+        "sha256": "bb7edd8b04c17229e1976240ff3f8b6623d91ffc01db4567b59325ccc4883102"
+      },
+      {
+        "mode": "party_persistence_test:read",
+        "sha256": "240528567a9fe2a2a4d478d8a406ad488f31828e4d6a335fbfbc53301228e26a"
+      },
+      {
+        "mode": "mobile_ui_integration_test",
+        "sha256": "e5871f7aec91af3d91b44c8d197e20b5491ad77f1cc7ad3aa6408e1cd7b0424f"
+      },
+      {
+        "mode": "ui_layout_test",
+        "sha256": "69e85ebf3aaad1eff0fae6bbe0fad4f84f1a9bd4f39af318c87a1508db0878f0"
+      },
+      {
+        "mode": "visual_settings_test",
+        "sha256": "9d79ff262ccc6fb1db8aa8b89de2cf025570d9f1f3d1a6f5c1ff0cbf8623401c"
+      },
+      {
+        "mode": "depth_travel_guard_test",
+        "sha256": "acf4d9ebea0636d89fa4d99970321f119047a65c0ab89ccbfa92efff3b28d81d"
+      },
+      {
+        "mode": "early_return_travel_test",
+        "sha256": "2931dcc09bd1135efaae09bc015bb97de104593fa244e078ce50ec69367bec15"
+      },
+      {
+        "mode": "smoke_test",
+        "sha256": "c65b127dc694c22b9f646eefdd58a8d80160d6c49bd466a5e1728ce9771e4eb5"
+      }
+    ],
+    "summary_sha256": "77db33cd6fb590bbfe4773e57328d20e2a82be65af38247910768c7d57f798d3",
+    "new_gd_uids": 10,
+    "authorized_protected_changes": {
+      "scripts/party/party.gd": {
+        "before": "4c5828a987bfa02a5045abc1d2d447a21b6178a93dc09f90af9368c0dc9f88be",
+        "after": "f4d4cfac71cc5580ae08a80225705a30372520d2f374ad4c0588cc5083a16088",
+        "authorization": "Root authorized only canonical Personal Home Companion Hall recruitment, dismissal and UI context integration."
+      },
+      "scripts/pets/pet_progression.gd": {
+        "before": "a64c2f4b9af7758adbf8a2d74cd069e36710a0bd175dbbd262f8e2a1b435a875",
+        "after": "cfcd860f40150ecd15ebe4b54947d6706d26e78369fd372495052b1557c20fde",
+        "authorization": "Root authorized TEST ACCESS achievement eligibility while preserving actual ingredients, costs, ownership and provenance."
+      }
+    },
+    "physical_android_tested": false,
+    "rendered_visual_review": false
+  },
+  "new_gd_uids": {
+    "path": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-79g8htlq/new-gd-uids.json",
+    "sha256": "1c0e4676500ccaf4979dbb0005ad8462b91fc4e382f9e58e95c558bcccbac565",
+    "entries": {
+      "tests/home_room_services_test.gd.uid": {
+        "sha256": "b425d17684ebccc007f9e27856bca71b39cdda4ee42d1b16f7673bce3a40964d",
+        "value": "uid://dpgtrkqke8g86"
+      },
+      "tests/home_expansion_fixture.gd.uid": {
+        "sha256": "6c6b3331bb77b262c955da3212057a6811988c48872f02bbc6aaadaa792d2b68",
+        "value": "uid://owf5mu1cmpue"
+      },
+      "tests/home_expansion_world_test.gd.uid": {
+        "sha256": "ac5b39f5750a47384e46be7e8616c39aa903eb9c235005070644c09ba40be773",
+        "value": "uid://do2gimtdrm0j7"
+      },
+      "tests/home_expansion_camera_test.gd.uid": {
+        "sha256": "50f54802fad6abaa2e92378c00586a0111736a5f5d6998ca6ce7f4eda077a283",
+        "value": "uid://pfsxe0xisb0s"
+      },
+      "tests/home_expansion_integration_test.gd.uid": {
+        "sha256": "f3473e6f467babc9deb1928f6fb29bca0acda4a3129e3d082da413302ec74c4a",
+        "value": "uid://dvde56pekuowf"
+      },
+      "tests/tester_spiritweaving_test.gd.uid": {
+        "sha256": "dc4d023b632b2dfb6754c839a9449cf0554a1e4f940bcc65ddec9015690a93c3",
+        "value": "uid://b0ofrdkwcumt6"
+      },
+      "scripts/home/home_room.gd.uid": {
+        "sha256": "4008d57186f75a6bf00a206ddbc8a1fed0bfdc7e6034029cbcf0d59f0ad70ace",
+        "value": "uid://cwxpe2gr2dd5h"
+      },
+      "scripts/home/home_room_service.gd.uid": {
+        "sha256": "bca2c647f448a6637f1b3980ac2781eb2ae8bb3cc687f6c905360b9ae6d79536",
+        "value": "uid://bmqkvv4s3va2f"
+      },
+      "scripts/home/home_workroom_builder.gd.uid": {
+        "sha256": "224b705d28a7fe751e88f2d7e6c1aaea84333f5b4e1ad3f7d54fd57c40c85943",
+        "value": "uid://cs0vu71mq2xpj"
+      },
+      "scripts/home/home_private_builder.gd.uid": {
+        "sha256": "611e015716a18c75b3e1ba29fe32f31b3c5357b34cd0a3c40162f59ceb2f35e5",
+        "value": "uid://jklynvpp1hmk"
+      }
+    }
+  },
+  "resolved_diagnostics": [
+    {
+      "run": "focused-uo_0nkb5",
+      "accepted": false,
+      "findings": [
+        "Wardrobe bench armrests intersected authored capsule routes; benches moved x\u00b17.4 to\u00b18.2 without removing route checks.",
+        "Integration fixture touch was routed through the wrong panel; changed to the actual overlay input owner without removing rotation assertions.",
+        "Native upper return floor ray could hit an overlapping authored UpperLanding rather than Gallery. Added only exact canonical West/EastUpperLandingCollision names to the floor whitelist; height, normal, parent and three capsule checks retained."
+      ],
+      "upper_arrival_probe": {
+        "receipt": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/focused-uo_0nkb5/upper-arrival-probe.json",
+        "log_sha256": "3896e72a98da249086ff8a0da515ae89a6a8bf13c39afa1b931d4f21ad8d8d4b"
+      }
+    },
+    {
+      "run": "focused-bh72p3e_",
+      "accepted": false,
+      "finding": "Retained lower-edge navigation asserted a six-metre settled radius while a delayed command was still taking a valid ground detour around Trophy Hall pillars. One heading failed; gate stopped.",
+      "investigation": "/workspace/scratch/vaultbound-home-stage5-validation/home-rooms/navigation-diagnostic/analysis.json",
+      "investigation_sha256": "d365d67cf0e3c76e2fa0c09bec6c6a0447c7d6004c82f4619a1170107fefc794",
+      "resolution": "Production navigation and geometry unchanged. Test continuously checks ground/no recovery through bounded eight-second formation convergence, then retains a separate original 90-frame ground/six-metre hold. Added eight assertions; no distance threshold increase. Baseline original and current diagnostic were independently run once."
+    }
+  ],
+  "manual_android_tests": [
+    "Import the root project in Godot 4 Android editor; launch without script/resource errors and test safe-area layouts in landscape.",
+    "Enable TEST ACCESS at level 1, enter all six new rooms through actual foyer doors, use their services, switch both cameras, return safely. Disable inside an unearned room and confirm return remains available while services lock.",
+    "Walk both staircases and upper gallery with Guardian, Mystic and a selected pet; inspect player/camera clipping and furniture clearance.",
+    "Inspect Armory/outfit models, Companion Hall avatars, owned journals, Wardrobe character rotation and selected rooftop pet; compare saved ownership before/after restart.",
+    "Exercise every theme, Low/Medium/High quality, reduced motion, device rotation, focus loss and touch-tail cancellation.",
+    "Profile native Android frame time, memory, heat and battery during home and dungeon play; verify 30/60 FPS goals on actual supported hardware.",
+    "Smoke-test retained Sanctuary, portals, dungeon/depth/extraction, combat, inventory, save recovery and party recruitment on device."
+  ],
+  "known_limits": [
+    "Rooms and models use original procedural/available visual families; no new bespoke rigged art or licensed premium asset delivery is claimed.",
+    "Companion Hall displays existing recruited Guardian/Mystic avatars, not duplicate AI controllers or new companion classes.",
+    "Equipment/pet/trophy displays reference ownership and do not create, transfer or consume items.",
+    "Local TEST ACCESS bypasses implemented eligibility only; it does not grant ingredients, Depthmarks, trophies, account privileges, live multiplayer or billing.",
+    "No physical Android test, APK installation, live hosting, multiplayer visiting, billing or rendered performance result is claimed by this native gate."
+  ],
+  "physical_android_tested": false,
+  "rendered_visual_review": false,
+  "android_performance_measured": false,
+  "validation_tools": {
+    "run.py": "3f5d8284695b4818fe98afaeb35497ea318c8d3d88891c2cb02a8d29bc351264",
+    "review.py": "e63e267475d51ee09a9d85c09b0bf114566727ecf866e8ac52ea977c739382d4",
+    "preflight.gd": "d8fa5892d5ac8d50674386a7ab74c3446e256416f6fd650f4099f8c61b1bad8f",
+    "focused-specs.json": "89bb8ae3a4e078ac061aadfa53a0f57bc8719c103fce47f77a9e5070d36c1975",
+    "make_report.py": "47526771002a925ed05652437ff903657cee26549c129f9b713e28e6005e526c"
+  }
+}

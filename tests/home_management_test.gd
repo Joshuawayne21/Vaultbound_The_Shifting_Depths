@@ -49,7 +49,9 @@ func _cases() -> void:
 	game._notification(MainLoop.NOTIFICATION_APPLICATION_FOCUS_IN)
 	if not _shared_revision_boundary(): return
 	for room: Dictionary in session.home_management_snapshot().rooms:
-		check(room.available == (room.id in ["foyer", "trophy_hall", "pet_conservatory"]), "Permanent milestone never activates an unbuilt room: " + room.id)
+		var destination := "personal_sanctuary" if room.id == "foyer" else "collection_hall" if room.id == "trophy_hall" else "home_conservatory" if room.id == "pet_conservatory" else "home_" + String(room.id)
+		check(room.available and room.implemented and room.earned and room.destination == destination,
+			"An actually recorded earned milestone exposes its exact implemented room: " + room.id)
 	var altered: Dictionary = session.quote_home_action(&"set_appearance", {"theme_id": "royal_azure", "sigil_id": "vault_diamond"})
 	altered.preview.after = {"theme_id": "injected", "sigil_id": "injected"}
 	check(session.commit_home_action(altered) and session.profile.home.theme_id == "royal_azure", "Caller-edited preview cannot alter trusted quote intent")
@@ -140,7 +142,7 @@ func _navigation_boundaries() -> bool:
 		&"personal_chamber", &"wardrobe", &"rooftop_garden", &"collection_hall", &"rootbound_abyss", &"forged_destination"]:
 		check(not session.home_navigation_status(route, management_station, player).ok
 			and not session.request_home_navigation(route) and game.hud.expedition_overlay.mode == &"home",
-			"Unbuilt, current-room or caller-supplied destinations cannot close the home panel: " + String(route))
+			"Unrecorded, current-room or caller-supplied destinations cannot close the home panel: " + String(route))
 	session.store.read_only = true
 	var read_only_state: Dictionary = session.home_management_snapshot()
 	check(read_only_state.read_only and not read_only_state.service_available and read_only_state.navigation_available

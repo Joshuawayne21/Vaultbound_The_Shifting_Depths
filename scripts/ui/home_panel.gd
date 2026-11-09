@@ -436,7 +436,7 @@ func detail_lines() -> Array[Dictionary]:
 		if bool(room.get("available", false)) and selected_room != String(data.get("current_room_id", "foyer")) and not room_navigation_available():
 			_add_lines(lines, "Return to the Grand Foyer to enter this room.", UI.WARNING)
 		_add_lines(lines, "Use the available room entrance or its marked doorway. RETURN TO SANCTUARY travels back to the city.", UI.IVORY)
-		_add_lines(lines, "Sealed room milestones remain permanent records. They do not open rooms that are still under construction.", UI.MUTED)
+		_add_lines(lines, "Room milestones remain permanent records. TEST ACCESS lets you visit implemented rooms without recording unearned milestones.", UI.MUTED)
 	elif tab == &"pets":
 		_pet_detail_lines(lines)
 	else:
@@ -537,7 +537,8 @@ func _draw() -> void:
 			_button(primary_rect(), "REVIEW DISPLAY" if display_changed() else "DISPLAY SAVED", true, available and display_changed() and display_selection_allowed())
 		else:
 			var current_room := String(data.get("current_room_id", "foyer"))
-			var label := "YOU ARE HERE" if selected_room == current_room else "ENTER TROPHY HALL" if selected_room == "trophy_hall" else "ENTER CONSERVATORY" if selected_room == "pet_conservatory" else "RETURN TO FOYER" if selected_room == "foyer" else "ROOM NOT OPEN"
+			var row := _row("rooms", selected_room)
+			var label := "YOU ARE HERE" if selected_room == current_room else "RETURN TO FOYER" if selected_room == "foyer" else "ENTER " + String(row.get("label", "ROOM")).to_upper() if bool(row.get("implemented", false)) else "ROOM NOT OPEN"
 			_button(primary_rect(), label, true, room_navigation_available() and not _busy)
 	_text(notice, Vector2(rect.position.x + 22, rect.end.y - 86), 12, UI.TEAL, rect.size.x - 44)
 

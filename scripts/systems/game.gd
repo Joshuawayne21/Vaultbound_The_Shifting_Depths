@@ -12,7 +12,14 @@ const LEVELS := {
 	&"collection_hall": "res://scenes/world/collection_hall.tscn",
 	&"personal_sanctuary": "res://scenes/world/personal_sanctuary.tscn",
 	&"home_conservatory": "res://scenes/world/pet_conservatory.tscn",
+	&"home_armory": "res://scenes/world/home_armory.tscn",
+	&"home_companion_hall": "res://scenes/world/home_companion_hall.tscn",
+	&"home_relic_library": "res://scenes/world/home_relic_library.tscn",
+	&"home_personal_chamber": "res://scenes/world/home_personal_chamber.tscn",
+	&"home_wardrobe": "res://scenes/world/home_wardrobe.tscn",
+	&"home_rooftop_garden": "res://scenes/world/home_rooftop_garden.tscn",
 }
+const HOME_ROOMS := {&"home_conservatory": &"pet_conservatory", &"home_armory": &"armory", &"home_companion_hall": &"companion_hall", &"home_relic_library": &"relic_library", &"home_personal_chamber": &"personal_chamber", &"home_wardrobe": &"wardrobe", &"home_rooftop_garden": &"rooftop_garden"}
 const DEPTH_POLICY = preload("res://resources/expedition/depth_policy.tres")
 const DUNGEON_CONTENT = preload("res://scripts/expedition/dungeon_content.gd")
 
@@ -194,14 +201,15 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 			or home_actor.downed or home_actor.eliminated or home_actor.combat.state != &"idle":
 			if is_instance_valid(next_world): next_world.free()
 			return
-	elif destination == &"home_conservatory":
-		var room_status: Dictionary = ExpeditionSession.home_room_entry_status(&"pet_conservatory", request_world, player)
+	elif HOME_ROOMS.has(destination):
+		var room_status: Dictionary = ExpeditionSession.home_room_entry_status(HOME_ROOMS[destination], request_world, player)
 		if entry_id != &"from_home" or not bool(room_status.get("ok", false)):
 			next_world.free()
 			hud.show_message(String(room_status.get("reason", "Enter this room through your Personal Sanctuary.")))
 			return
 		home_room_identity = String(ExpeditionSession.home_snapshot().get("id", ""))
-		if not next_world.has_method("configure_home_visit") or not next_world.configure_home_visit(home_room_identity):
+		if (destination != &"home_conservatory" and (next_world.get_script() == null or next_world.get_script().resource_path != "res://scripts/home/home_room.gd" or next_world.get("room_id") != String(HOME_ROOMS[destination]))) \
+			or not next_world.has_method("configure_home_visit") or not next_world.configure_home_visit(home_room_identity):
 			next_world.free()
 			return
 	elif destination == &"collection_hall" and current_location == &"personal_sanctuary" and entry_id == &"from_home":
@@ -335,14 +343,14 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 		await _recover_completed_return(next_world, completed_return, travel_serial)
 		return
 	var combat_admitted := true
-	if destination in [&"personal_sanctuary", &"home_conservatory"]:
+	if (destination == &"personal_sanctuary" or HOME_ROOMS.has(destination)):
 		combat_admitted = is_instance_valid(next_world) and not next_world.is_queued_for_deletion() \
 			and next_world.get_parent() == world_root and active_world == next_world and current_location == destination \
 			and _travel_serial == travel_serial and next_world.has_method("validate_home_arrival") and next_world.validate_home_arrival(entry_id)
-		if destination == &"home_conservatory":
+		if HOME_ROOMS.has(destination):
 			var room_home: Dictionary = ExpeditionSession.home_snapshot()
 			combat_admitted = combat_admitted and not home_room_identity.is_empty() and room_home.get("id") == home_room_identity \
-				and ExpeditionSession.home_room_accessible(&"pet_conservatory") and not ExpeditionSession.active
+				and ExpeditionSession.home_room_accessible(HOME_ROOMS[destination]) and not ExpeditionSession.active
 	if not issued_plan.is_empty() and _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan) \
 			and _candidate_ready_valid(next_world, issued_context, issued_plan):
 		# Native candidate floor/capsules exist now. Only its private issued
@@ -355,7 +363,7 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 		ExpeditionSession.bind_game_context(player, previous_location, previous_world)
 		demo_exchange.bind_game_context(player, previous_location, previous_world)
 		_cancel_candidate_travel(next_world, issued_generation, issued_seed, issued_context, issued_plan)
-		if destination in [&"personal_sanctuary", &"home_conservatory"]:
+		if (destination == &"personal_sanctuary" or HOME_ROOMS.has(destination)):
 			hud.show_message("Home arrival is obstructed. You remain in the current area.")
 		return
 	if is_instance_valid(previous_world):
@@ -998,7 +1006,7 @@ func _portal_information_lines(destination: StringName, depth_status: Dictionary
 	elif destination == &"collection_hall":
 		lines = ["COLLECTION HALL · Owned exhibits and discovery journal", "Inspect your real owned equipment, relics and discovered item definitions.", "Display assignments use existing inventory instances; visiting creates no items."]
 	elif destination == &"personal_sanctuary":
-		lines = ["PERSONAL SANCTUARY · Your local saved home", "Explore the Grand Foyer and Trophy Hall. Own a pet to unlock the Pet Conservatory.", "Owned equipment, relics and pets stay in your existing collections when displayed.", "Offline home for this saved profile · Remote visitors and online housing are unavailable."]
+		lines = ["PERSONAL SANCTUARY · Your local saved home", "Explore nine connected home rooms. Home Management shows each earned requirement or TEST ACCESS.", "Owned equipment, relics and pets stay in your existing collections when displayed.", "Offline home for this saved profile · Remote visitors and online housing are unavailable."]
 	else:
 		lines = ["SUNKEN VAULT · Existing authored practice dungeon", "Explore the original chambers and practise combat and manual portal travel.", "The generated Rootbound expedition and extraction loop has its own gate."]
 	lines.append("Party: 1 local human + %d AI companion%s · No remote players." % [ai_count, "" if ai_count == 1 else "s"])
@@ -1037,11 +1045,35 @@ func _travel_if_context_current(destination: StringName, entry_id: StringName, r
 		return
 	change_location(destination, entry_id)
 
+func request_home_room_service(source: Node3D, actor: Node) -> bool:
+	# The live room owns its service registry. Caller labels, foreign nodes and
+	# stale worlds cannot turn an exhibition into inventory/recruit authority.
+	if not is_inside_tree() or is_queued_for_deletion() or transitioning or _modal_open or not _application_focused \
+		or not HOME_ROOMS.has(current_location) or current_location == &"home_conservatory" or actor != player \
+		or not is_instance_valid(source) or source.get_script() == null or source.get_script().resource_path != "res://scripts/home/home_room_service.gd" \
+		or not is_instance_valid(hud) or not is_instance_valid(hud.expedition_overlay) \
+		or not hud.is_inside_tree() or hud.is_queued_for_deletion() or hud.expedition_overlay.mode != &"none":
+		return false
+	var kind := StringName(source.get("service_kind"))
+	if not ExpeditionSession.home_room_service_source_valid(source, actor, HOME_ROOMS[current_location], kind): return false
+	match kind:
+		&"equipment":
+			hud.expedition_overlay.open_equipment()
+			return hud.expedition_overlay.mode == &"pack"
+		&"companions":
+			if not is_instance_valid(party) or party.get_parent() != self: return false
+			party.open_recruitment()
+			return hud.expedition_overlay.mode == &"recruit"
+		&"library_items", &"library_monsters":
+			return ExpeditionSession.open_home_journal_service(source, actor, &"items" if kind == &"library_items" else &"monsters")
+	return false
+
+
 func request_home_navigation(source: Node3D, actor: Node, route_id: StringName) -> bool:
 	# Session supplies its actual canonical lectern/player, never UI Node references
 	# or destination strings. Existing travel remains the sole world/party owner.
 	if not is_inside_tree() or is_queued_for_deletion() or transitioning or not _application_focused \
-		or current_location not in [&"personal_sanctuary", &"home_conservatory"] or not _modal_open or actor != player \
+		or not (current_location == &"personal_sanctuary" or HOME_ROOMS.has(current_location)) or not _modal_open or actor != player \
 		or not is_instance_valid(hud) or not hud.is_inside_tree() or hud.is_queued_for_deletion() or not is_instance_valid(hud.expedition_overlay) \
 		or not hud.expedition_overlay.is_inside_tree() or hud.expedition_overlay.is_queued_for_deletion() \
 		or not is_instance_valid(party) or not party.is_inside_tree() or party.is_queued_for_deletion() or ExpeditionSession.active:
@@ -1074,7 +1106,7 @@ func request_home_navigation(source: Node3D, actor: Node, route_id: StringName) 
 
 func _home_navigation_context_valid(context: Dictionary) -> bool:
 	if not is_inside_tree() or is_queued_for_deletion() or transitioning or _modal_open or not _application_focused \
-		or current_location not in [&"personal_sanctuary", &"home_conservatory"] or current_location != context.get("location") or ExpeditionSession.active:
+		or not (current_location == &"personal_sanctuary" or HOME_ROOMS.has(current_location)) or current_location != context.get("location") or ExpeditionSession.active:
 		return false
 	for key: String in ["owner", "world", "source", "actor", "party", "overlay", "panel"]:
 		var reference := context.get(key) as WeakRef
@@ -1135,7 +1167,7 @@ func _on_respawn() -> void:
 				return
 			ExpeditionSession.fail_run("defeated")
 			if ExpeditionSession.active or ExpeditionSession.run_generation != generation or active_world != world: return
-		if current_location in [&"personal_sanctuary", &"home_conservatory"] and player.health > 0.0:
+		if (current_location == &"personal_sanctuary" or HOME_ROOMS.has(current_location)) and player.health > 0.0:
 			# A home fall reuses its admitted scene and saved identity. Room entry
 			# restrictions must not trap a player by trying to enter from itself.
 			if is_instance_valid(world) and world.has_method("validate_home_arrival") and world.validate_home_arrival(&"default"):

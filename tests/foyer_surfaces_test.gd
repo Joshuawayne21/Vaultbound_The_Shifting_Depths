@@ -156,22 +156,22 @@ func _room_availability() -> void:
 		var frame := foyer.get_node_or_null("FutureDoor_" + id)
 		if not check(frame != null, "Room retains its authored doorway frame: " + id): continue
 		var plaque := frame.get_node_or_null("RequirementPlaque") as Label3D
-		if id == "pet_conservatory":
-			var door := frame.get_node_or_null("ConservatoryDoor") as Node3D
-			check(plaque != null and plaque.text.contains("RECORD AT HOME MANAGEMENT")
-				and not bool(frame.get_meta("room_available", false)) and is_instance_valid(door)
-				and door.is_in_group("interactables") and door.get_prompt().contains("Record your milestone")
-				and not session.home_room_entry_status(&"pet_conservatory", foyer, player).ok,
-				"Implemented Conservatory doorway explains and enforces its unrecorded earned milestone")
-		else:
-			check(plaque != null and plaque.text.contains("NOT YET OPEN") and not frame.is_in_group("interactables") and not frame.has_method("interact"),
-				"Sealed room exposes honest milestone information without a fabricated room service: " + id)
+		var door := frame.get_node_or_null("ConservatoryDoor" if id == "pet_conservatory" else "RoomDoor_" + id) as Node3D
+		var destination := &"home_conservatory" if id == "pet_conservatory" else StringName("home_" + id)
+		check(plaque != null and plaque.text.contains("RECORD AT HOME MANAGEMENT")
+			and not bool(frame.get_meta("room_available", false)) and is_instance_valid(door)
+			and door.is_in_group("interactables") and door.get_prompt().contains("Record your milestone")
+			and door.destination == destination and door.entry_id == &"from_home"
+			and not frame.is_in_group("interactables") and not frame.has_method("interact")
+			and not session.home_room_entry_status(StringName(id), foyer, player).ok,
+			"Implemented doorway explains and enforces its unrecorded earned milestone: " + id)
 	var destinations: Array[String] = []
 	for node: Node in foyer.find_children("*", "Node3D", true, false):
 		if node.has_signal("travel_requested") and node.get("destination") != null:
 			destinations.append(String(node.destination))
 	destinations.sort()
-	check(destinations == ["collection_hall", "home_conservatory", "sanctuary"], "The foyer exposes only its three implemented, separately admitted room/return destinations")
+	check(destinations == ["collection_hall", "home_armory", "home_companion_hall", "home_conservatory", "home_personal_chamber", "home_relic_library", "home_rooftop_garden", "home_wardrobe", "sanctuary"],
+		"The foyer exposes exactly its nine implemented, separately admitted room/return destinations")
 
 func _visible_stairs() -> void:
 	var stonework := foyer.get_node_or_null("WalkableStonework") as MeshInstance3D

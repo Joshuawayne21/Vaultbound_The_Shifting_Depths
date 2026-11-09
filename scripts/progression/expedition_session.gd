@@ -1086,29 +1086,80 @@ func _wear_equipped(candidate: Dictionary, amount: int) -> void:
 		if not entry.is_empty():
 			entry.durability = maxi(0, int(entry.durability) - amount)
 
-func _home_service_source_valid(source: Node3D, actor: Node) -> bool:
-	if active or _location not in [&"personal_sanctuary", &"home_conservatory"] or actor != _player or not is_instance_valid(actor) or not actor is VaultPlayer \
+func _home_definition(room_id: StringName) -> Dictionary:
+	var index := HomeProgress.CATALOG.ROOM_IDS.find(String(room_id))
+	if index < 0 or not HomeProgress.CATALOG.valid(): return {}
+	return HomeProgress.CATALOG.rooms[index]
+
+func _canonical_home_room_id(world: Node3D, location: StringName) -> StringName:
+	# This identifies an already admitted visit. Eligibility may subsequently be
+	# disabled; accepted visits must retain their return and management routes.
+	if not is_instance_valid(world) or not world.is_inside_tree() or world.is_queued_for_deletion() or world.get_script() == null:
+		return &""
+	var identity := String(home_snapshot().get("id", ""))
+	if not HomeProgress.valid_id(identity, false): return &""
+	var path: String = world.get_script().resource_path
+	if location == &"personal_sanctuary":
+		return &"foyer" if path == "res://scripts/home/personal_sanctuary.gd" else &""
+	if location == &"collection_hall":
+		return &"trophy_hall" if path == "res://scripts/world/collection_hall.gd" and world.has_method("is_home_origin_visit") and world.is_home_origin_visit() else &""
+	if not world.has_method("is_home_origin_visit") or not world.is_home_origin_visit() \
+		or not world.has_method("home_identity") or world.home_identity() != identity: return &""
+	if location == &"home_conservatory":
+		return &"pet_conservatory" if path == "res://scripts/home/pet_conservatory.gd" else &""
+	if path != "res://scripts/home/home_room.gd": return &""
+	var room_id := StringName(world.get("room_id"))
+	if room_id not in [&"armory", &"companion_hall", &"relic_library", &"personal_chamber", &"wardrobe", &"rooftop_garden"]: return &""
+	var definition := _home_definition(room_id)
+	return room_id if not definition.is_empty() and bool(definition.available) and StringName(definition.destination) == location else &""
+
+func _home_game_context_valid(world: Node3D, actor: Node, require_controls: bool = false) -> bool:
+	if active or not is_instance_valid(actor) or actor != _player or not actor is VaultPlayer \
 		or not actor.is_inside_tree() or actor.is_queued_for_deletion() or actor.downed or actor.eliminated or not _actor_ready(): return false
-	var expected_path := "res://scripts/home/personal_sanctuary.gd" if _location == &"personal_sanctuary" else "res://scripts/home/pet_conservatory.gd"
-	if not is_instance_valid(_world) or not _world.is_inside_tree() or _world.is_queued_for_deletion() \
-		or _world.get_script() == null or _world.get_script().resource_path != expected_path: return false
-	if _location == &"home_conservatory" and (not _world.has_method("is_home_origin_visit") or not _world.is_home_origin_visit() \
-		or not _world.has_method("home_identity") or _world.home_identity() != home_snapshot().get("id", "")): return false
+	if require_controls and (not actor.controls_enabled or not InputHub.controls_enabled): return false
+	if not is_instance_valid(world) or world != _world or not world.is_inside_tree() or world.is_queued_for_deletion(): return false
 	var game := actor.get_parent()
-	if not is_instance_valid(game) or game.get_script() == null or game.get_script().resource_path != "res://scripts/systems/game.gd" \
-		or not game.is_inside_tree() or game.is_queued_for_deletion() or game.get("transitioning") \
-		or not bool(game.get("_application_focused")) \
-		or game.get("player") != actor or game.get("active_world") != _world or game.get("current_location") != _location \
-		or _world.get_parent() != game.get("world_root") or _world.get_viewport() != actor.get_viewport() \
-		or _world.get_world_3d() != actor.get_world_3d(): return false
+	return is_instance_valid(game) and game.get_script() != null and game.get_script().resource_path == "res://scripts/systems/game.gd" \
+		and game.is_inside_tree() and not game.is_queued_for_deletion() and not game.get("transitioning") \
+		and bool(game.get("_application_focused")) and game.get("player") == actor and game.get("active_world") == world \
+		and game.get("current_location") == _location and world.get_parent() == game.get("world_root") \
+		and world.get_viewport() == actor.get_viewport() and world.get_world_3d() == actor.get_world_3d()
+
+func _home_service_source_valid(source: Node3D, actor: Node) -> bool:
+	if not _home_game_context_valid(_world, actor) or _canonical_home_room_id(_world, _location) == &"": return false
 	if not is_instance_valid(source) or not source.is_inside_tree() or source.is_queued_for_deletion() \
-		or not source.is_visible_in_tree() or not _world.is_ancestor_of(source) \
+		or not source.is_visible_in_tree() or source.get_parent() != _world \
 		or source.get_script() == null or source.get_script().resource_path != "res://scripts/home/home_management_station.gd" \
 		or not _world.has_method("home_management_station") or _world.home_management_station() != source \
 		or source.get_viewport() != actor.get_viewport() or source.get_world_3d() != actor.get_world_3d(): return false
-	return HomeProgress.valid_id(home_snapshot().get("id"), false) \
-		and actor.global_position.distance_to(source.global_position) <= float(source.get("interaction_radius")) \
-		and _service_visible(source)
+	return actor.global_position.distance_to(source.global_position) <= float(source.get("interaction_radius")) and _service_visible(source)
+
+func home_room_service_source_valid(source: Node3D, actor: Node, room_id: StringName, kind: StringName) -> bool:
+	if not _home_game_context_valid(_world, actor, true) or _canonical_home_room_id(_world, _location) != room_id \
+		or not HomeProgress.room_available(profile, String(room_id)): return false
+	var allowed := {&"armory": [&"equipment"], &"companion_hall": [&"companions"],
+		&"relic_library": [&"library_items", &"library_monsters"], &"personal_chamber": [&"equipment"], &"wardrobe": [&"equipment"]}
+	if not allowed.has(room_id) or kind not in allowed[room_id] or _world.get_script().resource_path != "res://scripts/home/home_room.gd": return false
+	if not is_instance_valid(source) or not source.is_inside_tree() or source.is_queued_for_deletion() or not source.is_visible_in_tree() \
+		or source.get_parent() != _world or source.get_script() == null \
+		or source.get_script().resource_path != "res://scripts/home/home_room_service.gd" or source.get("service_kind") != kind \
+		or not source.has_method("can_interact") or not _world.has_method("registered_room_services") \
+		or source.get_viewport() != actor.get_viewport() or source.get_world_3d() != actor.get_world_3d(): return false
+	var registered: Dictionary = _world.registered_room_services()
+	return registered.get(kind) == source and bool(source.can_interact(actor))
+
+func open_home_journal_service(source: Node3D, actor: Node, tab: String) -> bool:
+	if tab not in ["items", "monsters"]: return false
+	var kind := StringName("library_" + tab)
+	if not home_room_service_source_valid(source, actor, &"relic_library", kind): return false
+	close_service()
+	_service = source
+	_service_kind = &"home_journal"
+	_service_context = {"tab": tab, "home_journal": true}
+	# Read-only discovery UI. Collection display writes still require the real
+	# Collection Hall service and its registered stand, never this lectern.
+	ui_requested.emit(&"collection", _service_context.duplicate(true))
+	return true
 
 func open_home_service(source: Node3D, actor: Node = null) -> bool:
 	if actor == null: actor = _player
@@ -1127,63 +1178,48 @@ func home_management_snapshot() -> Dictionary:
 	result.service_available = available and not store.read_only
 	# Returning through an existing scene route does not write secured progress.
 	result.navigation_available = available and not _home_mutating
-	result.current_room_id = "pet_conservatory" if _location == &"home_conservatory" else "foyer"
+	result.current_room_id = String(_canonical_home_room_id(_world, _location))
 	result.navigation_routes = []
 	if result.navigation_available:
-		for route: StringName in [&"sanctuary", &"foyer", &"trophy_hall", &"pet_conservatory"]:
-			if home_navigation_status(route, _service, _player).ok: result.navigation_routes.append(String(route))
+		for route: String in ["sanctuary"] + HomeProgress.CATALOG.ROOM_IDS:
+			if home_navigation_status(StringName(route), _service, _player).ok: result.navigation_routes.append(route)
 	return result
 
 func home_navigation_status(route_id: StringName, source: Node3D, actor: Node) -> Dictionary:
 	var denied := {"ok": false, "destination": &"", "entry_id": &"", "reason": "Approach your Home Management lectern to travel."}
-	# Pure admission is intentionally usable after the trusted Game closes the
-	# modal and clears _service. It never grants a general travel capability.
+	# Pure admission remains usable after Game closes the modal. The actual
+	# canonical source and current visit are still independently required.
 	if _home_mutating or not _home_service_source_valid(source, actor): return denied
-	if route_id == &"sanctuary":
-		return {"ok": true, "destination": &"sanctuary", "entry_id": &"from_hall", "reason": ""}
-	if route_id == &"foyer" and _location == &"home_conservatory":
-		return {"ok": true, "destination": &"personal_sanctuary", "entry_id": &"from_conservatory", "reason": ""}
-	if route_id == &"trophy_hall" and _location == &"personal_sanctuary":
-		var home := home_snapshot()
-		var definition: Dictionary = HomeProgress.CATALOG.rooms[HomeProgress.CATALOG.ROOM_IDS.find("trophy_hall")]
-		if "trophy_hall" in home.unlocked_rooms and bool(definition.available) and definition.destination == "collection_hall":
-			return {"ok": true, "destination": &"collection_hall", "entry_id": &"from_home", "reason": ""}
-	if route_id == &"pet_conservatory" and _location == &"personal_sanctuary":
-		var home := home_snapshot()
-		var definition: Dictionary = HomeProgress.CATALOG.rooms[HomeProgress.CATALOG.ROOM_IDS.find("pet_conservatory")]
-		if HomeProgress.room_available(profile, "pet_conservatory") and bool(definition.available) and definition.destination == "home_conservatory":
-			return {"ok": true, "destination": &"home_conservatory", "entry_id": &"from_home", "reason": ""}
-		denied.reason = "Own one Spiritweaving pet, then record the Pet Conservatory milestone at Home Management."
+	if route_id == &"sanctuary": return {"ok": true, "destination": &"sanctuary", "entry_id": &"from_hall", "reason": ""}
+	var current := _canonical_home_room_id(_world, _location)
+	if route_id == &"foyer" and current not in [&"", &"foyer"]:
+		var entry := &"from_conservatory" if current == &"pet_conservatory" else StringName("from_" + String(current))
+		return {"ok": true, "destination": &"personal_sanctuary", "entry_id": entry, "reason": ""}
+	var definition := _home_definition(route_id)
+	if current == &"foyer" and route_id != &"foyer" and not definition.is_empty():
+		if HomeProgress.room_available(profile, String(route_id)):
+			return {"ok": true, "destination": StringName(definition.destination), "entry_id": &"from_home", "reason": ""}
+		denied.reason = "Record the earned room milestone: " + String(definition.requirement) if bool(definition.available) else "This room is not available in this build."
 		return denied
-	denied.reason = "That room is not available from Home Management."
+	denied.reason = "Return to the Grand Foyer to enter another room."
 	return denied
 
 func home_room_entry_status(room_id: StringName, source_world: Node3D, actor: Node) -> Dictionary:
-	# Physical doors admit only the current player in the canonical foyer. The
-	# caller cannot turn a catalog destination into a general teleport capability.
+	# Physical doors only admit from the current canonical foyer, never arbitrary
+	# caller-selected world scenes or guessed home identities.
 	var denied := {"ok": false, "destination": &"", "entry_id": &"", "reason": "Return to your Grand Foyer to enter this room."}
-	if room_id != &"pet_conservatory" or active or _location != &"personal_sanctuary" \
-		or not is_instance_valid(actor) or actor != _player or not actor is VaultPlayer \
-		or not actor.is_inside_tree() or actor.is_queued_for_deletion() or actor.downed or actor.eliminated \
-		or not actor.controls_enabled or not InputHub.controls_enabled or not _actor_ready(): return denied
-	if not is_instance_valid(source_world) or source_world != _world or not source_world.is_inside_tree() \
-		or source_world.is_queued_for_deletion() or source_world.get_script() == null \
-		or source_world.get_script().resource_path != "res://scripts/home/personal_sanctuary.gd": return denied
-	var game := actor.get_parent()
-	if not is_instance_valid(game) or game.get_script() == null or game.get_script().resource_path != "res://scripts/systems/game.gd" \
-		or not game.is_inside_tree() or game.is_queued_for_deletion() or game.get("transitioning") \
-		or not bool(game.get("_application_focused")) or game.get("player") != actor \
-		or game.get("active_world") != source_world or game.get("current_location") != _location \
-		or source_world.get_parent() != game.get("world_root") or source_world.get_viewport() != actor.get_viewport() \
-		or source_world.get_world_3d() != actor.get_world_3d(): return denied
+	if _location != &"personal_sanctuary" or room_id == &"foyer" \
+		or not _home_game_context_valid(source_world, actor, true) or _canonical_home_room_id(source_world, _location) != &"foyer": return denied
+	var definition := _home_definition(room_id)
+	if definition.is_empty() or not bool(definition.available):
+		denied.reason = "This room is not available in this build."
+		return denied
 	var validated := VaultProfileStore.normalize(profile)
 	if validated.is_empty() or not HomeProgress.valid_id(validated.home.id, false): return denied
-	if not HomeProgress.room_available(validated, "pet_conservatory"):
-		denied.reason = "Own one Spiritweaving pet, then record the Pet Conservatory milestone at Home Management."
+	if not HomeProgress.room_available(validated, String(room_id)):
+		denied.reason = "Record the earned room milestone: " + String(definition.requirement)
 		return denied
-	var definition: Dictionary = HomeProgress.CATALOG.rooms[HomeProgress.CATALOG.ROOM_IDS.find("pet_conservatory")]
-	if not bool(definition.available) or definition.destination != "home_conservatory": return denied
-	return {"ok": true, "destination": &"home_conservatory", "entry_id": &"from_home", "reason": ""}
+	return {"ok": true, "destination": StringName(definition.destination), "entry_id": &"from_home", "reason": ""}
 
 func request_home_navigation(route_id: StringName) -> bool:
 	if _home_mutating or _service_kind != &"home": return false
@@ -1257,31 +1293,11 @@ func home_snapshot() -> Dictionary:
 	return HomeProgress.normalize(profile.get("home"), TesterAccess.enabled(profile))
 
 func _home_entry_source_valid(source_world: Node3D, actor: Node) -> bool:
-	if active or not is_instance_valid(actor) or actor != _player or not actor is VaultPlayer \
-			or not actor.is_inside_tree() or actor.is_queued_for_deletion() or actor.downed or actor.eliminated \
-			or not actor.controls_enabled or not InputHub.controls_enabled or not _actor_ready():
-		return false
-	if not is_instance_valid(source_world) or source_world != _world or not source_world.is_inside_tree() \
-			or source_world.is_queued_for_deletion() or source_world.get_script() == null:
-		return false
-	var game := actor.get_parent()
-	if not is_instance_valid(game) or game.get_script() == null or game.get_script().resource_path != "res://scripts/systems/game.gd" \
-			or not game.is_inside_tree() or game.is_queued_for_deletion() or game.get("transitioning") \
-			or game.get("player") != actor or game.get("active_world") != source_world or game.get("current_location") != _location \
-			or source_world.get_parent() != game.get("world_root") or source_world.get_viewport() != actor.get_viewport() \
-			or source_world.get_world_3d() != actor.get_world_3d():
-		return false
-	var source_path: String = source_world.get_script().resource_path
-	if _location == &"sanctuary":
-		return source_path == "res://scripts/world/sanctuary.gd"
-	if _location == &"home_conservatory":
-		return source_path == "res://scripts/home/pet_conservatory.gd" \
-			and source_world.has_method("is_home_origin_visit") and source_world.is_home_origin_visit() \
-			and source_world.has_method("home_identity") and source_world.home_identity() == home_snapshot().get("id", "") \
-			and HomeProgress.valid_id(home_snapshot().get("id"), false)
-	return _location == &"collection_hall" and source_path == "res://scripts/world/collection_hall.gd" \
-		and source_world.has_method("is_home_origin_visit") and source_world.is_home_origin_visit() \
-		and HomeProgress.valid_id(home_snapshot().get("id"), false)
+	if not _home_game_context_valid(source_world, actor, true) or source_world.get_script() == null: return false
+	if _location == &"sanctuary": return source_world.get_script().resource_path == "res://scripts/world/sanctuary.gd"
+	# Return admission uses accepted visit identity, even after TEST ACCESS is
+	# disabled, not the current eligibility that would govern a fresh entry.
+	return _canonical_home_room_id(source_world, _location) not in [&"", &"foyer"]
 
 func prepare_home_entry(source_world: Node3D, actor: Node) -> bool:
 	if _home_preparing:
@@ -1304,7 +1320,7 @@ func _prepare_home_entry(source_world: Node3D, actor: Node) -> bool:
 		# changing any saved state. The canonical source guard above has checked
 		# the actual Game, actor, Hall script and private home-origin route.
 		# Sanctuary entry, legacy Hall visits and identity creation stay denied.
-		if (_location == &"collection_hall" and source_world.is_home_origin_visit() or _location == &"home_conservatory") \
+		if _canonical_home_room_id(source_world, _location) not in [&"", &"foyer"] \
 			and HomeProgress.valid_id(home.id, false) and home.id == home_snapshot().get("id"):
 			return true
 		storage_error = store.last_error
@@ -1344,16 +1360,18 @@ func _tester_access_error() -> String:
 	if store.read_only: return "Test access cannot save while secured progress is read-only."
 	if active: return "Finish or leave the expedition before changing test access."
 	if _home_preparing or _home_mutating: return "Finish the current home change first."
-	if _location not in [&"sanctuary", &"personal_sanctuary", &"home_conservatory", &"collection_hall"]:
+	if _location not in [&"sanctuary", &"personal_sanctuary", &"home_conservatory", &"collection_hall", \
+		&"home_armory", &"home_companion_hall", &"home_relic_library", &"home_personal_chamber", &"home_wardrobe", &"home_rooftop_garden"]:
 		return "Return to the Sanctuary or your home to change test access."
 	if not is_instance_valid(_player) or not _player is VaultPlayer or not _player.is_inside_tree() \
 		or _player.is_queued_for_deletion() or _player.downed or _player.eliminated or not _actor_ready() \
 		or not _player.combat.can_switch_weapon(): return "Finish your combat action before changing test access."
 	if not is_instance_valid(_world) or not _world.is_inside_tree() or _world.is_queued_for_deletion() or _world.get_script() == null:
 		return "The current safe area is unavailable."
-	var paths := {&"sanctuary": "res://scripts/world/sanctuary.gd", &"personal_sanctuary": "res://scripts/home/personal_sanctuary.gd",
-		&"home_conservatory": "res://scripts/home/pet_conservatory.gd", &"collection_hall": "res://scripts/world/collection_hall.gd"}
-	if _world.get_script().resource_path != paths[_location]: return "The current safe area is unavailable."
+	if _location in [&"sanctuary", &"collection_hall"]:
+		var expected_path := "res://scripts/world/sanctuary.gd" if _location == &"sanctuary" else "res://scripts/world/collection_hall.gd"
+		if _world.get_script().resource_path != expected_path: return "The current safe area is unavailable."
+	elif _canonical_home_room_id(_world, _location) == &"": return "The current safe area is unavailable."
 	var game := _player.get_parent()
 	if not is_instance_valid(game) or game.get_script() == null or game.get_script().resource_path != "res://scripts/systems/game.gd" \
 		or not game.is_inside_tree() or game.is_queued_for_deletion() or game.get("transitioning") \

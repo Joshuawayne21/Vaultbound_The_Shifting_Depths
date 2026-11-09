@@ -3,6 +3,7 @@ extends RefCounted
 ## Pure cosmetic collection planning. Session admits real sources; ProfileStore saves.
 const Catalog = preload("res://scripts/pets/pet_catalog.gd")
 const COUNTERS := ["eggs_found", "rescues", "rootwarden_victories"]
+const TesterAccess = preload("res://scripts/progression/tester_access.gd")
 const KEYS := ["ingredients", "ingredient_discoveries", "weave_seeds", "owned", "active_id", "recipe_discoveries", "achievements", "statistics"]
 
 static func empty_fields() -> Dictionary:
@@ -154,7 +155,7 @@ static func ingredient_rows(values: Dictionary) -> Array[Dictionary]:
 
 static func recipe_snapshot(profile: Dictionary, id: String) -> Dictionary:
 	var recipe := Catalog.recipe_for(StringName("weave_" + id))
-	var result := {"id": String(recipe.id), "costs": [], "requirements": [], "can_create": true, "reason": ""}
+	var result := {"id": String(recipe.id), "costs": [], "requirements": [], "can_create": true, "reason": "", "tester_access": TesterAccess.enabled(profile)}
 	for ingredient: String in recipe.ingredient_costs:
 		var required := int(recipe.ingredient_costs[ingredient])
 		var count := int(profile.pets.ingredients.get(ingredient, 0))
@@ -165,8 +166,8 @@ static func recipe_snapshot(profile: Dictionary, id: String) -> Dictionary:
 		var rule: Dictionary = Catalog.POLICY.achievement_rules[String(achievement)]
 		var count := int(profile.statistics.completed) if rule.stat == "completed" else int(profile.pets.statistics.get(rule.stat, 0))
 		var met: bool = profile.pets.achievements.has(String(achievement))
-		result.requirements.append({"id": String(achievement), "label": rule.label, "current": count, "target": int(rule.target), "met": met})
-		if not met:
+		result.requirements.append({"id": String(achievement), "label": rule.label, "current": count, "target": int(rule.target), "met": met, "test_access": not met and TesterAccess.enabled(profile)})
+		if not met and not TesterAccess.enabled(profile):
 			result.reason = String(rule.label)
 	if not recipe.enabled:
 		result.reason = "This combination is unavailable."
