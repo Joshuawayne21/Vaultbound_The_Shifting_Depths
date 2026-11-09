@@ -25,7 +25,7 @@ func valid() -> bool:
 		var row: Dictionary = rooms[index]
 		if not _keys(row, ["id", "label", "requirement", "kind", "minimum", "available", "destination"]) \
 			or row.id != ROOM_IDS[index] or not _rule(row) or not row.available is bool or not row.destination is String: return false
-		if row.available != (index < 2) or row.destination != ("personal_sanctuary" if index == 0 else "collection_hall" if index == 1 else ""): return false
+		if row.available != (index < 3) or row.destination != ("personal_sanctuary" if index == 0 else "collection_hall" if index == 1 else "home_conservatory" if index == 2 else ""): return false
 	return true
 
 func _rule(row: Dictionary) -> bool:

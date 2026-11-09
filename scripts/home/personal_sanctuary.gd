@@ -15,7 +15,7 @@ const Layout = preload("res://scripts/home/home_foyer_layout.gd")
 const Builder = preload("res://scripts/home/home_foyer_builder.gd")
 const HomeStyle = preload("res://scripts/home/home_visual_style.gd")
 const Station = preload("res://scripts/home/home_management_station.gd")
-const ENTRY_IDS := [&"default", &"from_sanctuary", &"from_trophy_hall"]
+const ENTRY_IDS := [&"default", &"from_sanctuary", &"from_trophy_hall", &"from_conservatory"]
 # Match the existing player/companion scene capsules and VaultParty formation.
 # Arrival tests independently compare these checks with the actual actor shapes.
 const ACTOR_RADIUS := 0.34
@@ -24,7 +24,7 @@ const FORMATION_SIDE := 1.6
 const FORMATION_TRAIL := 2.2
 
 var display_name := "PERSONAL SANCTUARY"
-var objective := "Welcome home · Visit the Trophy Hall or return to the city"
+var objective := "Welcome home · Trophy Hall, Pet Conservatory and Home Management"
 var _floor_body: StaticBody3D
 var _management_station: Node3D
 var _session: Node
@@ -236,7 +236,10 @@ func _refresh_room_plaques() -> void:
 		var plaque := frame.get_node_or_null("RequirementPlaque") as Label3D
 		if plaque == null: continue
 		var status := "MILESTONE EARNED" if bool(row.get("unlocked", false)) else "MILESTONE READY" if bool(row.get("eligible", false)) else "LOCKED"
-		plaque.text = "%s\n%s · %s\n%s · NOT YET OPEN" % [String(row.get("label", "Room")).to_upper(), String(row.get("requirement", "")), String(row.get("progress", "")), status]
+		var implemented := String(row.get("id", "")) == "pet_conservatory"
+		var availability := "ENTER · USE" if bool(row.get("available", false)) else "RECORD AT HOME MANAGEMENT" if implemented and bool(row.get("eligible", false)) else "LOCKED" if implemented else "NOT YET OPEN"
+		frame.set_meta("room_available", bool(row.get("available", false)))
+		plaque.text = "%s\n%s · %s\n%s · %s" % [String(row.get("label", "Room")).to_upper(), String(row.get("requirement", "")), String(row.get("progress", "")), status, availability]
 
 func apply_home_presentation(snapshot: Dictionary) -> void:
 	var theme := String(snapshot.get("theme_id", "royal_azure"))
@@ -277,6 +280,8 @@ func _build_portals() -> void:
 	add_child(trophy_portal)
 
 func get_spawn_transform(entry_id: StringName) -> Transform3D:
+	if entry_id == &"from_conservatory":
+		return global_transform * Transform3D(Basis(Vector3.UP, PI / 2.0), Vector3(4.2, 0.15, 4))
 	if entry_id == &"from_trophy_hall":
 		return global_transform * Transform3D(Basis(Vector3.UP, PI), Vector3(0, 0.15, -6.5))
 	return global_transform * Transform3D(Basis.IDENTITY, Vector3(0, 0.15, 8))

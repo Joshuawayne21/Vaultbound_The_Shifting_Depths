@@ -82,7 +82,7 @@ func _geometry() -> void:
 			for inset: Vector2 in [Vector2.ZERO, Vector2(30, 18)]:
 				game.hud.surface._safe_inset = inset
 				var safe := Rect2(inset, extent - inset * 2)
-				var targets: Array[Rect2] = [panel.close_rect(), panel.claim_rect(), panel.primary_rect(), panel.tab_rect(0), panel.tab_rect(1), panel.return_rect(), panel.list_scroll_rect(-1), panel.list_scroll_rect(1), panel.detail_scroll_rect(-1), panel.detail_scroll_rect(1)]
+				var targets: Array[Rect2] = [panel.close_rect(), panel.claim_rect(), panel.primary_rect(), panel.tab_rect(0), panel.tab_rect(1), panel.tab_rect(2), panel.return_rect(), panel.list_scroll_rect(-1), panel.list_scroll_rect(1), panel.detail_scroll_rect(-1), panel.detail_scroll_rect(1)]
 				for index in range(panel.list_capacity()): targets.append(panel.row_rect(index))
 				var fits := safe.encloses(panel.panel_rect())
 				var separate := true
@@ -142,7 +142,8 @@ func _record_and_apply() -> void:
 	var available := 0
 	for room: Dictionary in panel.data.rooms:
 		if bool(room.available): available += 1
-	check(available == 2 and game.active_world.get_node_or_null("TrophyHallDoor") != null, "Recorded future milestones leave only the real Foyer and existing Trophy Hall available")
+	check(available == 3 and game.active_world.get_node_or_null("TrophyHallDoor") != null \
+		and bool(panel._row("rooms", "pet_conservatory").available), "Recorded milestones open the implemented Pet Conservatory alongside the Foyer and Trophy Hall; remaining rooms stay sealed")
 	if not _select("themes", "enchanted_forest") or not _select("sigils", "root_crown"): return
 	var saved := FileAccess.get_file_as_bytes(PATH)
 	_tap(panel.primary_rect().get_center())

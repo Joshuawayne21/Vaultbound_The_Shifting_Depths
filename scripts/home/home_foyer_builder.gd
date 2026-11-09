@@ -3,6 +3,7 @@ extends RefCounted
 const Architecture = preload("res://scripts/world/architecture.gd")
 const Layout = preload("res://scripts/home/home_foyer_layout.gd")
 const Dressing = preload("res://scripts/visual/sanctuary_dressing.gd")
+const RoomDoor = preload("res://scripts/home/home_room_door.gd")
 const SURFACE_GROUP := &"city_navigation_surfaces"
 const MAIN_TREAD_COUNT := 44
 const LOWER_TREAD_COUNT := 6
@@ -317,6 +318,11 @@ static func _future_doors(root: Node3D, kit: Architecture) -> void:
 		var label: Label3D = local_kit.label(String(row.label) + "\nNOT YET OPEN", Vector3(0, 5.05, 0.2), 24, Color("d0d8e6"))
 		label.name = "RequirementPlaque"
 		label.pixel_size = 0.004
+		if row.id == "pet_conservatory":
+			var door := RoomDoor.new()
+			door.name = "ConservatoryDoor"
+			door.position = Vector3(0, 0, 0.35)
+			frame.add_child(door)
 
 static func _ornament(root: Node3D, kit: Architecture) -> void:
 	var art := Dressing.new(root, kit.palette)

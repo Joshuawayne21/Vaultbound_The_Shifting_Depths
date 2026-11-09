@@ -9,7 +9,7 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 func _run() -> void:
-	check(Store.VERSION == 9 and Home.VERSION == 2 and Home.CATALOG.valid(), "Profile9/home2 catalog is bounded and independent of dungeon content")
+	check(Store.VERSION == 10 and Home.VERSION == 3 and Home.CATALOG.valid(), "Profile10/home3 catalog is bounded and independent of dungeon content")
 	_migration()
 	_models()
 	_boundaries()
@@ -30,7 +30,7 @@ func _old() -> Dictionary:
 func _clean() -> void:
 	DirAccess.make_dir_recursive_absolute(PATH.get_base_dir())
 	for file: String in DirAccess.open(PATH.get_base_dir()).get_files(): DirAccess.remove_absolute(PATH.get_base_dir().path_join(file))
-	for suffix: String in [".tmp", ".pre-v9.bak.tmp", ".bak.tmp"]:
+	for suffix: String in [".tmp", ".pre-v10.bak.tmp", ".bak.tmp"]:
 		if DirAccess.dir_exists_absolute(PATH + suffix): DirAccess.remove_absolute(PATH + suffix)
 
 func _write(path: String, value: String) -> void:
@@ -48,16 +48,16 @@ func _migration() -> void:
 	var store := Store.new(PATH)
 	var loaded := store.load_profile()
 	var expected := old.duplicate(true)
-	expected.version = 9
+	expected.version = 10
 	expected.home = Home.empty_fields()
 	expected.home.id = Fixtures.ID
 	expected.home.unlocked_rooms = Home.BASE_ROOMS.duplicate()
-	check(loaded == expected and not store.read_only, "Migration retains exact identity and all owned fields, adding only base home2 choices")
+	check(loaded == expected and not store.read_only, "Migration retains exact identity and all owned fields, adding only base home3 choices")
 	check(loaded.home.unlocked_styles == ["royal_azure"] and loaded.home.unlocked_rooms == ["foyer", "trophy_hall"],
 		"Historical eligibility does not grant cosmetic or room milestones during normalization")
-	check(FileAccess.get_file_as_string(PATH) == bytes and not FileAccess.file_exists(PATH + ".pre-v9.bak"), "Loading performs no migration write")
-	check(store.save_profile(loaded) and FileAccess.get_file_as_string(PATH + ".pre-v9.bak") == bytes \
-		and FileAccess.get_file_as_string(PATH + ".pre-v8.bak") == "original-v8-history", "First explicit save preserves exact pre-v9 bytes and earlier backups")
+	check(FileAccess.get_file_as_string(PATH) == bytes and not FileAccess.file_exists(PATH + ".pre-v10.bak"), "Loading performs no migration write")
+	check(store.save_profile(loaded) and FileAccess.get_file_as_string(PATH + ".pre-v10.bak") == bytes \
+		and FileAccess.get_file_as_string(PATH + ".pre-v8.bak") == "original-v8-history", "First explicit save preserves exact pre-v10 bytes and earlier backups")
 	var empty_old := old.duplicate(true)
 	empty_old.home.id = ""
 	check(Store.normalize(empty_old).home == Home.empty_fields(), "Unallocated old homes remain unallocated with no room milestones")
@@ -79,7 +79,7 @@ func _models() -> void:
 	expected.revision += 1
 	check(claimed.profile == expected, "Unlocks change only the home milestone lists and one revision")
 	for row: Dictionary in Home.snapshot(claimed.profile).rooms:
-		check(row.available == (row.id in Home.BASE_ROOMS) and (row.destination.is_empty() if not row.available else not row.destination.is_empty()),
+		check(row.available == (row.id in ["foyer", "trophy_hall", "pet_conservatory"]) and (row.destination.is_empty() if not row.available else not row.destination.is_empty()),
 			"Earned room milestone does not invent an implemented room: " + row.id)
 	var duplicate := Home.plan(claimed.profile, &"claim_home_milestones", {}, int(claimed.profile.revision))
 	check(duplicate.ok and not duplicate.changed and duplicate.profile == claimed.profile, "Repeated milestone claim is a complete no-op")
@@ -130,7 +130,7 @@ func _future_and_failure() -> void:
 		var valid := _owned()
 		var future := valid.duplicate(true)
 		match kind:
-			"version": future.home.version = 3
+			"version": future.home.version = 4
 			"unknown_field": future.home.decor_slots = {}
 			"theme": future.home.theme_id = "future_theme"
 			"sigil": future.home.sigil_id = "future_sigil"
@@ -143,7 +143,7 @@ func _future_and_failure() -> void:
 		store.load_profile()
 		check(store.read_only and not store.recovered_backup and not store.save_profile(valid) \
 			and FileAccess.get_file_as_string(PATH) == bytes, "Future home content is preserved before fallback: " + kind)
-	for suffix: String in [".tmp", ".pre-v9.bak.tmp", ".bak.tmp"]:
+	for suffix: String in [".tmp", ".pre-v10.bak.tmp", ".bak.tmp"]:
 		_clean()
 		var bytes := JSON.stringify(_old(), "", true, true)
 		_write(PATH, bytes)
@@ -154,5 +154,5 @@ func _future_and_failure() -> void:
 		check(not store.save_profile(planned.profile) and FileAccess.get_file_as_string(PATH) == bytes \
 			and old.home.unlocked_styles == ["royal_azure"], "Failed write does not publish earned style or replace old bytes: " + suffix)
 		DirAccess.remove_absolute(PATH + suffix)
-		check(store.save_profile(planned.profile) and FileAccess.get_file_as_string(PATH + ".pre-v9.bak") == bytes,
-			"Retry preserves exact pre-v9 bytes before saving legitimate unlocks: " + suffix)
+		check(store.save_profile(planned.profile) and FileAccess.get_file_as_string(PATH + ".pre-v10.bak") == bytes,
+			"Retry preserves exact pre-v10 bytes before saving legitimate unlocks: " + suffix)

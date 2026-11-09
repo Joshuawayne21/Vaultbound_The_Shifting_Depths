@@ -6,7 +6,7 @@ func prepare_management_world(path: String, fresh: bool = true) -> bool:
 	if fresh:
 		DirAccess.make_dir_recursive_absolute(path.get_base_dir())
 		for file: String in DirAccess.open(path.get_base_dir()).get_files(): DirAccess.remove_absolute(path.get_base_dir().path_join(file))
-		for suffix: String in [".tmp", ".pre-v9.bak.tmp", ".bak.tmp"]:
+		for suffix: String in [".tmp", ".pre-v10.bak.tmp", ".bak.tmp"]:
 			if DirAccess.dir_exists_absolute(path + suffix): DirAccess.remove_absolute(path + suffix)
 		var old := HomeFixtures.owned()
 		old.version = 8
@@ -55,7 +55,7 @@ func claim_and_apply(path: String) -> bool:
 	expected.home.unlocked_rooms = Home.CATALOG.ROOM_IDS.duplicate()
 	expected.home.unlocked_styles = Home.CATALOG.STYLE_IDS.duplicate()
 	expected.revision += 1
-	if not check(session.profile == expected and FileAccess.get_file_as_string(path + ".pre-v9.bak") == original_profile_bytes,
+	if not check(session.profile == expected and FileAccess.get_file_as_string(path + ".pre-v10.bak") == original_profile_bytes,
 		"Actual milestone save changes only home/revision and preserves the exact original v8 bytes"): return false
 	var appearance: Dictionary = session.quote_home_action(&"set_appearance", {"theme_id": "celestial_violet", "sigil_id": "crystal_star"})
 	if not check(session.commit_home_action(appearance), "Actual source-bound appearance selection saves successfully"): return false

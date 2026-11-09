@@ -154,16 +154,24 @@ func _actual_rail_stop() -> void:
 func _room_availability() -> void:
 	for id: String in ["pet_conservatory", "companion_hall", "armory", "relic_library", "personal_chamber", "wardrobe", "rooftop_garden"]:
 		var frame := foyer.get_node_or_null("FutureDoor_" + id)
-		if not check(frame != null, "Future room has an authored sealed frame: " + id): continue
+		if not check(frame != null, "Room retains its authored doorway frame: " + id): continue
 		var plaque := frame.get_node_or_null("RequirementPlaque") as Label3D
-		check(plaque != null and plaque.text.contains("NOT YET OPEN") and not frame.is_in_group("interactables") and not frame.has_method("interact"),
-			"Sealed room exposes honest milestone information without a fabricated room service: " + id)
+		if id == "pet_conservatory":
+			var door := frame.get_node_or_null("ConservatoryDoor") as Node3D
+			check(plaque != null and plaque.text.contains("RECORD AT HOME MANAGEMENT")
+				and not bool(frame.get_meta("room_available", false)) and is_instance_valid(door)
+				and door.is_in_group("interactables") and door.get_prompt().contains("Record your milestone")
+				and not session.home_room_entry_status(&"pet_conservatory", foyer, player).ok,
+				"Implemented Conservatory doorway explains and enforces its unrecorded earned milestone")
+		else:
+			check(plaque != null and plaque.text.contains("NOT YET OPEN") and not frame.is_in_group("interactables") and not frame.has_method("interact"),
+				"Sealed room exposes honest milestone information without a fabricated room service: " + id)
 	var destinations: Array[String] = []
 	for node: Node in foyer.find_children("*", "Node3D", true, false):
-		if node.get_script() != null and node.get_script().resource_path == "res://scripts/world/portal.gd":
+		if node.has_signal("travel_requested") and node.get("destination") != null:
 			destinations.append(String(node.destination))
 	destinations.sort()
-	check(destinations == ["collection_hall", "sanctuary"], "The foyer opens only its two implemented room/return destinations")
+	check(destinations == ["collection_hall", "home_conservatory", "sanctuary"], "The foyer exposes only its three implemented, separately admitted room/return destinations")
 
 func _visible_stairs() -> void:
 	var stonework := foyer.get_node_or_null("WalkableStonework") as MeshInstance3D

@@ -49,7 +49,7 @@ func _cases() -> void:
 	game._notification(MainLoop.NOTIFICATION_APPLICATION_FOCUS_IN)
 	if not _shared_revision_boundary(): return
 	for room: Dictionary in session.home_management_snapshot().rooms:
-		check(room.available == (room.id in Home.BASE_ROOMS), "Permanent milestone never activates an unbuilt room: " + room.id)
+		check(room.available == (room.id in ["foyer", "trophy_hall", "pet_conservatory"]), "Permanent milestone never activates an unbuilt room: " + room.id)
 	var altered: Dictionary = session.quote_home_action(&"set_appearance", {"theme_id": "royal_azure", "sigil_id": "vault_diamond"})
 	altered.preview.after = {"theme_id": "injected", "sigil_id": "injected"}
 	check(session.commit_home_action(altered) and session.profile.home.theme_id == "royal_azure", "Caller-edited preview cannot alter trusted quote intent")

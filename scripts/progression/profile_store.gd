@@ -4,7 +4,7 @@ extends RefCounted
 ## a temporary file, and renamed only after a successful read-back. A previous
 ## valid profile is kept as .bak. This is offline persistence, not remote authority.
 
-const VERSION := 9
+const VERSION := 10
 const DepthProgress = preload("res://scripts/progression/depth_progression.gd")
 const EncounterProgress = preload("res://scripts/progression/encounter_progression.gd")
 const HomeProgress = preload("res://scripts/progression/home_progression.gd")
@@ -284,8 +284,8 @@ static func _normalize(value: Variant, unavailable_items: Dictionary, unavailabl
 	if records.is_empty():
 		return {}
 	result.encounter_records = records
-	var home := HomeProgress.normalize(value.get("home")) if int(value.version) >= 9 else HomeProgress.migrate_legacy(value)
-	if home.is_empty():
+	var home := HomeProgress.normalize(value.get("home")) if int(value.version) >= 10 else HomeProgress.migrate_legacy(value)
+	if home.is_empty() or not HomeProgress.displays_owned(home, result.pets.owned):
 		return {}
 	result.home = home
 	return result

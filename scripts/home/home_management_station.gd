@@ -7,7 +7,7 @@ var _home: WeakRef
 func configure(home: Node3D) -> bool:
 	if is_inside_tree() or _home != null or not is_instance_valid(home) or home.is_queued_for_deletion():
 		return false
-	if home.get_script() == null or home.get_script().resource_path != "res://scripts/home/personal_sanctuary.gd":
+	if home.get_script() == null or home.get_script().resource_path not in ["res://scripts/home/personal_sanctuary.gd", "res://scripts/home/pet_conservatory.gd"]:
 		return false
 	_home = weakref(home)
 	return true
@@ -22,7 +22,7 @@ func _valid_home() -> bool:
 		and home.has_method("home_management_station") and home.home_management_station() == self
 
 func get_prompt() -> String:
-	return "Manage your Home · Appearance & milestones"
+	return "Manage your Home · Appearance, pets & rooms"
 
 func can_interact(actor: Node3D) -> bool:
 	return _valid_home() and is_visible_in_tree() and is_instance_valid(actor) and actor.is_inside_tree() \
