@@ -9,6 +9,8 @@ const WarningVisual = preload("res://scripts/enemies/boss_warning_visual.gd")
 const TypedVisual = preload("res://scripts/visual/rootbound_hazard_visual.gd")
 const CrystalVisual = preload("res://scripts/visual/crystal_hazard_visual.gd")
 const EmberVisual = preload("res://scripts/visual/ember_hazard_visual.gd")
+const RollingVisual = preload("res://scripts/visual/rolling_stone_visual.gd")
+const RollingWarning = preload("res://scripts/visual/rolling_stone_warning.gd")
 var active := false
 var state: StringName = &"idle"
 var radius := 2.0
@@ -23,6 +25,7 @@ var _material: StandardMaterial3D
 var _typed := TypedCast.new()
 var _typed_mode := false
 var _typed_warning: Node3D
+var _typed_warning_travel := false
 var _typed_visual: Node3D
 var _typed_visual_id: StringName = &""
 var _typed_materials: Dictionary = {}
@@ -41,17 +44,20 @@ func trigger_typed(issued: Dictionary, context: Node3D) -> bool:
 	_typed_mode = true
 	if not _typed.begin(self, context, issued): return false
 	var definition_id := StringName(issued.profile.id)
-	var crystal: bool = issued.profile.version == 2
+	var modern: bool = issued.profile.version == 2
+	var rolling: bool = issued.profile.version == 3 and definition_id == &"root_rolling_stone"
 	var visual: Node3D = _typed_visual
 	var warning: Node3D = _typed_warning
-	var owns_visual := visual == null or _typed_visual_id != definition_id or crystal
-	var owns_warning := warning == null
+	var owns_visual := visual == null or _typed_visual_id != definition_id or modern or rolling
+	var owns_warning := warning == null or _typed_warning_travel != rolling
 	# Locals own candidates until all native ready/node_added callbacks return.
 	# A nested accepted cast never sees or inherits this half-built presentation.
 	if owns_visual:
-		visual = EmberVisual.new() if definition_id in [&"ember_flame_vent", &"ember_arcane_mine"] else CrystalVisual.new() if crystal else TypedVisual.new()
+		if rolling: visual = RollingVisual.new()
+		elif modern: visual = EmberVisual.new() if definition_id in [&"ember_flame_vent", &"ember_arcane_mine"] else CrystalVisual.new()
+		else: visual = TypedVisual.new()
 		visual.name = "TypedHazardVisual"
-		var configured: bool = visual.configure(issued.profile, issued.shape, _typed_materials) if crystal else visual.configure(definition_id, _typed_materials)
+		var configured: bool = visual.configure(issued.profile, issued.shape, _typed_materials) if modern or rolling else visual.configure(definition_id, _typed_materials)
 		if not configured:
 			visual.free()
 			if _typed_admission_current(issued): cancel()
@@ -61,7 +67,7 @@ func trigger_typed(issued: Dictionary, context: Node3D) -> bool:
 			_discard_candidate(visual)
 			return false
 	if owns_warning:
-		warning = WarningVisual.new()
+		warning = RollingWarning.new() if rolling else WarningVisual.new()
 		warning.name = "TypedHazardWarning"
 		add_child(warning)
 		if not _typed_admission_current(issued):
@@ -73,14 +79,18 @@ func trigger_typed(issued: Dictionary, context: Node3D) -> bool:
 		if owns_warning: _discard_candidate(warning)
 		return false
 	var old_visual := _typed_visual
+	var old_warning := _typed_warning
 	_typed_visual = visual
 	_typed_warning = warning
+	_typed_warning_travel = rolling
 	_typed_visual_id = definition_id
 	if owns_visual and is_instance_valid(old_visual): _discard_candidate(old_visual)
 	if not _typed_admission_current(issued): return false
+	if owns_warning and is_instance_valid(old_warning): _discard_candidate(old_warning)
+	if not _typed_admission_current(issued): return false
 	global_position = issued.shape.position
 	rotation = Vector3.ZERO
-	if not crystal:
+	if not modern and not rolling:
 		visual.rotation = Vector3.ZERO
 		visual.scale = Vector3.ONE
 	if definition_id == &"root_spike_lane":
@@ -99,7 +109,13 @@ func trigger_typed(issued: Dictionary, context: Node3D) -> bool:
 	if not _typed_admission_current(issued): return false
 	var zones := _typed.zones()
 	if not _typed_admission_current(issued): return false
-	warning.show_shapes(zones)
+	if rolling:
+		var shown: bool = zones.size() == 1 and warning.begin(zones[0])
+		if not _typed_admission_current(issued): return false
+		if not shown:
+			cancel()
+			return false
+	else: warning.show_shapes(zones)
 	if not _typed_admission_current(issued): return false
 	_sync_typed_visuals()
 	return _typed_admission_current(issued)
@@ -118,6 +134,9 @@ func _discard_candidate(node: Node3D) -> void:
 
 func typed_snapshot() -> Dictionary:
 	return _typed.snapshot() if _typed_mode else {}
+
+func typed_travel_snapshot() -> Dictionary:
+	return _typed.travel_snapshot() if _typed_mode else {}
 
 func typed_activation_snapshot() -> Dictionary:
 	var result := _typed.activation_snapshot()
@@ -300,11 +319,16 @@ func _sync_typed_visuals() -> void:
 	var progress := 1.0 - _remaining / duration
 	_typed_visual.visible = true
 	if not _typed_admission_current(accepted): return
-	if _typed.issued.profile.version == 2:
+	if _typed.issued.profile.version == 3:
+		_typed_visual.update_travel(state, _typed.travel_snapshot())
+	elif _typed.issued.profile.version == 2:
 		_typed_visual.update_pose(state, clampf(progress, 0.0, 1.0), _typed.pulses_delivered, _typed.next_pulse)
 	else: _typed_visual.update_pose(state, clampf(progress, 0.0, 1.0), _typed.pulses_delivered)
 	if not _typed_admission_current(accepted): return
 	if _typed.attack_id <= 0: _typed_warning.hide_all()
+	elif _typed.issued.profile.version == 3:
+		var travel: Dictionary = _typed.travel_snapshot()
+		_typed_warning.update_corridor(travel.position, _typed.issued.shape.end)
 	else: _typed_warning.set_phase(state == &"active", progress)
 
 func _exit_tree() -> void:

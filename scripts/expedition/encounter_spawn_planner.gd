@@ -251,3 +251,111 @@ static func _pose_clear(world: Node3D, origin: Vector3, metadata: Dictionary, ex
 	query.exclude = excluded
 	query.margin = 0.005
 	return world.get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty()
+
+static func rolling_floor_snapshot(world: Node3D, room: Node3D, path: Dictionary, profile: Dictionary) -> Dictionary:
+	var parts := _rolling_floor_parts(world, room, path, profile)
+	if parts.is_empty(): return {}
+	return {"floor": weakref(parts.floor), "body": weakref(parts.body), "collision": weakref(parts.collision),
+		"shape": weakref(parts.collision.shape), "mesh": weakref(parts.floor.mesh),
+		"world_transform": world.global_transform, "room_transform": room.global_transform}
+
+static func rolling_floor_matches(world: Node3D, room: Node3D, path: Dictionary, profile: Dictionary, proof: Dictionary) -> bool:
+	if proof.is_empty(): return false
+	var parts := _rolling_floor_parts(world, room, path, profile)
+	if parts.is_empty() or world.global_transform != proof.world_transform or room.global_transform != proof.room_transform: return false
+	return proof.floor.get_ref() == parts.floor and proof.body.get_ref() == parts.body \
+		and proof.collision.get_ref() == parts.collision and proof.shape.get_ref() == parts.collision.shape \
+		and proof.mesh.get_ref() == parts.floor.mesh
+
+static func _rolling_floor_parts(world: Node3D, room: Node3D, path: Dictionary, profile: Dictionary) -> Dictionary:
+	var definition := preload("res://scripts/expedition/hazard_definition.gd")
+	if not is_instance_valid(world) or not is_instance_valid(room) or not world.is_inside_tree() or not room.is_inside_tree() \
+		or world.is_queued_for_deletion() or room.is_queued_for_deletion() or not world.is_ancestor_of(room) \
+		or world.global_basis != Basis.IDENTITY or room.global_basis != Basis.IDENTITY \
+		or not definition.valid_shape(profile, path) or profile.get("version") != 3 or profile.get("id") != "root_rolling_stone": return {}
+	var floor_node := room.get_node_or_null("Floor") as MeshInstance3D
+	var body := room.get_node_or_null("Floor/Body") as StaticBody3D
+	var collision := room.get_node_or_null("Floor/Body/Collision") as CollisionShape3D
+	if not is_instance_valid(floor_node) or not is_instance_valid(body) or not is_instance_valid(collision) \
+		or not floor_node.is_inside_tree() or not body.is_inside_tree() or not collision.is_inside_tree() \
+		or floor_node.is_queued_for_deletion() or body.is_queued_for_deletion() or collision.is_queued_for_deletion() \
+		or floor_node.get_parent() != room or body.get_parent() != floor_node or collision.get_parent() != body \
+		or floor_node.transform != Transform3D(Basis.IDENTITY, Vector3(0, -0.25, 0)) \
+		or body.transform != Transform3D.IDENTITY or collision.transform != Transform3D.IDENTITY \
+		or body.collision_layer != 1 or body.collision_mask != 0 or collision.disabled \
+		or not collision.shape is BoxShape3D or not floor_node.mesh is BoxMesh \
+		or collision.shape.size != Vector3(24, 0.5, 24) or floor_node.mesh.size != Vector3(24, 0.5, 24): return {}
+	var shape_count := 0
+	for child: Node in body.get_children():
+		if child is CollisionShape3D or child is CollisionPolygon3D: shape_count += 1
+	if shape_count != 1: return {}
+	# The excluded RID must contain exactly the verified support shape, including
+	# shape owners added through CollisionObject rather than child scene nodes.
+	var owners := body.get_shape_owners()
+	if owners.size() != 1: return {}
+	var owner_id: int = owners[0]
+	if body.shape_owner_get_owner(owner_id) != collision or body.shape_owner_get_shape_count(owner_id) != 1 \
+		or body.is_shape_owner_disabled(owner_id) or body.shape_owner_get_transform(owner_id) != Transform3D.IDENTITY \
+		or body.shape_owner_get_shape(owner_id, 0) != collision.shape: return {}
+	var start: Vector3 = room.to_local(path.start)
+	var end: Vector3 = room.to_local(path.end)
+	var radius := float(profile.radius)
+	if start.y != 0.0 or end.y != 0.0 or path.position != room.global_position \
+		or maxf(absf(start.x), absf(end.x)) + radius > 12.0 \
+		or maxf(absf(start.z), absf(end.z)) + radius > 12.0: return {}
+	return {"floor": floor_node, "body": body, "collision": collision}
+
+static func rolling_path_clear(world: Node3D, room: Node3D, path: Dictionary, profile: Dictionary) -> bool:
+	if not profile.get("axis_length") is float or not is_finite(profile.axis_length): return false
+	if not rolling_segment_clear(world, room, path, profile, 0.0, float(profile.axis_length)): return false
+	# Keep the real chest-front, extraction and every open connector approachable.
+	return checkpoint_anchor_clear(world, room)
+
+static func rolling_segment_clear(world: Node3D, room: Node3D, path: Dictionary, profile: Dictionary,
+		from_distance: float, to_distance: float, cached_sphere: SphereShape3D = null) -> bool:
+	var parts := _rolling_floor_parts(world, room, path, profile)
+	if parts.is_empty() or not is_finite(from_distance) or not is_finite(to_distance) \
+		or from_distance < 0.0 or to_distance < from_distance or to_distance > float(profile.axis_length): return false
+	var start: Vector3 = Vector3(path.start).lerp(Vector3(path.end), from_distance / float(profile.axis_length))
+	var end: Vector3 = Vector3(path.start).lerp(Vector3(path.end), to_distance / float(profile.axis_length))
+	var excluded := _foreign_colliders(world)
+	var space := world.get_world_3d().direct_space_state
+	# The exact enabled continuous Box proof above makes these three support
+	# samples sufficient; no other floor or arbitrary room descendant substitutes.
+	for point: Vector3 in [start, start.lerp(end, 0.5), end]:
+		var ray := PhysicsRayQueryParameters3D.create(point + Vector3.UP * 0.55, point - Vector3.UP * 0.3, 1, excluded)
+		ray.collide_with_areas = false
+		ray.hit_from_inside = true
+		var hit := space.intersect_ray(ray)
+		if hit.is_empty() or hit.get("collider") != parts.body or Vector3(hit.normal).y < 0.8 \
+			or absf(Vector3(hit.position).y - point.y) > 0.0001: return false
+	var sphere := cached_sphere
+	if sphere == null:
+		sphere = SphereShape3D.new()
+		sphere.radius = float(profile.radius)
+	# Canonicalize to native real_t without allocating another shape per tick.
+	if sphere.radius != float(Vector2(float(profile.radius), 0.0).x): return false
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = sphere
+	query.collision_mask = 1 | 16
+	query.collide_with_areas = false
+	query.margin = 0.005
+	excluded.append(parts.body.get_rid())
+	query.exclude = excluded
+	query.transform = Transform3D(Basis.IDENTITY, start + Vector3.UP * float(profile.radius))
+	if not space.intersect_shape(query, 1).is_empty(): return false
+	query.motion = end - start
+	if not query.motion.is_zero_approx():
+		var fraction := space.cast_motion(query)
+		if fraction.size() != 2 or fraction[0] < 1.0: return false
+	query.motion = Vector3.ZERO
+	query.transform.origin = end + Vector3.UP * float(profile.radius)
+	return space.intersect_shape(query, 1).is_empty()
+
+static func rolling_escape_clear(world: Node3D, room: Node3D, path: Dictionary) -> bool:
+	var geometry := preload("res://scripts/combat/danger_geometry.gd")
+	for actor: Node3D in current_party_occupants(world):
+		if not geometry.contains(path, actor.global_position, 0.5): continue
+		var enabled: Variant = actor.get("controls_enabled")
+		if not enabled is bool or not enabled: return false
+	return hazard_escape_clear(world, room, path)

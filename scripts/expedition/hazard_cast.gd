@@ -6,6 +6,7 @@ const Definition = preload("res://scripts/expedition/hazard_definition.gd")
 const Attack = preload("res://scripts/enemies/boss_attack_definition.gd")
 const Policy = preload("res://scripts/expedition/depth_policy.gd")
 const Geometry = preload("res://scripts/combat/danger_geometry.gd")
+const Travel = preload("res://scripts/expedition/hazard_travel.gd")
 const KEYS := ["run_generation", "content_version", "room_id", "source_receipt", "cast_serial", "profile", "shape", "depth_policy"]
 var issued: Dictionary = {}
 var serial := 0
@@ -22,11 +23,13 @@ var _timing: Dictionary = {}
 var _accepted: Dictionary = {}
 var _terminal: Dictionary = {}
 var _delivery_depth := 0
+var _travel_distance := 0.0
 
 func begin(actor: Node3D, context: Node3D, payload: Dictionary) -> bool:
 	if live or not is_instance_valid(actor) or not actor.is_inside_tree() or actor.is_queued_for_deletion() \
 		or not is_instance_valid(context) or not context.is_inside_tree() or not context.has_method("registered_hazard_cast_valid") \
 		or not valid_issued(payload) or int(payload.cast_serial) <= serial: return false
+	if payload.profile.version == 3 and not context.has_method("registered_hazard_travel_segment_clear"): return false
 	_owner = weakref(actor)
 	_world = weakref(context)
 	issued = payload.duplicate(true)
@@ -37,6 +40,7 @@ func begin(actor: Node3D, context: Node3D, payload: Dictionary) -> bool:
 	active_remaining = 0.0
 	next_pulse = 0.0
 	pulses_delivered = 0
+	_travel_distance = 0.0
 	attack_id = CombatRules.next_attack_id()
 	live = true
 	var admitting_serial := serial
@@ -50,10 +54,11 @@ static func valid_issued(payload: Variant) -> bool:
 	if not payload is Dictionary or not Attack.exact_keys(payload, KEYS): return false
 	for key: String in ["run_generation", "content_version", "room_id", "cast_serial"]:
 		if not payload[key] is int or int(payload[key]) < 0: return false
-	return payload.content_version in [3, 4, 5, 6] and payload.cast_serial > 0 and payload.source_receipt is String \
+	return payload.content_version in [3, 4, 5, 6, 7] and payload.cast_serial > 0 and payload.source_receipt is String \
 		and not String(payload.source_receipt).is_empty() and String(payload.source_receipt).length() <= 160 \
 		and payload.profile is Dictionary and payload.shape is Dictionary and payload.depth_policy is Dictionary \
 		and Definition.valid_shape(payload.profile, payload.shape) \
+		and (payload.profile.version != 3 or payload.content_version == 7) \
 		and Policy.valid_snapshot(payload.depth_policy, int(payload.depth_policy.get("expedition_depth", 0)))
 
 func source_current() -> bool:
@@ -94,6 +99,12 @@ func activation_snapshot() -> Dictionary:
 
 func terminal_snapshot() -> Dictionary: return _terminal.duplicate(true)
 
+func travel_snapshot() -> Dictionary:
+	if issued.get("profile", {}).get("version") != 3: return {}
+	var length := float(issued.profile.axis_length)
+	return {"distance": _travel_distance, "position": Vector3(issued.shape.start).lerp(issued.shape.end, _travel_distance / length),
+		"remaining_distance": maxf(0.0, length - _travel_distance), "active": live and state == &"active"}
+
 func advance(delta: float) -> void:
 	if not live: return
 	var entering_serial := serial
@@ -103,6 +114,9 @@ func advance(delta: float) -> void:
 	var actor := _owner.get_ref() as Node3D
 	if CombatRules.party_targets(actor).is_empty():
 		cancel()
+		return
+	if _timing.delivery_mode == "swept_travel":
+		_advance_travel(delta)
 		return
 	if state == &"warning":
 		remaining = maxf(0.0, remaining - delta)
@@ -121,6 +135,70 @@ func advance(delta: float) -> void:
 	if pulses_delivered >= int(_timing.pulse_count): return
 	next_pulse = maxf(0.0, next_pulse - delta)
 	if next_pulse <= 0.0: _pulse() # At most one edge; discard accumulated overrun.
+
+func _travel_current(captured: int, committed_id: int) -> bool:
+	return live and serial == captured and attack_id == committed_id and source_current() \
+		and live and serial == captured and attack_id == committed_id
+
+func _advance_travel(delta: float) -> void:
+	var captured := serial
+	var committed_id := attack_id
+	var initial := state == &"warning"
+	if initial:
+		remaining = maxf(0.0, remaining - delta)
+		if remaining > 0.0: return
+		state = &"active"
+		active_remaining = float(_timing.active_time)
+	elif delta == 0.0:
+		return
+	elif delta > float(_timing.max_step_delta):
+		cancel()
+		return
+	# A long warning frame cannot carry travel into the newly active window.
+	var proposed := Travel.proposal(issued.profile, issued.shape, _travel_distance, 0.0 if initial else delta)
+	if proposed.is_empty():
+		cancel()
+		return
+	var actor := _owner.get_ref() as Node3D
+	var context := _world.get_ref() as Node3D
+	var clear: bool = context.registered_hazard_travel_segment_clear(actor, int(issued.run_generation),
+		String(issued.source_receipt), captured, float(proposed.from_distance), float(proposed.to_distance))
+	if not _travel_current(captured, committed_id):
+		if live and serial == captured: cancel()
+		return
+	if not clear:
+		cancel()
+		return
+	_travel_distance = float(proposed.to_distance)
+	active_remaining = maxf(0.0, (float(issued.profile.axis_length) - _travel_distance) / float(_timing.travel_speed))
+	_delivery_depth += 1
+	_dispatch_travel(committed_id, captured, proposed)
+	if is_instance_valid(self): _delivery_depth -= 1
+	if not is_instance_valid(self): return
+	if not _travel_current(captured, committed_id):
+		if live and serial == captured: cancel()
+		return
+	# Unlike stationary pulse expiry, the final swept contact precedes retirement.
+	if bool(proposed.finished): _retire("expired")
+
+func _dispatch_travel(committed_id: int, captured: int, proposed: Dictionary) -> void:
+	if committed_id <= 0 or not _travel_current(captured, committed_id): return
+	var actor := _owner.get_ref() as Node3D
+	var zone: Dictionary = proposed.contact
+	var start: Vector3 = proposed.from
+	var end: Vector3 = proposed.to
+	var axis := end - start
+	var amount := float(_timing.damage) * float(issued.depth_policy.damage_multiplier)
+	for target: Node3D in CombatRules.party_targets(actor):
+		if not _travel_current(captured, committed_id): return
+		if not CombatRules.party_target_available(target) or not Geometry.contains(zone, target.global_position): continue
+		var along := clampf((target.global_position - start).dot(axis) / axis.length_squared(), 0.0, 1.0) if axis.length_squared() > 0.00000001 else 0.0
+		var nearest := start + axis * along
+		if not CombatRules.visible_from(actor, end + Vector3.UP, target.global_position + Vector3.UP, target) \
+			or not CombatRules.visible_from(actor, nearest + Vector3.UP, target.global_position + Vector3.UP, target): continue
+		if not _travel_current(captured, committed_id): return
+		CombatRules.apply_hit(actor, target, amount, committed_id, StringName(issued.profile.id), 0.0, 0.0, 1.0, start)
+		if not _travel_current(captured, committed_id): return
 
 func _pulse() -> void:
 	if not live or not source_current(): return
@@ -160,6 +238,10 @@ func zones() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	if not live or attack_id <= 0 or not source_current(): return result
 	var zone: Dictionary = issued.shape.duplicate(true)
+	if _timing.delivery_mode == "swept_travel" and state == &"active":
+		var proposed := Travel.proposal(issued.profile, issued.shape, _travel_distance, 0.0)
+		if proposed.is_empty() or proposed.remaining.is_empty() or active_remaining <= 0.0: return result
+		zone = proposed.remaining
 	zone["kind"] = StringName(issued.profile.id)
 	zone["attack_id"] = attack_id
 	zone["stage_id"] = pulses_delivered if _timing.delivery_mode == "pulse_edges" else 0

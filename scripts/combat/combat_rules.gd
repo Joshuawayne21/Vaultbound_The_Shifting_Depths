@@ -104,12 +104,17 @@ static func visible_from(context: Node3D, origin: Vector3, destination: Vector3,
 
 static func apply_hit(source: Node3D, target: Node3D, amount: float, attack_id: int,
 		kind: StringName = &"melee", stagger: float = 0.0,
-		slow_duration: float = 0.0, slow_factor: float = 1.0) -> bool:
+		slow_duration: float = 0.0, slow_factor: float = 1.0, hit_origin: Variant = null) -> bool:
 	if not is_instance_valid(source) or not is_instance_valid(target):
 		return false
 	if source == target or not source.is_inside_tree() or not target.is_inside_tree():
 		return false
 	if not is_finite(amount) or amount <= 0.0 or attack_id <= 0:
+		return false
+	# A moving attack can retain its registered source node while supplying its
+	# actual approach position. Callers still own source/cast admission; this is
+	# internal combat data, not an accepted client-supplied damage packet.
+	if hit_origin != null and (not hit_origin is Vector3 or not hit_origin.is_finite()):
 		return false
 	if not target.has_method("receive_hit") and not target.has_method("take_hit") and not target.has_method("take_damage"):
 		return false
@@ -130,7 +135,7 @@ static func apply_hit(source: Node3D, target: Node3D, amount: float, attack_id: 
 	var packet := {
 		"attack_id": attack_id,
 		"source_id": source.get_instance_id(),
-		"source_position": source.global_position,
+		"source_position": source.global_position if hit_origin == null else hit_origin,
 		"damage": amount,
 		"kind": kind,
 		"stagger": maxf(0.0, stagger),
@@ -147,7 +152,7 @@ static func apply_hit(source: Node3D, target: Node3D, amount: float, attack_id: 
 	if target.has_method("receive_hit"):
 		accepted = bool(target.receive_hit(packet))
 	elif target.has_method("take_hit"):
-		target.take_hit(amount, source.global_position)
+		target.take_hit(amount, source.global_position if hit_origin == null else hit_origin)
 	else:
 		target.take_damage(amount)
 	if accepted:

@@ -6,9 +6,9 @@ const EmberGeometry = preload("res://scripts/combat/danger_geometry.gd")
 func start_ember(id: String, variant: String = "none") -> bool:
 	if not await start_selected(id, 11, variant): return false
 	var issued: Dictionary = world.issued_run_plan()
-	return check(issued.theme_id == "ember_crypt" and issued.content_version == 6 \
+	return check(issued.theme_id == "ember_crypt" and issued.content_version == 7 \
 		and issued == session.issued_run_plan() and world.combat_admission_valid(),
-		"Actual Ember Game actor has the admitted content-v6 world and Session identity")
+		"Actual Ember Game actor has the admitted content-v7 world and Session identity")
 
 func ember_stage(pattern: String, index: int = 0) -> Dictionary:
 	return EmberAttack.stage_snapshot(attack_snapshot(boss, pattern), index)

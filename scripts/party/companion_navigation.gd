@@ -529,7 +529,9 @@ func _nearest_grid_position(position: Vector3, rings: int) -> Vector3:
 			var cell := center + Vector2i(x, z)
 			var candidate := _point(cell)
 			var measured := _flat_distance(candidate, position)
-			if measured >= distance or not _walkable(cell):
+			# Native clearance alone can snap a safe actor into a typed warning.
+			# Search must begin through a legal connector to its first grid node.
+			if measured >= distance or _crosses_danger(position, candidate, true) or not _walkable(cell):
 				continue
 			if _segment_clear(position, candidate):
 				distance = measured

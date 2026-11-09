@@ -30,7 +30,7 @@ func _run() -> void:
 			var ember: bool = expected_theme == "ember_crypt"
 			var purpose: String = "boss" if expected_theme == "rootbound_abyss" else expected_theme + "/boss"
 			var exact: bool = plan.theme_id == expected_theme and plan.boss_seed == _seed(seed_value, depth, purpose) \
-				and plan == Content.resolve_run_plan(seed_value, depth) and plan.content_version == 6 and plan.biome_id == "rootbound_abyss"
+				and plan == Content.resolve_run_plan(seed_value, depth) and plan.content_version == 7 and plan.biome_id == "rootbound_abyss"
 			if ember:
 				ember_plan = plan
 				seen[String(plan.required_boss_id) + ":" + String(plan.variant_id)] = true

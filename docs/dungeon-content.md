@@ -5,7 +5,7 @@
 Thornmarshal and Mycelial Cantor controllers, an Ascendant Thornmarshal pattern
 and an optional Root Bark Champion to Rootbound. Read the [encounter guide](rootbound-encounters.md)
 for selection rules and mechanics. The [7D.3 event batch](rootbound-events.md)
-adds spike lanes, spore patches, a destructible hive and finite horde. Additional
+adds spike lanes, spore patches, a destructible hive and finite horde. [7D.7](rootbound-rolling-stone.md) adds one optional Rootbound rolling-stone opportunity. Additional
 themes, trap families and Ancient encounters remain later work. [7D.5 Crystal](glimmering-crystal-abyss.md) and [7D.6 Ember](crimson-ember-temple.md) add two executable themes; they do not complete every proposed biome. The [7D.4 Return springs](dungeon-return-springs.md) now provide safe early exits without completing a floor. Headless validation does not
 replace physical Android play-testing or rendered visual review.
 
@@ -17,7 +17,7 @@ The Rootbound progression track keeps its existing `biome_id: rootbound_abyss`. 
 
 Session admits a content run through `begin_content_run`; Abyss independently prepares it through `configure_content`. Game compares both full plans and the separate depth policy during travel. Public getters return detached copies. The original `begin_run`, `begin_depth_run`, `generate` and `generate_for_depth` remain compatibility paths for explicit fixtures; production travel uses the content path. `generate_for_run` adds content metadata without changing configured topology version 2 or the bounded seed mixer.
 
-Content version 6 retains the boss, event and Return spring contracts and freezes theme selection, ordinary encounter composition, trap/discovery policies and native arena profiles. Depths 1–5 remain Rootbound; 6–10 retain the seeded 60/40 Rootbound/Crystal draw. From Depth 11, a separate 25% Ember opportunity leaves the old draw unchanged when not selected, producing 45/30/25 Rootbound/Crystal/Ember weights. Plans contain only the selected theme's actual producers. All eligible pools must validate before preview and admission; unavailable content never silently falls back. `RoomContentPlanner` derives optional placement from that plan and
+Content version 7 retains the boss, event and Return spring contracts and freezes theme selection, ordinary encounter composition, trap/discovery policies and native arena profiles. It adds a selected-theme rolling policy: Rootbound carries the bounded registered opportunity, while Crystal and Ember carry no rolling-stone content. Profile version 7 remains unchanged. Depths 1–5 remain Rootbound; 6–10 retain the seeded 60/40 Rootbound/Crystal draw. From Depth 11, a separate 25% Ember opportunity leaves the old draw unchanged when not selected, producing 45/30/25 Rootbound/Crystal/Ember weights. Plans contain only the selected theme's actual producers. All eligible pools must validate before preview and admission; unavailable content never silently falls back. `RoomContentPlanner` derives optional placement from that plan and
 the generated layout. The world privately admits the actual room after native
 floor, body and route checks; an unsafe optional slot is omitted. These probes
 exclude the retained previous world's collision and require ground belonging to
@@ -83,6 +83,14 @@ The private event registry binds the actual core, committed wave actors and veri
 The opaque hive uses physical, camera and stationary-obstacle layers. Cached companion routes invalidate on actual body admission/removal. Gameplay line-of-sight and projectile sweeps include that obstacle; a direct ray may hit its intended target, but cannot ignore a different intervening core. Ordinary enemies retain their prior collision bits and add the stationary obstacle. Floor probes keep the original world layer.
 
 See [exact event timing, selection and rewards](rootbound-events.md). Resource edits affect future issued content; the approved v1 hazard/event tuning tuples are fixed, rather than freely retunable exports.
+
+## Rootbound moving-stone source proof
+
+The rolling opportunity uses a dedicated deterministic stream after prior room-content choices. It selects at most one unreserved, nonhidden Rootbound thorn-trap room from Depth 6; the configured opportunity is 25% when an eligible room exists. Its selected initial legacy-root opportunity is replaced without altering monsters, chests, doors or existing optional choices. Unsafe geometry can omit the placement. A first-entry attempt that cannot acquire the existing shared capacity is consumed without fallback or stacking.
+
+The v3 profile freezes a bounded sphere radius, six-metre initial path, speed, warning and contact timing. Admission proves the actual sole enabled flat supporting floor and a true grounded-sphere route, excluding only that verified supporting body and retained foreign worlds. Other own-world solids, including low obstacles, remain blocking. Native support and source identity are rechecked during travel. The source stays fixed while a passive native sphere follows the accepted cursor.
+
+After a full warning, only the current swept segment can attempt damage, under one attack identity for the entire pass. The remaining visual and analytic danger shorten together; the shader's rendered clipping still needs visual review. A delayed active frame above 0.25 seconds cancels without catch-up movement or damage. Obstruction, room exit, source replacement and support loss retire the cast. The validated segment-start approach supplies directional blocking; legacy damage calls retain their previous facing path. The stone has no physical blocker and grants no reward, XP, discovery or completion. Existing Return safety and collected-only progression rules remain. See [mechanics and limits](rootbound-rolling-stone.md).
 
 ## Attack footprints and projectile lifetime
 

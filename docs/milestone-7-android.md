@@ -134,6 +134,18 @@ The [headless gate](milestone-7d6-validation.md) does not replace these physical
 6. Partially search ordinary/elite, optional and required-boss caches. Use a clear Return spring on one run and final extraction on another. Restart and check exact collected rewards, the incomplete-versus-complete depth boundary, old gear, roster and pets. Ember must not grant unfinished boss items, Rootwarden-exclusive loot or new pet findings.
 7. Repeat representative rooms and encounters on Low/Medium/High, reduced effects/motion and ambient-density settings. Capture visual artifacts, touch comfort, sustained frame times, memory and thermal/battery behavior. Raw native vertices and host CPU timing are not Android rendering or performance evidence.
 
+## 7D.7 Rootbound rolling stone
+
+The [headless gate](milestone-7d7-validation.md) does not establish physical Android behavior. Use a backed-up test profile with Depth 6 or deeper legitimately unlocked, and record build, seed, depth and actual Rootbound theme. Selection is optional: an eligible floor has one configured 25% opportunity, not a guaranteed stone in every trap room.
+
+1. Enter a selected thorn-trap room. Check the complete two-second warning, the rolling sphere and its shrinking remaining-route warning in third-person and isometric views. Ground fully behind the passed sphere should become safe. Inspect clipping, apparent floor contact over decorative paving, and danger readability; native mesh bounds alone cannot prove these rendered results.
+2. Escape sideways, dodge through contact, and face the approach with the sword/shield. Confirm that one pass cannot repeatedly damage a member. The cosmetic stone must not push anyone or become a new navigation/doorway blocker.
+3. Watch Guardian and Mystic react with their existing delays and commands. Switch cameras during warning and travel. Leave and reenter the room: the attempt must not rearm. If an active frame stalls severely, confirm the stone retires without catch-up damage.
+4. Reach the unchanged chest-front, all open doors and nearby paths. Repeat on Low/Medium/High, reduced motion/effects, supported UI scales and screen insets. Essential danger must remain visible; record touch comfort and frame pacing.
+5. Take ordinary loot, use a safe Return spring on one run, and finish the required boss/final extraction on another. Restart and verify secured progression. The trap itself grants no loot, Depthmarks, XP, discovery or completion; early Return must still leave the depth incomplete.
+
+This batch does not add a biome, Ancient Boss, new recruit, pet genetics, ranked service or additional trap family beyond the rolling stone. The remaining [7D work](milestone-7-plan.md) and physical-device/rendered review are still pending.
+
 ## Capture performance and visual evidence
 
 Record at least ten minutes covering plaza/perimeter traversal, crowded district views, portals, combat and a representative dungeon. Compare cold start and warmed-up play; note frame-time spikes, thermal throttling, touch comfort and battery drain. Use the metrics display/profiler where available. Native mesh counts and cloud CPU timings cannot establish device FPS.

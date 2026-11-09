@@ -6,9 +6,9 @@ const CrystalGeometry = preload("res://scripts/combat/danger_geometry.gd")
 func start_crystal(id: String, variant: String = "none") -> bool:
 	if not await start_selected(id, 6, variant): return false
 	var issued: Dictionary = world.issued_run_plan()
-	return check(issued.theme_id == "crystal_caverns" and issued.content_version == 6 \
+	return check(issued.theme_id == "crystal_caverns" and issued.content_version == 7 \
 		and issued == session.issued_run_plan() and world.combat_admission_valid(),
-		"Actual Crystal Game actor has the admitted content-v6 world and Session identity")
+		"Actual Crystal Game actor has the admitted content-v7 world and Session identity")
 
 func crystal_stage(pattern: String, index: int = 0) -> Dictionary:
 	return CrystalAttack.stage_snapshot(attack_snapshot(boss, pattern), index)

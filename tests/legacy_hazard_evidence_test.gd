@@ -34,14 +34,14 @@ func _start_legacy_run() -> bool:
 			var layout: Dictionary = generator.generate_for_run(candidate, 6)
 			var replacements := {}
 			for slot: Dictionary in planner.content_slots(layout, plan):
-				if slot.definition_id == "root_spike_lane": replacements[int(slot.room_id)] = true
+				if slot.definition_id in ["root_spike_lane", "root_rolling_stone"]: replacements[int(slot.room_id)] = true
 			for room: Dictionary in layout.rooms:
 				if room.kind == &"trap" and not replacements.has(int(room.id)):
 					_seed = candidate
 					_trap_room = int(room.id)
 					break
 			if _seed >= 0: break
-	if not check(_seed >= 0 and _trap_room >= 0, "Public content-v6 seed selects Thornmarshal and an original roots trap"): return false
+	if not check(_seed >= 0 and _trap_room >= 0, "Public content-v7 seed selects Thornmarshal and an original roots trap"): return false
 	return await _open_run(_seed, 6)
 
 func _open_run(seed_value: int, depth: int) -> bool:
@@ -56,16 +56,16 @@ func _open_run(seed_value: int, depth: int) -> bool:
 	world.awareness.time_rate = 0.0
 	boss.set_physics_process(false)
 	for actor: Node3D in world.registered_optional_encounters(): actor.set_physics_process(false)
-	check(world.issued_run_plan().content_version == 6 and world.issued_run_plan() == session.issued_run_plan() \
-		and world.run_source_context_valid(), "Actual Game binds the complete content-v6 issued source")
+	check(world.issued_run_plan().content_version == 7 and world.issued_run_plan() == session.issued_run_plan() \
+		and world.run_source_context_valid(), "Actual Game binds the complete content-v7 issued source")
 	return true
 
 func _boss_current_version() -> void:
 	await focus(boss)
 	var before: float = player.health
-	if not check(boss.request_attack(&"sentinel_cleave"), "Real Thornmarshal accepts content-v6 authority with its unchanged attack profile"): return
+	if not check(boss.request_attack(&"sentinel_cleave"), "Real Thornmarshal accepts content-v7 authority with its unchanged attack profile"): return
 	var token: Dictionary = boss._cast.token()
-	check(boss._cast.issued.content_version == 6 and boss.cast_token_valid(token), "Actual boss cast retains its registered v6 generation and receipt")
+	check(boss._cast.issued.content_version == 7 and boss.cast_token_valid(token), "Actual boss cast retains its registered v7 generation and receipt")
 	var attack: Dictionary = attack_snapshot(boss, "sentinel_cleave")
 	commit(boss)
 	check(is_equal_approx(player.health, before - float(attack.damage) * float(world.issued_depth_policy().damage_multiplier)),
@@ -284,7 +284,7 @@ func _typed_current_version() -> void:
 				chosen_slot = slot
 				break
 		if chosen >= 0: break
-	if not check(chosen >= 0, "Public content-v6 planner retains a typed spore source outside checkpoint rooms"): return
+	if not check(chosen >= 0, "Public content-v7 planner retains a typed spore source outside checkpoint rooms"): return
 	if not await _open_run(chosen, 11): return
 	if not check(world.room_content_slots().has(chosen_slot), "The actual native spore slot passes final Game admission"): return
 	var room: Node3D = world.rooms[int(chosen_slot.room_id)]
@@ -304,11 +304,11 @@ func _typed_current_version() -> void:
 	var hazard: Node3D
 	for actor: Node3D in world.registered_hazard_actors():
 		if actor.active and actor.typed_snapshot().get("definition_id", "") == "root_spore_patch": hazard = actor
-	if not check(hazard != null, "Actual v6 room entry admits the unchanged typed spore producer"): return
+	if not check(hazard != null, "Actual v7 room entry admits the unchanged typed spore producer"): return
 	hazard.set_physics_process(false)
 	var issued: Dictionary = hazard.typed_snapshot()
-	check(issued.content_version == 6 and world.registered_hazard_cast_valid(hazard, int(issued.run_generation), String(issued.source_receipt), int(issued.cast_serial)),
-		"Typed cast receives and validates actual content-v6 source identity")
+	check(issued.content_version == 7 and world.registered_hazard_cast_valid(hazard, int(issued.run_generation), String(issued.source_receipt), int(issued.cast_serial)),
+		"Typed cast receives and validates actual content-v7 source identity")
 	var old_legacy: Dictionary = hazard.legacy_activation_snapshot()
 	var notices := {"count": 0}
 	hazard.legacy_retired.connect(func(_record: Dictionary) -> void: notices["count"] = int(notices.count) + 1)
@@ -327,6 +327,8 @@ func _typed_current_version() -> void:
 	dto.content_version = 5
 	check(HazardCast.valid_issued(dto), "Historical content-v5 typed issuance remains supported")
 	dto.content_version = 6
-	check(HazardCast.valid_issued(dto), "Explicit current content-v6 typed issuance is supported")
+	check(HazardCast.valid_issued(dto), "Historical content-v6 typed issuance remains supported")
 	dto.content_version = 7
+	check(HazardCast.valid_issued(dto), "Explicit current content-v7 typed issuance is supported")
+	dto.content_version = 8
 	check(not HazardCast.valid_issued(dto), "Unknown future content versions do not become trusted implicitly")

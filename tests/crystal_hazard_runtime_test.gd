@@ -68,8 +68,8 @@ func _start() -> bool:
 	player.invulnerable_remaining = 0.0
 	var state: Dictionary = hazard.typed_snapshot()
 	player.global_position = state.shape.position + Vector3.UP * 0.15
-	check(state.content_version == 6 and state.profile.version == 2 and state.remaining == 2.0 \
-		and level.registered_hazard_cast_valid(hazard, level.run_generation, String(state.source_receipt), int(state.cast_serial)), "Actual v6 source starts the complete v2 warning with private accepted identity")
+	check(state.content_version == 7 and state.profile.version == 2 and state.remaining == 2.0 \
+		and level.registered_hazard_cast_valid(hazard, level.run_generation, String(state.source_receipt), int(state.cast_serial)), "Actual v7 source starts the complete v2 warning with private accepted identity")
 	return true
 func _step(delta: float) -> void: hazard._physics_process(delta)
 func _amount() -> float: return 5.0 * float(level.issued_depth_policy().damage_multiplier)

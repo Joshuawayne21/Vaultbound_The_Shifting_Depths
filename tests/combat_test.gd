@@ -26,6 +26,7 @@ func _run() -> void:
 	await _sword_combo_and_buffer()
 	await _charged_attack(&"sword")
 	await _defense(&"sword")
+	await _moving_hit_origin()
 	await _sword_abilities_and_walls()
 	await _staff_projectiles()
 	await _offset_projectile_wall()
@@ -169,6 +170,38 @@ func _defense(style: StringName) -> void:
 	Rules.apply_hit(dummy, player, 30.0, Rules.next_attack_id(), &"enemy_melee")
 	check(player.combat.state == &"stagger" and player.stamina == 0.0, "Insufficient block stamina causes guard break")
 	await _idle()
+
+func _moving_hit_origin() -> void:
+	await _prepare(&"sword")
+	await seconds(0.55)
+	var front: Vector3 = player.global_position + player._facing * 2.0
+	var back: Vector3 = player.global_position - player._facing * 2.0
+	dummy.global_position = back
+	input_hub.request_action(&"defense_start")
+	for invalid: Variant in ["not a world position", Vector3(NAN, 0.0, 0.0)]:
+		var attack_id := Rules.next_attack_id()
+		var health_before: float = player.health
+		var stamina_before: float = player.stamina
+		var damage_before: int = player.damage_sequence
+		check(not Rules.apply_hit(dummy, player, 20.0, attack_id, &"environment", 0.0, 0.0, 1.0, invalid) \
+			and player.health == health_before and player.stamina == stamina_before and player.damage_sequence == damage_before,
+			"Malformed moving-hit origin cannot damage a real player or spend block stamina")
+		check(Rules.apply_hit(dummy, player, 20.0, attack_id, &"environment", 0.0, 0.0, 1.0, front) \
+			and is_equal_approx(player.health, health_before - 20.0 * player.combat.weapon.block_damage_multiplier) \
+			and player.stamina < stamina_before and player.combat.state == &"blocking",
+			"Rejected origin reserves no receipt; the same attack's valid approach blocks despite its source standing behind")
+		health_before = player.health
+		stamina_before = player.stamina
+		check(not Rules.apply_hit(dummy, player, 20.0, attack_id, &"environment", 0.0, 0.0, 1.0, back) \
+			and player.health == health_before and player.stamina == stamina_before,
+			"Changing approach origin cannot bypass the existing whole-attack damage receipt")
+	dummy.global_position = front
+	var before: float = player.health
+	check(Rules.apply_hit(dummy, player, 20.0, Rules.next_attack_id(), &"environment", 0.0, 0.0, 1.0, back) \
+		and is_equal_approx(player.health, before - 20.0) and player.combat.state == &"stagger",
+		"A real rear approach bypasses a forward shield even when its registered source stands in front")
+	input_hub.request_action(&"defense_release")
+	check(await _idle(), "Moving-hit reaction recovers through the existing combat controller")
 
 func _sword_abilities_and_walls() -> void:
 	await _prepare(&"sword")

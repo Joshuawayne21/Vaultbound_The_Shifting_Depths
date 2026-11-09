@@ -6,6 +6,7 @@ const Spawn = preload("res://scripts/expedition/encounter_spawn_planner.gd")
 const Content = preload("res://scripts/expedition/dungeon_content.gd")
 const Director = preload("res://scripts/expedition/dungeon_event_director.gd")
 const Core = preload("res://scripts/expedition/spore_hive.gd")
+const RollingRegistry = preload("res://scripts/expedition/rolling_trap_registry.gd")
 const MineRegistry = preload("res://scripts/expedition/dormant_mine_registry.gd")
 const HazardDefinition = preload("res://scripts/expedition/hazard_definition.gd")
 var world: Node3D
@@ -23,6 +24,7 @@ var _hazard_poll := 0.0
 var _visits: Dictionary = {}
 var _initial_opportunities: Dictionary = {}
 var _mines: RefCounted
+var _rolling: RefCounted
 
 func configure(owner_world: Node3D, plan: Dictionary, materials: Dictionary) -> void:
 	world = owner_world
@@ -32,6 +34,8 @@ func configure(owner_world: Node3D, plan: Dictionary, materials: Dictionary) -> 
 	_slots = Planner.content_slots(world.layout, plan)
 	_mines = MineRegistry.new()
 	_mines.configure(self, world, plan)
+	_rolling = RollingRegistry.new()
+	_rolling.configure(self, world)
 
 func prepare() -> bool:
 	if _prepared: return admission_valid()
@@ -39,6 +43,10 @@ func prepare() -> bool:
 	for slot: Dictionary in _slots:
 		var room: Node3D = world.rooms[int(slot.room_id)]
 		if slot.kind == "hazard":
+			if slot.definition_id == "root_rolling_stone":
+				if not _rolling.prepare(slot, room, _plan.hazard_profiles[slot.definition_id], shape_for(slot)): return false
+				if _rolling.is_admitted(String(slot.id)): _admitted.append(slot.duplicate(true))
+				continue
 			if not Spawn.hazard_site_clear(world, room, shape_for(slot)): continue
 			if slot.definition_id == "ember_arcane_mine" and not _mines.prepare(slot, room, _materials): return false
 			_admitted.append(slot.duplicate(true))
@@ -66,7 +74,8 @@ func prepare() -> bool:
 
 func admission_valid() -> bool:
 	if not is_instance_valid(world) or not _prepared or not Planner.valid_content_slots(_admitted, world.layout, _plan) \
-		or (_mines != null and not _mines.admission_valid(_admitted)): return false
+		or (_mines != null and not _mines.admission_valid(_admitted)) \
+		or (_rolling != null and not _rolling.admission_valid(_admitted)): return false
 	var count := 0
 	for slot: Dictionary in _admitted:
 		if slot.kind == "event": count += 1
@@ -272,7 +281,7 @@ func tick(delta: float) -> void:
 	var initial: Dictionary = _initial_opportunities.get(int(world.current_room_id), {})
 	if initial.get("state", "") == "pending": _try_initial_opportunity(int(world.current_room_id))
 	for slot: Dictionary in _admitted:
-		if slot.kind != "hazard" or slot.definition_id == "ember_arcane_mine" or int(slot.room_id) != int(world.current_room_id) or _hazard_attempts.has(slot.id) or int(_visits.get(int(slot.room_id), 0)) > 2: continue
+		if slot.kind != "hazard" or slot.definition_id in ["ember_arcane_mine", "root_rolling_stone"] or int(slot.room_id) != int(world.current_room_id) or _hazard_attempts.has(slot.id) or int(_visits.get(int(slot.room_id), 0)) > 2: continue
 		_arm_hazard(slot)
 
 func _arm_hazard(slot: Dictionary) -> void:
@@ -310,6 +319,7 @@ func hazard_valid(actor: Node3D, generation: int, receipt: String, serial: int) 
 	var record: Dictionary = _hazard_records.get(actor.get_instance_id(), {})
 	if record.is_empty() or record.actor.get_ref() != actor: return false
 	var issued: Dictionary = record.issued
+	if record.get("owner_domain") == "rolling_initial" and not _rolling.source_valid(actor, issued): return false
 	if bool(actor.active) and actor.global_position != issued.shape.position: return false
 	var actual: Dictionary = actor.typed_snapshot()
 	for key: String in ["run_generation", "content_version", "room_id", "source_receipt", "cast_serial", "profile", "shape", "depth_policy"]:
@@ -323,8 +333,9 @@ func shape_for(slot: Dictionary) -> Dictionary:
 	var profile: Dictionary = _plan.hazard_profiles[slot.definition_id]
 	var result := {"shape": String(profile.shape), "position": center, "radius": float(profile.radius), "height_tolerance": float(profile.height_tolerance)}
 	if profile.shape == "capsule":
-		result["start"] = room.to_global(Vector3(-3, 0, 0))
-		result["end"] = room.to_global(Vector3(3, 0, 0))
+		var half_length: float = float(profile.axis_length) * 0.5 if slot.definition_id == "root_rolling_stone" else 3.0
+		result["start"] = room.to_global(Vector3(-half_length, 0, 0))
+		result["end"] = room.to_global(Vector3(half_length, 0, 0))
 	return result
 
 func hive_room_reserved(id: int) -> bool:
@@ -474,6 +485,9 @@ func capture_typed_retirement(actor: Node3D, terminal: Dictionary) -> void:
 	for key: String in ["run_generation", "room_id", "source_receipt", "cast_serial"]:
 		if terminal.get(key) != issued[key] or accepted.get(key) != issued[key]: return
 	if int(issued.run_generation) != int(world.run_generation): return
+	if record.get("owner_domain") == "rolling_initial":
+		_rolling.retired(actor, terminal, issued)
+		return
 	if record.get("owner_domain") == "room_slot" and issued.profile.id == "ember_arcane_mine":
 		_mines.retired(actor, terminal, issued)
 		return
@@ -537,3 +551,79 @@ func arm_mine(slot: Dictionary) -> String:
 		if is_instance_valid(self) and is_instance_valid(world) and world.run_source_context_valid(): world.notice.emit("Arcane mine — leave the warned seal")
 		return "accepted"
 	return "deferred"
+
+func rolling_room_selected(room_id: int) -> bool:
+	return _rolling != null and _rolling.has_room(room_id)
+
+func arm_rolling_opportunity(room_id: int) -> void:
+	if _rolling != null: _rolling.enter(room_id)
+
+func rolling_opportunity_resolved(room_id: int) -> bool:
+	return _rolling != null and _rolling.resolved(room_id)
+
+func rolling_slot_snapshot(id: String) -> Dictionary:
+	return _rolling.snapshot(id) if _rolling != null else {}
+
+func travel_segment_clear(actor: Node3D, generation: int, receipt: String, serial: int, from_distance: float, to_distance: float) -> bool:
+	if not hazard_valid(actor, generation, receipt, serial): return false
+	var record: Dictionary = _hazard_records.get(actor.get_instance_id(), {})
+	if record.get("owner_domain") != "rolling_initial": return false
+	return _rolling.segment_clear(actor, record.issued, from_distance, to_distance) \
+		and hazard_valid(actor, generation, receipt, serial)
+
+func arm_rolling(slot: Dictionary) -> void:
+	if not is_instance_valid(world) or not world.run_source_context_valid() or not _admitted.has(slot) \
+		or slot.definition_id != "root_rolling_stone" or int(world.current_room_id) != int(slot.room_id): return
+	var shape := shape_for(slot)
+	var room: Node3D = world.rooms[int(slot.room_id)]
+	var profile: Dictionary = _plan.hazard_profiles[slot.definition_id]
+	if not Spawn.rolling_path_clear(world, room, shape, profile) or not Spawn.rolling_escape_clear(world, room, shape): return
+	for actor: Node3D in world.registered_hazard_actors():
+		if not is_instance_valid(actor) or not actor.is_inside_tree() or actor.is_queued_for_deletion() or bool(actor.active): continue
+		# A native attachment callback can expose an accepted helper before its
+		# wrapper becomes visible/active. Preserve that owner's record and use a
+		# genuinely free pool member, never overwrite it with a refused attempt.
+		if actor.typed_snapshot().get("live", false) == true: continue
+		var scheduler: EncounterEventScheduler = world.scheduler
+		var reservation: int = scheduler.reserve_typed_hazard(int(slot.room_id), String(slot.id))
+		if reservation < 0: return
+		var issued := {"run_generation": int(world.run_generation), "content_version": int(_plan.content_version), "room_id": int(slot.room_id),
+			"source_receipt": String(slot.id), "cast_serial": int(actor.cast_serial) + 1, "profile": profile.duplicate(true),
+			"shape": shape.duplicate(true), "depth_policy": world.issued_depth_policy()}
+		var actor_id := actor.get_instance_id()
+		if not _rolling.accepting(String(slot.id), actor, issued):
+			scheduler.release_reservation(reservation)
+			return
+		_hazard_records[actor_id] = {"actor": weakref(actor), "issued": issued.duplicate(true), "owner_domain": "rolling_initial"}
+		var started: bool = actor.trigger_typed(issued, world)
+		if not is_instance_valid(self) or not is_instance_valid(world) or not world.run_source_context_valid():
+			if is_instance_valid(scheduler): scheduler.release_reservation(reservation)
+			return
+		var activation: Dictionary = actor.typed_activation_snapshot() if is_instance_valid(actor) else {}
+		var never_accepted: bool = activation.size() == 6 and activation.get("cast_serial") is int \
+			and int(activation.cast_serial) >= 0 and int(activation.cast_serial) < int(issued.cast_serial)
+		var same: bool = is_instance_valid(actor) and world.owns_environment_hazard(actor) and _hazard_records.get(actor_id, {}).get("issued") == issued
+		# A legacy replacement need not overwrite the old typed registry row.
+		# Match the actual wrapper mode/serial before binding or cancelling A.
+		if same:
+			var current: Dictionary = actor.typed_snapshot()
+			for key: String in ["run_generation", "content_version", "room_id", "source_receipt", "cast_serial", "profile", "shape", "depth_policy"]:
+				if current.get(key) != issued[key]: same = false
+			var accepted_identity: Dictionary = actor.typed_activation_snapshot()
+			for key: String in ["run_generation", "room_id", "source_receipt", "cast_serial"]:
+				if accepted_identity.get(key) != issued[key]: same = false
+		if not same:
+			scheduler.release_reservation(reservation)
+			_rolling.finish_attempt(String(slot.id), actor_id, issued, false, never_accepted)
+			return
+		var accepted: bool = activation.get("cast_serial") == issued.cast_serial and activation.get("source_receipt") == issued.source_receipt
+		if not started or not scheduler.bind_hazard(reservation, actor):
+			scheduler.release_reservation(reservation)
+			actor.cancel()
+			if not is_instance_valid(self) or not is_instance_valid(world) or not world.run_source_context_valid(): return
+			_rolling.finish_attempt(String(slot.id), actor_id, issued, accepted, never_accepted)
+			if _hazard_records.get(actor_id, {}).get("issued") == issued: _hazard_records.erase(actor_id)
+			return
+		_rolling.finish_attempt(String(slot.id), actor_id, issued, true)
+		world.notice.emit("Rolling stone — leave the marked lane")
+		return

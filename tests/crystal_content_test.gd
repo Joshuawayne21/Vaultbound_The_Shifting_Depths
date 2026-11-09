@@ -63,7 +63,7 @@ func _run() -> void:
 	check(shallow.available and shallow.themes.size() == 1 and shallow.themes[0].weight == 100 \
 		and deeper.available and deeper.themes.size() == 2 and deeper.themes[0].weight == 60 and deeper.themes[1].weight == 40 \
 		and not deeper.has("seed") and not deeper.has("required_boss_id"), "Preview honestly lists eligible weighted possibilities without issuing a seed")
-	check(Content.theme_pool_preview(51) == {"available": false, "content_version": 6, "themes": []}, "Unavailable depth cannot advertise partial theme choices")
+	check(Content.theme_pool_preview(51) == {"available": false, "content_version": 7, "themes": []}, "Unavailable depth cannot advertise partial theme choices")
 	for id: String in ["crystal_skeleton", "crystal_archer", "crystal_golem"]:
 		for variant: String in ["none", "elite"]:
 			var descriptor: Dictionary = Content.source_descriptor(selected, id, variant)

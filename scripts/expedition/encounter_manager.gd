@@ -329,9 +329,12 @@ func death_receipt(enemy: Node3D) -> String:
 	return String(death_record(enemy).get("receipt", ""))
 
 func _dead_actor_record(enemy: Node3D) -> Dictionary:
-	if not is_instance_valid(enemy) or not enemy.is_inside_tree() or float(enemy.get("health")) != 0.0 or enemy.get("state") != &"dead":
+	# Public source probes can name a hazard or scenery node without health.
+	# Validate private enrollment before reading the registered enemy contract.
+	var record := _actor_record(enemy)
+	if record.is_empty() or float(enemy.get("health")) != 0.0 or enemy.get("state") != &"dead":
 		return {}
-	return _actor_record(enemy)
+	return record
 
 func _actor_record(enemy: Node3D) -> Dictionary:
 	if not is_instance_valid(enemy) or not enemy.is_inside_tree() or enemy.is_queued_for_deletion(): return {}

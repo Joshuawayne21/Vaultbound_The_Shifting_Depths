@@ -19,8 +19,9 @@ func _run() -> void:
 			var usage := int(property.get("usage", 0))
 			if (usage & PROPERTY_USAGE_SCRIPT_VARIABLE) != 0 and (usage & PROPERTY_USAGE_STORAGE) != 0:
 				exported[String(property.name)] = true
-		check(exported.size() == Definition.V2_KEYS.size() and Attack.exact_keys(exported, Definition.V2_KEYS) \
-			and authored.delivery_mode == "" and Attack.exact_keys(profile, Definition.KEYS), "Version-one snapshots retain exact historical fields while the Resource explicitly declares the separate version-two delivery export")
+		check(exported.size() == Definition.V3_KEYS.size() and Attack.exact_keys(exported, Definition.V3_KEYS) \
+			and authored.delivery_mode == "" and authored.travel_speed == 3.0 and authored.max_step_delta == 0.25 \
+			and Attack.exact_keys(profile, Definition.KEYS), "Version-one snapshots retain exact historical fields while the Resource separately declares newer delivery and travel exports")
 		for key: String in Definition.KEYS:
 			var missing := profile.duplicate(true)
 			missing.erase(key)

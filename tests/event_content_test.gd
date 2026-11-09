@@ -16,19 +16,19 @@ func _run() -> void:
 		if not check(seeds.size() == 100, "Bounded public selection retains 100 Rootbound cases at depth%d" % depth): continue
 		for seed_value: int in seeds:
 			var plan: Dictionary = Content.resolve_run_plan(seed_value, depth)
-			if not check(not plan.is_empty() and plan.content_version == 6 and Content.valid_run_plan(plan, Policy.describe_depth(depth)), "Depth%d seed%d resolves complete versioned event policy" % [depth, seed_value]): continue
+			if not check(not plan.is_empty() and plan.content_version == 7 and Content.valid_run_plan(plan, Policy.describe_depth(depth)), "Depth%d seed%d resolves complete versioned event policy" % [depth, seed_value]): continue
 			var layout: Dictionary = Generator.generate_for_run(seed_value, depth)
 			var slots: Array[Dictionary] = Planner.content_slots(layout, plan)
 			var occupied := {}
 			for champion: Dictionary in Planner.plan(layout, plan): occupied[int(champion.room_id)] = "champion"
-			var counts := {"root_spike_lane": 0, "root_spore_patch": 0, "root_spore_hive": 0, "root_horde": 0}
+			var counts := {"root_spike_lane": 0, "root_spore_patch": 0, "root_spore_hive": 0, "root_horde": 0, "root_rolling_stone": 0}
 			var valid := true
 			for slot: Dictionary in slots:
 				var room: Dictionary = layout.rooms[int(slot.room_id)]
 				valid = valid and not occupied.has(int(slot.room_id)) and not bool(room.hidden) and room.kind in [&"combat", &"trap"]
 				occupied[int(slot.room_id)] = slot.definition_id
 				counts[slot.definition_id] += 1
-				seen[slot.definition_id] = true
+				if slot.definition_id != "root_rolling_stone": seen[slot.definition_id] = true
 				if slot.definition_id == "root_spore_hive": valid = valid and room.module == &"combat_grove" and not room.main and depth >= 6
 				if slot.definition_id == "root_spore_patch": valid = valid and room.module == &"combat_grove" and depth >= 2
 				if slot.definition_id == "root_spike_lane": valid = valid and room.module == &"trap_thorns" and depth >= 2

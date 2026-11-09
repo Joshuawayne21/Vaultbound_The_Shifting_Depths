@@ -312,7 +312,7 @@ func _ready() -> void:
 		_events.name = "RegisteredRoomEvents"
 		_events.configure(self, _content_plan, shared_materials)
 		add_child(_events)
-	if int(_content_plan.get("content_version", 0)) in [4, 5, 6]:
+	if int(_content_plan.get("content_version", 0)) in [4, 5, 6, 7]:
 		_checkpoints = Checkpoints.new()
 		_checkpoints.name = "ReturnCheckpoints"
 		_checkpoints.configure(self, shared_materials)
@@ -440,6 +440,10 @@ func _enter_room(id: int) -> void:
 		if hazard.active and hazard.room_id != id:
 			hazard.cancel()
 	var room: Dictionary = layout.rooms[id]
+	if room.kind == &"trap" and not _trap_visited.has(id) and _events != null and _events.rolling_room_selected(id):
+		_trap_visited[id] = true
+		_events.arm_rolling_opportunity(id)
+		if not is_instance_valid(self) or not run_source_context_valid(): return
 	if room.kind == &"trap" and not _trap_visited.has(id) and (_events == null or not _events.replaces_roots(id)):
 		_trap_visited[id] = true
 		if not _content_plan.is_empty() and _content_plan.trap_policy.initial.mode == "registered_typed":
@@ -1004,6 +1008,7 @@ func checkpoint_cache_placement_allowed(at: Vector3, footprint: float) -> bool:
 func initial_trap_resolved(room_id: int) -> bool:
 	if not rooms.has(room_id): return false
 	if layout.rooms[room_id].kind != &"trap": return true
+	if _events != null and _events.rolling_room_selected(room_id): return _events.rolling_opportunity_resolved(room_id)
 	if not _content_plan.is_empty() and _content_plan.trap_policy.initial.mode == "registered_typed":
 		return _events != null and _events.initial_opportunity_resolved(room_id)
 	var row: Dictionary = _initial_traps.get(room_id, {})
@@ -1059,3 +1064,9 @@ func _on_typed_hazard_retired(terminal: Dictionary, actor: Node3D) -> void:
 
 func mine_slot_snapshot(slot_id: String) -> Dictionary:
 	return _events.mine_slot_snapshot(slot_id) if _events != null else {}
+
+func rolling_slot_snapshot(id: String) -> Dictionary:
+	return _events.rolling_slot_snapshot(id) if _events != null else {}
+
+func registered_hazard_travel_segment_clear(actor: Node3D, generation: int, receipt: String, serial: int, from_distance: float, to_distance: float) -> bool:
+	return _events != null and _hazards.has(actor) and _events.travel_segment_clear(actor, generation, receipt, serial, from_distance, to_distance)

@@ -86,10 +86,10 @@ func enter_ember_hazard(kind: String) -> bool:
 		var source: Dictionary = hazard.typed_snapshot()
 		player.global_position = source.shape.position + Vector3.UP * 0.15
 		return check(level.run_source_context_valid() and level.combat_admission_valid() \
-			and level.issued_run_plan() == session.issued_run_plan() and source.content_version == 6 \
+			and level.issued_run_plan() == session.issued_run_plan() and source.content_version == 7 \
 			and source.profile == session.issued_run_plan().hazard_profiles[hazard_definition_id()] \
 			and level.registered_hazard_cast_valid(hazard, level.run_generation, String(source.source_receipt), int(source.cast_serial)),
-			"Content 6 " + kind + " retains its exact selected profile and private world source")
+			"Content 7 " + kind + " retains its exact selected profile and private world source")
 	return check(false, "Bounded public seed search supplies an admitted native Ember hazard site")
 
 func hazard_definition_id() -> String:
