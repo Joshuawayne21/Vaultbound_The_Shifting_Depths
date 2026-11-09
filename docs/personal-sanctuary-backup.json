@@ -1,0 +1,25 @@
+{
+  "kind": "pre-modification-backup",
+  "accepted_local_commit": "2344dea9985242b45add601345fe798ac5b5ea10",
+  "accepted_remote_commit": "f26fce0d99abb31307e1f090f77593e385ec9523",
+  "accepted_tree": "e38ff352164d87a1d616cd24f03759de8aac0a9f",
+  "backup_location": "/workspace/backups/vaultbound-before-personal-sanctuary-2026-11-09",
+  "verified_working_files": 1667,
+  "default_local_user_data_files_found": 0,
+  "archive_sha256": "2e6e1532cd83d4c58c6f8fa76aa0802f0cc3ab4c0e17c888e21ba0d838332f84",
+  "git_bundle_sha256": "62584b4eea6ae031e268f22c2b472ddbad9472494fe62e76eaf6ca7b8727b6eb",
+  "working_manifest_sha256": "952270134af1204226244ec74d0b3ddaf737ecbd6a5b0e91de3d31ad31974cd1",
+  "binary_patch_sha256": "306c1b6808432e09575105f4c6a1ce9fad3c3bb1002b1720806aa6bc985f3946",
+  "backup_manifest_sha256": "d605fb38db0b7c82a5af4cec5418cd26e91455b8ac61dae8411c5e316b38e85f",
+  "unfinished_shrine_preserved": true,
+  "original_worktree": "/workspace/vaultbound",
+  "feature_worktree": "/workspace/vaultbound-home",
+  "feature_branch": "feature/personal-sanctuary",
+  "device_saves_backed_up": false,
+  "restore_notes": [
+    "Restore the Git bundle into a separate directory.",
+    "Extract the archived working tree only into that separate recovery checkout, then verify every file against working-tree-manifest.json.",
+    "Do not extract over current player data or reset the original worktree.",
+    "Android saves reside on the device and require a separate device backup before installing a migrated build."
+  ]
+}

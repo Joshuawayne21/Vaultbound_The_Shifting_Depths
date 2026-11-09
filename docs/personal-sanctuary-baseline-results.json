@@ -1,0 +1,152 @@
+{
+  "status": "passed",
+  "checked_at_utc": "2026-11-09T02:35:36.705374+00:00",
+  "scope": "Accepted D7 baseline only; no new Home gameplay acceptance",
+  "source_commit": "2344dea9985242b45add601345fe798ac5b5ea10",
+  "source_sha256": "1d88ff411492bcf57d3ef0f28b48b16c00dbcd80b97c7f1615f40f058971d6b3",
+  "source_snapshot": "/workspace/scratch/vaultbound-home-audit/baseline-j44gy2n8/source",
+  "semantic_files": 1133,
+  "engine": "4.6.3.stable.official.7d41c59c4",
+  "renderer": "Headless GL Compatibility; no GPU/device measurement",
+  "baseline_report_sha256": "3d16c5cef944c494068d7910369a45d0f27301b7b64bd2b9ece2e67da47f8767",
+  "strict_preflight_loaded_scripts": 12,
+  "runtime_modes": 4,
+  "runtime_checks": 1368,
+  "engine_processes": 7,
+  "startup_120_frames_run": false,
+  "tests": [
+    {
+      "mode": "sanctuary_world_test",
+      "checks": 225,
+      "exit_code": 0,
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-audit/baseline-j44gy2n8/source",
+        "--script",
+        "res://tests/sanctuary_world_test.gd"
+      ]
+    },
+    {
+      "mode": "collection_world_test",
+      "checks": 36,
+      "exit_code": 0,
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-audit/baseline-j44gy2n8/source",
+        "--script",
+        "res://tests/collection_world_test.gd"
+      ]
+    },
+    {
+      "mode": "profile_v7_test",
+      "checks": 97,
+      "exit_code": 0,
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-audit/baseline-j44gy2n8/source",
+        "--script",
+        "res://tests/profile_v7_test.gd"
+      ]
+    },
+    {
+      "mode": "smoke_test",
+      "checks": 1010,
+      "exit_code": 0,
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-audit/baseline-j44gy2n8/source",
+        "--script",
+        "res://tests/smoke_test.gd"
+      ]
+    }
+  ],
+  "setup": [
+    {
+      "mode": "version",
+      "exit_code": 0,
+      "argv": [
+        "godot4",
+        "--version"
+      ],
+      "environment_notices": []
+    },
+    {
+      "mode": "import",
+      "exit_code": 0,
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-audit/baseline-j44gy2n8/source",
+        "--editor",
+        "--import",
+        "--quit"
+      ],
+      "environment_notices": [
+        "ERROR: Condition \"_sock == -1\" is true. Returning: FAILED",
+        "ERROR: Condition \"err != OK\" is true. Returning: ERR_CANT_CREATE",
+        "ERROR: Condition \"_sock == -1\" is true. Returning: FAILED",
+        "ERROR: Condition \"err != OK\" is true. Returning: ERR_CANT_CREATE",
+        "Unable to open Android 'build-tools' directory."
+      ]
+    },
+    {
+      "mode": "preflight",
+      "exit_code": 0,
+      "argv": [
+        "godot4",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-audit/baseline-j44gy2n8/source",
+        "--script",
+        "/workspace/scratch/vaultbound-home-audit/baseline-j44gy2n8/preflight.gd",
+        "--",
+        "res://scripts/party/companion.gd",
+        "res://tests/test_harness.gd",
+        "res://scripts/progression/profile_store.gd",
+        "res://scripts/systems/game.gd",
+        "res://scripts/world/sanctuary.gd",
+        "res://scripts/world/collection_hall.gd",
+        "res://scripts/world/portal.gd",
+        "res://scripts/player/camera_rig.gd",
+        "res://tests/sanctuary_world_test.gd",
+        "res://tests/collection_world_test.gd",
+        "res://tests/profile_v7_test.gd",
+        "res://tests/smoke_test.gd"
+      ],
+      "environment_notices": []
+    }
+  ],
+  "raw_log_sha256": {
+    "/workspace/scratch/vaultbound-home-audit/baseline-j44gy2n8/version.log": "1e07780c365549219ffd8e6bd120a818c80424e8295d4ee7451c10d0ed0fa84f",
+    "/workspace/scratch/vaultbound-home-audit/baseline-j44gy2n8/import.log": "5a1eb7f835f5a0a61ac0ea349eb5e8de0a07e1ac3b8ad3ed5f239b03540780ff",
+    "/workspace/scratch/vaultbound-home-audit/baseline-j44gy2n8/preflight.log": "ebe4cc72ba54a634d30fc6bf81d49946791215bcbf4d79704f4283d32ac9e34c",
+    "/workspace/scratch/vaultbound-home-audit/baseline-j44gy2n8/sanctuary_world_test.log": "571de13a2c5427cee5e94f47b592087a6ad054301383bdf2d2ee5779eabfad7b",
+    "/workspace/scratch/vaultbound-home-audit/baseline-j44gy2n8/collection_world_test.log": "6dfeb920214cbcb661710a4c725cfaf4c1979f79e8516cb0b3334de8ad38d397",
+    "/workspace/scratch/vaultbound-home-audit/baseline-j44gy2n8/profile_v7_test.log": "fede5b3c1a2d644eaaabaa6c5f0b5393e4bc15712c20204c86d2fa5b981dc8a5",
+    "/workspace/scratch/vaultbound-home-audit/baseline-j44gy2n8/smoke_test.log": "f486834e0edeebf367b2c31852530b2d2506443ceb8f7e0a79caa441cdf0c230"
+  },
+  "evidence_sha256": {
+    "/workspace/scratch/vaultbound-home-audit/baseline-j44gy2n8/results.json": "70d8012fd3d0608864d4e4c62b357c690be9fb86ff387c329c66144e07563794",
+    "/workspace/scratch/vaultbound-home-audit/baseline-j44gy2n8/summary.json": "a9f3e2436a8a67102b8fde159d25b9899060204020a94758b35b0b6a1d409674",
+    "/workspace/scratch/vaultbound-home-audit/baseline-j44gy2n8/orchestration.json": "381d0ab0052d271b5a869bb51f2c34650adcec520453d4461e99ccad9907f776",
+    "/workspace/scratch/vaultbound-home-audit/baseline-j44gy2n8/source-opening.json": "08c6a0e970759569271b88bc1e97d0df8cbee1c2c1ee4cebff0792ae67892f60",
+    "/workspace/scratch/vaultbound-home-audit/baseline-j44gy2n8/source-closing.json": "08c6a0e970759569271b88bc1e97d0df8cbee1c2c1ee4cebff0792ae67892f60"
+  },
+  "runner_sha256": "126c73fdc3b5c06251bc5a5f05f3e99abea51ea280512a745a33c2758fa13171",
+  "source_opening_equals_closing": true,
+  "all_raw_logs_rehashed": true,
+  "engine_lock_available_after_run": true,
+  "normal_player_data_used": false,
+  "android_device_tested": false,
+  "apk_export_tested": false,
+  "full_229_modes_rerun": false
+}
