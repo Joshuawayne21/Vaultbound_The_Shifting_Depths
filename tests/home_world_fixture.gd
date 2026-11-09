@@ -36,8 +36,8 @@ func first_home_entry(path: String) -> bool:
 	var saved := Store.new(path).load_profile()
 	return check(Home.valid_id(session.profile.home.id, false) and session.profile == expected
 		and saved == Store.normalize(JSON.parse_string(JSON.stringify(expected, "", true, true)))
-		and FileAccess.get_file_as_string(path + ".pre-v10.bak") == original_profile_bytes,
-		"Actual first entry saves one opaque identity and one revision while preserving every owned field and exact pre-v10 bytes")
+		and FileAccess.get_file_as_string(path + ".pre-v11.bak") == original_profile_bytes,
+		"Actual first entry saves one opaque identity and one revision while preserving every owned field and exact pre-v11 bytes")
 
 func return_home_without_write(path: String) -> bool:
 	var before: Dictionary = session.profile.duplicate(true)

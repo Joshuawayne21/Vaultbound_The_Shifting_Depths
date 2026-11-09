@@ -3,6 +3,7 @@ extends RefCounted
 ## Pure, reviewable transactions. No UI, actor, clock, file or networking writes.
 ## A quote is committed against one revision and receipt; the caller saves first.
 
+const TesterAccess = preload("res://scripts/progression/tester_access.gd")
 const Inventory = preload("res://scripts/progression/inventory_model.gd")
 const Catalog = preload("res://scripts/progression/loot_table.gd")
 const Enhancement = preload("res://scripts/progression/enhancement_policy.gd")
@@ -96,7 +97,7 @@ static func _evaluate(profile: Dictionary, action: StringName, arguments: Dictio
 			var recipe := _recipe(String(arguments.get("recipe_id", "")))
 			if recipe.is_empty():
 				return _failure("Choose a known crafting recipe.")
-			if int(profile.get("character", {}).get("level", 1)) < int(recipe.required_level):
+			if int(profile.get("character", {}).get("level", 1)) < int(recipe.required_level) and not TesterAccess.enabled(profile):
 				return _failure("This recipe requires level %d." % int(recipe.required_level))
 			result.materials = recipe.ingredients.duplicate(true)
 			result.cost_gold = int(recipe.gold)
@@ -176,7 +177,7 @@ static func _evaluate(profile: Dictionary, action: StringName, arguments: Dictio
 						return _failure("This item cannot be equipped.")
 					if not entry.identified:
 						return _failure("Identify the hidden properties before equipping this item.")
-					if int(profile.get("character", {}).get("level", 1)) < definition.required_level:
+					if int(profile.get("character", {}).get("level", 1)) < definition.required_level and not TesterAccess.enabled(profile):
 						return _failure("This equipment requires level %d." % definition.required_level)
 					if next.equipment[slot] == uid:
 						return _failure("This instance is already equipped.")

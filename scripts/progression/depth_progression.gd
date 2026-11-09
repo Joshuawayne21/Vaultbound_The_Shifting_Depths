@@ -3,6 +3,7 @@ extends RefCounted
 ## Pure progression planning. Only Session's verified extraction transaction
 ## installs completion; selecting a portal cannot award or persist an unlock.
 
+const TesterAccess = preload("res://scripts/progression/tester_access.gd")
 const Policy = preload("res://resources/expedition/depth_policy.tres")
 const VERSION := 1
 const FIRST_PROFILE_VERSION := 6
@@ -82,25 +83,27 @@ static func preservation_error(raw: Dictionary) -> String:
 static func entry_status(profile: Dictionary, depth: int) -> Dictionary:
 	var fields := normalize(profile.get("depth_progression"))
 	var result := {"ok": false, "reason": "Dungeon progression is unavailable.", "depth": depth,
-		"highest_unlocked_depth": int(fields.get("highest_unlocked_depth", 1)), "policy": {}}
+		"highest_unlocked_depth": int(fields.get("highest_unlocked_depth", 1)), "policy": {}, "tester_access": TesterAccess.enabled(profile)}
 	if fields.is_empty():
 		return result
 	var description: Dictionary = Policy.describe_depth(depth)
 	result.policy = description
 	if description.is_empty():
 		result.reason = "Depth %d is not available in this build." % depth
-	elif depth > int(fields.highest_unlocked_depth):
+	elif depth > int(fields.highest_unlocked_depth) and not TesterAccess.enabled(profile):
 		result.reason = "Complete Depth %d and extract to unlock Depth %d." % [depth - 1, depth]
 	else:
 		result.ok = true
 		result.reason = ""
 	return result
 
-static func complete(fields: Dictionary, depth: int, issued_policy: Dictionary = {}) -> Dictionary:
+static func complete(fields: Dictionary, depth: int, issued_policy: Dictionary = {}, tester_access: bool = false) -> Dictionary:
 	var result := normalize(fields)
 	var supported := Policy.supports_depth(depth) if issued_policy.is_empty() else VaultDepthPolicy.valid_snapshot(issued_policy, depth)
-	if result.is_empty() or depth < 1 or depth > int(result.highest_unlocked_depth) or not supported:
+	if result.is_empty() or depth < 1 or not supported:
 		return {}
+	# A test visit cannot skip the permanently earned sequential ladder.
+	if depth > int(result.highest_unlocked_depth): return result if tester_access else {}
 	result.highest_cleared_depth = maxi(int(result.highest_cleared_depth), depth)
 	result.highest_unlocked_depth = maxi(int(result.highest_unlocked_depth), depth + 1)
 	return result

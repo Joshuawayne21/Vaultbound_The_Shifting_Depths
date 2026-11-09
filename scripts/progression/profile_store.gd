@@ -4,9 +4,10 @@ extends RefCounted
 ## a temporary file, and renamed only after a successful read-back. A previous
 ## valid profile is kept as .bak. This is offline persistence, not remote authority.
 
-const VERSION := 10
+const VERSION := 11
 const DepthProgress = preload("res://scripts/progression/depth_progression.gd")
 const EncounterProgress = preload("res://scripts/progression/encounter_progression.gd")
+const TesterAccess = preload("res://scripts/progression/tester_access.gd")
 const HomeProgress = preload("res://scripts/progression/home_progression.gd")
 const MAX_COUNT := 2147483647
 const MAX_COMPANION_LEVEL := 20
@@ -38,6 +39,7 @@ static func empty_profile() -> Dictionary:
 	profile["depth_progression"] = DepthProgress.empty_fields()
 	profile["encounter_records"] = EncounterProgress.empty_fields()
 	profile["home"] = HomeProgress.empty_fields()
+	profile["tester_access"] = TesterAccess.empty_fields()
 	return profile
 
 func load_profile() -> Dictionary:
@@ -149,6 +151,8 @@ static func normalize(value: Variant) -> Dictionary:
 static func _normalize(value: Variant, unavailable_items: Dictionary, unavailable_pets: bool = false) -> Dictionary:
 	if not value is Dictionary or not _integer(value.get("version"), 1, VERSION):
 		return {}
+	if not TesterAccess.preservation_error(value).is_empty():
+		return {}
 	if not DepthProgress.preservation_error(value).is_empty():
 		return {}
 	if not EncounterProgress.preservation_error(value).is_empty():
@@ -176,6 +180,10 @@ static func _normalize(value: Variant, unavailable_items: Dictionary, unavailabl
 	if not value.get("items", {}) is Dictionary or not value.get("discoveries", []) is Array:
 		return {}
 	var result := empty_profile()
+	if int(value.version) >= TesterAccess.FIRST_PROFILE_VERSION or value.has("tester_access"):
+		var tester := TesterAccess.normalize(value.get("tester_access"))
+		if tester.is_empty(): return {}
+		result.tester_access = tester
 	if int(value.version) >= 5:
 		var pets := VaultPetProgression.normalize(value.get("pets"), unavailable_pets)
 		if pets.is_empty():
@@ -269,7 +277,7 @@ static func _normalize(value: Variant, unavailable_items: Dictionary, unavailabl
 			if uid.is_empty():
 				continue
 			var equipped_entry := VaultInventory.find(result, uid)
-			if not unavailable_items.has(equipped_entry.item_id) and VaultLootTable.item_for(equipped_entry.item_id).required_level > int(character.level):
+			if not unavailable_items.has(equipped_entry.item_id) and VaultLootTable.item_for(equipped_entry.item_id).required_level > int(character.level) and not TesterAccess.enabled(result):
 				return {}
 		var monsters: Variant = value.get("monster_discoveries", [])
 		if not monsters is Array:
@@ -284,7 +292,7 @@ static func _normalize(value: Variant, unavailable_items: Dictionary, unavailabl
 	if records.is_empty():
 		return {}
 	result.encounter_records = records
-	var home := HomeProgress.normalize(value.get("home")) if int(value.version) >= 10 else HomeProgress.migrate_legacy(value)
+	var home := HomeProgress.normalize(value.get("home"), TesterAccess.enabled(result)) if int(value.version) >= 10 else HomeProgress.migrate_legacy(value)
 	if home.is_empty() or not HomeProgress.displays_owned(home, result.pets.owned):
 		return {}
 	result.home = home
@@ -295,6 +303,8 @@ static func _unsupported_profile_reason(value: Variant) -> String:
 	if (version is int or version is float) and is_finite(float(version)) and float(version) > VERSION:
 		return "This profile uses a newer format. Secured data was left unchanged."
 	if value is Dictionary:
+		var tester_error := TesterAccess.preservation_error(value)
+		if not tester_error.is_empty(): return tester_error
 		var depth_error := DepthProgress.preservation_error(value)
 		if not depth_error.is_empty():
 			return depth_error

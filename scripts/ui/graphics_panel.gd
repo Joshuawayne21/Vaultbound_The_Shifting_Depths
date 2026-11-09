@@ -2,14 +2,23 @@ class_name VaultGraphicsPanel
 extends Control
 ## Uses the existing modal input owner. Changes commit only on a completed tap.
 signal close_requested
+signal pointers_canceled(ids: Array[int])
 const GOLD := VaultUITheme.GOLD
 const IVORY := VaultUITheme.IVORY
 const MUTED := VaultUITheme.MUTED
 const TEAL := VaultUITheme.TEAL
 const PANEL := VaultUITheme.PANEL
 const DETAILS := ["Fewer decorative plants and motes. Dynamic shadows off.", "Balanced decoration and soft dynamic shadows.", "Richer decoration, sharper shadows and smoother edges."]
-const TABS := ["graphics", "accessibility", "ambience"]
+const TABS := ["graphics", "accessibility", "ambience", "tester"]
 var settings: Node
+var session: Node
+var input_owner: Control
+var tester_data: Dictionary = {}
+var tester_quote: Dictionary = {}
+var selected_tester := false
+var tester_scroll := 0
+var _tester_focused := true
+var _tester_busy := false
 var selected_quality := 1
 var selected_fps := 30
 var selected_ui_scale := 100
@@ -33,6 +42,8 @@ func _ready() -> void:
 	hide()
 
 func open_panel() -> void:
+	_cancel_tester_review()
+	_tester_focused = true
 	settings = get_node_or_null("/root/VisualSettings")
 	if is_instance_valid(settings):
 		selected_quality = settings.current_quality
@@ -50,23 +61,27 @@ func open_panel() -> void:
 	section = "graphics"
 	_epoch += 1
 	show()
+	refresh_tester()
+	selected_tester = bool(tester_data.get("enabled", false))
 	queue_redraw()
 
 func hide_panel() -> void:
 	hide()
-	_pointers.clear()
-	_epoch += 1
+	_cancel_tester_review()
 
 func apply_visual_settings(value: Dictionary) -> void:
 	ui_scale = VaultUITheme.scale_from(value)
-	_pointers.clear()
-	_epoch += 1
+	_cancel_tester_review()
 	queue_redraw()
 
 func _notification(what: int) -> void:
 	if what in [NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED]:
-		_pointers.clear()
-		_epoch += 1
+		_tester_focused = false
+		_cancel_tester_review()
+	elif what in [NOTIFICATION_APPLICATION_FOCUS_IN, NOTIFICATION_APPLICATION_RESUMED]:
+		_tester_focused = true
+	elif what == NOTIFICATION_RESIZED and is_node_ready():
+		_cancel_tester_review()
 
 func handle_event(event: InputEvent) -> void:
 	if not visible:
@@ -94,12 +109,20 @@ func _local_point(point: Vector2) -> Vector2:
 	return get_global_transform_with_canvas().affine_inverse() * point
 
 func _begin(id: int, point: Vector2) -> void:
-	if not _pointers.has(id):
-		_pointers[id] = {"start": point, "dragged": false, "action": _hit(point), "epoch": _epoch}
+	if not _pointers.has(id) and _pointers.size() < 10:
+		_pointers[id] = {"start": point, "last": point, "dragged": false, "action": _hit(point), "epoch": _epoch,
+			"tester_scroll": section == "tester" and tester_detail_rect().has_point(point)}
 
 func _drag(id: int, point: Vector2) -> void:
 	if _pointers.has(id) and point.distance_to(_pointers[id].start) > 12.0:
 		_pointers[id].dragged = true
+	if _pointers.has(id) and bool(_pointers[id].tester_scroll) and bool(_pointers[id].dragged):
+		var delta := point.y - float(_pointers[id].last.y)
+		var step := roundi(delta / (22.0 * ui_scale))
+		if step != 0:
+			tester_scroll = clampi(tester_scroll - step, 0, maxi(0, tester_lines().size() - tester_line_capacity()))
+			_pointers[id].last = point
+			queue_redraw()
 
 func _end(id: int, point: Vector2, canceled: bool) -> void:
 	if not _pointers.has(id):
@@ -112,9 +135,13 @@ func _end(id: int, point: Vector2, canceled: bool) -> void:
 
 func _hit(point: Vector2) -> String:
 	if close_rect().has_point(point): return "close"
-	if apply_rect().has_point(point): return "apply"
+	if apply_rect().has_point(point): return "tester_apply" if section == "tester" else "apply"
 	for index in range(TABS.size()):
 		if tab_rect(index).has_point(point): return "tab_%d" % index
+	if section == "tester":
+		for index in range(2):
+			if tester_option_rect(index).has_point(point): return "tester_%d" % index
+		return ""
 	if section == "accessibility":
 		for index in range(3):
 			if scale_rect(index).has_point(point): return "scale_%d" % index
@@ -135,7 +162,16 @@ func _hit(point: Vector2) -> String:
 
 func _activate(action: String) -> void:
 	_epoch += 1
+	if action.begins_with("tester_"):
+		_activate_tester(action)
+		return
 	if action == "close":
+		if section == "tester" and not tester_quote.is_empty():
+			_cancel_tester_review()
+			notice = "Review canceled. Your saved access is unchanged."
+			queue_redraw()
+			return
+		_cancel_tester_review()
 		close_requested.emit()
 	elif action == "apply" and is_instance_valid(settings):
 		if settings.set_presentation_preferences(selected_quality, selected_fps, selected_ui_scale, selected_reduced_motion, selected_reduced_effects, selected_ambient_density, selected_high_contrast, selected_ambient_sound):
@@ -147,7 +183,13 @@ func _activate(action: String) -> void:
 	elif action.begins_with("fps_"):
 		selected_fps = 30 if action.ends_with("0") else 60
 	elif action.begins_with("tab_"):
+		_cancel_tester_review()
 		section = TABS[clampi(action.trim_prefix("tab_").to_int(), 0, TABS.size() - 1)]
+		if section == "tester":
+			refresh_tester()
+			selected_tester = bool(tester_data.get("enabled", false))
+			tester_scroll = 0
+			notice = ""
 	elif action.begins_with("scale_"):
 		selected_ui_scale = [100, 110, 120][action.trim_prefix("scale_").to_int()]
 	elif action == "motion":
@@ -169,7 +211,8 @@ func panel_rect() -> Rect2:
 
 func tab_rect(index: int) -> Rect2:
 	var rect := panel_rect()
-	return Rect2(rect.position + Vector2(32 + index * 240, 82), Vector2(228, 52))
+	var width := (rect.size.x - 64.0 - 12.0 * (TABS.size() - 1)) / TABS.size()
+	return Rect2(rect.position + Vector2(32 + index * (width + 12), 82), Vector2(width, 52))
 
 func quality_rect(index: int) -> Rect2:
 	var rect := panel_rect()
@@ -216,20 +259,23 @@ func _draw() -> void:
 		return
 	var rect := panel_rect()
 	VaultUITheme.frame(self, rect, PANEL, GOLD, true)
-	_text("DISPLAY & ACCESSIBILITY", rect.position + Vector2(32, 44), 25, IVORY)
+	_text("SETTINGS", rect.position + Vector2(32, 44), 25, IVORY)
 	_button(tab_rect(0), "GRAPHICS", section == "graphics")
 	_button(tab_rect(1), "ACCESSIBILITY", section == "accessibility")
 	_button(tab_rect(2), "AMBIENCE", section == "ambience")
+	_button(tab_rect(3), "TEST ACCESS", section == "tester")
 	if section == "accessibility":
 		_draw_accessibility(rect)
 	elif section == "ambience":
 		_draw_ambience(rect)
+	elif section == "tester":
+		_draw_tester(rect)
 	else:
 		_draw_graphics(rect)
 	if not notice.is_empty():
-		_text(notice, rect.position + Vector2(32, rect.size.y - 112), 13, TEAL)
-	_button(close_rect(), "BACK", false)
-	_button(apply_rect(), "APPLY & SAVE", true)
+		_text(_fit(notice, rect.size.x - 64, 12), rect.position + Vector2(32, rect.size.y - 105), 12, TEAL)
+	_button(close_rect(), "CANCEL REVIEW" if section == "tester" and not tester_quote.is_empty() else "BACK", false)
+	_button(apply_rect(), ("CONFIRM & SAVE" if not tester_quote.is_empty() else "REVIEW CHANGE") if section == "tester" else "APPLY & SAVE", section != "tester" or tester_can_apply())
 
 func _draw_graphics(rect: Rect2) -> void:
 	_text("VISUAL QUALITY", rect.position + Vector2(32, 156), 13, GOLD)
@@ -264,6 +310,142 @@ func _draw_ambience(rect: Rect2) -> void:
 	_text("Original generated placeholder audio; device listening remains to be tested.", rect.position + Vector2(32, 430), 12, MUTED)
 	_text("Your selections take effect only after Apply & Save.", rect.position + Vector2(32, 458), 12, IVORY)
 
+func bind_session(value: Node) -> void:
+	_cancel_tester_review()
+	if is_instance_valid(session) and session.changed.is_connected(_on_tester_changed): session.changed.disconnect(_on_tester_changed)
+	session = value
+	if is_instance_valid(session): session.changed.connect(_on_tester_changed)
+	refresh_tester()
+
+func _on_tester_changed(_snapshot: Dictionary) -> void:
+	if visible: refresh_tester()
+
+func refresh_tester() -> void:
+	tester_data = session.tester_access_snapshot().duplicate(true) if is_instance_valid(session) else {}
+	if not tester_quote.is_empty() and (not bool(tester_data.get("available", false)) \
+		or int(tester_quote.get("expected_revision", -1)) != int(tester_data.get("revision", -2))):
+		_cancel_tester_review()
+		notice = "This review expired. Review the access change again."
+	queue_redraw()
+
+func _test_active() -> bool:
+	return visible and _tester_focused and section == "tester" and is_instance_valid(session) \
+		and is_instance_valid(input_owner) and input_owner.mode == &"graphics" and input_owner._application_focused
+
+func _cancel_tester_review() -> void:
+	_epoch += 1
+	var previous := tester_quote
+	tester_quote = {}
+	var ids: Array[int] = []
+	for id: int in _pointers: ids.append(id)
+	_pointers.clear()
+	if not ids.is_empty(): pointers_canceled.emit(ids)
+	if not previous.is_empty() and is_instance_valid(session): session.cancel_tester_access(previous)
+
+func tester_can_apply() -> bool:
+	return _test_active() and not _tester_busy and bool(tester_data.get("available", false)) \
+		and (not tester_quote.is_empty() or selected_tester != bool(tester_data.get("enabled", false)))
+
+func _activate_tester(action: String) -> void:
+	if not _test_active() or _tester_busy: return
+	refresh_tester()
+	if action in ["tester_0", "tester_1"]:
+		if not bool(tester_data.get("available", false)):
+			notice = String(tester_data.get("reason", "Test access cannot be changed here."))
+			queue_redraw()
+			return
+		_cancel_tester_review()
+		selected_tester = action == "tester_1"
+		tester_scroll = 0
+		notice = "Selection only. Review and confirm to save."
+	elif action == "tester_apply":
+		if not tester_can_apply():
+			notice = String(tester_data.get("reason", "Choose a different access setting first."))
+			if notice.is_empty(): notice = "Choose a different access setting first."
+			queue_redraw()
+			return
+		_tester_busy = true
+		if tester_quote.is_empty():
+			var requested: Dictionary = session.quote_tester_access(selected_tester)
+			if _test_active() and bool(requested.get("ok", false)):
+				tester_quote = requested.duplicate(true)
+				tester_scroll = 0
+				notice = "Review the changes below; swipe for more, then confirm."
+			else:
+				if bool(requested.get("ok", false)): session.cancel_tester_access(requested)
+				notice = String(requested.get("error", "This access change is unavailable."))
+		else:
+			var accepted := tester_quote
+			tester_quote = {}
+			var saved: bool = session.commit_tester_access(accepted)
+			refresh_tester()
+			selected_tester = bool(tester_data.get("enabled", false))
+			notice = "TEST ACCESS %s saved for this local profile." % ("ON" if selected_tester else "OFF") if saved else "Access was not changed. Review again when saving is available."
+		_tester_busy = false
+	queue_redraw()
+
+func tester_option_rect(index: int) -> Rect2:
+	var rect := panel_rect()
+	var width := (rect.size.x - 76) * 0.5
+	return Rect2(rect.position + Vector2(32 + index * (width + 12), 178), Vector2(width, 60))
+
+func tester_detail_rect() -> Rect2:
+	var rect := panel_rect()
+	return Rect2(rect.position + Vector2(32, 252), Vector2(rect.size.x - 64, maxf(22, rect.size.y - 376)))
+
+func tester_line_capacity() -> int:
+	return maxi(1, floori(tester_detail_rect().size.y / (22.0 * ui_scale)))
+
+func tester_lines() -> Array[String]:
+	var paragraphs: Array[String] = [
+		"Local testing only. Bypasses progression requirements for implemented home rooms, styles, dungeon depths, equipment and recipes.",
+		"Your earned level and milestones stay unchanged. Item ownership, materials, Depthmark costs and talent points still apply.",
+		"Unfinished content stays unavailable. This is not an online account permission or a purchase."
+	]
+	if not bool(tester_data.get("available", false)):
+		paragraphs.push_front(String(tester_data.get("reason", "Return to Sanctuary or your home to change access.")))
+	if not tester_quote.is_empty():
+		paragraphs.push_front("REVIEW: turn TEST ACCESS " + ("ON" if selected_tester else "OFF"))
+		var preview: Dictionary = tester_quote.get("preview", {})
+		for line: Variant in preview.get("changes", []): paragraphs.append(String(line))
+		if not selected_tester:
+			paragraphs.append("Turning OFF restores normal requirements. Any listed test-only selections are reset; owned items and pets are retained.")
+	var result: Array[String] = []
+	var width := tester_detail_rect().size.x - 12
+	for paragraph: String in paragraphs:
+		var line := ""
+		for word: String in paragraph.split(" "):
+			var next := word if line.is_empty() else line + " " + word
+			if not line.is_empty() and _font != null and _font.get_string_size(next, HORIZONTAL_ALIGNMENT_LEFT, -1, roundi(13 * ui_scale)).x > width:
+				result.append(line)
+				line = word
+			else: line = next
+		if not line.is_empty(): result.append(line)
+	return result
+
+func _draw_tester(rect: Rect2) -> void:
+	var enabled := bool(tester_data.get("enabled", false))
+	_text("SAVED TEST ACCESS: " + ("ON" if enabled else "OFF"), rect.position + Vector2(32, 162), 14, TEAL if enabled else GOLD)
+	_button(tester_option_rect(0), "OFF · NORMAL REQUIREMENTS", not selected_tester)
+	_button(tester_option_rect(1), "ON · TEST IMPLEMENTED CONTENT", selected_tester)
+	var lines := tester_lines()
+	var capacity := tester_line_capacity()
+	tester_scroll = clampi(tester_scroll, 0, maxi(0, lines.size() - capacity))
+	var body := tester_detail_rect()
+	for index in range(mini(capacity, lines.size() - tester_scroll)):
+		_text(lines[tester_scroll + index], body.position + Vector2(0, (index + 0.8) * 22 * ui_scale), 13, IVORY)
+	if lines.size() > capacity and notice.is_empty():
+		_text("Swipe details · %d–%d / %d" % [tester_scroll + 1, mini(lines.size(), tester_scroll + capacity), lines.size()], rect.position + Vector2(32, rect.size.y - 105), 10, MUTED)
+
+func _fit(value: String, width: float, pixels: int) -> String:
+	if _font == null: return value
+	var size_px := roundi(pixels * ui_scale)
+	if _font.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x <= width: return value
+	var shortened := value
+	while not shortened.is_empty() and _font.get_string_size(shortened + "…", HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x > width:
+		shortened = shortened.left(shortened.length() - 1)
+	return shortened + "…"
+
 func _toggle_button(rect: Rect2, label: String, detail: String, selected: bool) -> void:
 	VaultUITheme.frame(self, rect, Color("173549") if selected else Color("141e32"), TEAL if selected else GOLD, selected)
 	_centered_text(label, rect.get_center() + Vector2(0, -5), 14, IVORY)
@@ -275,8 +457,9 @@ func _centered_text(value: String, at: Vector2, pixels: int, tint: Color) -> voi
 
 func _button(rect: Rect2, label: String, selected: bool) -> void:
 	VaultUITheme.frame(self, rect, Color("173549") if selected else Color("141e32"), TEAL if selected else GOLD, selected)
-	var width := _font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, roundi(15 * ui_scale)).x
-	_text(label, rect.get_center() + Vector2(-width * 0.5, 5), 15, IVORY if selected else MUTED)
+	var fitted := _fit(label, rect.size.x - 18, 15)
+	var width := _font.get_string_size(fitted, HORIZONTAL_ALIGNMENT_LEFT, -1, roundi(15 * ui_scale)).x
+	_text(fitted, rect.get_center() + Vector2(-width * 0.5, 5), 15, IVORY if selected else MUTED)
 
 func _text(value: String, at: Vector2, font_size: int, color: Color) -> void:
 	font_size = roundi(font_size * ui_scale)

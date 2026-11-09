@@ -16,6 +16,7 @@ const PetCatalog = preload("res://scripts/pets/pet_catalog.gd")
 const EncounterRewards = preload("res://resources/loot/monster_rewards.tres")
 const DepthProgress = preload("res://scripts/progression/depth_progression.gd")
 const EncounterProgress = preload("res://scripts/progression/encounter_progression.gd")
+const TesterAccess = preload("res://scripts/progression/tester_access.gd")
 const HomeProgress = preload("res://scripts/progression/home_progression.gd")
 const Content = preload("res://scripts/expedition/dungeon_content.gd")
 const EVENT_RECORD_KEYS := ["encounter_definition_id", "content_version", "encounter_version", "objective_role",
@@ -65,6 +66,8 @@ var _completed_early_return: Dictionary = {}
 var _home_preparing := false
 var _home_mutating := false
 var _home_quotes: Dictionary = {}
+var _tester_quotes: Dictionary = {}
+var _tester_mutating := false
 
 func _ready() -> void:
 	profile = store.load_profile()
@@ -640,7 +643,7 @@ func extract() -> bool:
 		notice.emit("Defeat %s to awaken the extraction spring." % _issued_boss_label())
 		return false
 	var next := profile.duplicate(true)
-	var completed_depth := DepthProgress.complete(next.depth_progression, int(_issued_depth.get("expedition_depth", 0)), _issued_depth.get("policy", {}))
+	var completed_depth := DepthProgress.complete(next.depth_progression, int(_issued_depth.get("expedition_depth", 0)), _issued_depth.get("policy", {}), TesterAccess.enabled(profile))
 	if completed_depth.is_empty():
 		notice.emit("The issued dungeon depth could not be verified. Your secured progression was preserved.")
 		return false
@@ -936,7 +939,7 @@ func snapshot() -> Dictionary:
 		"inventory": inventory, "secured_items": inventory, "discoveries": profile.discoveries.duplicate(),
 		"boss_defeated": boss_defeated, "kills": kills, "elapsed": elapsed, "elapsed_seconds": elapsed,
 		"equipped_item": String(profile.equipped_item), "last_results": last_results.duplicate(true),
-		"storage_error": storage_error, "statistics": profile.statistics.duplicate(true),
+		"storage_error": storage_error, "statistics": profile.statistics.duplicate(true), "tester_access": TesterAccess.enabled(profile),
 		"companions": companion_roster(), "revision": int(profile.revision),
 		"character": CharacterProgression.snapshot(profile.character),
 		"inventory_slots": VaultInventory.used_slots(profile), "inventory_capacity": VaultInventory.CAPACITY}
@@ -1148,7 +1151,7 @@ func home_navigation_status(route_id: StringName, source: Node3D, actor: Node) -
 	if route_id == &"pet_conservatory" and _location == &"personal_sanctuary":
 		var home := home_snapshot()
 		var definition: Dictionary = HomeProgress.CATALOG.rooms[HomeProgress.CATALOG.ROOM_IDS.find("pet_conservatory")]
-		if "pet_conservatory" in home.unlocked_rooms and bool(definition.available) and definition.destination == "home_conservatory":
+		if HomeProgress.room_available(profile, "pet_conservatory") and bool(definition.available) and definition.destination == "home_conservatory":
 			return {"ok": true, "destination": &"home_conservatory", "entry_id": &"from_home", "reason": ""}
 		denied.reason = "Own one Spiritweaving pet, then record the Pet Conservatory milestone at Home Management."
 		return denied
@@ -1175,7 +1178,7 @@ func home_room_entry_status(room_id: StringName, source_world: Node3D, actor: No
 		or source_world.get_world_3d() != actor.get_world_3d(): return denied
 	var validated := VaultProfileStore.normalize(profile)
 	if validated.is_empty() or not HomeProgress.valid_id(validated.home.id, false): return denied
-	if "pet_conservatory" not in validated.home.unlocked_rooms:
+	if not HomeProgress.room_available(validated, "pet_conservatory"):
 		denied.reason = "Own one Spiritweaving pet, then record the Pet Conservatory milestone at Home Management."
 		return denied
 	var definition: Dictionary = HomeProgress.CATALOG.rooms[HomeProgress.CATALOG.ROOM_IDS.find("pet_conservatory")]
@@ -1251,7 +1254,7 @@ func _commit_home_action(trusted: Dictionary) -> bool:
 	return true
 
 func home_snapshot() -> Dictionary:
-	return HomeProgress.normalize(profile.get("home"))
+	return HomeProgress.normalize(profile.get("home"), TesterAccess.enabled(profile))
 
 func _home_entry_source_valid(source_world: Node3D, actor: Node) -> bool:
 	if active or not is_instance_valid(actor) or actor != _player or not actor is VaultPlayer \
@@ -1275,8 +1278,7 @@ func _home_entry_source_valid(source_world: Node3D, actor: Node) -> bool:
 		return source_path == "res://scripts/home/pet_conservatory.gd" \
 			and source_world.has_method("is_home_origin_visit") and source_world.is_home_origin_visit() \
 			and source_world.has_method("home_identity") and source_world.home_identity() == home_snapshot().get("id", "") \
-			and HomeProgress.valid_id(home_snapshot().get("id"), false) \
-			and "pet_conservatory" in home_snapshot().get("unlocked_rooms", [])
+			and HomeProgress.valid_id(home_snapshot().get("id"), false)
 	return _location == &"collection_hall" and source_path == "res://scripts/world/collection_hall.gd" \
 		and source_world.has_method("is_home_origin_visit") and source_world.is_home_origin_visit() \
 		and HomeProgress.valid_id(home_snapshot().get("id"), false)
@@ -1329,6 +1331,101 @@ func _prepare_home_entry(source_world: Node3D, actor: Node) -> bool:
 	_emit_changed()
 	return true
 
+func home_room_accessible(room_id: StringName) -> bool:
+	return HomeProgress.room_available(profile, String(room_id))
+
+func tester_access_snapshot() -> Dictionary:
+	var error := _tester_access_error()
+	return {"enabled": TesterAccess.enabled(profile), "available": error.is_empty() and not _tester_mutating,
+		"reason": error, "revision": int(profile.revision), "local_only": true,
+		"description": "TEST ACCESS bypasses progression requirements for implemented content. Ownership, costs and earned talent points still apply."}
+
+func _tester_access_error() -> String:
+	if store.read_only: return "Test access cannot save while secured progress is read-only."
+	if active: return "Finish or leave the expedition before changing test access."
+	if _home_preparing or _home_mutating: return "Finish the current home change first."
+	if _location not in [&"sanctuary", &"personal_sanctuary", &"home_conservatory", &"collection_hall"]:
+		return "Return to the Sanctuary or your home to change test access."
+	if not is_instance_valid(_player) or not _player is VaultPlayer or not _player.is_inside_tree() \
+		or _player.is_queued_for_deletion() or _player.downed or _player.eliminated or not _actor_ready() \
+		or not _player.combat.can_switch_weapon(): return "Finish your combat action before changing test access."
+	if not is_instance_valid(_world) or not _world.is_inside_tree() or _world.is_queued_for_deletion() or _world.get_script() == null:
+		return "The current safe area is unavailable."
+	var paths := {&"sanctuary": "res://scripts/world/sanctuary.gd", &"personal_sanctuary": "res://scripts/home/personal_sanctuary.gd",
+		&"home_conservatory": "res://scripts/home/pet_conservatory.gd", &"collection_hall": "res://scripts/world/collection_hall.gd"}
+	if _world.get_script().resource_path != paths[_location]: return "The current safe area is unavailable."
+	var game := _player.get_parent()
+	if not is_instance_valid(game) or game.get_script() == null or game.get_script().resource_path != "res://scripts/systems/game.gd" \
+		or not game.is_inside_tree() or game.is_queued_for_deletion() or game.get("transitioning") \
+		or not bool(game.get("_application_focused")) or game.get("player") != _player \
+		or game.get("active_world") != _world or game.get("current_location") != _location \
+		or _world.get_parent() != game.get("world_root") or _world.get_viewport() != _player.get_viewport() \
+		or _world.get_world_3d() != _player.get_world_3d(): return "Test access is unavailable during travel or while the app is unfocused."
+	if VaultProfileStore.normalize(profile).is_empty(): return "The current profile needs recovery before changing test access."
+	return ""
+
+func quote_tester_access(enabled: bool) -> Dictionary:
+	if _tester_mutating: return {"ok": false, "error": "A test-access change is already being saved."}
+	var error := _tester_access_error()
+	if not error.is_empty(): return {"ok": false, "error": error}
+	var preview := TesterAccess.preview(profile, enabled)
+	if not bool(preview.get("ok", false)): return preview
+	_quote_sequence += 1
+	var request_id := "tester_%d_%d_%d" % [int(profile.revision), Time.get_ticks_usec(), _quote_sequence]
+	_tester_quotes[request_id] = {"enabled": enabled, "revision": int(profile.revision), "player": _player.get_instance_id(),
+		"world": _world.get_instance_id(), "location": _location}
+	if _tester_quotes.size() > 8: _tester_quotes.erase(_tester_quotes.keys()[0])
+	return {"ok": true, "request_id": request_id, "expected_revision": int(profile.revision), "preview": preview.duplicate(true)}
+
+func cancel_tester_access(confirmation: Dictionary) -> bool:
+	return _tester_quotes.erase(String(confirmation.get("request_id", "")))
+
+func commit_tester_access(confirmation: Dictionary) -> bool:
+	if _tester_mutating: return false
+	var request_id := String(confirmation.get("request_id", ""))
+	if not _tester_quotes.has(request_id): return false
+	var trusted: Dictionary = _tester_quotes[request_id]
+	_tester_quotes.erase(request_id)
+	_tester_mutating = true
+	var accepted := _commit_tester_access(trusted)
+	if is_instance_valid(self): _tester_mutating = false
+	return accepted
+
+func _commit_tester_access(trusted: Dictionary) -> bool:
+	var error := _tester_access_error()
+	if not error.is_empty():
+		notice.emit(error)
+		return false
+	if trusted.player != _player.get_instance_id() or trusted.world != _world.get_instance_id() or trusted.location != _location: return false
+	var plan := TesterAccess.plan(profile, bool(trusted.enabled), int(trusted.revision))
+	if not bool(plan.get("ok", false)):
+		notice.emit(String(plan.get("error", "Test-access change unavailable.")))
+		return false
+	if not bool(plan.changed): return true
+	var validated := VaultProfileStore.normalize(plan.profile)
+	if validated.is_empty(): return false
+	if not store.save_profile(validated):
+		storage_error = store.last_error
+		notice.emit("Could not save test access. Existing progress was preserved. " + storage_error)
+		return false
+	var previous_weapon := String(VaultInventory.active_weapon_entry(profile).get("uid", ""))
+	profile = validated
+	storage_error = ""
+	_quotes.clear()
+	_pet_quotes.clear()
+	_home_quotes.clear()
+	_tester_quotes.clear()
+	var current_weapon := VaultInventory.active_weapon_entry(profile)
+	_player.apply_progression(profile, false)
+	if String(current_weapon.get("uid", "")) != previous_weapon:
+		var item := VaultLootTable.item_for(String(current_weapon.get("item_id", "")))
+		_player.combat.commit_weapon_switch(item.weapon_style if item != null else _player.combat.weapon.style)
+	_player.apply_progression(profile)
+	var revision := int(profile.revision)
+	_emit_changed()
+	if is_instance_valid(self) and int(profile.revision) == revision: notice.emit(String(plan.message))
+	return true
+
 func bind_game_context(player: Node, location: StringName, world: Node3D = null) -> void:
 	_player = player
 	_location = location
@@ -1336,6 +1433,7 @@ func bind_game_context(player: Node, location: StringName, world: Node3D = null)
 	close_service()
 
 func close_service() -> void:
+	_tester_quotes.clear()
 	_home_quotes.clear()
 	_service = null
 	_service_kind = &""

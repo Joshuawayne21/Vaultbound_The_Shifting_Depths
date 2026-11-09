@@ -342,7 +342,7 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 		if destination == &"home_conservatory":
 			var room_home: Dictionary = ExpeditionSession.home_snapshot()
 			combat_admitted = combat_admitted and not home_room_identity.is_empty() and room_home.get("id") == home_room_identity \
-				and "pet_conservatory" in room_home.get("unlocked_rooms", []) and not ExpeditionSession.active
+				and ExpeditionSession.home_room_accessible(&"pet_conservatory") and not ExpeditionSession.active
 	if not issued_plan.is_empty() and _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan) \
 			and _candidate_ready_valid(next_world, issued_context, issued_plan):
 		# Native candidate floor/capsules exist now. Only its private issued
@@ -987,6 +987,11 @@ func _portal_information_lines(destination: StringName, depth_status: Dictionary
 				"Boss + final extraction unlocks the next depth. Early Return secures loot only. Death loses unsecured finds.",
 				"Seed on entry · Modifiers not known before generation · Stronger variant / optional encounter possible."])
 			seed_row = lines.size() - 1
+		if bool(ExpeditionSession.tester_access_snapshot().get("enabled", false)):
+			lines[0] = "TEST ACCESS · " + lines[0]
+			for index in range(lines.size()):
+				if lines[index].contains("unlock the next depth") or lines[index].contains("unlocks the next depth"):
+					lines[index] = "Testing a locked depth does not skip earned depth progression. Rewards still require extraction."
 		if debug_expedition_seed >= 0: lines[seed_row] = "Developer seed: %d · layout and modifiers are generated on entry." % debug_expedition_seed
 	elif destination == &"combat_arena":
 		lines = ["PROVING GROUNDS · Existing combat practice area", "Practice Sword/Shield and Staff combat with the current enemies and targets.", "This is a local training destination, not a player-versus-player match."]

@@ -3,6 +3,7 @@ extends RefCounted
 ## Pure progression/stat resolution. Profile persistence and transaction authority
 ## remain with ExpeditionSession; no scene, camera or network state is consulted.
 
+const TesterAccess = preload("res://scripts/progression/tester_access.gd")
 const DATA = preload("res://resources/progression/character_progression.tres")
 const EFFECTS = preload("res://resources/progression/equipment_effects.tres")
 const Enhancement = preload("res://scripts/progression/enhancement_policy.gd")
@@ -145,7 +146,7 @@ static func resolve_stats(profile: Dictionary, weapon_style: StringName = &"swor
 			var definition := VaultLootTable.item_for(String(entry.get("item_id", "")))
 			if not VaultInventory.slot_accepts(definition, slot):
 				continue
-			if level < int(definition.get("required_level")):
+			if level < int(definition.get("required_level")) and not TesterAccess.enabled(profile):
 				continue
 			seen.append(uid)
 			var appearance_slot := "main_weapon" if slot in VaultInventory.LOADOUT_SLOTS else slot

@@ -235,7 +235,9 @@ func _refresh_room_plaques() -> void:
 		if frame == null: continue
 		var plaque := frame.get_node_or_null("RequirementPlaque") as Label3D
 		if plaque == null: continue
-		var status := "MILESTONE EARNED" if bool(row.get("unlocked", false)) else "MILESTONE READY" if bool(row.get("eligible", false)) else "LOCKED"
+		var status := "MILESTONE EARNED" if bool(row.get("earned", row.get("unlocked", false))) else "MILESTONE READY" if bool(row.get("eligible", false)) else "LOCKED"
+		if bool(snapshot.get("tester_access", false)) and bool(row.get("available", false)) and not bool(row.get("earned", false)):
+			status = "TEST ACCESS"
 		var implemented := String(row.get("id", "")) == "pet_conservatory"
 		var availability := "ENTER · USE" if bool(row.get("available", false)) else "RECORD AT HOME MANAGEMENT" if implemented and bool(row.get("eligible", false)) else "LOCKED" if implemented else "NOT YET OPEN"
 		frame.set_meta("room_available", bool(row.get("available", false)))

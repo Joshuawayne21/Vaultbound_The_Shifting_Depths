@@ -445,7 +445,7 @@ func detail_lines() -> Array[Dictionary]:
 			_add_lines(lines, String(row.get("label", pair[1])) + " · " + _status(row), UI.TEAL if bool(row.get("unlocked", false)) else UI.WARNING)
 			_add_lines(lines, String(row.get("requirement", "")), UI.IVORY)
 			_add_lines(lines, String(row.get("progress", "")), UI.MUTED)
-		_add_lines(lines, "Preview only. Record eligible unlocks, then review and apply an appearance. No gameplay statistics change.", UI.MUTED)
+		_add_lines(lines, "TEST ACCESS allows these cosmetic previews without claiming milestones." if bool(data.get("tester_access", false)) else "Preview only. Record eligible unlocks, then review and apply an appearance. No gameplay statistics change.", UI.MUTED)
 	if not bool(data.get("service_available", false)):
 		if bool(data.get("navigation_available", false)) and bool(data.get("read_only", false)):
 			_add_lines(lines, "Appearance saving is read-only. Existing room travel and Return to Sanctuary remain available.", UI.WARNING)
@@ -486,11 +486,12 @@ func _pet_detail_lines(lines: Array[Dictionary]) -> void:
 	_add_lines(lines, "Displays do not change ownership, active companion selection or combat statistics.", UI.MUTED)
 
 func _status(row: Dictionary) -> String:
+	if bool(row.get("test_access", false)) and (not row.has("destination") or bool(row.get("available", false))): return "TEST ACCESS · NOT EARNED"
 	if bool(row.get("available", false)): return "OPEN IN THIS BUILD"
 	if row.has("destination"):
 		if bool(row.get("implemented", false)):
 			return "EARNED · RECORD TO OPEN" if bool(row.get("eligible", false)) else "LOCKED · REQUIREMENT NOT MET"
-		return "MILESTONE RECORDED · ROOM NOT OPEN" if bool(row.get("unlocked", false)) else ("EARNED · RECORD MILESTONE · ROOM NOT OPEN" if bool(row.get("eligible", false)) else "LOCKED · ROOM NOT OPEN")
+		return "MILESTONE RECORDED · ROOM NOT OPEN" if bool(row.get("earned", row.get("unlocked", false))) else ("EARNED · RECORD MILESTONE · ROOM NOT OPEN" if bool(row.get("eligible", false)) else "LOCKED · ROOM NOT OPEN")
 	return "UNLOCKED" if bool(row.get("unlocked", false)) else ("EARNED · RECORD TO UNLOCK" if bool(row.get("eligible", false)) else "LOCKED")
 
 func _add_lines(lines: Array[Dictionary], value: String, tint: Color) -> void:

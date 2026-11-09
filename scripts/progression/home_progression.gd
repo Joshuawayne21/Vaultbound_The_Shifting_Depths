@@ -2,6 +2,7 @@ class_name VaultHomeProgression
 extends RefCounted
 ## Pure local home identity, earned milestones and cosmetic appearance plans.
 ## Existing item, pet and companion ownership remain in their original domains.
+const TesterAccess = preload("res://scripts/progression/tester_access.gd")
 const VERSION := 3
 const FIRST_PROFILE_VERSION := 8
 const NAMESPACE_PROFILE_VERSION := 10
@@ -13,6 +14,15 @@ const KEYS := ["version", "id", "theme_id", "sigil_id", "unlocked_rooms", "unloc
 const BASE_ROOMS := ["foyer", "trophy_hall"]
 const PET_SLOTS := ["north_meadow", "south_meadow", "crystal_grove", "moon_pool", "canopy_nest", "ancient_grove"]
 const PET_SLOT_LABELS := ["North Meadow", "South Meadow", "Crystal Grove", "Moon Pool", "Canopy Nest", "Ancient Grove"]
+
+static func test_enabled(profile: Dictionary) -> bool:
+	return TesterAccess.enabled(profile)
+
+static func room_available(profile: Dictionary, room_id: String) -> bool:
+	var home := normalize(profile.get("home"), test_enabled(profile))
+	var index := CATALOG.ROOM_IDS.find(room_id)
+	if home.is_empty() or not valid_id(home.id, false) or index < 0: return false
+	return bool(CATALOG.rooms[index].available) and (room_id in home.unlocked_rooms or test_enabled(profile))
 
 static func empty_fields() -> Dictionary:
 	return {"version": VERSION, "id": "", "theme_id": "royal_azure", "sigil_id": "vault_diamond",
@@ -31,17 +41,17 @@ static func valid_id(value: Variant, allow_empty: bool = true) -> bool:
 		if not "0123456789abcdef".contains(value.substr(index, 1)): return false
 	return true
 
-static func normalize(value: Variant) -> Dictionary:
+static func normalize(value: Variant, tester_access: bool = false) -> Dictionary:
 	if not CATALOG.valid() or not value is Dictionary or not _keys(value, KEYS) \
 		or not _integer(value.get("version"), VERSION, VERSION) or not valid_id(value.get("id")): return {}
 	if not value.theme_id is String or not value.sigil_id is String \
 		or value.theme_id not in CATALOG.STYLE_IDS or value.sigil_id not in CATALOG.SIGIL_IDS \
 		or not _sequence(value.unlocked_rooms, CATALOG.ROOM_IDS) or not _sequence(value.unlocked_styles, CATALOG.STYLE_IDS): return {}
-	if "royal_azure" not in value.unlocked_styles or value.theme_id not in value.unlocked_styles \
-		or _sigil_style(value.sigil_id) not in value.unlocked_styles: return {}
+	if "royal_azure" not in value.unlocked_styles or (not tester_access and (value.theme_id not in value.unlocked_styles \
+		or _sigil_style(value.sigil_id) not in value.unlocked_styles)): return {}
 	if not _display_fields_valid(value.pet_displays): return {}
 	if value.pet_displays.values().any(func(id: String) -> bool: return not id.is_empty()) \
-		and "pet_conservatory" not in value.unlocked_rooms: return {}
+		and "pet_conservatory" not in value.unlocked_rooms and not tester_access: return {}
 	if value.id.is_empty():
 		if value.theme_id != "royal_azure" or value.sigil_id != "vault_diamond" \
 			or not value.unlocked_rooms.is_empty() or value.unlocked_styles != ["royal_azure"]: return {}
@@ -97,7 +107,7 @@ static func preservation_error(raw: Dictionary) -> String:
 	return ""
 
 static func plan_initialization(profile: Dictionary, identity: String, expected_revision: int) -> Dictionary:
-	var home := normalize(profile.get("home"))
+	var home := normalize(profile.get("home"), test_enabled(profile))
 	if home.is_empty() or not String(home.id).is_empty() or not valid_id(identity, false) \
 		or not _integer(profile.get("revision"), 0, MAX_REVISION - 1) or int(profile.revision) != expected_revision: return {}
 	var next := profile.duplicate(true)
@@ -107,10 +117,10 @@ static func plan_initialization(profile: Dictionary, identity: String, expected_
 	return next
 
 static func snapshot(profile: Dictionary) -> Dictionary:
-	var home := normalize(profile.get("home"))
+	var home := normalize(profile.get("home"), test_enabled(profile))
 	if home.is_empty(): return {}
 	var result := {"revision": int(profile.revision), "home": home, "themes": [], "sigils": [], "rooms": [], "claimable_count": 0,
-		"pet_displays": [], "owned_pet_displays": [], "pet_displays_unlocked": "pet_conservatory" in home.unlocked_rooms}
+		"pet_displays": [], "owned_pet_displays": [], "pet_displays_unlocked": room_available(profile, "pet_conservatory"), "tester_access": test_enabled(profile)}
 	for index in range(PET_SLOTS.size()):
 		var slot: String = PET_SLOTS[index]
 		var pet_id: String = home.pet_displays[slot]
@@ -129,7 +139,7 @@ static func snapshot(profile: Dictionary) -> Dictionary:
 		row.selected = definition.id == home.theme_id
 		row.color = definition.color
 		result.themes.append(row)
-		if row.eligible and not row.unlocked: result.claimable_count += 1
+		if row.eligible and not row.earned: result.claimable_count += 1
 	for definition: Dictionary in CATALOG.sigils:
 		var style: Dictionary = CATALOG.styles[CATALOG.STYLE_IDS.find(definition.style_id)]
 		var row := _row(profile, style, definition.style_id in home.unlocked_styles)
@@ -140,13 +150,13 @@ static func snapshot(profile: Dictionary) -> Dictionary:
 	for definition: Dictionary in CATALOG.rooms:
 		var row := _row(profile, definition, definition.id in home.unlocked_rooms)
 		row.implemented = bool(definition.available)
-		row.available = bool(definition.available) and bool(row.unlocked)
+		row.available = room_available(profile, String(definition.id))
 		row.destination = definition.destination if row.available else ""
-		row.status = "Available" if row.available else "Milestone earned · Room not open in this build" if row.unlocked \
+		row.status = "TEST ACCESS · Available" if row.available and not row.earned else "Available" if row.available else "Milestone earned · Room not open in this build" if row.earned \
 			else "Record the earned milestone to open this room" if row.eligible and bool(definition.available) \
 			else "Locked · " + String(row.requirement) if bool(definition.available) else "Locked · Room not open in this build"
 		result.rooms.append(row)
-		if row.eligible and not row.unlocked: result.claimable_count += 1
+		if row.eligible and not row.earned: result.claimable_count += 1
 	return result
 
 static func preview(profile: Dictionary, action: StringName, arguments: Dictionary) -> Dictionary:
@@ -156,8 +166,9 @@ static func preview(profile: Dictionary, action: StringName, arguments: Dictiona
 		"changed": false, "after": {"theme_id": data.home.theme_id, "sigil_id": data.home.sigil_id}, "new_rooms": [], "new_styles": []}
 	if action == &"set_appearance":
 		if not _keys(arguments, ["theme_id", "sigil_id"]) or not arguments.theme_id is String or not arguments.sigil_id is String \
-			or arguments.theme_id not in data.home.unlocked_styles or arguments.sigil_id not in CATALOG.SIGIL_IDS \
-			or _sigil_style(arguments.sigil_id) not in data.home.unlocked_styles: return _error("Record the earned appearance milestone before applying this choice.")
+			or arguments.theme_id not in CATALOG.STYLE_IDS or arguments.sigil_id not in CATALOG.SIGIL_IDS \
+			or (not test_enabled(profile) and (arguments.theme_id not in data.home.unlocked_styles \
+			or _sigil_style(arguments.sigil_id) not in data.home.unlocked_styles)): return _error("Record the earned appearance milestone before applying this choice.")
 		result.after = arguments.duplicate(true)
 		result.changed = result.after.theme_id != data.home.theme_id or result.after.sigil_id != data.home.sigil_id
 		if not result.changed: result.message = "This appearance is already selected."
@@ -182,9 +193,9 @@ static func preview(profile: Dictionary, action: StringName, arguments: Dictiona
 		if not arguments.is_empty(): return _error("Home milestones use secured progress, not caller-supplied requirements.")
 		result.title = "Record earned home milestones"
 		for row: Dictionary in data.rooms:
-			if row.eligible and not row.unlocked: result.new_rooms.append(row.id)
+			if row.eligible and not row.earned: result.new_rooms.append(row.id)
 		for row: Dictionary in data.themes:
-			if row.eligible and not row.unlocked: result.new_styles.append(row.id)
+			if row.eligible and not row.earned: result.new_styles.append(row.id)
 		result.changed = not result.new_rooms.is_empty() or not result.new_styles.is_empty()
 		result.message = "Record %d earned room milestones and %d cosmetic styles. Planned rooms remain under construction." % [result.new_rooms.size(), result.new_styles.size()] if result.changed else "No new home milestones are ready."
 	else: return _error("That home action is unavailable.")
@@ -208,7 +219,7 @@ static func plan(profile: Dictionary, action: StringName, arguments: Dictionary,
 		next.home.unlocked_rooms = CATALOG.ROOM_IDS.filter(func(id: String) -> bool: return id in next.home.unlocked_rooms)
 		next.home.unlocked_styles = CATALOG.STYLE_IDS.filter(func(id: String) -> bool: return id in next.home.unlocked_styles)
 		next.revision = expected_revision + 1
-	if normalize(next.home).is_empty() or not displays_owned(next.home, next.pets.owned): return _error("Home choices failed validation.")
+	if normalize(next.home, test_enabled(next)).is_empty() or not displays_owned(next.home, next.pets.owned): return _error("Home choices failed validation.")
 	return {"ok": true, "changed": shown.changed, "profile": next, "message": shown.message}
 
 static func displays_owned(home: Dictionary, owned: Dictionary) -> bool:
@@ -239,7 +250,7 @@ static func _display_row(profile: Dictionary, slot: String, pet_id: String) -> D
 
 static func _row(profile: Dictionary, definition: Dictionary, unlocked: bool) -> Dictionary:
 	var count := _count(profile, String(definition.kind))
-	return {"id": definition.id, "label": definition.label, "unlocked": unlocked,
+	return {"id": definition.id, "label": definition.label, "unlocked": unlocked or test_enabled(profile), "earned": unlocked, "test_access": test_enabled(profile) and not unlocked,
 		"eligible": valid_id(profile.home.id, false) and count >= int(definition.minimum),
 		"requirement": definition.requirement, "progress": "%d / %d" % [mini(count, int(definition.minimum)), int(definition.minimum)]}
 

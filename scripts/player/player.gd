@@ -270,7 +270,8 @@ func apply_progression(profile: Dictionary, refresh: bool = true) -> void:
 	# expedition snapshots must not reset a combat action or refill resources.
 	_progression_profile = {"character": profile.get("character", CharacterProgression.empty_character()).duplicate(true),
 		"inventory": profile.get("inventory", []).duplicate(true), "equipment": profile.get("equipment", {}).duplicate(true),
-		"active_loadout": String(profile.get("active_loadout", "main_weapon"))}
+		"active_loadout": String(profile.get("active_loadout", "main_weapon")),
+		"tester_access": VaultTesterAccess.normalize(profile.get("tester_access", VaultTesterAccess.empty_fields()))}
 	if refresh:
 		_refresh_progression_stats()
 

@@ -107,8 +107,10 @@ func _ready() -> void:
 		rpg_panel.close_requested.connect(close_modal)
 	graphics_panel = preload("res://scripts/ui/graphics_panel.gd").new()
 	graphics_panel.name = "GraphicsPanel"
+	graphics_panel.input_owner = self
 	add_child(graphics_panel)
 	graphics_panel.close_requested.connect(close_modal)
+	graphics_panel.pointers_canceled.connect(_retain_home_pointer_tails)
 	loot_panel = preload("res://scripts/ui/loot_panel.gd").new()
 	loot_panel.name = "LootPanel"
 	add_child(loot_panel)
@@ -345,6 +347,7 @@ func open_city_information(kind: StringName, context: Dictionary) -> void:
 
 func bind_progression_session(session: Node) -> void:
 	progression_session = session
+	if is_instance_valid(graphics_panel): graphics_panel.bind_session(session)
 	if is_instance_valid(home_panel): home_panel.bind_session(session)
 	if is_instance_valid(pet_panel): pet_panel.bind_session(session)
 	if is_instance_valid(pet_name_panel): pet_name_panel.bind_session(session)
@@ -408,7 +411,7 @@ func apply_visual_settings(settings: Dictionary) -> void:
 		var receiver := _native_panel()
 		_cancel_native_pointers()
 		receiver.cancel_for_focus_loss()
-	for panel: Control in [pet_panel, pet_name_panel, pet_preview, exchange_panel, exchange_text_panel, home_panel]:
+	for panel: Control in [pet_panel, pet_name_panel, pet_preview, exchange_panel, exchange_text_panel, home_panel, graphics_panel]:
 		if is_instance_valid(panel): panel.apply_visual_settings(settings)
 	queue_redraw()
 
@@ -1291,8 +1294,10 @@ func _draw() -> void:
 	_draw_social_controls()
 	var graphics := _graphics_rect()
 	_panel(graphics, PANEL)
-	_text("GRAPHICS", graphics.get_center() + Vector2(0, -7), 12, GOLD, true)
-	_text("DISPLAY / UI", graphics.get_center() + Vector2(0, 14), 9, MUTED, true)
+	var test_badge := tester_badge_text()
+	if not test_badge.is_empty(): draw_rect(graphics, GOLD, false, 2)
+	_text("SETTINGS", graphics.get_center() + Vector2(0, -7), 12, GOLD, true)
+	_text(test_badge if not test_badge.is_empty() else "DISPLAY / UI", graphics.get_center() + Vector2(0, 14), 9, GOLD if not test_badge.is_empty() else MUTED, true)
 	if is_instance_valid(party):
 		_draw_party_controls()
 	_draw_storage_warning()
@@ -1316,6 +1321,9 @@ func _draw() -> void:
 			&"results": _draw_results()
 			&"party": _draw_party_menu()
 			&"recruit": _draw_recruitment()
+
+func tester_badge_text() -> String:
+	return "TEST ACCESS ON" if bool(session_snapshot.get("tester_access", false)) else ""
 
 
 func _draw_social_controls() -> void:
