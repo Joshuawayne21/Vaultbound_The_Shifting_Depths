@@ -41,7 +41,7 @@ func _read_actual(path: String) -> void:
 	var expected := Store.normalize(parsed)
 	if not check(not expected.is_empty() and session.profile == expected, "Separate process restores exact saved early rewards, instance ownership, party and findings"):
 		return
-	check(session.profile.version == 7 and session.profile.statistics.completed == 3 and session.profile.statistics.last_seed == 711 and session.profile.depth_progression == {"version": 1, "highest_unlocked_depth": 50, "highest_cleared_depth": 49}, "Early-return restart preserves v7 schema and original full-clear records/unlocks")
+	check(session.profile.version == VaultProfileStore.VERSION and session.profile.statistics.completed == 3 and session.profile.statistics.last_seed == 711 and session.profile.depth_progression == {"version": 1, "highest_unlocked_depth": 50, "highest_cleared_depth": 49}, "Early-return restart preserves the current schema and original full-clear records/unlocks")
 	check(session.profile.encounter_records.entries.root_spore_hive.secured_defeats == 1 and not session.profile.encounter_records.entries.has("rootwarden") and not session.profile.pets.achievements.has("abyss_explorer") and session._completed_early_return.is_empty(), "Actual optional evidence persists without invented boss completion, backfilled achievement or durable travel token")
 	if not await enter_checkpoint(): return
 	if not await clear_checkpoint(): return

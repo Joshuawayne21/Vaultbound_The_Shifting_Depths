@@ -22,7 +22,7 @@ func _run() -> void:
 	if not check(not profile.is_empty(), "Valid older ownership and completed floors load without a save-version bump"):
 		finish()
 		return
-	check(profile.version == 7 and profile.encounter_records.themes == ["rootbound_abyss"] and not profile.encounter_records.entries.has("prism_conductor"), "Old floors and owned crystal-named items never imply Crystal encounter history")
+	check(profile.version == VaultProfileStore.VERSION and profile.encounter_records.themes == ["rootbound_abyss"] and not profile.encounter_records.entries.has("prism_conductor"), "Old floors and owned crystal-named items never imply Crystal encounter history")
 	check(Ids.JOURNAL_IDS.has("prism_conductor_refracted") and not Ids.ENCOUNTER_IDS.has("prism_conductor_refracted"), "Refracted victory is a journal-only observation, not another boss or reward source")
 	var original_root: Dictionary = profile.encounter_records.entries.rootwarden.duplicate(true)
 	var pending := Progress.append_source_pending({}, "actual_crystal_conductor", "prism_conductor", "refracted_pattern", "crystal_caverns", 11)

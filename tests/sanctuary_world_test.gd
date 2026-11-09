@@ -124,12 +124,13 @@ func _camera_samples() -> void:
 func _portal_round_trips() -> void:
 	var identity := player.get_instance_id()
 	game.debug_expedition_seed = 23
-	for destination: StringName in [&"dungeon", &"collection_hall", &"combat_arena", &"rootbound_abyss"]:
+	for destination: StringName in [&"dungeon", &"personal_sanctuary", &"combat_arena", &"rootbound_abyss"]:
 		game.hud.close_modals()
 		var portal := portal_to(destination)
 		if not check(portal != null, "City exposes the playable portal: " + String(destination)):
 			continue
-		player.reset_for_spawn(Transform3D(Basis.IDENTITY, game.active_world.get_poi_approach_position(destination) + Vector3.UP * 0.15))
+		var poi: StringName = &"collection_hall" if destination == &"personal_sanctuary" else destination
+		player.reset_for_spawn(Transform3D(Basis.IDENTITY, game.active_world.get_poi_approach_position(poi) + Vector3.UP * 0.15))
 		await frames(5)
 		check(player.interaction_target == portal and game._city_source_valid(portal), "Authored portal approach is physically nearby and visible: " + String(destination))
 		input_hub.request_action(&"interact")
@@ -139,6 +140,11 @@ func _portal_round_trips() -> void:
 			return
 		await frames(6)
 		check(player.get_instance_id() == identity and player.is_on_floor() and game.world_root.get_child_count() == 1, "Portal retains one player and one world with a valid arrival: " + String(destination))
+		if destination == &"personal_sanctuary":
+			if not await _return_through(&"collection_hall"): return
+			check(game.active_world.is_home_origin_visit() and game.active_world.stands.size() == 12, "The home doorway enters the existing twelve-stand Hall with this visit's return provenance")
+			if not await _return_through(&"personal_sanctuary"): return
+			check(player.get_instance_id() == identity and game.world_root.get_child_count() == 1, "The interior Hall round trip retains the same shell and one active home")
 		if destination == &"combat_arena":
 			if not await _return_through(&"dungeon"):
 				return

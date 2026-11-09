@@ -11,7 +11,7 @@ extends Resource
 @export var terrace_height := 0.8
 @export var ramp_length := 8.0
 
-const DISTRICT_NAMES := ["Portal Promenade", "Combat Coliseum", "Merchant Terraces", "Trophy Hall & Relic Gallery", "Master Forge", "Cosmetic Pavilion", "Spiritweaving Conservatory", "Tavern & Recruitment"]
+const DISTRICT_NAMES := ["Portal Promenade", "Combat Coliseum", "Merchant Terraces", "Personal Sanctuary & Trophy Hall", "Master Forge", "Cosmetic Pavilion", "Spiritweaving Conservatory", "Tavern & Recruitment"]
 const DISTRICT_POIS := [&"rootbound_abyss", &"combat_arena", &"merchant_general", &"collection_hall", &"blacksmith", &"equipment", &"conservatory", &"tavern"]
 
 func district_transform(id: StringName) -> Transform3D:
@@ -38,7 +38,7 @@ func get_pois() -> Array[Dictionary]:
 	result.append(_poi(&"merchant_appraiser", "Iris · Relic Appraiser", &"C", Vector3(-4.2, 0, -2), 1.6, &"merchant"))
 	result.append(_poi(&"merchant_general", "Mara · General Merchant", &"C", Vector3(0, 0, -2), 1.6, &"merchant"))
 	result.append(_poi(&"merchant_equipment", "Dain · Equipment Trader", &"C", Vector3(4.2, 0, -2), 1.6, &"merchant"))
-	result.append(_poi(&"collection_hall", "Collection Hall · Your Legacy", &"D", Vector3(0, 0, -2), 2.1, &"portal"))
+	result.append(_poi(&"collection_hall", "Personal Sanctuary · Your Home", &"D", Vector3(0, 0, -2), 2.1, &"portal"))
 	result.append(_poi(&"blacksmith", "Brann · Master Forge", &"E", Vector3(0, 0, -1.4), 1.6, &"blacksmith"))
 	result.append(_poi(&"equipment", "Equipment & Appearance Preview", &"F", Vector3.ZERO, 1.8, &"equipment"))
 	result.append(_poi(&"conservatory", "Conservatory & Collection Guide", &"G", Vector3.ZERO, 1.8, &"conservatory"))

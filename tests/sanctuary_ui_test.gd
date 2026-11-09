@@ -36,7 +36,7 @@ func _run() -> void:
 	await _map_routing()
 	await _terminals()
 	await _portal_sources()
-	check(FileAccess.get_file_as_bytes(PROFILE) == saved, "Map, guide, preview and portal travel leave secured profile bytes identical")
+	check(FileAccess.get_file_as_bytes(PROFILE) == saved, "After first home allocation, Hall visits and return travel leave secured profile bytes identical")
 	finish()
 
 func _tap(point: Vector2, finger: int = 90) -> void:
@@ -181,16 +181,35 @@ func _portal_sources() -> void:
 	if back != null:
 		back.interact(game.player)
 		await arrive(&"sanctuary")
+	check(FileAccess.get_file_as_bytes(PROFILE) == saved, "Map, guide, preview and prior portal travel preserve exact secured profile bytes before home allocation")
+	var before_home: Dictionary = session.profile.duplicate(true)
 	await _approach(&"collection_hall")
-	var hall := portal_to(&"collection_hall")
-	hall.interact(game.player)
+	var home := portal_to(&"personal_sanctuary")
+	home.interact(game.player)
 	var at: Vector2 = panel.primary_rect().get_center()
 	touch(overlay, 94, at, true)
 	touch(overlay, 95, at, true)
 	touch(overlay, 94, at, false)
 	touch(overlay, 95, at, false)
-	await arrive(&"collection_hall")
+	if not await arrive(&"personal_sanctuary"): return
+	var after_home: Dictionary = session.profile.duplicate(true)
+	check(not String(after_home.home.id).is_empty() and int(after_home.revision) == int(before_home.revision) + 1, "The first explicit home entry allocates one saved local identity and revision")
+	after_home.home = before_home.home.duplicate(true)
+	after_home.revision = before_home.revision
+	check(after_home == before_home, "First home entry preserves every existing currency, inventory, display, companion and progression field")
+	saved = FileAccess.get_file_as_bytes(PROFILE)
 	check(game.world_root.get_child_count() == 1 and not panel.visible, "Two fingers confirming once create only one destination world")
+	var hall := portal_to(&"collection_hall")
+	game.player.reset_for_spawn(Transform3D(Basis.IDENTITY, hall.to_global(Vector3(0, 0.15, 2))))
+	await frames(3)
+	input_hub.request_action(&"interact")
+	if not await arrive(&"collection_hall"): return
+	check(game.active_world.is_home_origin_visit() and not panel.visible, "The interior Trophy Hall uses the existing immediate door without an unauthorized city card")
+	back = portal_to(&"personal_sanctuary")
+	game.player.reset_for_spawn(Transform3D(Basis.IDENTITY, back.to_global(Vector3(0, 0.15, 2))))
+	await frames(3)
+	input_hub.request_action(&"interact")
+	if not await arrive(&"personal_sanctuary"): return
 	back = portal_to(&"sanctuary")
 	back.interact(game.player)
 	await arrive(&"sanctuary")

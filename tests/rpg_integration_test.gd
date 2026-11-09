@@ -214,16 +214,23 @@ func _blacksmith() -> void:
 	game.hud.close_modals()
 
 func _collection_hall() -> void:
-	var portal := portal_to(&"collection_hall")
-	if not check(portal != null, "Sanctuary has a Collection Hall passage alongside its existing dungeon portals"):
+	var portal := portal_to(&"personal_sanctuary")
+	if not check(portal != null, "Sanctuary's existing Hall gateway opens the personal home alongside its dungeon portals"):
 		return
 	_place(game.active_world.get_poi_approach_position(&"collection_hall") + Vector3.UP * 0.15)
 	portal.interact(player)
-	check(game.hud.expedition_overlay.mode == &"sanctuary" and game.current_location == &"sanctuary", "Hall passage opens its information card before explicit entry")
+	check(game.hud.expedition_overlay.mode == &"sanctuary" and game.current_location == &"sanctuary", "Home passage opens its information card before explicit entry")
 	game.hud.expedition_overlay.sanctuary_panel._activate("enter")
+	if not await arrive(&"personal_sanctuary"): return
+	portal = portal_to(&"collection_hall")
+	if not check(portal != null and not portal.require_entry_card, "The personal home has a working interior Trophy Hall door"): return
+	_place(portal.to_global(Vector3(0, 0.15, 2)))
+	await frames(3)
+	input_hub.request_action(&"interact")
 	if not await arrive(&"collection_hall"):
 		return
 	var hall: Node3D = game.active_world
+	check(hall.is_home_origin_visit(), "The actual home doorway configures only this Hall visit's return route")
 	check(hall.stands.size() == 12 and hall.journals.size() == 2 and hall.trophy_unlocked, "The hall supplies eight equipment stands, four relic pedestals, both journals and the Rootwarden trophy")
 	check(game.party.members.size() == 3 and player.get_instance_id() == identity, "The same party and player accompany the Hall visit")
 	var stand: Node3D = hall.stands.equipment_0
@@ -242,15 +249,22 @@ func _collection_hall() -> void:
 	_commit(&"display", {"stand_id": "relic_0", "uid": _entries("rootwarden_heart")[0].uid}, "Relic pedestal assignment")
 	check(hall.stands.relic_0.displayed_model != null, "The owned Rootwarden heart can be exhibited on a relic pedestal")
 	game.hud.close_modals()
-	var return_portal := portal_to(&"sanctuary")
-	check(return_portal != null, "Collection Hall has a safe Sanctuary return passage")
+	var return_portal := portal_to(&"personal_sanctuary")
+	check(return_portal != null, "A home-origin Hall has a safe return to that local home")
 	_place(return_portal.global_position + Vector3(0, 0.15, -2))
+	return_portal.interact(player)
+	if not await arrive(&"personal_sanctuary"): return
+	return_portal = portal_to(&"sanctuary")
+	if not check(return_portal != null, "The home retains an explicit return to the main Sanctuary"): return
+	_place(return_portal.to_global(Vector3(0, 0.15, 2)))
 	return_portal.interact(player)
 	await arrive(&"sanctuary")
 	check(session.profile.displays.equipment_0 == weapon_uid and Store.new(PROFILE).load_profile().displays == session.profile.displays, "Travel preserves persistent display selections and instance ownership")
 	await game.change_location(&"collection_hall")
 	if await arrive(&"collection_hall"):
 		check(game.active_world.stands.equipment_0.displayed_uid == weapon_uid, "Re-entering the Hall reconstructs the saved exhibit")
+		check(not game.active_world.is_home_origin_visit() and portal_to(&"sanctuary") != null \
+			and portal_to(&"personal_sanctuary") == null, "A subsequent legacy direct Hall visit does not inherit the prior home return route")
 	await game.change_location(&"sanctuary")
 	await arrive(&"sanctuary")
 

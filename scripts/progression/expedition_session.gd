@@ -16,6 +16,7 @@ const PetCatalog = preload("res://scripts/pets/pet_catalog.gd")
 const EncounterRewards = preload("res://resources/loot/monster_rewards.tres")
 const DepthProgress = preload("res://scripts/progression/depth_progression.gd")
 const EncounterProgress = preload("res://scripts/progression/encounter_progression.gd")
+const HomeProgress = preload("res://scripts/progression/home_progression.gd")
 const Content = preload("res://scripts/expedition/dungeon_content.gd")
 const EVENT_RECORD_KEYS := ["encounter_definition_id", "content_version", "encounter_version", "objective_role",
 	"reward_profile_id", "pet_profile_id", "discovery_id", "kind", "roster_profile_id",
@@ -61,6 +62,7 @@ var _configured_depth_run := false
 var _issued_content_plan: Dictionary = {}
 var _pending_encounters: Dictionary = {}
 var _completed_early_return: Dictionary = {}
+var _home_preparing := false
 
 func _ready() -> void:
 	profile = store.load_profile()
@@ -1078,6 +1080,71 @@ func _wear_equipped(candidate: Dictionary, amount: int) -> void:
 		var entry := VaultInventory.find(candidate, uid)
 		if not entry.is_empty():
 			entry.durability = maxi(0, int(entry.durability) - amount)
+
+func home_snapshot() -> Dictionary:
+	return HomeProgress.normalize(profile.get("home"))
+
+func _home_entry_source_valid(source_world: Node3D, actor: Node) -> bool:
+	if active or not is_instance_valid(actor) or actor != _player or not actor is VaultPlayer \
+			or not actor.is_inside_tree() or actor.is_queued_for_deletion() or actor.downed or actor.eliminated \
+			or not actor.controls_enabled or not InputHub.controls_enabled or not _actor_ready():
+		return false
+	if not is_instance_valid(source_world) or source_world != _world or not source_world.is_inside_tree() \
+			or source_world.is_queued_for_deletion() or source_world.get_script() == null:
+		return false
+	var game := actor.get_parent()
+	if not is_instance_valid(game) or game.get_script() == null or game.get_script().resource_path != "res://scripts/systems/game.gd" \
+			or not game.is_inside_tree() or game.is_queued_for_deletion() or game.get("transitioning") \
+			or game.get("player") != actor or game.get("active_world") != source_world or game.get("current_location") != _location \
+			or source_world.get_parent() != game.get("world_root") or source_world.get_viewport() != actor.get_viewport() \
+			or source_world.get_world_3d() != actor.get_world_3d():
+		return false
+	var source_path: String = source_world.get_script().resource_path
+	if _location == &"sanctuary":
+		return source_path == "res://scripts/world/sanctuary.gd"
+	return _location == &"collection_hall" and source_path == "res://scripts/world/collection_hall.gd" \
+		and source_world.has_method("is_home_origin_visit") and source_world.is_home_origin_visit() \
+		and HomeProgress.valid_id(home_snapshot().get("id"), false)
+
+func prepare_home_entry(source_world: Node3D, actor: Node) -> bool:
+	if _home_preparing:
+		return false
+	_home_preparing = true
+	var accepted := _prepare_home_entry(source_world, actor)
+	if is_instance_valid(self):
+		_home_preparing = false
+	return accepted
+
+func _prepare_home_entry(source_world: Node3D, actor: Node) -> bool:
+	if not _home_entry_source_valid(source_world, actor):
+		return false
+	if store.read_only:
+		storage_error = store.last_error
+		notice.emit("Home entry is unavailable while secured progress is read-only. " + storage_error)
+		return false
+	if VaultProfileStore.normalize(profile).is_empty():
+		return false
+	var home := home_snapshot()
+	if not String(home.id).is_empty():
+		return true
+	# Only a real Sanctuary entry can allocate; Hall returns reuse an existing ID.
+	if _location != &"sanctuary":
+		return false
+	var random_bytes := Crypto.new().generate_random_bytes(16)
+	if random_bytes.size() != 16:
+		return false
+	var next := HomeProgress.plan_initialization(profile, "home_" + random_bytes.hex_encode(), int(profile.revision))
+	if next.is_empty():
+		return false
+	if not store.save_profile(next):
+		storage_error = store.last_error
+		notice.emit("Could not prepare your home. Existing progress was preserved. " + storage_error)
+		return false
+	profile = next
+	storage_error = ""
+	# Saving precedes callbacks; Game revalidates its travel source after return.
+	_emit_changed()
+	return true
 
 func bind_game_context(player: Node, location: StringName, world: Node3D = null) -> void:
 	_player = player

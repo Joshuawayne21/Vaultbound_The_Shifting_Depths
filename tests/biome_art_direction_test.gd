@@ -37,7 +37,7 @@ func _run() -> void:
 			check(definition.availability == "unavailable" and definition.runtime_destination == &"" and not shell.LEVELS.has(definition.id), "%s cannot open a destination" % definition.display_name)
 			check(definition.asset_status == "art_direction_only" and definition.status_label().begins_with("Unavailable") and definition.asset_note.contains("No environment scene"), "%s is explicitly unavailable without model claims" % definition.display_name)
 	check(ids.size() == 6 and playable == 1, "Six art definitions preserve one playable biome")
-	check(shell.LEVELS.keys() == [&"sanctuary", &"dungeon", &"combat_arena", &"rootbound_abyss", &"collection_hall"], "Existing world IDs remain unchanged")
+	check(shell.LEVELS.keys() == [&"sanctuary", &"dungeon", &"combat_arena", &"rootbound_abyss", &"collection_hall", &"personal_sanctuary"], "The local home appends one destination while preserving every existing world ID")
 	var module_ids: Array = []
 	for entries: Array in Generator.MODULES.values():
 		module_ids.append_array(entries)

@@ -18,7 +18,7 @@ func _cases() -> void:
 		if not await move_to_room(int(level.layout.boss_id)): return
 		if not await defeat_crystal_source(level.boss, sample.id, sample.variant): return
 		if not await extract_case(PATH, sample.id == "geode_colossus"): return
-		check(session.profile.encounter_records.entries.rootwarden == retained_rootbound and session.profile.version == 7, "New full Crystal clear preserves the exact old Rootbound record and current save schema")
+		check(session.profile.encounter_records.entries.rootwarden == retained_rootbound and session.profile.version == VaultProfileStore.VERSION, "New full Crystal clear preserves the exact old Rootbound record and current save schema")
 	# Natural elite composition is not promised in any one seed. Search additional
 	# actual admitted floors, without editing RNG, actors or their registry.
 	for _attempt in range(8):

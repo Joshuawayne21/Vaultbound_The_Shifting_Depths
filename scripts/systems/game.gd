@@ -10,6 +10,7 @@ const LEVELS := {
 	&"combat_arena": "res://scenes/world/combat_arena.tscn",
 	&"rootbound_abyss": "res://scenes/world/rootbound_abyss.tscn",
 	&"collection_hall": "res://scenes/world/collection_hall.tscn",
+	&"personal_sanctuary": "res://scenes/world/personal_sanctuary.tscn",
 }
 const DEPTH_POLICY = preload("res://resources/expedition/depth_policy.tres")
 const DUNGEON_CONTENT = preload("res://scripts/expedition/dungeon_content.gd")
@@ -170,6 +171,31 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 			next_world.free()
 		hud.show_message("Passage is missing a safe arrival point.")
 		return
+	if destination == &"personal_sanctuary":
+		# Home ownership is prepared by the existing save authority. Its notices
+		# and changed signal can synchronously replace this request's world.
+		var home_location := current_location
+		var home_generation := int(ExpeditionSession.run_generation)
+		var home_serial := _travel_serial
+		var home_actor := player
+		var prepared: bool = ExpeditionSession.prepare_home_entry(request_world, home_actor)
+		if not is_instance_valid(self) or not prepared or not is_inside_tree() or is_queued_for_deletion() \
+			or transitioning or not _application_focused or _modal_open or _travel_serial != home_serial \
+			or active_world != request_world or not is_instance_valid(request_world) or not request_world.is_inside_tree() \
+			or request_world.is_queued_for_deletion() or request_world.get_parent() != world_root \
+			or current_location != home_location or ExpeditionSession.active or ExpeditionSession.run_generation != home_generation \
+			or not is_instance_valid(home_actor) or player != home_actor or not home_actor.is_inside_tree() \
+			or home_actor.is_queued_for_deletion() or not home_actor.controls_enabled or not InputHub.controls_enabled or home_actor.health <= 0.0 \
+			or home_actor.downed or home_actor.eliminated or home_actor.combat.state != &"idle":
+			if is_instance_valid(next_world): next_world.free()
+			return
+	elif destination == &"collection_hall" and current_location == &"personal_sanctuary" and entry_id == &"from_home":
+		if not is_instance_valid(request_world) or request_world.get_script() == null \
+			or request_world.get_script().resource_path != "res://scripts/home/personal_sanctuary.gd" \
+			or not next_world.has_method("configure_return_route") \
+			or not next_world.configure_return_route(&"personal_sanctuary", &"from_trophy_hall"):
+			next_world.free()
+			return
 	var issued_generation := -1
 	var issued_seed := -1
 	var issued_context: Dictionary = {}
@@ -294,6 +320,10 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 		await _recover_completed_return(next_world, completed_return, travel_serial)
 		return
 	var combat_admitted := true
+	if destination == &"personal_sanctuary":
+		combat_admitted = is_instance_valid(next_world) and not next_world.is_queued_for_deletion() \
+			and next_world.get_parent() == world_root and active_world == next_world and current_location == destination \
+			and _travel_serial == travel_serial and next_world.has_method("validate_home_arrival") and next_world.validate_home_arrival(entry_id)
 	if not issued_plan.is_empty() and _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan) \
 			and _candidate_ready_valid(next_world, issued_context, issued_plan):
 		# Native candidate floor/capsules exist now. Only its private issued
@@ -306,6 +336,8 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 		ExpeditionSession.bind_game_context(player, previous_location, previous_world)
 		demo_exchange.bind_game_context(player, previous_location, previous_world)
 		_cancel_candidate_travel(next_world, issued_generation, issued_seed, issued_context, issued_plan)
+		if destination == &"personal_sanctuary":
+			hud.show_message("Home arrival is obstructed. You remain in the current area.")
 		return
 	if is_instance_valid(previous_world):
 		_pet_presenter = null
@@ -941,6 +973,8 @@ func _portal_information_lines(destination: StringName, depth_status: Dictionary
 		lines = ["PROVING GROUNDS · Existing combat practice area", "Practice Sword/Shield and Staff combat with the current enemies and targets.", "This is a local training destination, not a player-versus-player match."]
 	elif destination == &"collection_hall":
 		lines = ["COLLECTION HALL · Owned exhibits and discovery journal", "Inspect your real owned equipment, relics and discovered item definitions.", "Display assignments use existing inventory instances; visiting creates no items."]
+	elif destination == &"personal_sanctuary":
+		lines = ["PERSONAL SANCTUARY · Your local saved home", "Enter your private home and visit the existing Trophy Hall through its interior door.", "Owned equipment and relic displays stay in your existing inventory and Collection Hall.", "Offline home for this saved profile · Remote visitors and online housing are unavailable."]
 	else:
 		lines = ["SUNKEN VAULT · Existing authored practice dungeon", "Explore the original chambers and practise combat and manual portal travel.", "The generated Rootbound expedition and extraction loop has its own gate."]
 	lines.append("Party: 1 local human + %d AI companion%s · No remote players." % [ai_count, "" if ai_count == 1 else "s"])

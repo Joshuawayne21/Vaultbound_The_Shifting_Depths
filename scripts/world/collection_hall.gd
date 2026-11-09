@@ -20,6 +20,18 @@ var _trophy: Node3D
 var _trophy_label: Label3D
 var _completion_label: Label3D
 var collection_completion: Dictionary = {}
+var _home_origin_visit := false
+
+func configure_return_route(destination: StringName, entry_id: StringName) -> bool:
+	# This visit's route is configured before attachment, never written to the
+	# inventory or reused by a later direct Hall visit.
+	if is_inside_tree() or _home_origin_visit or destination != &"personal_sanctuary" or entry_id != &"from_trophy_hall":
+		return false
+	_home_origin_visit = true
+	return true
+
+func is_home_origin_visit() -> bool:
+	return _home_origin_visit
 
 func _ready() -> void:
 	add_to_group("collection_halls")
@@ -36,9 +48,9 @@ func _ready() -> void:
 	portal.name = "SanctuaryReturn"
 	portal.position = Vector3(0, 0, 13)
 	portal.rotation.y = PI
-	portal.destination = &"sanctuary"
-	portal.entry_id = &"from_hall"
-	portal.title = "RETURN TO SANCTUARY"
+	portal.destination = &"personal_sanctuary" if _home_origin_visit else &"sanctuary"
+	portal.entry_id = &"from_trophy_hall" if _home_origin_visit else &"from_hall"
+	portal.title = "RETURN TO PERSONAL SANCTUARY" if _home_origin_visit else "RETURN TO SANCTUARY"
 	add_child(portal)
 	_keep_static_collision(self)
 	_session = get_node_or_null("/root/ExpeditionSession")

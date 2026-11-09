@@ -41,7 +41,7 @@ func _read_actual(path: String) -> void:
 	if not check(not expected.is_empty() and session.profile == expected, "Separate process restores exact Crystal rewards, worn equipment, roster and old Rootbound history"):
 		return
 	var entries: Dictionary = session.profile.encounter_records.entries
-	check(session.profile.version == 7 and session.profile.encounter_records.themes == ["crystal_caverns", "rootbound_abyss"] \
+	check(session.profile.version == VaultProfileStore.VERSION and session.profile.encounter_records.themes == ["crystal_caverns", "rootbound_abyss"] \
 		and entries.prism_conductor.secured_defeats == 1 and entries.prism_conductor_refracted.secured_defeats == 1 \
 		and entries.geode_colossus.secured_defeats == 1 and entries.shard_wraith.secured_defeats == 1 and entries.crystal_lancekeeper.secured_defeats == 1 \
 		and session.profile.statistics.completed == 6 and entries.rootwarden == retained_rootbound,

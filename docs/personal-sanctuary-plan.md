@@ -1,6 +1,6 @@
 # Prismheart Sanctuary and Personal Sanctuary integration
 
-Status: inspection and staged implementation, 2026-11-09. This is an extension of Vaultbound, not a replacement game. The supplied written layout is the current design reference; no Prismheart blueprint attachment was available for visual comparison. Architectural placement remains provisional until that reference is available.
+Status: home-entry foundation verified, 2026-11-09. This extends the existing game. The user has now supplied **Vaultbound_Sanctuary_Blueprint_V2.png** (2400 × 1900; SHA-256 `4355394eaa28bd89ec424d1f87f323b25fb706bc48b80ef502aa9b575b80398b`). It has been inspected, resolving the earlier instruction to wait for the blueprint before architectural redesign. The schematic is explicitly not to scale and marks its approximately 120 m plaza adaptable. It guides the city layout; the written brief supplies the Grand Foyer interior design. Receipt of the reference is not completion of the redesign.
 
 ## Preserved baseline
 
@@ -24,18 +24,22 @@ Work takes place in the same repository's `feature/personal-sanctuary` worktree.
 | Trophies | Existing Collection Hall has eight equipment stands, four relic pedestals, journals and a Rootwarden trophy. Saved display IDs reference inventory UIDs. They do not transfer or duplicate ownership. |
 | Pets | Existing eight-pet Spiritweaving catalog, earned ingredients, owned records and one cosmetic follower are retained. Habitat displays must reference those records and have a bounded active count. |
 | Companions | Guardian/Mystic roster and three-member party persist independently of world scenes. Navigation currently supports a ground height field and terraced city routes; stacked foyer floors need additional, verified handling. |
-| Persistence | `VaultProfileStore` v7 validates whole profiles, preserves exact pre-migration backups and verifies temporary writes before replacement. A home extension must participate in that validation; unknown fields are otherwise omitted during normalization. |
+| Persistence | The inspected baseline used `VaultProfileStore` v7. Stage 2 extends it to v8 with a bounded home identity namespace, exact `.pre-v8.bak` snapshots and future-home read-only preservation. Existing whole-profile validation and verified temporary writes remain in control. |
 | Environment | Original procedural architecture, shared materials, static mesh batching, ambient wildlife, inexpensive water and local daylight presentation exist. Low/Medium/High presets, reduced motion/effects, density controls and optional 30/60 FPS targets are available. |
 | Assets | Baseline contains 408 GDScript files, 110 scenes, 583 resources and 19 SVGs; no GLB/GLTF models or raster textures. Existing procedural models are reusable prototype art, not imported premium character/building assets. |
 | Unimplemented services | No authenticated online backend, bank/storage system, guild creation, visiting permissions or real cosmetic billing. Existing documents propose a backend; they do not provide one. Do not display these as functioning online services. |
 
 ## Architectural direction
 
-The written city plan keeps the circular exchange and six shared-service booths at the center. The Portal Nexus lies north, Merchant Bazaar and Grand Vault east, Cosmetic Atelier south, and guild/recruitment facilities west. Preserve legacy destination IDs, safe spawns, return routes and saved collection IDs while updating presentation and route maps in the city architecture stage.
+The blueprint keeps the circular exchange and six shared-service booths around the Living Prismheart. Its cardinal map is: north Portal Nexus with the Contract Board annex and four future portal frames; east Merchant Bazaar with the Grand Vault Bank to its south and the Hidden Undercroft below; south Cosmetic Atelier; west Guild and Recruitment Hall, Hall of Champions to the northwest, second-floor Guild War Room and Pet Gardens to the southwest. The user's written change overrides the blueprint's **Trophies** portal label: it becomes **Personal Sanctuary**, preserving the Trophy Hall inside the home. Retain the existing player spawn connection; adapt dimensions only with verified routes and camera clearance. Planned bank/guild/contract facilities must not be advertised as implemented services before their own validated work.
 
-The Personal Sanctuary replaces the city Trophy Room portal's destination. Its first arrival is the Grand Foyer. The existing Collection Hall remains a separate loaded room behind a foyer entrance, retaining its runtime location and transaction guards. Home-origin Hall visits return to the foyer; legacy direct Hall visits retain their Sanctuary return. This permits an incremental visual expansion without resetting trophies.
+Stage 2 replaces the city Trophy Room portal's visible destination with Personal Sanctuary while retaining its existing southeast position and stable internal POI/node identifiers. Its first arrival is currently a 30 × 28 m ground-floor foundation, not the complete Grand Foyer. The existing Collection Hall remains a separate loaded room behind a foyer entrance, retaining its runtime location and transaction guards. Home-origin Hall visits return to the foyer; legacy direct Hall visits retain their Sanctuary return. This permits an incremental visual expansion without resetting trophies.
 
-The foyer's ground floor connects Trophy Hall, Pet Conservatory, Armory, Companion Hall and Relic Library. The upper floor connects Personal Chamber, Wardrobe and Rooftop Garden. Maintain compact routes despite monumental ceiling heights. Use sealed architectural space for future Aquarium, Vault, Workshop, Alchemy, Secret Chamber and Achievement Gallery; no unfinished functional menus.
+The planned complete foyer's ground floor will connect Trophy Hall, Pet Conservatory, Armory, Companion Hall and Relic Library. Its upper floor will connect Personal Chamber, Wardrobe and Rooftop Garden. Maintain compact routes despite monumental ceiling heights. Use sealed architectural space for future Aquarium, Vault, Workshop, Alchemy, Secret Chamber and Achievement Gallery; no unfinished functional menus.
+
+## Current checkpoint
+
+Milestone 1 is committed: audit, recoverable repository/working-tree backup and a focused accepted-build baseline. Stage 2 code provides one saved offline home identity, explicit city portal confirmation, native arrival/formation clearance, the temporary home room and context-correct Trophy Hall returns. Its final regression passed **46,230 checks across 198 suites and 234 runtime modes**, including 23 independent restart readers. [Stage 2 evidence](personal-sanctuary-m2-validation.md) separates these results from the excluded development runs. The Grand Foyer and later architecture stages are planned separately. See the [home behavior guide](personal-sanctuary-home.md) and [Android checklist](personal-sanctuary-android.md).
 
 ## Ordered milestones and gates
 
@@ -55,7 +59,7 @@ The foyer's ground floor connects Trophy Hall, Pet Conservatory, Armory, Compani
 - Extend the existing versioned profile; do not create a second inventory or currency.
 - Preserve original bytes before schema migration and preserve future/unknown saved content through read-only failure behavior.
 - Create a home identity once through a successful guarded save. Normalization must never generate random identities or mutate disk.
-- Persist themes, sigils, room unlocks and display references; keep owned gear, trophies and pets in their existing records.
+- Stage 2 persists only the home namespace version and opaque identity. Later stages will add themes, sigils, room unlocks and display references through versioned migrations; owned gear, trophies and pets stay in their existing records.
 - Revalidate ownership, scene/service context and revision at every home mutation. Failures leave in-memory and on-disk progression unchanged.
 - A local home is owned by the current offline profile. Networked visits and permissions require authenticated infrastructure and separate validation.
 
@@ -63,6 +67,6 @@ The foyer's ground floor connects Trophy Hall, Pet Conservatory, Armory, Compani
 
 The isometric camera's nominal position is approximately 14 m above the player's floor. Low opaque ceilings, chandeliers or overlapping balconies can obstruct it. Camera collision must remain enabled; geometric clearance and appropriate apertures must be tested. Companion floor sampling currently assumes one height per horizontal point, so a true two-story foyer is a navigation change, not only scenery.
 
-Existing tests intentionally assert the original five destination registry entries, Collection Hall portal and profile schema. Update only assertions superseded by the requested portal/schema change; retain legacy travel, display and save coverage. An interrupted test process is never a pass.
+Stage 2 updates only the legacy registry, portal-route and current-schema assertions superseded by the requested change. The original five destinations remain registered alongside the new home destination; direct legacy Hall visits retain their city return. Keep all existing travel, display and save coverage. An interrupted test process is never a pass.
 
 Physical Android performance, notch/keyboard behavior, thermals and touch comfort require real-device testing. No physical Android test, premium imported model, live marketplace, guild backend, bank, payment or visiting system is claimed by this plan.

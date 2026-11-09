@@ -28,7 +28,8 @@ func _run() -> void:
 	for entry: Node in get_nodes_in_group("interactables"):
 		if entry.get("destination") != null:
 			destinations.append(entry.destination)
-	check(destinations.has(&"dungeon") and destinations.has(&"rootbound_abyss") and destinations.has(&"collection_hall"), "Sanctuary retains old portals and adds the Collection Hall")
+	check(destinations.has(&"dungeon") and destinations.has(&"rootbound_abyss") and destinations.has(&"personal_sanctuary") \
+		and sanctuary.get_node("CollectionHallGate").get_meta("sanctuary_poi") == &"collection_hall", "Sanctuary retains dungeon portals and the stable Hall gate/POI now leads to the personal home")
 	check(_clear_floor(sanctuary, sanctuary.get_spawn_transform(&"from_hall").origin - Vector3.UP * 0.15), "Returning from the Hall has an unobstructed Sanctuary arrival")
 	sanctuary.queue_free()
 	await frames(3)
@@ -48,6 +49,8 @@ func _run() -> void:
 	check(_clear_floor(hall, hall.get_spawn_transform(&"default").origin - Vector3.UP * 0.15), "Hall arrival floor and central aisle are clear")
 	var portal := hall.get_node("SanctuaryReturn")
 	check(portal.destination == &"sanctuary" and portal.entry_id == &"from_hall", "Hall return portal targets the correct Sanctuary arrival")
+	check(not hall.is_home_origin_visit() and not hall.configure_return_route(&"personal_sanctuary", &"from_trophy_hall") \
+		and portal.get_meta("portal_visual_profile_id") == &"sanctuary_return", "Standalone Hall visits retain their default return and cannot change provenance after attachment")
 	var session := root.get_node("ExpeditionSession")
 	var saved: Dictionary = session.profile.duplicate(true)
 	var fixture: Dictionary = saved.duplicate(true)

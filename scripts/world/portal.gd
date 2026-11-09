@@ -9,6 +9,7 @@ signal portal_info_requested(source: Node3D)
 const VISUAL_PROFILES := {
 	&"rootbound_abyss": preload("res://resources/portals/rootbound.tres"),
 	&"collection_hall": preload("res://resources/portals/collection_hall.tres"),
+	&"personal_sanctuary": preload("res://resources/portals/personal_sanctuary.tres"),
 	&"dungeon": preload("res://resources/portals/dungeon_practice.tres"),
 	&"combat_arena": preload("res://resources/portals/combat_practice.tres"),
 	&"sanctuary": preload("res://resources/portals/sanctuary_return.tres"),
@@ -183,6 +184,7 @@ func get_prompt() -> String:
 		&"combat_arena": return "Enter the Proving Grounds"
 		&"rootbound_abyss": return "Begin a Rootbound Abyss expedition"
 		&"collection_hall": return "Enter your Collection Hall"
+		&"personal_sanctuary": return "Return to Personal Sanctuary" if entry_id == &"from_trophy_hall" else "Enter your Personal Sanctuary"
 		&"dungeon": return "Return to the Sunken Vault" if entry_id == &"from_arena" else "Enter the Sunken Vault"
 	return "Use the passage"
 

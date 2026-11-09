@@ -41,7 +41,7 @@ func _read_actual(path: String) -> void:
 	if not check(not expected.is_empty() and session.profile == expected, "Separate process restores exact Ember rewards, worn equipment, roster and old Rootbound and Crystal history"):
 		return
 	var entries: Dictionary = session.profile.encounter_records.entries
-	check(session.profile.version == 7 and session.profile.encounter_records.themes == ["crystal_caverns", "ember_crypt", "rootbound_abyss"] \
+	check(session.profile.version == VaultProfileStore.VERSION and session.profile.encounter_records.themes == ["crystal_caverns", "ember_crypt", "rootbound_abyss"] \
 		and entries.furnace_warden.secured_defeats == 1 and entries.furnace_warden_banked_backdraft.secured_defeats == 1 \
 		and entries.cinder_liturgist.secured_defeats == 1 and entries.ash_sealkeeper.secured_defeats == 1 and entries.cinder_pikewarden.secured_defeats == 1 \
 		and session.profile.statistics.completed == 6 and old_history_preserved(),

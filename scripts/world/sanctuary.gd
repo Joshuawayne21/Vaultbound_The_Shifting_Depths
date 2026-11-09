@@ -52,7 +52,7 @@ func _build_portals() -> void:
 		portal.name = {&"dungeon": "PracticeGate", &"rootbound_abyss": "RootboundExpeditionGate", &"combat_arena": "ProvingGroundsGate", &"collection_hall": "CollectionHallGate"}[id]
 		portal.position = data.position
 		portal.rotation.y = data.rotation
-		portal.destination = id
+		portal.destination = &"personal_sanctuary" if id == &"collection_hall" else id
 		portal.entry_id = &"from_sanctuary" if id == &"dungeon" else &"default"
 		portal.title = String(data.label).to_upper()
 		portal.require_entry_card = true

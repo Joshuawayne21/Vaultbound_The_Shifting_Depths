@@ -22,8 +22,8 @@ func _cases() -> void:
 	if not await enter_rolling_world(): return
 	if not await _cancel_without_rewards(): return
 	if not await _full_exit(): return
-	check(session.profile.version == 7 and VaultLootTable.item_ids().size() == 351,
-		"Rolling traversal keeps the existing save schema and 350 gameplay items plus currency")
+	check(session.profile.version == VaultProfileStore.VERSION and VaultLootTable.item_ids().size() == 351,
+		"Rolling traversal keeps the current save schema and 350 gameplay items plus currency")
 
 func _reward_state() -> Dictionary:
 	return {"profile": session.profile.duplicate(true), "loot": session.loot_records(),
@@ -210,8 +210,8 @@ func _saved_once(before: Dictionary, items: Dictionary, kills: int) -> bool:
 		and saved.pets == session.profile.pets and saved.gold == session.profile.gold
 		and saved.character == session.profile.character and saved.depth_progression == session.profile.depth_progression
 		and saved.statistics.total_kills == int(before.statistics.total_kills) + kills
-		and saved.revision == int(before.revision) + 1 and saved.version == 7,
-		"An independent existing reader sees exactly the collected ownership, true kill credit and one version7 save revision")
+		and saved.revision == int(before.revision) + 1 and saved.version == Store.VERSION,
+		"An independent existing reader sees exactly the collected ownership, true kill credit and one current-schema save revision")
 	var secured: Dictionary = session.profile.duplicate(true)
 	game.hud.close_results()
 	return check(not session.active and not session.extract() and session.profile == secured

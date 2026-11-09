@@ -170,7 +170,7 @@ func _geometry() -> void:
 		check(bounds.end.y >= 22.0 and bounds.end.y <= 30.0 and bounds.position.y >= -9.0 and bounds.position.y <= -7.0, "Named elder tree towers above the player and has a grounded distant cliff-root bed: " + id)
 
 func _portal_profiles() -> void:
-	var identities: Array[StringName] = [&"dungeon", &"rootbound_abyss", &"combat_arena", &"collection_hall"]
+	var identities: Array[StringName] = [&"dungeon", &"rootbound_abyss", &"combat_arena", &"personal_sanctuary"]
 	var material_ids: Dictionary = {}
 	for destination: StringName in identities:
 		var portal := portal_to(destination)
@@ -180,7 +180,7 @@ func _portal_profiles() -> void:
 		check(resource != null and portal.get_meta("portal_visual_profile_id", &"") == resource.id and label != null and not label.no_depth_test, "Portal exposes its actual route-specific profile and depth-tested label: " + String(destination))
 		if resource == null: continue
 		if destination == &"rootbound_abyss": check(resource.magic_color.b > resource.magic_color.r and resource.id == &"rootbound_blue", "Rootbound has the blue dungeon identity")
-		if destination == &"collection_hall": check(resource.magic_color.r > resource.magic_color.b and resource.id == &"collection_gold", "Collection Hall retains a gold trophy identity")
+		if destination == &"personal_sanctuary": check(resource.crest == "home" and resource.id == &"personal_sanctuary" and resource.route_label.contains("LOCAL"), "The personal home has a distinct honest local-home identity")
 		if destination in [&"dungeon", &"combat_arena"]: check(resource.route_label.contains("LOCAL"), "Practice portal does not masquerade as ranked or online content")
 		var surface: ShaderMaterial = portal.get("_surface_material")
 		check(surface.get_shader_parameter("magic_color") == resource.magic_color and not material_ids.has(surface.get_instance_id()), "Each portal has its own profile-tinted shader material")
@@ -195,7 +195,10 @@ func _portal_profiles() -> void:
 				var shape := body.get_child(0) as CollisionShape3D
 				matching = matching and shape.shape is BoxShape3D and shape.shape.size == node.mesh.size and body.collision_layer == 8 and body.collision_mask == 0 and shape.global_transform.is_equal_approx(node.global_transform)
 		check(matching, "Every new opaque portal ornament has a matching camera-only shape and leaves player collision unchanged")
-		check(is_equal_approx(portal.interaction_radius, 3.0) and portal.require_entry_card and portal.position.is_equal_approx(Layout.get_poi(destination).position), "Portal appearance preserves admission radius, entry review and exact authored destination position")
+		var poi: StringName = &"collection_hall" if destination == &"personal_sanctuary" else destination
+		check(is_equal_approx(portal.interaction_radius, 3.0) and portal.require_entry_card and portal.position.is_equal_approx(Layout.get_poi(poi).position), "Portal appearance preserves admission radius, entry review and exact authored destination position")
+	var hall_profile := load("res://resources/portals/collection_hall.tres") as Resource
+	check(hall_profile.magic_color.r > hall_profile.magic_color.b and hall_profile.id == &"collection_gold", "The existing interior Collection Hall portal retains its gold trophy identity")
 	check(portal_to(&"veilgarden") == null and portal_to(&"bloodfall_frontier") == null, "Future purple/red worlds are not falsely exposed before implementation")
 
 func _camera_routes(quality: int) -> void:
@@ -206,9 +209,10 @@ func _camera_routes(quality: int) -> void:
 	for index in range(3):
 		var angle := (float(index) + 0.5) * TAU / 16.0
 		points.append({"point": Vector3(sin(angle), 0, -cos(angle)) * 41.0, "yaw": PI - angle})
-	for destination: StringName in [&"rootbound_abyss", &"collection_hall"]:
+	for destination: StringName in [&"rootbound_abyss", &"personal_sanctuary"]:
 		var portal := portal_to(destination)
-		points.append({"point": city.get_poi_approach_position(destination), "yaw": portal.rotation.y + PI})
+		var poi: StringName = &"collection_hall" if destination == &"personal_sanctuary" else destination
+		points.append({"point": city.get_poi_approach_position(poi), "yaw": portal.rotation.y + PI})
 	var rig: Node3D = game.camera_rig
 	for pitch in [0.12, 0.98]:
 		for index in range(points.size()):

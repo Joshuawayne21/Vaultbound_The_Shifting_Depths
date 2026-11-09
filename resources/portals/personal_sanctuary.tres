@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="VaultPortalVisualProfile" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/visual/portal_visual_profile.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"personal_sanctuary"
+route_label = "PERSONAL SANCTUARY · LOCAL HOME"
+crest = "home"
+deep_color = Color(0.035, 0.10, 0.14, 1)
+magic_color = Color(0.22, 0.66, 0.61, 1)
+rim_color = Color(1, 0.88, 0.60, 1)
+accent_color = Color(0.64, 0.94, 0.81, 1)

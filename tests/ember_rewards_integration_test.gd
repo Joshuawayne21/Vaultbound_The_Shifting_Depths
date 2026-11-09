@@ -19,7 +19,7 @@ func _cases() -> void:
 		if not deny_foreign_ember_source(): return
 		if not await defeat_ember_source(level.boss, sample.id, sample.variant): return
 		if not await extract_case(PATH, sample.id == "cinder_liturgist"): return
-		check(old_history_preserved() and session.profile.version == 7, "New full Ember clear preserves exact old Rootbound and Crystal records and current save schema")
+		check(old_history_preserved() and session.profile.version == VaultProfileStore.VERSION, "New full Ember clear preserves exact old Rootbound and Crystal records and current save schema")
 	# Natural elite composition is not promised in any one seed. Search additional
 	# actual admitted floors, without editing RNG, actors or their registry.
 	for _attempt in range(8):
