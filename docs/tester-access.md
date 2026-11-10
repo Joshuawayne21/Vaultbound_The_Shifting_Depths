@@ -4,7 +4,7 @@ Build `0.7.0-home6a` (Android version code 28) retains a saved **TEST ACCESS** s
 
 ## Enable once on your device
 
-1. Back up the existing phone profile and its backup files. Import the matching published build from `feature/personal-sanctuary` or `vaultbound-personal-sanctuary-m6a.zip`, using a new clearly named folder. Keep the same application/user-data identity; the ZIP is source, not an APK, and extracting a new folder does not migrate profiles between applications. Do not clear app data or uninstall. Verify root `project.godot` shows `config/version="0.7.0-home6a"` before testing; an older extraction/default branch lacks this switch.
+1. Back up the existing phone profile and its backup files. On the [GitHub repository](https://github.com/Joshuawayne21/Vaultbound_The_Shifting_Depths), choose **main → Code → Download ZIP**, or download the [main source ZIP](https://github.com/Joshuawayne21/Vaultbound_The_Shifting_Depths/archive/refs/heads/main.zip). Extract it into a new clearly named folder and import its root `project.godot`. Keep the same application/user-data identity; the ZIP is source, not an APK, and extracting a new folder does not migrate profiles between applications. Do not clear app data or uninstall. Verify `config/version="0.7.0-home6a"` (Android export code **28**) before testing; an older extracted folder may lack the switch.
 2. Return to the Sanctuary or your home and finish any action. Open **SETTINGS → TEST ACCESS** (the fourth tab).
 3. Select **ON · TEST IMPLEMENTED CONTENT → REVIEW CHANGE → CONFIRM & SAVE**.
 4. Check **SAVED TEST ACCESS: ON** and the **TEST ACCESS ON** HUD badge. Restart once to confirm the saved choice is retained. Cancelled review or a failed save does not enable it.

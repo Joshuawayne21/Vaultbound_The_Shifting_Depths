@@ -6,7 +6,7 @@ Build `0.7.0-home5` adds the six-room expansion: Armory, Companion Hall, Relic L
 
 The current capital checkpoint is `0.7.0-home6a` / code 28. Its Stage 6.1 changes do not relocate the home gate or change the accepted Stage 5 room ownership/services. Capital native validation passed its scoped 8,250-check gate; rendered and physical Android review remain pending; see [the separate report](personal-sanctuary-m6-1-validation.md).
 
-When importing, select `feature/personal-sanctuary` or the matching published `vaultbound-personal-sanctuary-m6a.zip` source ZIP, and verify `config/version="0.7.0-home6a"` in root `project.godot`. An older project folder/default branch does not contain this update. Back up phone saves separately.
+Download the current project from the [GitHub repository](https://github.com/Joshuawayne21/Vaultbound_The_Shifting_Depths) using **main → Code → Download ZIP**, or use the [main source ZIP](https://github.com/Joshuawayne21/Vaultbound_The_Shifting_Depths/archive/refs/heads/main.zip). Import the fresh extraction's root `project.godot` and verify `config/version="0.7.0-home6a"` (Android export code **28**). An older extracted project folder can still contain earlier rooms. Back up phone saves separately and preserve the same application/user-data identity; a source ZIP is not an APK and does not migrate profiles between applications.
 
 Use the southeast **Personal Sanctuary** gate in district D of the existing city. Review its local destination card and confirm **ENTER**. Its position, internal `CollectionHallGate` node and `collection_hall` map POI remain stable. The city has not yet been rearranged to the supplied Prismheart blueprint.
 
