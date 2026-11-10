@@ -11,6 +11,10 @@ var middle_height: Dictionary = {}
 var recoveries: Dictionary = {}
 var observed_frames := 0
 var maximum_step := 0.0
+var previous_sample_frame := 0
+var maximum_step_actor: StringName = &""
+var maximum_step_frame_gap := 0
+var maximum_step_physics_frame := 0
 
 func _initialize() -> void:
 	Engine.max_fps = 120
@@ -38,9 +42,26 @@ func _run() -> void:
 		travelled[actor.name] = 0.0
 		middle_height[actor.name] = false
 		if actor != game.player: recoveries[actor.name] = actor.recovery_count
+	previous_sample_frame = Engine.get_physics_frames()
 	var layout: Dictionary = game.active_world.get_city_layout()
 	var graph: Dictionary = game.active_world.get_companion_navigation_graph()
 	check(graph.points.size() <= 48 and graph.points.size() >= 25, "City routing uses a bounded authored ring, district and ramp graph")
+	# New booth journeys use the real player input and both real followers.
+	# No resets, teleports or navigation mocks are allowed in this loop.
+	var booths: Array = layout.exchange_booths
+	check(booths.size() == 6, "Actual city layout exposes all six shared Exchange approaches")
+	for index in range(booths.size()):
+		input_hub.request_action(&"camera_toggle")
+		# Followers continue settling during both directions of camera transition.
+		# Observe every tick so a 36-frame displacement is never called one step.
+		for _transition_frame in range(36):
+			await physics_frame
+			_record_motion()
+		var booth: Dictionary = booths[index]
+		check(await _walk_to(booth.approach + Vector3.UP * 0.06, 16.0), "Player physically reaches booth " + String(booth.id) + " in alternating camera modes")
+		check(await _regroup(9.0), "Both companions physically regroup at booth " + String(booth.id))
+	check(await _walk_to(Vector3(-8.5, 0.06, 8), 14.0), "Player walks from new booths to the unchanged legacy City Guide")
+	check(await _regroup(9.0), "Both followers return from the new inner circulation to the legacy guide")
 	for index in range(8):
 		var angle := float(index) * TAU / 8.0
 		var point := Vector3(sin(angle) * float(layout.ring_radius), 0.06, cos(angle) * float(layout.ring_radius))
@@ -61,6 +82,8 @@ func _run() -> void:
 		if actor != game.player:
 			check(actor.recovery_count == int(recoveries[actor.name]), "%s completed all routes without recovery teleportation" % actor.name)
 			check(actor.navigator.replan_count < observed_frames / 5 + 20, "%s path planning remains throttled below physics frequency" % actor.name)
+	if maximum_step >= 0.35:
+		print("CITY MAXIMUM STEP DIAGNOSTIC: ", JSON.stringify({"actor": maximum_step_actor, "distance": maximum_step, "sample_frame_gap": maximum_step_frame_gap, "physics_frame": maximum_step_physics_frame}))
 	check(maximum_step < 0.35, "No observed actor movement step hides a relocation during traversal")
 	var metrics := {"observed_physics_frames": observed_frames, "maximum_actor_step": maximum_step, "distance": travelled, "player": {"replans": leader_navigation.replan_count, "geometry_probes": leader_navigation.geometry_probe_count}}
 	for actor in actors:
@@ -148,9 +171,15 @@ func _all_below_terrace() -> bool:
 
 func _record_motion() -> void:
 	observed_frames += 1
+	var frame := Engine.get_physics_frames()
 	for actor in actors:
 		var step: float = actor.global_position.distance_to(previous[actor.name])
+		if step > maximum_step:
+			maximum_step_actor = actor.name
+			maximum_step_frame_gap = frame - previous_sample_frame
+			maximum_step_physics_frame = frame
 		maximum_step = maxf(maximum_step, step)
 		travelled[actor.name] = float(travelled[actor.name]) + step
 		previous[actor.name] = actor.global_position
 		middle_height[actor.name] = bool(middle_height[actor.name]) or (actor.global_position.y > 0.15 and actor.global_position.y < 0.65)
+	previous_sample_frame = frame

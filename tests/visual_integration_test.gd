@@ -2,6 +2,8 @@ extends "res://tests/test_harness.gd"
 ## Physical camera clearance in the actual decorated worlds at every quality.
 ## No screenshots, GPU timing or device input are inferred from these checks.
 const Generator = preload("res://scripts/expedition/dungeon_generator.gd")
+const CAPITAL_CONFIG = preload("res://resources/sanctuary/prismheart_capital.tres")
+var _prismheart_probe: Dictionary = {}
 
 func _initialize() -> void:
 	suite_name = "VAULTBOUND VISUAL INTEGRATION"
@@ -32,8 +34,7 @@ func _run() -> void:
 				await frames(3)
 				clear = clear and _camera_clear()
 			check(clear, "Both camera compositions remain outside geometry at %s, tier %d" % [point, quality])
-		var safe: Vector3 = game.camera_rig._clear_position(Vector3(0, 1.35, 0), Vector3(0, 9, 0))
-		check(safe.y < 3.8 and safe.y > 2.8, "Suspended crystal retracts a camera without a quality-dependent gap")
+		check(_prismheart_camera_clearance(quality), "Actual Prismheart camera surface retracts a clear camera sphere consistently at tier %d" % quality)
 		var body_ray := PhysicsRayQueryParameters3D.create(Vector3(0, 1.35, 0), Vector3(0, 3.5, 0), 1)
 		check(game.get_world_3d().direct_space_state.intersect_ray(body_ray).is_empty(), "Crystal clearance does not introduce a player navigation blocker")
 	check(session.profile == profile, "Changing every graphics tier leaves secured progression byte-for-byte equivalent")
@@ -81,6 +82,50 @@ func _run() -> void:
 		await frames(3)
 		check(_camera_clear(), "Collection Hall camera remains outside arrival architecture")
 	finish()
+
+func _prismheart_camera_clearance(quality: int) -> bool:
+	var body := game.active_world.get_node_or_null("LivingPrismheart/PrismheartCameraEnvelope") as StaticBody3D
+	if body == null or body.get_child_count() != 1: return false
+	var collider := body.get_child(0) as CollisionShape3D
+	if collider == null or not collider.shape is BoxShape3D: return false
+	var anchor := Vector3(0, 1.35, 0)
+	var desired := Vector3(0, 9, 0)
+	var space := game.get_world_3d().direct_space_state
+	var ray := PhysicsRayQueryParameters3D.create(anchor, desired, 8)
+	var hit := space.intersect_ray(ray)
+	if hit.is_empty() or hit.collider != body: return false
+	var entry: Vector3 = hit.position
+	var normal: Vector3 = hit.normal
+	var native_bottom: Vector3 = collider.global_transform * Vector3(0, -(collider.shape as BoxShape3D).size.y * 0.5, 0)
+	# The authored envelope is 7.4m tall. Independently raycast its real lower
+	# plane; the new center setting puts entry at 7.3m, not the old jewel height.
+	var expected_entry_y := float(CAPITAL_CONFIG.crystal_center_y) - 3.7
+	var safe: Vector3 = game.camera_rig._clear_position(anchor, desired)
+	var camera_sphere := game.camera_rig.get("_collision_sphere") as SphereShape3D
+	if camera_sphere == null: return false
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = camera_sphere
+	query.transform = Transform3D(Basis.IDENTITY, safe)
+	query.collision_mask = 1 | 8
+	var clearance := entry.y - safe.y
+	var valid := (
+		body.collision_layer == 8 and body.collision_mask == 0
+		and entry.is_equal_approx(native_bottom) and is_equal_approx(entry.y, expected_entry_y)
+		and normal.is_equal_approx(Vector3.DOWN)
+		and safe.is_finite() and is_zero_approx(safe.x) and is_zero_approx(safe.z) and safe.y > anchor.y
+		and clearance >= camera_sphere.radius and clearance <= camera_sphere.radius + 0.15
+		and space.intersect_shape(query, 1).is_empty()
+	)
+	if _prismheart_probe.is_empty():
+		_prismheart_probe = {"entry": entry, "safe": safe, "body": body.get_instance_id()}
+	else:
+		valid = (
+			valid and entry.is_equal_approx(_prismheart_probe.entry)
+			and safe.is_equal_approx(_prismheart_probe.safe) and body.get_instance_id() == int(_prismheart_probe.body)
+		)
+	if not valid:
+		print("PRISMHEART CAMERA CLEARANCE: ", {"quality": quality, "entry": entry, "expected_y": expected_entry_y, "native_bottom": native_bottom, "safe": safe, "sphere_radius": camera_sphere.radius, "clearance": clearance})
+	return valid
 
 func _camera_clear() -> bool:
 	var position: Vector3 = game.camera_rig.camera.global_position

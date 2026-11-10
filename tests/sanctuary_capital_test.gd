@@ -4,6 +4,7 @@ extends "res://tests/test_harness.gd"
 const Builder = preload("res://scripts/sanctuary/sanctuary_city_builder.gd")
 const Layout = preload("res://resources/sanctuary/city_layout.tres")
 const LandmarkBuilder = preload("res://scripts/sanctuary/sanctuary_landmarks.gd")
+const PrismheartChecks = preload("res://tests/prismheart_native_checks.gd")
 const Store = preload("res://scripts/progression/profile_store.gd")
 const PROFILE := "/tmp/vaultbound-7b-capital/profile.json"
 var city: Node3D
@@ -44,9 +45,10 @@ func _run() -> void:
 	var geometry := _mesh_identity(landmarks)
 	_geometry()
 	_portal_profiles()
+	PrismheartChecks.arrivals_and_approaches(self, city, game.player)
 	check(_count_class(city, "WorldEnvironment") == 1 and _count_class(city, "DirectionalLight3D") == 1, "Capital presentation retains one environment and one directional light")
 	for quality in range(3):
-		check(settings.set_options(quality, 60), "Capital quality %d applies through the existing settings system" % quality)
+		check(settings.set_presentation_preferences(quality, 60, 100, false, false, 100, false, false), "Capital quality %d applies through the existing settings system" % quality)
 		await frames(2)
 		var snapshot: Dictionary = landmarks.snapshot()
 		var optional := 0
@@ -60,9 +62,12 @@ func _run() -> void:
 		check(optional == [2, 4, 7][quality] and snapshot.active_optional_meshes == optional and snapshot.enabled_triangles == visible_faces, "Quality %d optional counts and triangle report match actual visible meshes" % quality)
 		check(_physics_signature(city) == physics and city.get_companion_navigation_graph() == graph, "Quality %d changes no collider or navigation contract" % quality)
 		check(_mesh_identity(landmarks) == geometry, "Quality %d reuses all built landmark meshes and transforms" % quality)
+		PrismheartChecks.arrivals_and_approaches(self, city, game.player)
+		PrismheartChecks.prismheart(self, city, quality)
 		await _camera_routes(quality)
 	check(settings.set_presentation_preferences(2, 60, 100, true, true, 0, true, false), "Reduced motion, effects and zero fauna density use existing preferences")
 	await frames(3)
+	PrismheartChecks.prismheart(self, city, 2, true)
 	check(landmarks.snapshot().active_optional_meshes == 2 and _mesh_identity(landmarks) == geometry, "Reduced effects uses the Low accent budget without rebuilding landmark geometry")
 	check(_count_processing(landmarks) == 0 and _count_class(landmarks, "CollisionObject3D") == 0 and _count_class(landmarks, "NavigationRegion3D") == 0 and _count_class(landmarks, "Light3D") == 0, "Distant landmarks add no per-frame simulation, physics, navigation or lights")
 	check(_physics_signature(city) == physics and city.get_companion_navigation_graph() == graph, "Accessibility changes preserve the complete physical city")
@@ -89,11 +94,11 @@ func _unbaked_boundary() -> void:
 		matching = matching and mesh != null
 		if mesh == null: continue
 		heights[snappedf(mesh.size.y, 0.01)] = true
-		matching = matching and mesh.size.y >= 2.8 and mesh.size.y <= 4.2 and is_equal_approx(mesh.size.x, 4.48) and is_equal_approx(mesh.size.z, 0.8)
+		matching = matching and snappedf(mesh.size.y, 0.01) in [22.0, 26.0, 30.0] and is_equal_approx(mesh.size.x, 4.48) and is_equal_approx(mesh.size.z, 0.8)
 		var shape := node.get_child(0).get_child(0) as CollisionShape3D
 		matching = matching and shape.shape is BoxShape3D and shape.shape.size == mesh.size and shape.global_transform.is_equal_approx(node.global_transform)
 		matching = matching and absf(Vector2(node.position.x, node.position.z).length() - 44.6) < 0.001 and absf(node.position.y - mesh.size.y * 0.5) < 0.001
-	check(matching, "Raised wall native meshes and actual solid shapes match, retain footprints and rise two-to-three times above the 1.4m baseline")
+	check(matching, "Raised wall native meshes and actual solid shapes match, retain footprints and rise to the authored 22/26/30m capital silhouettes")
 	check(heights.size() >= 2, "Actual wall geometry has varied heights instead of one repeated perimeter silhouette")
 	var tower_count := 0
 	var tower_heights: Dictionary = {}
@@ -120,6 +125,7 @@ func _unbaked_boundary() -> void:
 		check(shaft.mesh is CylinderMesh and shaft_shape.shape is CylinderShape3D and is_equal_approx(shaft.mesh.top_radius, 0.48) and is_equal_approx(shaft_shape.shape.radius, 0.48) and is_equal_approx(shaft.mesh.height, shaft_shape.shape.height) and shaft_shape.global_transform.is_equal_approx(shaft.global_transform), "Raised tower shaft and actual solid collider correspond: " + tower.name)
 		check(crown.collision_layer == 8 and crown.collision_mask == 0 and covered and native_bounds.end.y >= 5.5 and native_bounds.end.y <= 8.01, "Tower crown camera collider encloses its actual opaque cap without a new ground obstacle: " + tower.name)
 	check(tower_count == 16 and tower_heights.size() == 3, "Sixteen original boundary towers use three measured skyline heights")
+	PrismheartChecks.unbaked(self, stage)
 	stage.queue_free()
 	await frames(2)
 
@@ -167,7 +173,7 @@ func _geometry() -> void:
 	for id: String in bounds_by_tree:
 		var bounds: AABB = bounds_by_tree[id]
 		tree_heights[id] = {"foundation_y": bounds.position.y, "top_y": bounds.end.y, "full_height": bounds.size.y}
-		check(bounds.end.y >= 22.0 and bounds.end.y <= 30.0 and bounds.position.y >= -9.0 and bounds.position.y <= -7.0, "Named elder tree towers above the player and has a grounded distant cliff-root bed: " + id)
+		check(bounds.end.y >= 57.99 and bounds.end.y <= 70.01 and bounds.position.y >= -9.0 and bounds.position.y <= -7.0, "Named elder tree towers above the player and has a grounded distant cliff-root bed: " + id)
 
 func _portal_profiles() -> void:
 	var identities: Array[StringName] = [&"dungeon", &"rootbound_abyss", &"combat_arena", &"personal_sanctuary"]
@@ -213,6 +219,14 @@ func _camera_routes(quality: int) -> void:
 		var portal := portal_to(destination)
 		var poi: StringName = &"collection_hall" if destination == &"personal_sanctuary" else destination
 		points.append({"point": city.get_poi_approach_position(poi), "yaw": portal.rotation.y + PI})
+	# Preserve every earlier wall/tower/portal probe, then add the new plaza,
+	# all authored districts and the suspended central landmark.
+	for row: Dictionary in Layout.get_exchange_booths():
+		points.append({"point": row.approach, "yaw": float(row.rotation) + PI})
+	for row: Dictionary in Layout.get_districts():
+		points.append({"point": row.approach, "yaw": PI - float(row.angle)})
+	for point: Vector3 in [Vector3.ZERO, Vector3(-4.5, 0, 0), Vector3(4.5, 0, 0)]:
+		points.append({"point": point, "yaw": 0.0})
 	var rig: Node3D = game.camera_rig
 	for pitch in [0.12, 0.98]:
 		for index in range(points.size()):
@@ -231,7 +245,7 @@ func _camera_routes(quality: int) -> void:
 					await physics_frame
 					camera_frames += 1
 					clear = clear and _camera_clear()
-			check(clear and not rig.is_isometric and rig.mode_blend < 0.01, "Quality %d keeps both actual camera transitions outside boundary/portal geometry at probe %d pitch %.2f" % [quality, index, pitch])
+			check(clear and not rig.is_isometric and rig.mode_blend < 0.01, "Quality %d keeps both actual camera transitions outside boundary/portal/booth/Prismheart geometry at probe %d pitch %.2f" % [quality, index, pitch])
 
 func _camera_clear() -> bool:
 	var position: Vector3 = game.camera_rig.camera.global_position

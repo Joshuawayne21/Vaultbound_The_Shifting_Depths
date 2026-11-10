@@ -66,6 +66,9 @@ func _holder(record: Dictionary, kind: StringName) -> Node3D:
 	var angle := deg_to_rad(float(record.angle))
 	node.position = Vector3(sin(angle), 0, -cos(angle)) * float(record.radius)
 	node.rotation.y = -angle
+	if kind == &"elder_tree":
+		var width := clampf(float(record.get("width_scale", 1.0)), 1.0, 1.6)
+		node.scale = Vector3(width, 1.0, width)
 	node.set_meta("capital_landmark_id", String(record.id))
 	node.set_meta("capital_landmark_kind", kind)
 	node.set_meta("authored_height", float(record.height))

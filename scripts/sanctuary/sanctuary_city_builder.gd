@@ -3,9 +3,17 @@ extends RefCounted
 
 const Architecture = preload("res://scripts/world/architecture.gd")
 const Dressing = preload("res://scripts/visual/sanctuary_dressing.gd")
+const CapitalArchitecture = preload("res://scripts/sanctuary/prismheart_architecture.gd")
+const Prismheart = preload("res://scripts/sanctuary/prismheart_visual.gd")
+const CAPITAL = preload("res://resources/sanctuary/prismheart_capital.tres")
+const IVORY = preload("res://resources/materials/home_ivory.tres")
+const ROYAL_BLUE = preload("res://resources/materials/home_royal_blue.tres")
 
 static func build(root: Node3D, layout: Resource) -> void:
+	assert(CAPITAL.valid(), "Invalid Prismheart capital architecture configuration")
 	var kit := Architecture.new(root)
+	kit.palette["light_stone"] = IVORY
+	kit.palette["royal_blue"] = ROYAL_BLUE
 	kit.environment(false)
 	var floor_mesh := kit.cylinder(Vector3(0, -0.5, 0), layout.radius, 1.0, "dark_stone", true, 96)
 	floor_mesh.name = "CityGround"
@@ -28,6 +36,7 @@ static func build(root: Node3D, layout: Resource) -> void:
 			_terrace(root, layout, district)
 	_build_boundary(kit, layout)
 	_build_exchange(kit)
+	CapitalArchitecture.build(root, kit.palette, layout)
 	_build_ring_furniture(kit, layout)
 	_build_wayfinding(kit, layout)
 
@@ -108,29 +117,36 @@ static func _build_boundary(kit: Architecture, layout: Resource) -> void:
 		var angle := (index + 0.5) * TAU / 64.0
 		var at := Vector3(sin(angle) * 44.6, 0, -cos(angle) * 44.6)
 		var basis := Basis(Vector3.UP, -angle)
-		var height := 3.2 + float(index % 3) * 0.5
+		var height := float(CAPITAL.wall_heights[index % CAPITAL.wall_heights.size()])
 		# The original 64 wall footprints remain authoritative for movement.
 		# Raised opaque masonry and its world/camera collider share one size.
-		var wall := kit.box(at + Vector3.UP * height * 0.5, Vector3(4.48, height, 0.8), "stone", true)
+		var wall := kit.box(at + Vector3.UP * height * 0.5, Vector3(4.48, height, 0.8), "light_stone", true)
 		wall.name = "CapitalWall_%02d" % index
 		wall.rotation.y = -angle
 		wall.add_to_group("capital_boundary_walls")
 		wall.set_meta("capital_wall_index", index)
 		wall.set_meta("capital_wall_height", height)
-		# Insets and coping stay inside the wall envelope. Every quality preset
-		# retains this silhouette; small optional foliage has no collision.
-		art.box(at + Vector3.UP * (height - 0.08), Vector3(4.48, 0.16, 0.8), "light_stone", basis)
-		art.box(at + basis * Vector3(0, 0.32, 0.375), Vector3(4.4, 0.12, 0.055), "bronze", basis)
+		# Every opaque trim remains inside the unchanged X/Z wall envelope;
+		# all presets retain masonry and matching camera/world collision.
+		art.box(at + Vector3.UP * (height - 0.12), Vector3(4.48, 0.24, 0.8), "gold", basis)
+		for y: float in [0.40, 5.8, 12.6]:
+			art.box(at + basis * Vector3(0, y, 0.37), Vector3(4.4, 0.20, 0.06), "gold", basis)
 		for side: float in [-1.0, 1.0]:
-			art.box(at + basis * Vector3(side * 1.93, height * 0.5, 0.36), Vector3(0.3, height - 0.3, 0.08), "light_stone", basis)
+			art.box(at + basis * Vector3(side * 1.93, height * 0.5, 0.35), Vector3(0.3, height - 0.3, 0.10), "stone", basis)
+		art.box(at + basis * Vector3(0, 8.6, 0.365), Vector3(1.65, 4.8, 0.06), "royal_blue", basis)
+		art.box(at + basis * Vector3(0, 8.6, 0.398), Vector3(0.075, 4.3, 0.004), "gold", basis)
 		if index % 2 == 0:
-			var rune := at + basis * Vector3(0, height * 0.59, 0.402)
-			art.box(rune, Vector3(0.075, 0.58, 0.012), "glow", basis)
-			art.box(rune, Vector3(0.38, 0.065, 0.012), "gold", basis)
+			var rune := at + basis * Vector3(0, height - 4.2, 0.398)
+			art.box(rune, Vector3(0.10, 1.8, 0.004), "glow", basis)
+			art.box(rune, Vector3(0.9, 0.08, 0.004), "gold", basis)
 		if index % 4 == 1:
 			for vine in range(3):
-				art.leaf(at + basis * Vector3(-0.8 + float(vine) * 0.7, height - 0.7, 0.4), 0.65, 0.15, "leaf", -angle, PI)
-	art.flush("CapitalMasonry")
+				art.leaf(at + basis * Vector3(-0.8 + float(vine) * 0.7, height - 0.7, 0.4), 1.3, 0.30, "leaf", -angle, PI)
+		# Eight spatial sectors permit meaningful culling of small trim instead
+		# of one 90-metre-wide MultiMesh for every ornament material.
+		if index % 8 == 7:
+			art.flush("CapitalMasonrySector%02d" % (index / 8))
+			art = Dressing.new(kit.root, kit.palette)
 	for index in range(16):
 		var angle := (index + 0.5) * TAU / 16.0
 		var at: Vector3 = Vector3(sin(angle), 0, -cos(angle)) * (layout.radius - 1.6)
@@ -184,36 +200,27 @@ static func _build_boundary_tower(kit: Architecture, at: Vector3, index: int) ->
 	node.add_child(blocker)
 
 static func _build_exchange(kit: Architecture) -> void:
-	kit.cylinder(Vector3(0, 0.035, 0), 3.2, 0.045, "dark_stone", false, 48)
-	# Flush ornamental water keeps every original central arrival/combat lane open.
-	var water := kit.cylinder(Vector3(0, 0.065, 0), 2.74, 0.015, "water", false, 48)
+	# Flush fountain surfaces preserve the original central arrival floor.
+	# The giant suspended jewel leaves 7.3m of air beneath its camera envelope.
+	kit.cylinder(Vector3(0, 0.035, 0), 4.2, 0.045, "royal_blue", false, 48)
+	var water := kit.cylinder(Vector3(0, 0.065, 0), 3.8, 0.015, "water", false, 48)
 	water.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	kit.ring(Vector3(0, 0.075, 0), 2.8, 2.85, "gold")
+	kit.ring(Vector3(0, 0.075, 0), 3.85, 3.93, "gold")
 	kit.ring(Vector3(0, 0.076, 0), 1.2, 1.24, "gold")
+	_annulus(kit, 5.2, 5.65, 0.023, "royal_blue")
+	_annulus(kit, 5.2, 5.24, 0.032, "gold")
+	_annulus(kit, 5.61, 5.65, 0.032, "gold")
 	var art := Dressing.new(kit.root, kit.palette)
-	art.facet(Vector3(0, 4.9, 0), Vector3(1.0, 1.65, 1.0), "crystal", PI / 6.0)
-	art.facet(Vector3(0, 4.9, 0.01), Vector3(0.48, 1.85, 0.48), "glow", PI / 6.0)
-	for index in range(4):
-		var angle := PI / 4.0 + index * TAU / 4.0
-		art.facet(Vector3(sin(angle) * 0.88, 4.2, cos(angle) * 0.88), Vector3(0.24, 0.48, 0.24), "gold", angle)
-	kit.ring(Vector3(0, 3.88, 0), 1.02, 1.065, "gold")
-	for index in range(16):
-		var angle := index * TAU / 16.0
+	for index in range(24):
+		var angle := index * TAU / 24.0
 		var radial := Vector3(sin(angle), 0, cos(angle))
 		art.box(radial * 14.8 + Vector3.UP * 0.035, Vector3(0.12, 0.018, 1.0), "gold", Basis(Vector3.UP, angle))
-		art.box(radial * 2.5 + Vector3.UP * 0.09, Vector3(0.045, 0.02, 0.42), "gold", Basis(Vector3.UP, angle))
+		art.box(radial * 3.35 + Vector3.UP * 0.09, Vector3(0.045, 0.02, 0.42), "gold", Basis(Vector3.UP, angle))
 	art.flush("ExchangeInlay")
-	var body := StaticBody3D.new()
-	body.name = "HeartCameraOccluder"
-	body.collision_layer = 8
-	body.collision_mask = 0
-	body.position = Vector3(0, 4.9, 0)
-	var collider := CollisionShape3D.new()
-	var shape := BoxShape3D.new()
-	shape.size = Vector3(1.05, 2.45, 1.05)
-	collider.shape = shape
-	body.add_child(collider)
-	kit.root.add_child(body)
+	var heart := Prismheart.new()
+	heart.name = "LivingPrismheart"
+	heart.set_meta("dynamic_visual", true)
+	kit.root.add_child(heart)
 
 static func _build_ring_furniture(kit: Architecture, layout: Resource) -> void:
 	for index in range(8):

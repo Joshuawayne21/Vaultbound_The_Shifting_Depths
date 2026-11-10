@@ -5,23 +5,23 @@
 [resource]
 script = ExtResource("1")
 trees = Array[Dictionary]([{
-"id": "lantern_crown", "name": "The Lantern Crown", "angle": 22.5, "radius": 70.0, "height": 26.0,
+"id": "lantern_crown", "name": "The Lantern Crown", "angle": 22.5, "radius": 78.0, "height": 64.0, "width_scale": 1.6,
 "bark": Color(0.34, 0.23, 0.15, 1), "leaf": Color(0.16, 0.47, 0.28, 1), "accent": Color(0.80, 0.67, 0.24, 1)
 }, {
-"id": "moonveil_willow", "name": "Moonveil Willow", "angle": 112.5, "radius": 70.0, "height": 24.0,
+"id": "moonveil_willow", "name": "Moonveil Willow", "angle": 112.5, "radius": 78.0, "height": 58.0, "width_scale": 1.6,
 "bark": Color(0.31, 0.32, 0.43, 1), "leaf": Color(0.26, 0.43, 0.57, 1), "accent": Color(0.59, 0.38, 0.89, 1)
 }, {
-"id": "sundered_root", "name": "The Sundered Elder", "angle": 202.5, "radius": 70.0, "height": 30.0,
+"id": "sundered_root", "name": "The Sundered Elder", "angle": 202.5, "radius": 78.0, "height": 70.0, "width_scale": 1.6,
 "bark": Color(0.40, 0.29, 0.20, 1), "leaf": Color(0.12, 0.46, 0.38, 1), "accent": Color(0.16, 0.85, 0.78, 1)
 }, {
-"id": "starbough", "name": "Starbough Sentinel", "angle": 292.5, "radius": 70.0, "height": 22.0,
+"id": "starbough", "name": "Starbough Sentinel", "angle": 292.5, "radius": 78.0, "height": 60.0, "width_scale": 1.6,
 "bark": Color(0.49, 0.47, 0.40, 1), "leaf": Color(0.38, 0.56, 0.27, 1), "accent": Color(0.42, 0.80, 0.95, 1)
 }])
 waterfalls = Array[Dictionary]([{
-"id": "dawn_cascade", "angle": 67.5, "radius": 73.0, "height": 17.0
+"id": "dawn_cascade", "angle": 67.5, "radius": 73.0, "height": 42.0
 }, {
-"id": "violet_cascade", "angle": 247.5, "radius": 73.0, "height": 20.0
+"id": "violet_cascade", "angle": 247.5, "radius": 73.0, "height": 48.0
 }])
 floating_stones = Array[Dictionary]([{
-"id": "vault_shards", "angle": 157.5, "radius": 76.0, "height": 18.0
+"id": "vault_shards", "angle": 157.5, "radius": 76.0, "height": 50.0
 }])

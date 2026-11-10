@@ -1,0 +1,1725 @@
+{
+  "stage": "Personal Sanctuary overhaul Stage6.1 \u2014 Prismheart capital architecture and six shared Exchange booths",
+  "status": "Focused native automated validation passed; rendered presentation and physical Android acceptance remain separate",
+  "checked_at_utc": "2026-11-09T23:56:21.265037+00:00",
+  "engine": "Godot 4.6.3.stable.official.7d41c59c4",
+  "renderer": "GL Compatibility; headless native physics/input checks",
+  "build": "0.7.0-home6a",
+  "android_version_code": 28,
+  "base_commit": "efc934f516bcceb688aef10f606b0f769009151a",
+  "source_sha256": "28ecefaf3da8d85b983c8af81119b436cc876d5062815343507665b48c91ba79",
+  "semantic_file_count": 1205,
+  "source_manifest": {
+    "path": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source.json",
+    "sha256": "c0799362845f4fc5c9d6449995fc1d05cba2d22870316b77c8871cbb6bcecdc7"
+  },
+  "source_scope": "scripts/resources/scenes/assets/tests excluding .uid/.import, plus project.godot/export_presets.cfg; documentation excluded",
+  "accepted_gate": {
+    "path": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g",
+    "checks": 8250,
+    "runtime_modes": 32,
+    "suites": 30,
+    "new_or_expanded_modes": 3,
+    "new_or_expanded_checks": 837,
+    "retained_modes": 29,
+    "retained_checks": 7413,
+    "strict_loads": 24,
+    "startup_frames": 120,
+    "runtime_host_seconds": 575.645,
+    "independent_readers": [
+      "demo_exchange_restart_test:read",
+      "exchange_isolation_test:read"
+    ],
+    "note": "All32 accepted modes use one final frozen source. Earlier failed/diagnostic runs and the separate budget probe are excluded from accepted assertion totals."
+  },
+  "setup": [
+    {
+      "mode": "import",
+      "exit_code": 0,
+      "checks": 0,
+      "seconds": 6.888,
+      "errors": [],
+      "environment_notices": [
+        "ERROR: Condition \"_sock == -1\" is true. Returning: FAILED",
+        "ERROR: Condition \"err != OK\" is true. Returning: ERR_CANT_CREATE",
+        "ERROR: Condition \"_sock == -1\" is true. Returning: FAILED",
+        "ERROR: Condition \"err != OK\" is true. Returning: ERR_CANT_CREATE",
+        "Unable to open Android 'build-tools' directory."
+      ],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/import.log",
+      "sha256": "5795e0406184f8a514df507a8718e59c755a2bb7ed15abf2a91e98c6d3b03cad",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--editor",
+        "--import",
+        "--quit"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "strict-loads",
+      "exit_code": 0,
+      "checks": 0,
+      "seconds": 1.569,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/strict-loads.log",
+      "sha256": "72876079169f8208233ad6f00294bf7ee522b109d3c7d360fa9583b81d915b9e",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/preflight.gd",
+        "--",
+        "res://scripts/party/companion.gd",
+        "res://scripts/player/player.gd",
+        "res://scripts/resources/home_catalog.gd",
+        "res://tests/test_harness.gd",
+        "res://tests/pet_test_fixtures.gd",
+        "res://tests/home_test_fixtures.gd",
+        "res://tests/rootbound_rewards_fixture.gd",
+        "res://tests/home_world_fixture.gd",
+        "res://tests/home_management_fixture.gd",
+        "res://tests/foyer_native_fixture.gd",
+        "res://scripts/exchange/demo_exchange_controller.gd",
+        "res://scripts/sanctuary/prismheart_architecture.gd",
+        "res://scripts/sanctuary/prismheart_capital_data.gd",
+        "res://scripts/sanctuary/prismheart_visual.gd",
+        "res://scripts/sanctuary/sanctuary_city_builder.gd",
+        "res://scripts/sanctuary/sanctuary_landmarks.gd",
+        "res://scripts/sanctuary/sanctuary_layout.gd",
+        "res://scripts/world/sanctuary.gd",
+        "res://tests/city_navigation_test.gd",
+        "res://tests/exchange_booths_test.gd",
+        "res://tests/prismheart_native_checks.gd",
+        "res://tests/sanctuary_capital_test.gd",
+        "res://tests/static_visual_batcher_test.gd",
+        "res://tests/visual_integration_test.gd"
+      ],
+      "ok": true,
+      "loaded": [
+        "res://scripts/party/companion.gd",
+        "res://scripts/player/player.gd",
+        "res://scripts/resources/home_catalog.gd",
+        "res://tests/test_harness.gd",
+        "res://tests/pet_test_fixtures.gd",
+        "res://tests/home_test_fixtures.gd",
+        "res://tests/rootbound_rewards_fixture.gd",
+        "res://tests/home_world_fixture.gd",
+        "res://tests/home_management_fixture.gd",
+        "res://tests/foyer_native_fixture.gd",
+        "res://scripts/exchange/demo_exchange_controller.gd",
+        "res://scripts/sanctuary/prismheart_architecture.gd",
+        "res://scripts/sanctuary/prismheart_capital_data.gd",
+        "res://scripts/sanctuary/prismheart_visual.gd",
+        "res://scripts/sanctuary/sanctuary_city_builder.gd",
+        "res://scripts/sanctuary/sanctuary_landmarks.gd",
+        "res://scripts/sanctuary/sanctuary_layout.gd",
+        "res://scripts/world/sanctuary.gd",
+        "res://tests/city_navigation_test.gd",
+        "res://tests/exchange_booths_test.gd",
+        "res://tests/prismheart_native_checks.gd",
+        "res://tests/sanctuary_capital_test.gd",
+        "res://tests/static_visual_batcher_test.gd",
+        "res://tests/visual_integration_test.gd"
+      ]
+    },
+    {
+      "mode": "startup",
+      "exit_code": 0,
+      "checks": 0,
+      "seconds": 6.032,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/startup.log",
+      "sha256": "a9912b85473f126d3f4f63ec824170c828df3473a292f866dde86cafda5b66da",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--quit-after",
+        "120"
+      ],
+      "ok": true
+    }
+  ],
+  "results": [
+    {
+      "mode": "static_visual_batcher_test",
+      "exit_code": 0,
+      "checks": 32,
+      "seconds": 1.47,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/static_visual_batcher_test.log",
+      "sha256": "27ed6fb9e08fe2797b26cd6084c6275030b89d30482c08168d65d44ccc2c8136",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/static_visual_batcher_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "visual_integration_test",
+      "exit_code": 0,
+      "checks": 63,
+      "seconds": 9.391,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/visual_integration_test.log",
+      "sha256": "1674a2584782984a6d8d4cc4c106d2af0fda43e42a3684f98782360769771234",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/visual_integration_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "exchange_booths_test",
+      "exit_code": 0,
+      "checks": 294,
+      "seconds": 6.335,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/exchange_booths_test.log",
+      "sha256": "c109258605262ad095f5b5af69f7f555befe6025a5db0e868ae33fb7579e65ab",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/exchange_booths_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "sanctuary_capital_test",
+      "exit_code": 0,
+      "checks": 460,
+      "seconds": 194.595,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/sanctuary_capital_test.log",
+      "sha256": "b69c581679e0c2d69a248a94b5b6bce60ac46d10244631373805fbf97629f4c6",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/sanctuary_capital_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "city_navigation_test",
+      "exit_code": 0,
+      "checks": 83,
+      "seconds": 147.501,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/city_navigation_test.log",
+      "sha256": "8b0482d81cacdad4e7cf6a648154aa15d71e1e5748f77e5088df8789ad68299b",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/city_navigation_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "sanctuary_world_test",
+      "exit_code": 0,
+      "checks": 235,
+      "seconds": 14.256,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/sanctuary_world_test.log",
+      "sha256": "9d584dd3dfd309f3a7c0bbef046a897315ac4abffb6aff9cc0caa1173c4a8521",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/sanctuary_world_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "sanctuary_ui_test",
+      "exit_code": 0,
+      "checks": 65,
+      "seconds": 5.33,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/sanctuary_ui_test.log",
+      "sha256": "abb7b5b4d990ca94b1d327997bc31e66ebdce997051f7cbde13d0770a1905a35",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/sanctuary_ui_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "city_surface_test",
+      "exit_code": 0,
+      "checks": 21,
+      "seconds": 7.285,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/city_surface_test.log",
+      "sha256": "756511c070bb81e24ba8541ee0aa64c0cba7f32447cc85b75aedec6d042db711",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/city_surface_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "city_scenery_test",
+      "exit_code": 0,
+      "checks": 141,
+      "seconds": 2.773,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/city_scenery_test.log",
+      "sha256": "fedd6508312c6461849c681d085e1c6f25aeecd0b4653263d3d0f2ce70db0d66",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/city_scenery_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "visual_settings_test",
+      "exit_code": 0,
+      "checks": 54,
+      "seconds": 1.468,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/visual_settings_test.log",
+      "sha256": "9d79ff262ccc6fb1db8aa8b89de2cf025570d9f1f3d1a6f5c1ff0cbf8623401c",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/visual_settings_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "visual_accessibility_test",
+      "exit_code": 0,
+      "checks": 144,
+      "seconds": 3.425,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/visual_accessibility_test.log",
+      "sha256": "d6a92780b2f3acccbd26eb927dcd92938ec590b5b825a1920a5d1cb0f1805720",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/visual_accessibility_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "visual_style_test",
+      "exit_code": 0,
+      "checks": 48,
+      "seconds": 1.118,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/visual_style_test.log",
+      "sha256": "a19d127a155043f61ad461f5bdfd71805324571335449325fc8c9309dccd2744",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/visual_style_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "demo_exchange_model_test",
+      "exit_code": 0,
+      "checks": 597,
+      "seconds": 6.436,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/demo_exchange_model_test.log",
+      "sha256": "aff3d1e00b603babfad6f7361fda36288be158ef84850a0734c69030c2191774",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/demo_exchange_model_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "demo_exchange_eligibility_test",
+      "exit_code": 0,
+      "checks": 29,
+      "seconds": 1.119,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/demo_exchange_eligibility_test.log",
+      "sha256": "3145c337fbbeca67a86099c33b5cb233db4f3505cb81441d997edfb203762883",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/demo_exchange_eligibility_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "demo_exchange_store_test",
+      "exit_code": 0,
+      "checks": 42,
+      "seconds": 1.57,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/demo_exchange_store_test.log",
+      "sha256": "df330c6c444fc237bef59b5b743ae3295cba2dc62666357e17fccf741d8c52c2",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/demo_exchange_store_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "demo_exchange_sales_test",
+      "exit_code": 0,
+      "checks": 979,
+      "seconds": 23.89,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/demo_exchange_sales_test.log",
+      "sha256": "29d259e5062697d7f79c7e221ae147faf0a7162843d6c8207d4cbfb14df6150c",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/demo_exchange_sales_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "demo_exchange_controller_test",
+      "exit_code": 0,
+      "checks": 83,
+      "seconds": 3.975,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/demo_exchange_controller_test.log",
+      "sha256": "6d7275d14c4a8432c12d5e8d20c9307dc336163ef7a0c4aeb48b57e0e3c7bfd5",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/demo_exchange_controller_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "demo_exchange_ui_test",
+      "exit_code": 0,
+      "checks": 408,
+      "seconds": 8.19,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/demo_exchange_ui_test.log",
+      "sha256": "826f626b82fd4372896d39de5a452cc7a35296907ed083f3886a04eb549c7ecb",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/demo_exchange_ui_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "native_exchange_input_test",
+      "exit_code": 0,
+      "checks": 131,
+      "seconds": 5.482,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/native_exchange_input_test.log",
+      "sha256": "e91d200438aa92854bbe8b2a53dc7697337765785462e989ab17351d20c708c9",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/native_exchange_input_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "demo_exchange_restart_test:write",
+      "exit_code": 0,
+      "checks": 11,
+      "seconds": 1.218,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/demo_exchange_restart_test_write.log",
+      "sha256": "f76ef4dae70dfe0960765db1a02c578e37a055fc9685a08ce057d1baa97433da",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/demo_exchange_restart_test.gd",
+        "--",
+        "--write",
+        "/tmp/vaultbound-6f-home6-focused-32tptk6g/demo_exchange_restart_test/vaultbound-6f-home6-exchange-restart"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "demo_exchange_restart_test:read",
+      "exit_code": 0,
+      "checks": 11,
+      "seconds": 1.218,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/demo_exchange_restart_test_read.log",
+      "sha256": "c071e4ad3fa897f1537320829e17fbef6e406c706661a33a6cf2b93a008e3d85",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/demo_exchange_restart_test.gd",
+        "--",
+        "--read",
+        "/tmp/vaultbound-6f-home6-focused-32tptk6g/demo_exchange_restart_test/vaultbound-6f-home6-exchange-restart"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "exchange_isolation_test:write",
+      "exit_code": 0,
+      "checks": 2041,
+      "seconds": 56.197,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/exchange_isolation_test_write.log",
+      "sha256": "16b6d0b58e364498a7152cf61c05af2b90ab8f8ec593c75b561d3cdbf41a891b",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/exchange_isolation_test.gd",
+        "--",
+        "--write"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "exchange_isolation_test:read",
+      "exit_code": 0,
+      "checks": 38,
+      "seconds": 2.521,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/exchange_isolation_test_read.log",
+      "sha256": "47c6972ad9cbad0d79ed40fdbf3944207b96ec084656743b9dc3e0281782f6f5",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/exchange_isolation_test.gd",
+        "--",
+        "--read"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "home_expansion_integration_test",
+      "exit_code": 0,
+      "checks": 223,
+      "seconds": 19.622,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/home_expansion_integration_test.log",
+      "sha256": "005d665e038f97c1118978e948ed39411f085079906845ff6cf0cbbe58a6c0c4",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/home_expansion_integration_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "home_room_services_test",
+      "exit_code": 0,
+      "checks": 48,
+      "seconds": 5.883,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/home_room_services_test.log",
+      "sha256": "8c0dc0ad641196fb2f33a0d3f57ca001293bdb8954696c3eae5999f09350f3f3",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/home_room_services_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "tester_access_ui_test",
+      "exit_code": 0,
+      "checks": 42,
+      "seconds": 2.22,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/tester_access_ui_test.log",
+      "sha256": "5750054060f09730270e86364a56d7fb22362bc7606358eb1da8c651c247173f",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/tester_access_ui_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "depth_portal_ui_test",
+      "exit_code": 0,
+      "checks": 70,
+      "seconds": 5.38,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/depth_portal_ui_test.log",
+      "sha256": "1c414b965684c79b604ff5fb3a3d16e78f366d3901e6690931175c5bb8262b44",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/depth_portal_ui_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "depth_travel_guard_test",
+      "exit_code": 0,
+      "checks": 60,
+      "seconds": 4.728,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/depth_travel_guard_test.log",
+      "sha256": "acf4d9ebea0636d89fa4d99970321f119047a65c0ab89ccbfa92efff3b28d81d",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/depth_travel_guard_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "early_return_travel_test",
+      "exit_code": 0,
+      "checks": 349,
+      "seconds": 17.965,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/early_return_travel_test.log",
+      "sha256": "2931dcc09bd1135efaae09bc015bb97de104593fa244e078ce50ec69367bec15",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/early_return_travel_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "mobile_ui_integration_test",
+      "exit_code": 0,
+      "checks": 152,
+      "seconds": 2.973,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/mobile_ui_integration_test.log",
+      "sha256": "e5871f7aec91af3d91b44c8d197e20b5491ad77f1cc7ad3aa6408e1cd7b0424f",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/mobile_ui_integration_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "ui_layout_test",
+      "exit_code": 0,
+      "checks": 247,
+      "seconds": 1.569,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/ui_layout_test.log",
+      "sha256": "69e85ebf3aaad1eff0fae6bbe0fad4f84f1a9bd4f39af318c87a1508db0878f0",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/ui_layout_test.gd"
+      ],
+      "ok": true
+    },
+    {
+      "mode": "smoke_test",
+      "exit_code": 0,
+      "checks": 1049,
+      "seconds": 8.542,
+      "errors": [],
+      "environment_notices": [],
+      "log": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/logs/smoke_test.log",
+      "sha256": "fc26230168079036fa1b8cd91c67d5b76d60a5af7ab9771dd50a6b15bd3387ea",
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "res://tests/smoke_test.gd"
+      ],
+      "ok": true
+    }
+  ],
+  "native_evidence": {
+    "new_unbatched_prismheart_architecture": {
+      "lights": 0,
+      "meshes": 226,
+      "processing": 0,
+      "triangles": 4722
+    },
+    "capital_landmarks_only_and_camera_matrix": {
+      "camera_transition_frames": 11016,
+      "meshes": 19,
+      "optional_caps": [
+        2,
+        4,
+        7
+      ],
+      "tree_heights": {
+        "lantern_crown": {
+          "foundation_y": -8.0,
+          "full_height": 72.0,
+          "top_y": 64.0
+        },
+        "moonveil_willow": {
+          "foundation_y": -8.0,
+          "full_height": 66.0,
+          "top_y": 58.0
+        },
+        "starbough": {
+          "foundation_y": -8.0,
+          "full_height": 68.0,
+          "top_y": 60.0
+        },
+        "sundered_root": {
+          "foundation_y": -8.0,
+          "full_height": 75.9000015258789,
+          "top_y": 67.9000015258789
+        }
+      },
+      "triangles": 8671
+    },
+    "continuous_city_traversal_player_guardian_mystic": {
+      "Guardian": {
+        "geometry_probes": 19920,
+        "recoveries": 0,
+        "replans": 323
+      },
+      "Mystic": {
+        "geometry_probes": 16816,
+        "recoveries": 0,
+        "replans": 281
+      },
+      "distance": {
+        "Guardian": 594.968380607665,
+        "Mystic": 603.277137382829,
+        "Player": 588.30825870746
+      },
+      "maximum_actor_step": 0.0884170308709145,
+      "observed_physics_frames": 8703,
+      "player": {
+        "geometry_probes": 24378,
+        "replans": 200
+      }
+    },
+    "shared_test_exchange": {
+      "adapter_identity": 307929025327,
+      "booths": [
+        "exchange_01",
+        "exchange_02",
+        "exchange_03",
+        "exchange_04",
+        "exchange_05",
+        "exchange_06"
+      ],
+      "checks": 294,
+      "physical_android_tested": false,
+      "protected_files": {
+        "profile.json": {
+          "bytes": 8788,
+          "sha256": "cb871b4217028c3fdc54e671c597fac706aaf58072f4900db049ccc46f5eeade"
+        },
+        "profile.json.bak": {
+          "bytes": 8787,
+          "sha256": "6d0fea439c4085ab2df06a35663084126fa094864e76db135959be335678c342"
+        },
+        "profile.json.pre-v11.bak": {
+          "bytes": 3943,
+          "sha256": "1032fe1bbc97e8b74966f3bcab4eb3a58aecf344746751d90a1c2e383917f2b9"
+        },
+        "profile.json.pre-v5.bak": {
+          "bytes": 3943,
+          "sha256": "1032fe1bbc97e8b74966f3bcab4eb3a58aecf344746751d90a1c2e383917f2b9"
+        },
+        "social.cfg": {
+          "bytes": 75,
+          "sha256": "c35f02e55bf3f9300ac6997f1fe2251ccac88205e30c260b4192b74e2819b76c"
+        },
+        "visual.cfg": {
+          "bytes": 222,
+          "sha256": "6031830797e20081f355c5dafcc3a2da43f52d28aefecf23f6dc8da183de2032"
+        }
+      },
+      "sale_count": 1,
+      "sources": 7,
+      "test_revision": 5
+    },
+    "postbatch_native_budgets_by_quality": [
+      {
+        "active_world_postbatch": {
+          "allocated_instance_triangles": 102629,
+          "allocated_multimesh_instances": 2201,
+          "allocated_multimesh_triangles": 24920,
+          "allocated_particles": 0,
+          "character_bodies": 0,
+          "directional_lights": 1,
+          "empty_mesh_nodes": 528,
+          "enabled_physics_process_nodes": 0,
+          "enabled_process_nodes": 9,
+          "environments": 1,
+          "labels_3d": 48,
+          "local_lights": 0,
+          "mesh_triangles": 77709,
+          "nodes": 2792,
+          "nonempty_mesh_nodes": 1081,
+          "nonempty_multimesh_nodes": 208,
+          "particle_nodes": 0,
+          "static_bodies": 354,
+          "unique_mesh_resources": 979,
+          "unique_surface_or_override_materials": 111,
+          "visible_instance_triangles": 89916,
+          "visible_labels_3d": 44,
+          "visible_mesh_triangles": 69824,
+          "visible_multimesh_instances": 1674,
+          "visible_multimesh_triangles": 20092,
+          "visible_nonempty_mesh_nodes": 927,
+          "visible_nonempty_multimesh_nodes": 204,
+          "visible_shadow_geometry_nodes": 389,
+          "visible_shadow_lights": 0
+        },
+        "decorative_caps_and_metadata": {
+          "AmbientButterflies": {
+            "active": 0,
+            "allocated": 4,
+            "displayed_indices": [],
+            "requested": 2,
+            "seed": 1071,
+            "swept_bounds": "[P: (-1.0, 0.55, -0.8), S: (2.0, 0.95, 1.6)]"
+          },
+          "AmbientButterflies2": {
+            "active": 0,
+            "allocated": 4,
+            "displayed_indices": [],
+            "requested": 2,
+            "seed": 1072,
+            "swept_bounds": "[P: (-1.0, 0.55, -0.8), S: (2.0, 0.95, 1.6)]"
+          },
+          "AmbientButterflies3": {
+            "active": 0,
+            "allocated": 4,
+            "displayed_indices": [],
+            "requested": 2,
+            "seed": 1073,
+            "swept_bounds": "[P: (-1.0, 0.55, -0.8), S: (2.0, 0.95, 1.6)]"
+          },
+          "AmbientButterflies4": {
+            "active": 0,
+            "allocated": 4,
+            "displayed_indices": [],
+            "requested": 2,
+            "seed": 1074,
+            "swept_bounds": "[P: (-1.0, 0.55, -0.8), S: (2.0, 0.95, 1.6)]"
+          },
+          "LivingPrismheart": {
+            "active_sparks": 4,
+            "center_y": 11.0,
+            "effects_scale": 1.0,
+            "motion_scale": 1.0,
+            "native_placeholder_art": true,
+            "pose_interval": 0.1,
+            "realtime_lights": 0,
+            "spark_cap": 12
+          },
+          "SanctuaryAmbience": {
+            "active_animals": 0,
+            "active_townsfolk": 1,
+            "activity_updates": 6,
+            "actor_interval": 0.1,
+            "actor_updates": 3,
+            "allocated_animals": 4,
+            "allocated_townsfolk": 4,
+            "animal_cap": 0,
+            "audio_allocated_bytes": 0,
+            "audio_playing": false,
+            "cycle_seconds": 1200.0,
+            "daylight_interval": 0.5,
+            "daylight_updates": 1,
+            "motion_scale": 1.0,
+            "night_amount": 0.0,
+            "optional_audio": false,
+            "phase": 0.500295223611111,
+            "townsfolk_cap": 2,
+            "uses_existing_environment": true,
+            "uses_existing_light": true
+          },
+          "SanctuaryLandscape": {
+            "authored_transform_count": 656,
+            "collision_nodes": 0,
+            "interior_batch_limit": 24,
+            "interior_batches": 24,
+            "interior_capacity": 560,
+            "interior_distance": 24.0,
+            "interior_instances": 280,
+            "navigation_nodes": 0,
+            "panorama_batches": 16,
+            "panorama_bounds": [
+              "[P: (-10.85779, -2.4, -89.53615), S: (21.85326, 15.266, 15.54656)]",
+              "[P: (-8.368017, -4.0, -87.32759), S: (17.29325, 17.55, 11.45658)]",
+              "[P: (44.07994, -2.4, -70.88283), S: (26.83089, 15.616, 26.83089)]",
+              "[P: (42.42641, -2.8, -72.12489), S: (29.69849, 0.00001, 29.69849)]",
+              "[P: (72.97326, -2.4, -11.25395), S: (16.25795, 15.616, 22.69969)]",
+              "[P: (75.87101, -4.0, -8.368017), S: (11.45658, 17.55, 17.29325)]",
+              "[P: (44.22547, -2.4, 44.33167), S: (26.50679, 15.022, 26.50678)]",
+              "[P: (42.42641, -2.8, 42.42641), S: (29.69849, 0.00001, 29.69849)]",
+              "[P: (-11.18495, -2.4, 72.81063), S: (22.44043, 15.616, 16.88811)]",
+              "[P: (-8.925231, -4.0, 75.87101), S: (17.29325, 17.55, 11.45658)]",
+              "[P: (-71.33376, -2.4, 43.88795), S: (27.02209, 15.266, 27.02209)]",
+              "[P: (-72.12489, -2.8, 42.42641), S: (29.69849, 0.00001, 29.69848)]",
+              "[P: (-89.39868, -2.4, -11.55811), S: (16.12881, 15.616, 22.80424)]",
+              "[P: (-87.32759, -4.0, -8.92523), S: (11.45658, 17.55, 17.29325)]",
+              "[P: (-70.99261, -2.4, -71.82935), S: (27.17405, 15.266, 27.17405)]",
+              "[P: (-72.12489, -2.8, -72.12489), S: (29.69848, 0.00001, 29.69849)]"
+            ],
+            "panorama_distance": 180.0,
+            "panorama_form_limit": 24,
+            "panorama_forms": 12,
+            "panorama_instances": 64,
+            "panorama_minimum_radius": 60.0,
+            "panorama_tree_capacity": 96,
+            "panorama_tree_instances": 48,
+            "panorama_triangle_capacity": 6216,
+            "panorama_triangles": 3336,
+            "quality": 0,
+            "retained_transform_count": 0,
+            "water_reaches": 4
+          }
+        },
+        "game_with_player_party_ui": {
+          "allocated_instance_triangles": 118935,
+          "allocated_multimesh_instances": 2201,
+          "allocated_multimesh_triangles": 24920,
+          "allocated_particles": 0,
+          "character_bodies": 3,
+          "directional_lights": 2,
+          "empty_mesh_nodes": 528,
+          "enabled_physics_process_nodes": 5,
+          "enabled_process_nodes": 16,
+          "environments": 2,
+          "labels_3d": 50,
+          "local_lights": 0,
+          "mesh_triangles": 94015,
+          "nodes": 3067,
+          "nonempty_mesh_nodes": 1243,
+          "nonempty_multimesh_nodes": 208,
+          "particle_nodes": 0,
+          "static_bodies": 354,
+          "unique_mesh_resources": 1069,
+          "unique_surface_or_override_materials": 144,
+          "visible_instance_triangles": 104364,
+          "visible_labels_3d": 46,
+          "visible_mesh_triangles": 84272,
+          "visible_multimesh_instances": 1674,
+          "visible_multimesh_triangles": 20092,
+          "visible_nonempty_mesh_nodes": 1054,
+          "visible_nonempty_multimesh_nodes": 204,
+          "visible_shadow_geometry_nodes": 514,
+          "visible_shadow_lights": 0
+        },
+        "notes": "Nonempty native Mesh/MultiMesh geometry and instance-multiplied triangles; visible means scene-tree visibility, before frustum/distance culling. Text glyph geometry, sky and particle renderer work are not included in mesh triangles. Not GPU draw calls, memory, frame time or FPS.",
+        "party_members": 3,
+        "party_simulation_paused_for_inventory": true,
+        "quality": 0,
+        "static_architecture_batch_report": {
+          "batch_meshes": 185,
+          "draws_saved": 343,
+          "eligible_meshes": 858,
+          "source_meshes": 528
+        }
+      },
+      {
+        "active_world_postbatch": {
+          "allocated_instance_triangles": 102629,
+          "allocated_multimesh_instances": 2201,
+          "allocated_multimesh_triangles": 24920,
+          "allocated_particles": 0,
+          "character_bodies": 0,
+          "directional_lights": 1,
+          "empty_mesh_nodes": 528,
+          "enabled_physics_process_nodes": 0,
+          "enabled_process_nodes": 9,
+          "environments": 1,
+          "labels_3d": 48,
+          "local_lights": 0,
+          "mesh_triangles": 77709,
+          "nodes": 2792,
+          "nonempty_mesh_nodes": 1081,
+          "nonempty_multimesh_nodes": 208,
+          "particle_nodes": 0,
+          "static_bodies": 354,
+          "unique_mesh_resources": 979,
+          "unique_surface_or_override_materials": 111,
+          "visible_instance_triangles": 94954,
+          "visible_labels_3d": 44,
+          "visible_mesh_triangles": 72430,
+          "visible_multimesh_instances": 1942,
+          "visible_multimesh_triangles": 22524,
+          "visible_nonempty_mesh_nodes": 970,
+          "visible_nonempty_multimesh_nodes": 204,
+          "visible_shadow_geometry_nodes": 389,
+          "visible_shadow_lights": 1
+        },
+        "decorative_caps_and_metadata": {
+          "AmbientButterflies": {
+            "active": 0,
+            "allocated": 4,
+            "displayed_indices": [],
+            "requested": 3,
+            "seed": 1071,
+            "swept_bounds": "[P: (-1.0, 0.55, -0.8), S: (2.0, 0.95, 1.6)]"
+          },
+          "AmbientButterflies2": {
+            "active": 0,
+            "allocated": 4,
+            "displayed_indices": [],
+            "requested": 3,
+            "seed": 1072,
+            "swept_bounds": "[P: (-1.0, 0.55, -0.8), S: (2.0, 0.95, 1.6)]"
+          },
+          "AmbientButterflies3": {
+            "active": 0,
+            "allocated": 4,
+            "displayed_indices": [],
+            "requested": 3,
+            "seed": 1073,
+            "swept_bounds": "[P: (-1.0, 0.55, -0.8), S: (2.0, 0.95, 1.6)]"
+          },
+          "AmbientButterflies4": {
+            "active": 0,
+            "allocated": 4,
+            "displayed_indices": [],
+            "requested": 3,
+            "seed": 1074,
+            "swept_bounds": "[P: (-1.0, 0.55, -0.8), S: (2.0, 0.95, 1.6)]"
+          },
+          "LivingPrismheart": {
+            "active_sparks": 8,
+            "center_y": 11.0,
+            "effects_scale": 1.0,
+            "motion_scale": 1.0,
+            "native_placeholder_art": true,
+            "pose_interval": 0.05,
+            "realtime_lights": 0,
+            "spark_cap": 12
+          },
+          "SanctuaryAmbience": {
+            "active_animals": 2,
+            "active_townsfolk": 3,
+            "activity_updates": 8,
+            "actor_interval": 0.1,
+            "actor_updates": 4,
+            "allocated_animals": 4,
+            "allocated_townsfolk": 4,
+            "animal_cap": 2,
+            "audio_allocated_bytes": 0,
+            "audio_playing": false,
+            "cycle_seconds": 1200.0,
+            "daylight_interval": 0.5,
+            "daylight_updates": 1,
+            "motion_scale": 1.0,
+            "night_amount": 0.0,
+            "optional_audio": false,
+            "phase": 0.500385091944444,
+            "townsfolk_cap": 3,
+            "uses_existing_environment": true,
+            "uses_existing_light": true
+          },
+          "SanctuaryLandscape": {
+            "authored_transform_count": 656,
+            "collision_nodes": 0,
+            "interior_batch_limit": 24,
+            "interior_batches": 24,
+            "interior_capacity": 560,
+            "interior_distance": 34.0,
+            "interior_instances": 424,
+            "navigation_nodes": 0,
+            "panorama_batches": 16,
+            "panorama_bounds": [
+              "[P: (-10.85779, -2.4, -89.53615), S: (21.85326, 15.266, 15.54656)]",
+              "[P: (-8.368017, -4.0, -87.32759), S: (17.29325, 17.55, 11.45658)]",
+              "[P: (44.07994, -2.4, -70.88283), S: (26.83089, 15.616, 26.83089)]",
+              "[P: (42.42641, -2.8, -72.12489), S: (29.69849, 0.00001, 29.69849)]",
+              "[P: (72.97326, -2.4, -11.25395), S: (16.25795, 15.616, 22.69969)]",
+              "[P: (75.87101, -4.0, -8.368017), S: (11.45658, 17.55, 17.29325)]",
+              "[P: (44.22547, -2.4, 44.33167), S: (26.50679, 15.022, 26.50678)]",
+              "[P: (42.42641, -2.8, 42.42641), S: (29.69849, 0.00001, 29.69849)]",
+              "[P: (-11.18495, -2.4, 72.81063), S: (22.44043, 15.616, 16.88811)]",
+              "[P: (-8.925231, -4.0, 75.87101), S: (17.29325, 17.55, 11.45658)]",
+              "[P: (-71.33376, -2.4, 43.88795), S: (27.02209, 15.266, 27.02209)]",
+              "[P: (-72.12489, -2.8, 42.42641), S: (29.69849, 0.00001, 29.69848)]",
+              "[P: (-89.39868, -2.4, -11.55811), S: (16.12881, 15.616, 22.80424)]",
+              "[P: (-87.32759, -4.0, -8.92523), S: (11.45658, 17.55, 17.29325)]",
+              "[P: (-70.99261, -2.4, -71.82935), S: (27.17405, 15.266, 27.17405)]",
+              "[P: (-72.12489, -2.8, -72.12489), S: (29.69848, 0.00001, 29.69849)]"
+            ],
+            "panorama_distance": 180.0,
+            "panorama_form_limit": 24,
+            "panorama_forms": 12,
+            "panorama_instances": 88,
+            "panorama_minimum_radius": 60.0,
+            "panorama_tree_capacity": 96,
+            "panorama_tree_instances": 72,
+            "panorama_triangle_capacity": 6216,
+            "panorama_triangles": 4776,
+            "quality": 1,
+            "retained_transform_count": 0,
+            "water_reaches": 4
+          }
+        },
+        "game_with_player_party_ui": {
+          "allocated_instance_triangles": 118935,
+          "allocated_multimesh_instances": 2201,
+          "allocated_multimesh_triangles": 24920,
+          "allocated_particles": 0,
+          "character_bodies": 3,
+          "directional_lights": 2,
+          "empty_mesh_nodes": 528,
+          "enabled_physics_process_nodes": 5,
+          "enabled_process_nodes": 16,
+          "environments": 2,
+          "labels_3d": 50,
+          "local_lights": 0,
+          "mesh_triangles": 94015,
+          "nodes": 3067,
+          "nonempty_mesh_nodes": 1243,
+          "nonempty_multimesh_nodes": 208,
+          "particle_nodes": 0,
+          "static_bodies": 354,
+          "unique_mesh_resources": 1069,
+          "unique_surface_or_override_materials": 144,
+          "visible_instance_triangles": 109402,
+          "visible_labels_3d": 46,
+          "visible_mesh_triangles": 86878,
+          "visible_multimesh_instances": 1942,
+          "visible_multimesh_triangles": 22524,
+          "visible_nonempty_mesh_nodes": 1097,
+          "visible_nonempty_multimesh_nodes": 204,
+          "visible_shadow_geometry_nodes": 514,
+          "visible_shadow_lights": 1
+        },
+        "notes": "Nonempty native Mesh/MultiMesh geometry and instance-multiplied triangles; visible means scene-tree visibility, before frustum/distance culling. Text glyph geometry, sky and particle renderer work are not included in mesh triangles. Not GPU draw calls, memory, frame time or FPS.",
+        "party_members": 3,
+        "party_simulation_paused_for_inventory": true,
+        "quality": 1,
+        "static_architecture_batch_report": {
+          "batch_meshes": 185,
+          "draws_saved": 343,
+          "eligible_meshes": 858,
+          "source_meshes": 528
+        }
+      },
+      {
+        "active_world_postbatch": {
+          "allocated_instance_triangles": 102629,
+          "allocated_multimesh_instances": 2201,
+          "allocated_multimesh_triangles": 24920,
+          "allocated_particles": 0,
+          "character_bodies": 0,
+          "directional_lights": 1,
+          "empty_mesh_nodes": 528,
+          "enabled_physics_process_nodes": 0,
+          "enabled_process_nodes": 9,
+          "environments": 1,
+          "labels_3d": 48,
+          "local_lights": 0,
+          "mesh_triangles": 77709,
+          "nodes": 2792,
+          "nonempty_mesh_nodes": 1081,
+          "nonempty_multimesh_nodes": 208,
+          "particle_nodes": 0,
+          "static_bodies": 354,
+          "unique_mesh_resources": 979,
+          "unique_surface_or_override_materials": 111,
+          "visible_instance_triangles": 99303,
+          "visible_labels_3d": 44,
+          "visible_mesh_triangles": 74431,
+          "visible_multimesh_instances": 2189,
+          "visible_multimesh_triangles": 24872,
+          "visible_nonempty_mesh_nodes": 997,
+          "visible_nonempty_multimesh_nodes": 205,
+          "visible_shadow_geometry_nodes": 389,
+          "visible_shadow_lights": 1
+        },
+        "decorative_caps_and_metadata": {
+          "AmbientButterflies": {
+            "active": 4,
+            "allocated": 4,
+            "displayed_indices": [
+              1,
+              2,
+              3,
+              0
+            ],
+            "requested": 4,
+            "seed": 1071,
+            "swept_bounds": "[P: (-1.0, 0.55, -0.8), S: (2.0, 0.95, 1.6)]"
+          },
+          "AmbientButterflies2": {
+            "active": 0,
+            "allocated": 4,
+            "displayed_indices": [],
+            "requested": 4,
+            "seed": 1072,
+            "swept_bounds": "[P: (-1.0, 0.55, -0.8), S: (2.0, 0.95, 1.6)]"
+          },
+          "AmbientButterflies3": {
+            "active": 0,
+            "allocated": 4,
+            "displayed_indices": [],
+            "requested": 4,
+            "seed": 1073,
+            "swept_bounds": "[P: (-1.0, 0.55, -0.8), S: (2.0, 0.95, 1.6)]"
+          },
+          "AmbientButterflies4": {
+            "active": 0,
+            "allocated": 4,
+            "displayed_indices": [],
+            "requested": 4,
+            "seed": 1074,
+            "swept_bounds": "[P: (-1.0, 0.55, -0.8), S: (2.0, 0.95, 1.6)]"
+          },
+          "LivingPrismheart": {
+            "active_sparks": 12,
+            "center_y": 11.0,
+            "effects_scale": 1.0,
+            "motion_scale": 1.0,
+            "native_placeholder_art": true,
+            "pose_interval": 0.05,
+            "realtime_lights": 0,
+            "spark_cap": 12
+          },
+          "SanctuaryAmbience": {
+            "active_animals": 4,
+            "active_townsfolk": 4,
+            "activity_updates": 10,
+            "actor_interval": 0.1,
+            "actor_updates": 5,
+            "allocated_animals": 4,
+            "allocated_townsfolk": 4,
+            "animal_cap": 4,
+            "audio_allocated_bytes": 0,
+            "audio_playing": false,
+            "cycle_seconds": 1200.0,
+            "daylight_interval": 0.5,
+            "daylight_updates": 2,
+            "motion_scale": 1.0,
+            "night_amount": 1.73420336824215e-06,
+            "optional_audio": false,
+            "phase": 0.500468244722222,
+            "townsfolk_cap": 4,
+            "uses_existing_environment": true,
+            "uses_existing_light": true
+          },
+          "SanctuaryLandscape": {
+            "authored_transform_count": 656,
+            "collision_nodes": 0,
+            "interior_batch_limit": 24,
+            "interior_batches": 24,
+            "interior_capacity": 560,
+            "interior_distance": 44.0,
+            "interior_instances": 560,
+            "navigation_nodes": 0,
+            "panorama_batches": 16,
+            "panorama_bounds": [
+              "[P: (-10.85779, -2.4, -89.53615), S: (21.85326, 15.266, 15.54656)]",
+              "[P: (-8.368017, -4.0, -87.32759), S: (17.29325, 17.55, 11.45658)]",
+              "[P: (44.07994, -2.4, -70.88283), S: (26.83089, 15.616, 26.83089)]",
+              "[P: (42.42641, -2.8, -72.12489), S: (29.69849, 0.00001, 29.69849)]",
+              "[P: (72.97326, -2.4, -11.25395), S: (16.25795, 15.616, 22.69969)]",
+              "[P: (75.87101, -4.0, -8.368017), S: (11.45658, 17.55, 17.29325)]",
+              "[P: (44.22547, -2.4, 44.33167), S: (26.50679, 15.022, 26.50678)]",
+              "[P: (42.42641, -2.8, 42.42641), S: (29.69849, 0.00001, 29.69849)]",
+              "[P: (-11.18495, -2.4, 72.81063), S: (22.44043, 15.616, 16.88811)]",
+              "[P: (-8.925231, -4.0, 75.87101), S: (17.29325, 17.55, 11.45658)]",
+              "[P: (-71.33376, -2.4, 43.88795), S: (27.02209, 15.266, 27.02209)]",
+              "[P: (-72.12489, -2.8, 42.42641), S: (29.69849, 0.00001, 29.69848)]",
+              "[P: (-89.39868, -2.4, -11.55811), S: (16.12881, 15.616, 22.80424)]",
+              "[P: (-87.32759, -4.0, -8.92523), S: (11.45658, 17.55, 17.29325)]",
+              "[P: (-70.99261, -2.4, -71.82935), S: (27.17405, 15.266, 27.17405)]",
+              "[P: (-72.12489, -2.8, -72.12489), S: (29.69848, 0.00001, 29.69849)]"
+            ],
+            "panorama_distance": 180.0,
+            "panorama_form_limit": 24,
+            "panorama_forms": 12,
+            "panorama_instances": 112,
+            "panorama_minimum_radius": 60.0,
+            "panorama_tree_capacity": 96,
+            "panorama_tree_instances": 96,
+            "panorama_triangle_capacity": 6216,
+            "panorama_triangles": 6216,
+            "quality": 2,
+            "retained_transform_count": 0,
+            "water_reaches": 4
+          }
+        },
+        "game_with_player_party_ui": {
+          "allocated_instance_triangles": 118935,
+          "allocated_multimesh_instances": 2201,
+          "allocated_multimesh_triangles": 24920,
+          "allocated_particles": 0,
+          "character_bodies": 3,
+          "directional_lights": 2,
+          "empty_mesh_nodes": 528,
+          "enabled_physics_process_nodes": 5,
+          "enabled_process_nodes": 16,
+          "environments": 2,
+          "labels_3d": 50,
+          "local_lights": 0,
+          "mesh_triangles": 94015,
+          "nodes": 3067,
+          "nonempty_mesh_nodes": 1243,
+          "nonempty_multimesh_nodes": 208,
+          "particle_nodes": 0,
+          "static_bodies": 354,
+          "unique_mesh_resources": 1069,
+          "unique_surface_or_override_materials": 144,
+          "visible_instance_triangles": 113751,
+          "visible_labels_3d": 46,
+          "visible_mesh_triangles": 88879,
+          "visible_multimesh_instances": 2189,
+          "visible_multimesh_triangles": 24872,
+          "visible_nonempty_mesh_nodes": 1124,
+          "visible_nonempty_multimesh_nodes": 205,
+          "visible_shadow_geometry_nodes": 514,
+          "visible_shadow_lights": 1
+        },
+        "notes": "Nonempty native Mesh/MultiMesh geometry and instance-multiplied triangles; visible means scene-tree visibility, before frustum/distance culling. Text glyph geometry, sky and particle renderer work are not included in mesh triangles. Not GPU draw calls, memory, frame time or FPS.",
+        "party_members": 3,
+        "party_simulation_paused_for_inventory": true,
+        "quality": 2,
+        "static_architecture_batch_report": {
+          "batch_meshes": 185,
+          "draws_saved": 343,
+          "eligible_meshes": 858,
+          "source_meshes": 528
+        }
+      }
+    ],
+    "budget_receipt": {
+      "source_sha256": "28ecefaf3da8d85b983c8af81119b436cc876d5062815343507665b48c91ba79",
+      "source_unchanged": true,
+      "diagnostic_only": true,
+      "exit": 0,
+      "errors": [],
+      "checks": 12,
+      "seconds": 2.644,
+      "command": [
+        "/usr/local/bin/godot",
+        "--headless",
+        "--path",
+        "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/source",
+        "--script",
+        "/workspace/scratch/vaultbound-home-stage6-validation/budget-diagnostic/probe.gd"
+      ],
+      "log_sha256": "c592ca432becdc20e6b8ff56b2181167f6595203d852df62bfff3b777a02aa3a",
+      "probe_sha256": "b05849e2720a7ecad9f1b97a18bd454988dd07a9d490dfcdc01ab14ad18a45be",
+      "snapshots": 3,
+      "physical_android_tested": false,
+      "rendered_visual_review": false
+    },
+    "scope_notes": [
+      "The19-mesh/8671-triangle capital record describes only the existing CapitalLandmarks layer. It is not the whole city cost.",
+      "New PrismheartArchitecture before batching has226 nonempty mesh objects and4722 triangles, zero added realtime lights and zero processing nodes.",
+      "Whole-world postbatch counts are measured separately below, including Mesh/MultiMesh instance-multiplied geometry and visibility flags.",
+      "Scene-tree visibility counts are before frustum/distance culling. static_architecture_batch_report.draws_saved is an internal batching estimate, not measured GPU draw calls.",
+      "Continuous traversal uses the player, Guardian and Mystic; it does not claim that a pet traversed the new booth route.",
+      "Measured tree tops are58,60,64 and67.9m. Their66\u201375.9m full meshes include foundations sunk8m below ground.",
+      "Headless host duration, triangle inventories and process flags do not measure Android FPS, memory, battery or thermal behavior."
+    ]
+  },
+  "preservation": {
+    "source_unchanged": true,
+    "workspace_matches_source": true,
+    "protected_unchanged": true,
+    "protected_files": 951,
+    "protected_manifest": {
+      "path": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/protected.json",
+      "sha256": "7def310b0679fa2d67c07b835ab92338aca76f70cc517f73813cdc49865041ef"
+    },
+    "authorized_protected_changes": {},
+    "existing_player_profiles_touched": false,
+    "isolation": "Separate source/XDG snapshots and disposable profile/demo fixture namespaces, serialized engine lock; no source or player-profile mutation by validation."
+  },
+  "independent_review": {
+    "ok": true,
+    "run": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g",
+    "source_sha256": "28ecefaf3da8d85b983c8af81119b436cc876d5062815343507665b48c91ba79",
+    "base_commit": "efc934f516bcceb688aef10f606b0f769009151a",
+    "checks": 8250,
+    "modes": 32,
+    "strict_loads": 24,
+    "protected_files": 951,
+    "logs": [
+      {
+        "mode": "import",
+        "sha256": "5795e0406184f8a514df507a8718e59c755a2bb7ed15abf2a91e98c6d3b03cad"
+      },
+      {
+        "mode": "strict-loads",
+        "sha256": "72876079169f8208233ad6f00294bf7ee522b109d3c7d360fa9583b81d915b9e"
+      },
+      {
+        "mode": "startup",
+        "sha256": "a9912b85473f126d3f4f63ec824170c828df3473a292f866dde86cafda5b66da"
+      },
+      {
+        "mode": "static_visual_batcher_test",
+        "sha256": "27ed6fb9e08fe2797b26cd6084c6275030b89d30482c08168d65d44ccc2c8136"
+      },
+      {
+        "mode": "visual_integration_test",
+        "sha256": "1674a2584782984a6d8d4cc4c106d2af0fda43e42a3684f98782360769771234"
+      },
+      {
+        "mode": "exchange_booths_test",
+        "sha256": "c109258605262ad095f5b5af69f7f555befe6025a5db0e868ae33fb7579e65ab"
+      },
+      {
+        "mode": "sanctuary_capital_test",
+        "sha256": "b69c581679e0c2d69a248a94b5b6bce60ac46d10244631373805fbf97629f4c6"
+      },
+      {
+        "mode": "city_navigation_test",
+        "sha256": "8b0482d81cacdad4e7cf6a648154aa15d71e1e5748f77e5088df8789ad68299b"
+      },
+      {
+        "mode": "sanctuary_world_test",
+        "sha256": "9d584dd3dfd309f3a7c0bbef046a897315ac4abffb6aff9cc0caa1173c4a8521"
+      },
+      {
+        "mode": "sanctuary_ui_test",
+        "sha256": "abb7b5b4d990ca94b1d327997bc31e66ebdce997051f7cbde13d0770a1905a35"
+      },
+      {
+        "mode": "city_surface_test",
+        "sha256": "756511c070bb81e24ba8541ee0aa64c0cba7f32447cc85b75aedec6d042db711"
+      },
+      {
+        "mode": "city_scenery_test",
+        "sha256": "fedd6508312c6461849c681d085e1c6f25aeecd0b4653263d3d0f2ce70db0d66"
+      },
+      {
+        "mode": "visual_settings_test",
+        "sha256": "9d79ff262ccc6fb1db8aa8b89de2cf025570d9f1f3d1a6f5c1ff0cbf8623401c"
+      },
+      {
+        "mode": "visual_accessibility_test",
+        "sha256": "d6a92780b2f3acccbd26eb927dcd92938ec590b5b825a1920a5d1cb0f1805720"
+      },
+      {
+        "mode": "visual_style_test",
+        "sha256": "a19d127a155043f61ad461f5bdfd71805324571335449325fc8c9309dccd2744"
+      },
+      {
+        "mode": "demo_exchange_model_test",
+        "sha256": "aff3d1e00b603babfad6f7361fda36288be158ef84850a0734c69030c2191774"
+      },
+      {
+        "mode": "demo_exchange_eligibility_test",
+        "sha256": "3145c337fbbeca67a86099c33b5cb233db4f3505cb81441d997edfb203762883"
+      },
+      {
+        "mode": "demo_exchange_store_test",
+        "sha256": "df330c6c444fc237bef59b5b743ae3295cba2dc62666357e17fccf741d8c52c2"
+      },
+      {
+        "mode": "demo_exchange_sales_test",
+        "sha256": "29d259e5062697d7f79c7e221ae147faf0a7162843d6c8207d4cbfb14df6150c"
+      },
+      {
+        "mode": "demo_exchange_controller_test",
+        "sha256": "6d7275d14c4a8432c12d5e8d20c9307dc336163ef7a0c4aeb48b57e0e3c7bfd5"
+      },
+      {
+        "mode": "demo_exchange_ui_test",
+        "sha256": "826f626b82fd4372896d39de5a452cc7a35296907ed083f3886a04eb549c7ecb"
+      },
+      {
+        "mode": "native_exchange_input_test",
+        "sha256": "e91d200438aa92854bbe8b2a53dc7697337765785462e989ab17351d20c708c9"
+      },
+      {
+        "mode": "demo_exchange_restart_test:write",
+        "sha256": "f76ef4dae70dfe0960765db1a02c578e37a055fc9685a08ce057d1baa97433da"
+      },
+      {
+        "mode": "demo_exchange_restart_test:read",
+        "sha256": "c071e4ad3fa897f1537320829e17fbef6e406c706661a33a6cf2b93a008e3d85"
+      },
+      {
+        "mode": "exchange_isolation_test:write",
+        "sha256": "16b6d0b58e364498a7152cf61c05af2b90ab8f8ec593c75b561d3cdbf41a891b"
+      },
+      {
+        "mode": "exchange_isolation_test:read",
+        "sha256": "47c6972ad9cbad0d79ed40fdbf3944207b96ec084656743b9dc3e0281782f6f5"
+      },
+      {
+        "mode": "home_expansion_integration_test",
+        "sha256": "005d665e038f97c1118978e948ed39411f085079906845ff6cf0cbbe58a6c0c4"
+      },
+      {
+        "mode": "home_room_services_test",
+        "sha256": "8c0dc0ad641196fb2f33a0d3f57ca001293bdb8954696c3eae5999f09350f3f3"
+      },
+      {
+        "mode": "tester_access_ui_test",
+        "sha256": "5750054060f09730270e86364a56d7fb22362bc7606358eb1da8c651c247173f"
+      },
+      {
+        "mode": "depth_portal_ui_test",
+        "sha256": "1c414b965684c79b604ff5fb3a3d16e78f366d3901e6690931175c5bb8262b44"
+      },
+      {
+        "mode": "depth_travel_guard_test",
+        "sha256": "acf4d9ebea0636d89fa4d99970321f119047a65c0ab89ccbfa92efff3b28d81d"
+      },
+      {
+        "mode": "early_return_travel_test",
+        "sha256": "2931dcc09bd1135efaae09bc015bb97de104593fa244e078ce50ec69367bec15"
+      },
+      {
+        "mode": "mobile_ui_integration_test",
+        "sha256": "e5871f7aec91af3d91b44c8d197e20b5491ad77f1cc7ad3aa6408e1cd7b0424f"
+      },
+      {
+        "mode": "ui_layout_test",
+        "sha256": "69e85ebf3aaad1eff0fae6bbe0fad4f84f1a9bd4f39af318c87a1508db0878f0"
+      },
+      {
+        "mode": "smoke_test",
+        "sha256": "fc26230168079036fa1b8cd91c67d5b76d60a5af7ab9771dd50a6b15bd3387ea"
+      }
+    ],
+    "summary_sha256": "c20c697d40a02265265f21b2129fee44828c2d88ca131648a37a8562889ddf3b",
+    "new_gd_uids": 5,
+    "authorized_protected_changes": {},
+    "physical_android_tested": false,
+    "rendered_visual_review": false
+  },
+  "new_gd_uids": {
+    "path": "/workspace/scratch/vaultbound-home-stage6-validation/focused-32tptk6g/new-gd-uids.json",
+    "sha256": "42cb82ca91dbb7e5d048b1b3ae955d93fedd2f5bdb25cbfcf2e67fecf23ad14a",
+    "entries": {
+      "tests/exchange_booths_test.gd.uid": {
+        "sha256": "2963b5c6d6fd9c9859eaeac32f5417f7661db03d9c8dab900dd7d129b82ed492",
+        "value": "uid://b3ulsk8ckmnp0"
+      },
+      "tests/prismheart_native_checks.gd.uid": {
+        "sha256": "f2d1e8c07fb06b085f7bc860a0ea57da6ca6a7ac623bc39c41e1806e6b203bca",
+        "value": "uid://tbj73fb37ggc"
+      },
+      "scripts/sanctuary/prismheart_architecture.gd.uid": {
+        "sha256": "236f28ee6616f765fdb8265f016aa510101fb93c5ff1c5207bd5d30db0b9edd0",
+        "value": "uid://7o1r8eupi7r2"
+      },
+      "scripts/sanctuary/prismheart_visual.gd.uid": {
+        "sha256": "4ceed7a5c9c52eeeb63c966746f8b18561a935203836067f3a6e0a8769784058",
+        "value": "uid://dxgt3dj27xham"
+      },
+      "scripts/sanctuary/prismheart_capital_data.gd.uid": {
+        "sha256": "fdd5febe88a517d79e88b208b8a5ad1755e95f1110bd671696ec69019a0a332a",
+        "value": "uid://bupvg3xkn32bo"
+      }
+    }
+  },
+  "resolved_diagnostics": [
+    {
+      "run": "focused-6s487y1m",
+      "accepted": false,
+      "runtime_modes_executed": 0,
+      "finding": "Prismheart construction assigned a conditional untyped Array to Array[Vector3], then pose updates encountered the unconstructed mesh.",
+      "fix": "Construct PackedVector3Array explicitly. Final startup and native visual assertions pass; no masking nil guard or geometry change."
+    },
+    {
+      "run": "focused-p9wqli0t",
+      "accepted": false,
+      "finding": "The new camera wait omitted36 frames of motion observations, so the next sample combined normal companion movement and failed the existing .35m per-observation limit.",
+      "proof": {
+        "receipt": "/workspace/scratch/vaultbound-home-stage6-validation/sampling-diagnostic/receipt.json",
+        "log_sha256": "50e75c3e1816cfb035fe48d269d8c3718246761059a2f29231896426cab28e73",
+        "actor": "Mystic",
+        "before_booth": 4,
+        "physics_frame_gap": 37,
+        "accumulated_displacement_m": 1.44383978843689,
+        "maximum_true_physics_step_m": 0.0802125558257103,
+        "recoveries": 0
+      },
+      "fix": "Observe all36 camera-transition physics ticks with the existing recorder. No previous-position reset, threshold increase, navigation or AI change. Final complete city traversal is required to pass."
+    },
+    {
+      "kind": "bounded_config_hardening",
+      "finding": "Validate every configurable landmark tower height, including finite lower/upper bounds.",
+      "fix": "Require each height finite within35\u201345m. Negative-data tests clone configurations and preserve the shared live resource."
+    },
+    {
+      "run": "focused-f3rkn3ta",
+      "accepted": false,
+      "finding": "An older retained batching fixture measured the Collection Hall with the default8m cells, while its shipped ready-time policy has used12m cells since the prior home-room stage.",
+      "baseline_proof": "/workspace/scratch/vaultbound-home-stage6-validation/batcher-baseline/receipt.json",
+      "authored_policy_proof": "/workspace/scratch/vaultbound-home-stage6-validation/batcher-baseline/authored-policy-receipt.json",
+      "fix": "Test the actual Sanctuary8m and Hall12m policies. The original minimum80 savings remains unchanged; Hall saves104 native renderable meshes(321 to217), with collider/floor/exclusion assertions preserved. No production batching change."
+    },
+    {
+      "run": "focused-9ba35khw",
+      "accepted": false,
+      "finding": "An older retained camera assertion expected the removed low crystal obstruction at y2.8\u20133.8, rather than the intentionally raised Prismheart.",
+      "fix": "Check the canonical physical camera envelope, its authored lower plane, actual native sphere clearance before the hit surface and identical behavior across presets. The player-space body ray and all other scene checks remain."
+    }
+  ],
+  "manual_android_tests": [
+    "Import the root project with Godot4 Android editor and launch the Sanctuary; verify no resource/script errors and safe landscape UI.",
+    "Inspect enlarged walls, four landmark towers, giant trees, blue/gold booths and rotating Prismheart from both camera perspectives by day and night.",
+    "Walk all six booth approaches with Guardian/Mystic; open the same DEMO market through each actual mobile INTERACT button and verify honest TEST currency labels.",
+    "Verify original dungeon/home/pet/practice/frontier portals, return spawns, merchant/NPC services and both terrace routes remain readable and reachable.",
+    "Exercise Low/Medium/High quality, reduced motion/effects, zero particle density, focus loss, safe areas, touch scrolling and actual device keyboard.",
+    "Verify inventory, equipment, acquired trophies/pets, companions, home rooms and secured Depthmarks persist after restart and dungeon extraction.",
+    "Measure native Android frame time, memory, battery and sustained temperature.30/60FPS are unverified device goals, not results of this gate."
+  ],
+  "known_limits": [
+    "All six booths share the existing offline DEMO / NOT LIVE exchange. No live marketplace, server account, secure online escrow, hosting or payment was added.",
+    "Art uses original procedural meshes and existing visual families. Rendered screenshots and physical Android visual/performance acceptance were not obtained in this environment.",
+    "This stage expands the central exchange, surrounding wall/tower skyline and giant-tree landmarks; it does not claim every later landscaping/sky/social milestone is complete.",
+    "Four original arrivals, thirteen original POIs, earned Depthmarks, home ownership, inventory, combat, progression and save systems remain connected.",
+    "No actual player profile was edited or reset by validation; TEST ACCESS remains an explicit reversible local setting."
+  ],
+  "physical_android_tested": false,
+  "rendered_visual_review": false,
+  "android_performance_measured": false,
+  "validation_tools": {
+    "run.py": "5219a3b70798a28a918aeb96d96ae349d1b18f67cc61b6866763cd1bf48e9e9a",
+    "review.py": "e63e267475d51ee09a9d85c09b0bf114566727ecf866e8ac52ea977c739382d4",
+    "preflight.gd": "d8fa5892d5ac8d50674386a7ab74c3446e256416f6fd650f4099f8c61b1bad8f",
+    "focused-specs.json": "7cfbcacc10c09b7771bb5b69393d68657e36f2dbcb2ae19c60464ded85384694",
+    "final-specs.json": "453a01a96323a7df4c91434c44f0f4386c9ffe20400738dd00a75b5939304ad9",
+    "make_report.py": "09d3f3686313ff88509f2534b07b624f96e91489747358a2818255873e10362d"
+  }
+}

@@ -10,6 +10,17 @@ const Store = preload("res://scripts/exchange/demo_exchange_store.gd")
 const ACTORS := ["demo_a", "demo_b"]
 const PUBLIC_ACTIONS := ["create_order", "fill_order", "cancel_order", "claim", "request_trade", "accept_trade", "decline_trade", "set_offer", "lock_trade", "cancel_trade", "advance_time", "reset_demo", "confirm_trade"]
 const MAX_QUOTES := 24
+# Exact authored paths are a second check after the world's once-built registry.
+# Arbitrary city terminals and same-name replacements never gain market access.
+const SOURCE_PATHS := {
+	&"map": NodePath("MapCityTerminal"),
+	&"exchange_01": NodePath("ExchangeBooth01Terminal"),
+	&"exchange_02": NodePath("ExchangeBooth02Terminal"),
+	&"exchange_03": NodePath("ExchangeBooth03Terminal"),
+	&"exchange_04": NodePath("ExchangeBooth04Terminal"),
+	&"exchange_05": NodePath("ExchangeBooth05Terminal"),
+	&"exchange_06": NodePath("ExchangeBooth06Terminal"),
+}
 var _store: RefCounted = Store.new()
 var _state: Dictionary = {}
 var _initial_namespace := ""
@@ -22,7 +33,7 @@ var _tearing_down := false
 var _player: WeakRef
 var _world: WeakRef
 var _source: WeakRef
-var _expected_source: WeakRef
+var _expected_sources: Dictionary = {}
 var _world_sources: Array[Dictionary] = []
 var _location: StringName = &""
 var _service_generation := 0
@@ -75,22 +86,43 @@ func bind_game_context(player: Node3D, location: StringName, world: Node3D) -> v
 	_player = weakref(player) if is_instance_valid(player) else null
 	_world = weakref(world) if is_instance_valid(world) else null
 	_location = location
-	_expected_source = _remembered_source(world, location) if is_instance_valid(world) else null
+	_expected_sources = _remembered_sources(world, location) if is_instance_valid(world) else {}
 
-func _remembered_source(world: Node3D, location: StringName) -> WeakRef:
-	# A candidate world may roll back to a still-live former world. Neither that
-	# rollback nor a same-world rebind can adopt a replacement terminal.
+func _remembered_sources(world: Node3D, location: StringName) -> Dictionary:
+	# A candidate world may roll back to a still-live former world. Capture the
+	# registry on its FIRST bind, including absent sources. Neither rollback nor
+	# same-world rebinding may enroll a later addition or replacement terminal.
 	for index in range(_world_sources.size() - 1, -1, -1):
 		var remembered := _world_sources[index].world.get_ref() as Node3D
 		if not is_instance_valid(remembered) or remembered.is_queued_for_deletion():
 			_world_sources.remove_at(index)
 	for binding: Dictionary in _world_sources:
 		if binding.world.get_ref() == world:
-			return binding.source
-	var authored := world.get_node_or_null("MapCityTerminal") as Node3D if location == &"sanctuary" else null
-	var source_ref: WeakRef = weakref(authored) if is_instance_valid(authored) else null
-	_world_sources.append({"world": weakref(world), "source": source_ref})
-	return source_ref
+			return binding.sources
+	var captured: Dictionary = {}
+	if location == &"sanctuary" and world.get_script() != null \
+			and world.get_script().resource_path == "res://scripts/world/sanctuary.gd" \
+			and world.has_method("registered_exchange_sources"):
+		var registered: Dictionary = world.registered_exchange_sources()
+		for id: StringName in SOURCE_PATHS:
+			var authored := registered.get(id) as Node3D
+			captured[id] = weakref(authored) if is_instance_valid(authored) and not authored.is_queued_for_deletion() \
+				and world.get_node_or_null(SOURCE_PATHS[id]) == authored and authored.get_parent() == world \
+				and authored.get_script() != null and authored.get_script().resource_path == "res://scripts/sanctuary/city_terminal.gd" \
+				and authored.get("terminal_id") == id and authored.get("kind") == &"map" else null
+	_world_sources.append({"world": weakref(world), "sources": captured})
+	return captured
+
+func _authored_source_valid(world: Node3D, source: Node3D) -> bool:
+	# Never re-read the mutable scene registry as authority after first bind.
+	# Verify identity AND path AND declared role on each subsequent operation.
+	if source.get_script() == null or source.get_script().resource_path != "res://scripts/sanctuary/city_terminal.gd" \
+			or source.get("kind") != &"map" or source.get_parent() != world:
+		return false
+	var id: StringName = source.get("terminal_id")
+	var remembered: WeakRef = _expected_sources.get(id)
+	return remembered != null and remembered.get_ref() == source and SOURCE_PATHS.has(id) \
+		and world.get_node_or_null(SOURCE_PATHS[id]) == source
 
 func open_service(source: Node3D) -> bool:
 	if _busy or not _focused or not _physical_source_valid(source):
@@ -132,15 +164,13 @@ func invalidate_pending(_reason: String = "") -> void:
 func _physical_source_valid(source: Node3D) -> bool:
 	var world := _world.get_ref() as Node3D if _world != null else null
 	var player := _player.get_ref() as Node3D if _player != null else null
-	var authored := _expected_source.get_ref() as Node3D if _expected_source != null else null
 	var shell := get_parent()
 	if _location != &"sanctuary" or not is_instance_valid(world) or not world.is_inside_tree() or world.is_queued_for_deletion() \
 			or shell == null or not shell.has_method("change_location") or shell.get("active_world") != world or shell.get("player") != player or bool(shell.get("transitioning")):
 		return false
 	if world.get_script() == null or world.get_script().resource_path != "res://scripts/world/sanctuary.gd" \
 			or not is_instance_valid(source) or source.is_queued_for_deletion() or not source.is_inside_tree() or not source.is_visible_in_tree() \
-			or not is_instance_valid(authored) or source != authored or world.get_node_or_null("MapCityTerminal") != source or source.get_script() == null \
-			or source.get_script().resource_path != "res://scripts/sanctuary/city_terminal.gd" or source.get("terminal_id") != &"map" or source.get("kind") != &"map":
+			or not _authored_source_valid(world, source):
 		return false
 	if not player is VaultPlayer or not player.is_inside_tree() or player.is_queued_for_deletion() or player.downed or player.eliminated \
 			or float(player.health) <= 0.0 or player.combat == null or player.combat.state != &"idle" \

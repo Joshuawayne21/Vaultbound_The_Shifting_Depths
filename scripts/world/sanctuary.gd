@@ -18,6 +18,10 @@ const CITY_LAYOUT = preload("res://resources/sanctuary/city_layout.tres")
 
 var display_name := "THE SANCTUARY"
 var objective := "Explore the eight districts · Find the city guide at the Ring Exchange"
+# Authored instance identities, recorded once during construction. Read-only
+# callers receive a detached map; looking up a name never enrolls a new source.
+var _exchange_sources: Dictionary = {}
+var _terminals_built := false
 
 func _ready() -> void:
 	CityBuilder.build(self, CITY_LAYOUT)
@@ -105,6 +109,9 @@ func _build_training_court() -> void:
 	title.pixel_size = 0.004
 
 func _build_terminals() -> void:
+	if _terminals_built:
+		return
+	_terminals_built = true
 	var descriptions := {
 		&"map": "Choose the city guide or a LOCAL TEST Exchange. DEMO / NOT LIVE: synthetic accounts, items and TEST DM only. Nothing enters your real collection; online player trading remains unavailable.",
 		&"equipment": "Preview your owned equipment and appearance using the existing equipment viewer. Cosmetic purchases and a separate cosmetic catalog are not available in this build.",
@@ -123,6 +130,8 @@ func _build_terminals() -> void:
 		terminal.set_meta("sanctuary_poi", id)
 		terminal.set_meta("approach_position", data.approach)
 		add_child(terminal)
+		if id == &"map":
+			_exchange_sources[id] = weakref(terminal)
 		var kit := Architecture.new(terminal)
 		kit.cylinder(Vector3(0, 0.09, 0), 0.7, 0.18, "dark_stone", false, 8)
 		kit.cylinder(Vector3(0, 0.48, 0), 0.35, 0.78, "stone", true, 8)
@@ -132,6 +141,30 @@ func _build_terminals() -> void:
 		kit.ring(Vector3(0, 1.15, 0), 0.19, 0.23, "gold")
 		var label := kit.label(String(data.label), Vector3(0, 1.8, 0), 25)
 		label.pixel_size = 0.004
+
+	for data: Dictionary in CITY_LAYOUT.get_exchange_booths():
+		var terminal := Terminal.new()
+		terminal.name = "ExchangeBooth%02dTerminal" % int(data.number)
+		terminal.position = data.position
+		terminal.rotation.y = float(data.rotation)
+		terminal.terminal_id = data.id
+		terminal.title = data.label
+		terminal.kind = &"map"
+		terminal.description = descriptions[&"map"]
+		terminal.interaction_radius = 3.0
+		terminal.set_meta("sanctuary_poi", data.id)
+		terminal.set_meta("approach_position", data.approach)
+		add_child(terminal)
+		_exchange_sources[data.id] = weakref(terminal)
+		# CityBuilder already supplies this counter's visible mesh and collision.
+		# The terminal is only an interaction anchor, never a second lectern.
+
+func registered_exchange_sources() -> Dictionary:
+	var result: Dictionary = {}
+	for id: StringName in _exchange_sources:
+		var terminal := _exchange_sources[id].get_ref() as Node3D
+		result[id] = terminal if is_instance_valid(terminal) and not terminal.is_queued_for_deletion() else null
+	return result
 
 func get_city_layout() -> Dictionary:
 	return CITY_LAYOUT.describe()

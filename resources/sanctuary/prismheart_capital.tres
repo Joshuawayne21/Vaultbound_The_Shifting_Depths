@@ -1,0 +1,14 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/sanctuary/prismheart_capital_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+wall_heights = PackedFloat32Array(22, 26, 30)
+tower_heights = PackedFloat32Array(35, 38, 42, 45)
+tower_radius = 48.0
+booth_radius = 12.0
+inner_circulation_radius = 8.0
+crystal_center_y = 11.0
+sparkle_counts = PackedInt32Array(4, 8, 12)
+maximum_new_architecture_triangles = 24000

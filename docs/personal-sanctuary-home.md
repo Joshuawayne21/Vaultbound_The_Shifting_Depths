@@ -4,7 +4,9 @@ Build `0.7.0-home5` adds the six-room expansion: Armory, Companion Hall, Relic L
 
 ## Route and architecture
 
-When importing, select `feature/personal-sanctuary` or the matching published Stage 5 source ZIP, and verify `config/version="0.7.0-home5"` in root `project.godot`. An older project folder/default branch does not contain this update. Back up phone saves separately.
+The current capital checkpoint is `0.7.0-home6a` / code 28. Its Stage 6.1 changes do not relocate the home gate or change the accepted Stage 5 room ownership/services. Capital native validation passed its scoped 8,250-check gate; rendered and physical Android review remain pending; see [the separate report](personal-sanctuary-m6-1-validation.md).
+
+When importing, select `feature/personal-sanctuary` or the matching published `vaultbound-personal-sanctuary-m6a.zip` source ZIP, and verify `config/version="0.7.0-home6a"` in root `project.godot`. An older project folder/default branch does not contain this update. Back up phone saves separately.
 
 Use the southeast **Personal Sanctuary** gate in district D of the existing city. Review its local destination card and confirm **ENTER**. Its position, internal `CollectionHallGate` node and `collection_hall` map POI remain stable. The city has not yet been rearranged to the supplied Prismheart blueprint.
 

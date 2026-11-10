@@ -4,6 +4,10 @@ extends "res://tests/test_harness.gd"
 const Architecture = preload("res://scripts/world/architecture.gd")
 const Batcher = preload("res://scripts/visual/static_visual_batcher.gd")
 const DetailBatch = preload("res://scripts/visual/sanctuary_detail_batch.gd")
+# Match each scene's shipped ready-time bake after suppressing that bake below.
+# The enlarged Hall has used 12m cells since home-room commit 600e6ee; Sanctuary
+# retains 8m cells. Measuring the default8m policy for both is not a Hall check.
+const WORLD_CELL_SIZES := {"res://scenes/world/sanctuary.tscn": 8.0, "res://scenes/world/collection_hall.tscn": 12.0}
 
 func _initialize() -> void:
 	suite_name = "VAULTBOUND STATIC VISUAL BATCHER"
@@ -11,8 +15,8 @@ func _initialize() -> void:
 
 func _run() -> void:
 	await _fixture()
-	for path: String in ["res://scenes/world/sanctuary.tscn", "res://scenes/world/collection_hall.tscn"]:
-		await _world(path)
+	for path: String in WORLD_CELL_SIZES:
+		await _world(path, float(WORLD_CELL_SIZES[path]))
 	finish()
 
 func _fixture() -> void:
@@ -85,7 +89,7 @@ func _fixture() -> void:
 	world.queue_free()
 	await frames(3)
 
-func _world(path: String) -> void:
+func _world(path: String, cell_size: float) -> void:
 	var world := load(path).instantiate() as Node3D
 	# Defer the normal ready-time bake so its exact before/after can be measured.
 	world.set_meta("static_architecture_batch_report", {})
@@ -95,9 +99,9 @@ func _world(path: String) -> void:
 	world.remove_meta("static_architecture_batch_report")
 	var before := _mesh_count(world)
 	var collision_before := _collisions(world)
-	var report := Batcher.bake(world)
+	var report := Batcher.bake(world, cell_size)
 	var after := _mesh_count(world)
-	print("STATIC BATCH METRICS %s: %s; renderable meshes %d -> %d" % [path.get_file(), report, before, after])
+	print("STATIC BATCH METRICS %s (%sm cells): %s; renderable meshes %d -> %d" % [path.get_file(), cell_size, report, before, after])
 	check(report.draws_saved >= 80, "Static architecture materially reduces %s mesh draws" % path.get_file())
 	check(before - after == report.draws_saved, "Batch metrics match actual renderable mesh reduction for %s" % path.get_file())
 	check(_collisions(world) == collision_before, "Every world collider stays identical in %s" % path.get_file())
