@@ -4,8 +4,8 @@
 
 [resource]
 script = ExtResource("1")
-wall_heights = PackedFloat32Array(22, 26, 30)
-tower_heights = PackedFloat32Array(35, 38, 42, 45)
+wall_heights = PackedFloat32Array(4.6, 5.2, 5.8)
+tower_heights = PackedFloat32Array(9, 10, 11, 12)
 tower_radius = 48.0
 booth_radius = 12.0
 inner_circulation_radius = 8.0

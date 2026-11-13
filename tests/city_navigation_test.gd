@@ -9,6 +9,8 @@ var previous: Dictionary = {}
 var travelled: Dictionary = {}
 var middle_height: Dictionary = {}
 var recoveries: Dictionary = {}
+var bridge_witnesses: Dictionary = {}
+var active_bridge: StringName = &""
 var observed_frames := 0
 var maximum_step := 0.0
 var previous_sample_frame := 0
@@ -73,8 +75,18 @@ func _run() -> void:
 	for id: StringName in [&"A", &"B", &"C", &"G", &"D", &"F"]:
 		for district: Dictionary in districts:
 			if district.id == id:
+				var radial := Vector3(sin(float(district.angle)), 0, -cos(float(district.angle)))
+				check(await _walk_to(radial * 19.0 + Vector3.UP * 0.06, 22.0), "Player returns inside the enclosed Exchange before bridge " + String(id))
+				check(await _regroup(9.0), "Both companions gather inside archway " + String(id))
+				active_bridge = id
+				input_hub.request_action(&"camera_toggle")
+				for _transition_frame in range(36):
+					await physics_frame
+					_record_motion()
 				check(await _walk_to(district.approach + Vector3.UP * 0.06, 22.0), "Player reaches authored district " + String(id) + " entirely on foot")
 				check(await _regroup(9.0), "Both followers walk to district " + String(id))
+				_check_bridge_witness(id)
+				active_bridge = &""
 	for ramp: Dictionary in layout.ramps:
 		await _terrace(ramp)
 	for actor in actors:
@@ -85,7 +97,7 @@ func _run() -> void:
 	if maximum_step >= 0.35:
 		print("CITY MAXIMUM STEP DIAGNOSTIC: ", JSON.stringify({"actor": maximum_step_actor, "distance": maximum_step, "sample_frame_gap": maximum_step_frame_gap, "physics_frame": maximum_step_physics_frame}))
 	check(maximum_step < 0.35, "No observed actor movement step hides a relocation during traversal")
-	var metrics := {"observed_physics_frames": observed_frames, "maximum_actor_step": maximum_step, "distance": travelled, "player": {"replans": leader_navigation.replan_count, "geometry_probes": leader_navigation.geometry_probe_count}}
+	var metrics := {"observed_physics_frames": observed_frames, "maximum_actor_step": maximum_step, "distance": travelled, "bridge_witnesses": bridge_witnesses, "player": {"replans": leader_navigation.replan_count, "geometry_probes": leader_navigation.geometry_probe_count}}
 	for actor in actors:
 		if actor != game.player: metrics[actor.name] = {"replans": actor.navigator.replan_count, "geometry_probes": actor.navigator.geometry_probe_count, "recoveries": actor.recovery_count}
 	print("CITY NAVIGATION COUNTS: ", JSON.stringify(metrics))
@@ -100,10 +112,13 @@ func _terrace(ramp: Dictionary) -> void:
 	var outward: Vector3 = ramp.top - ramp.bottom
 	outward.y = 0.0
 	var landing: Vector3 = ramp.top + outward.normalized() * 2.7 + Vector3.UP * 0.06
+	active_bridge = StringName(ramp.district)
 	check(await _walk_to(landing, 9.0), "Actual player ascends the " + label + " ramp")
 	check(await _wait_for(func() -> bool: return _all_on_terrace(), 9.0), "Both actual followers reach the elevated " + label + " terrace")
 	for actor in actors:
 		check(bool(middle_height[actor.name]), "%s crosses intermediate ramp heights on %s ascent" % [actor.name, label])
+	_check_bridge_witness(active_bridge)
+	active_bridge = &""
 	check(game.party.issue_command(&"hold"), "Hold order is accepted on the " + label + " terrace")
 	var held := {}
 	for actor in actors:
@@ -181,5 +196,17 @@ func _record_motion() -> void:
 		maximum_step = maxf(maximum_step, step)
 		travelled[actor.name] = float(travelled[actor.name]) + step
 		previous[actor.name] = actor.global_position
+		if not active_bridge.is_empty():
+			var angle := float(String(active_bridge).unicode_at(0) - 65) * TAU / 8.0
+			var radial := Vector3(sin(angle), 0, -cos(angle))
+			var radius := actor.global_position.dot(radial)
+			var offset := absf(actor.global_position.dot(radial.cross(Vector3.UP)))
+			var threshold := 0.22 if active_bridge in [&"E", &"H"] else 0.30
+			if radius > 23.1 and radius < 25.4 and offset < 4.0 and actor.global_position.y > threshold:
+				bridge_witnesses[String(active_bridge) + ":" + String(actor.name)] = true
 		middle_height[actor.name] = bool(middle_height[actor.name]) or (actor.global_position.y > 0.15 and actor.global_position.y < 0.65)
 	previous_sample_frame = frame
+
+func _check_bridge_witness(id: StringName) -> void:
+	for actor in actors:
+		check(bridge_witnesses.has(String(id) + ":" + String(actor.name)), "%s physically crosses the raised %s bridge on continuous sampled movement" % [actor.name, id])

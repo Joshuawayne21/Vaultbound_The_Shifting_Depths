@@ -76,39 +76,57 @@ static func _tower(root: Node3D, shared: Architecture, index: int) -> void:
 	root.add_child(tower)
 	var kit := Architecture.new(tower)
 	kit.palette = shared.palette
-	# Broad towers grow outward from the original city wall. The 6.4m envelope
-	# has minimum radial extent 44.8m, outside the old inner wall face 44.2m.
-	# Existing sixteen inner pilasters and all their ground collision remain.
-	kit.box(Vector3(0, 1.6, 0), Vector3(6.2, 3.2, 6.2), "dark_stone")
-	kit.box(Vector3(0, (height - 5.0) * 0.5, 0), Vector3(5.2, height - 5.0, 5.2), "light_stone")
-	kit.box(Vector3(0, height - 5.2, 0), Vector3(6.4, 0.65, 6.4), "gold")
-	for y: float in [4.2, 12.0, 21.0]:
-		kit.box(Vector3(0, y, 0), Vector3(5.45, 0.30, 5.45), "gold")
+	# The modest 9–12m silhouettes retain the old 6.4m camera envelope X/Z,
+	# outside the walking boundary. Ornament heights follow their tower;
+	# no absolute 12/21/24m bands remain above the shortened architecture.
+	var shaft_bottom := 0.72
+	var shaft_top := height * 0.72
+	var shaft_height := shaft_top - shaft_bottom
+	var crown_bottom := shaft_top + 0.22
+	var crown_height := height - crown_bottom
+	kit.box(Vector3(0, 0.40, 0), Vector3(6.2, 0.80, 6.2), "dark_stone")
+	kit.box(Vector3(0, shaft_bottom + shaft_height * 0.5, 0), Vector3(5.2, shaft_height, 5.2), "light_stone")
+	# The course begins at the shaft top and every crown begins at its top.
+	# Adjacent parts meet, rather than leaving floating crown gaps.
+	kit.box(Vector3(0, shaft_top + 0.11, 0), Vector3(6.2, 0.22, 6.2), "gold")
+	for ratio: float in [0.24, 0.52]:
+		kit.box(Vector3(0, height * ratio, 0), Vector3(5.48, 0.18, 5.48), "gold")
 	for side: float in [-1.0, 1.0]:
-		for x: float in [-2.42, 2.42]:
-			kit.box(Vector3(x, (height - 5.0) * 0.5, side * 2.63), Vector3(0.30, height - 5.0, 0.12), "gold")
-		kit.box(Vector3(0, 14.5, side * 2.63), Vector3(1.85, 7.8, 0.08), "royal_blue")
-		kit.box(Vector3(0, 14.5, side * 2.70), Vector3(0.08, 7.2, 0.04), "gold")
-		for y: float in [7.4, 24.0]:
-			kit.box(Vector3(0, y, side * 2.64), Vector3(1.1, 2.6, 0.08), "crystal")
+		for x: float in [-2.37, 2.37]:
+			kit.box(Vector3(x, shaft_bottom + shaft_height * 0.5, side * 2.64), Vector3(0.22, shaft_height - 0.18, 0.12), "gold")
+		kit.box(Vector3(0, height * 0.40, side * 2.64), Vector3(1.5, height * 0.22, 0.08), "royal_blue")
+		kit.box(Vector3(0, height * 0.40, side * 2.70), Vector3(0.07, height * 0.18, 0.04), "gold")
+		kit.box(Vector3(0, height * 0.64, side * 2.64), Vector3(1.1, height * 0.10, 0.08), "crystal")
 	match index:
 		0:
-			kit.box(Vector3(0, height - 3.8, 0), Vector3(5.6, 2.2, 5.6), "stone")
-			for x: float in [-2.3, 2.3]:
-				for z: float in [-2.3, 2.3]: kit.box(Vector3(x, height - 1.65, z), Vector3(1.0, 2.1, 1.0), "light_stone")
-			kit.cone(Vector3(0, height - 1.4, 0), 1.2, 2.8, "gold")
+			var plinth_height := crown_height * 0.32
+			var plinth_top := crown_bottom + plinth_height
+			kit.box(Vector3(0, crown_bottom + plinth_height * 0.5, 0), Vector3(5.6, plinth_height, 5.6), "stone")
+			for x: float in [-2.24, 2.24]:
+				for z: float in [-2.24, 2.24]:
+					kit.box(Vector3(x, plinth_top + crown_height * 0.25, z), Vector3(0.80, crown_height * 0.50, 0.80), "light_stone")
+			kit.cone(Vector3(0, plinth_top + crown_height * 0.34, 0), 0.95, crown_height * 0.68, "gold")
 		1:
-			kit.cylinder(Vector3(0, height - 4.25, 0), 2.9, 0.8, "royal_blue", false, 8)
-			kit.cone(Vector3(0, height - 2.1, 0), 3.1, 4.2, "gold")
+			var drum_height := crown_height * 0.22
+			var roof_height := crown_height - drum_height
+			kit.cylinder(Vector3(0, crown_bottom + drum_height * 0.5, 0), 2.7, drum_height, "royal_blue", false, 8)
+			kit.cone(Vector3(0, crown_bottom + drum_height + roof_height * 0.5, 0), 3.1, roof_height, "gold")
 		2:
-			kit.box(Vector3(0, height - 3.3, 0), Vector3(5.6, 2.3, 5.6), "royal_blue")
-			kit.cone(Vector3(0, height - 1.45, 0), 1.4, 2.9, "crystal")
-			kit.ring(Vector3(0, height - 2.5, 0), 1.7, 1.85, "gold")
+			var plinth_height := crown_height * 0.27
+			var plinth_top := crown_bottom + plinth_height
+			var crystal_height := crown_height - plinth_height
+			kit.box(Vector3(0, crown_bottom + plinth_height * 0.5, 0), Vector3(5.6, plinth_height, 5.6), "royal_blue")
+			kit.cone(Vector3(0, plinth_top + crystal_height * 0.5, 0), 1.4, crystal_height, "crystal")
+			kit.ring(Vector3(0, plinth_top + 0.07, 0), 1.7, 1.85, "gold")
 		_:
-			kit.box(Vector3(0, height - 4.2, 0), Vector3(5.7, 1.4, 5.7), "stone")
+			var plinth_height := crown_height * 0.26
+			var drum_height := crown_height * 0.30
+			var roof_height := crown_height - plinth_height - drum_height
+			var plinth_top := crown_bottom + plinth_height
+			kit.box(Vector3(0, crown_bottom + plinth_height * 0.5, 0), Vector3(5.7, plinth_height, 5.7), "stone")
 			for x: float in [-1.65, 1.65]:
-				kit.cylinder(Vector3(x, height - 2.8, 0), 0.75, 1.8, "royal_blue", false, 8)
-				kit.cone(Vector3(x, height - 1.0, 0), 1.0, 2.0, "gold")
+				kit.cylinder(Vector3(x, plinth_top + drum_height * 0.5, 0), 0.72, drum_height, "royal_blue", false, 8)
+				kit.cone(Vector3(x, plinth_top + drum_height + roof_height * 0.5, 0), 0.98, roof_height, "gold")
 	_camera_box(tower, Vector3(0, height * 0.5, 0), Vector3(6.4, height, 6.4), "LandmarkCameraEnvelope")
 
 static func _camera_box(parent: Node3D, at: Vector3, size: Vector3, label: String) -> void:

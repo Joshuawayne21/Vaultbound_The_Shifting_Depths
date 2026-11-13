@@ -4,6 +4,7 @@ extends RefCounted
 const Architecture = preload("res://scripts/world/architecture.gd")
 const Dressing = preload("res://scripts/visual/sanctuary_dressing.gd")
 const CapitalArchitecture = preload("res://scripts/sanctuary/prismheart_architecture.gd")
+const ExchangeCourtyard = preload("res://scripts/sanctuary/exchange_courtyard.gd")
 const Prismheart = preload("res://scripts/sanctuary/prismheart_visual.gd")
 const CAPITAL = preload("res://resources/sanctuary/prismheart_capital.tres")
 const IVORY = preload("res://resources/materials/home_ivory.tres")
@@ -26,17 +27,29 @@ static func build(root: Node3D, layout: Resource) -> void:
 	for district: Dictionary in layout.get_districts():
 		var angle: float = district.angle
 		var outward := Vector3(sin(angle), 0, -cos(angle))
-		var path := kit.box(outward * 29.0 + Vector3.UP * 0.012, Vector3(layout.path_width, 0.018, 26.0), "path")
-		path.rotation.y = -angle
-		for side in [-1.0, 1.0]:
-			var line_at := outward * 27.0 + Basis(Vector3.UP, -angle) * Vector3(side * 3.84, 0.028, 0)
-			var line := kit.box(line_at, Vector3(0.07, 0.015, 20.0), "bronze")
-			line.rotation.y = -angle
+		# Leave the six raised bridge footprints free of the old flat paving.
+		# Forge/Tavern keep their original continuous terrace approach.
+		var path_spans := [Vector2(16.0, 42.0)]
+		var inlay_spans := [Vector2(17.0, 37.0)]
+		if district.height <= 0.0:
+			var start: float = ExchangeCourtyard.CONFIG.bridge_start_radius
+			var end: float = ExchangeCourtyard.CONFIG.bridge_end_radius
+			path_spans = [Vector2(16.0, start), Vector2(end, 42.0)]
+			inlay_spans = [Vector2(17.0, start - 0.01), Vector2(end + 0.01, 37.0)]
+		for span: Vector2 in path_spans:
+			var path := kit.box(outward * (span.x + span.y) * 0.5 + Vector3.UP * 0.012, Vector3(layout.path_width, 0.018, span.y - span.x), "path")
+			path.rotation.y = -angle
+		for span: Vector2 in inlay_spans:
+			for side: float in [-1.0, 1.0]:
+				var line_at := outward * (span.x + span.y) * 0.5 + Basis(Vector3.UP, -angle) * Vector3(side * 3.84, 0.028, 0)
+				var line := kit.box(line_at, Vector3(0.07, 0.015, span.y - span.x), "bronze")
+				line.rotation.y = -angle
 		if district.height > 0.0:
 			_terrace(root, layout, district)
 	_build_boundary(kit, layout)
 	_build_exchange(kit)
 	CapitalArchitecture.build(root, kit.palette, layout)
+	ExchangeCourtyard.build(root, layout, kit.palette)
 	_build_ring_furniture(kit, layout)
 	_build_wayfinding(kit, layout)
 
@@ -118,39 +131,69 @@ static func _build_boundary(kit: Architecture, layout: Resource) -> void:
 		var at := Vector3(sin(angle) * 44.6, 0, -cos(angle) * 44.6)
 		var basis := Basis(Vector3.UP, -angle)
 		var height := float(CAPITAL.wall_heights[index % CAPITAL.wall_heights.size()])
-		# The original 64 wall footprints remain authoritative for movement.
-		# Raised opaque masonry and its world/camera collider share one size.
-		var wall := kit.box(at + Vector3.UP * height * 0.5, Vector3(4.48, height, 0.8), "light_stone", true)
+		# Preserve the original 64 solid footprints. The visual masonry is thinner
+		# than that conservative envelope so relief can stand in front of it
+		# without coplanar faces or protruding through camera collision.
+		var core_height := height - 0.20
+		var wall := kit.box(at + Vector3.UP * core_height * 0.5, Vector3(4.48, core_height, 0.60), "light_stone")
 		wall.name = "CapitalWall_%02d" % index
 		wall.rotation.y = -angle
 		wall.add_to_group("capital_boundary_walls")
 		wall.set_meta("capital_wall_index", index)
 		wall.set_meta("capital_wall_height", height)
-		# Every opaque trim remains inside the unchanged X/Z wall envelope;
-		# all presets retain masonry and matching camera/world collision.
-		art.box(at + Vector3.UP * (height - 0.12), Vector3(4.48, 0.24, 0.8), "gold", basis)
-		for y: float in [0.40, 5.8, 12.6]:
-			art.box(at + basis * Vector3(0, y, 0.37), Vector3(4.4, 0.20, 0.06), "gold", basis)
+		var bounds := BoxShape3D.new()
+		bounds.size = Vector3(4.48, height, 0.8)
+		kit.add_body(wall, bounds)
+		# Core center is 0.10m lower; the actual body still spans ground to H.
+		var body := wall.get_child(0) as StaticBody3D
+		body.position.y = 0.10
+		# Cap begins where the core ends instead of covering its existing top.
+		art.box(at + Vector3.UP * (height - 0.10), Vector3(4.48, 0.20, 0.8), "gold", basis)
+		# Inward visible planes are deliberately separated: core .30, banner
+		# .34, ribs .35, bands/stripe .375 and glyph .395, all inside .40.
+		for y: float in [0.27, height * 0.73]:
+			art.box(at + basis * Vector3(0, y, 0.345), Vector3(4.4, 0.12, 0.06), "gold", basis)
 		for side: float in [-1.0, 1.0]:
-			art.box(at + basis * Vector3(side * 1.93, height * 0.5, 0.35), Vector3(0.3, height - 0.3, 0.10), "stone", basis)
-		art.box(at + basis * Vector3(0, 8.6, 0.365), Vector3(1.65, 4.8, 0.06), "royal_blue", basis)
-		art.box(at + basis * Vector3(0, 8.6, 0.398), Vector3(0.075, 4.3, 0.004), "gold", basis)
+			art.box(at + basis * Vector3(side * 1.93, core_height * 0.5, 0.315), Vector3(0.22, core_height - 0.18, 0.07), "stone", basis)
+		art.box(at + basis * Vector3(0, height * 0.51, 0.32), Vector3(1.32, height * 0.40, 0.04), "royal_blue", basis)
+		art.box(at + basis * Vector3(0, height * 0.51, 0.365), Vector3(0.055, height * 0.35, 0.02), "gold", basis)
 		if index % 2 == 0:
-			var rune := at + basis * Vector3(0, height - 4.2, 0.398)
-			art.box(rune, Vector3(0.10, 1.8, 0.004), "glow", basis)
-			art.box(rune, Vector3(0.9, 0.08, 0.004), "gold", basis)
+			var rune := at + basis * Vector3(0, height * 0.82, 0.385)
+			art.box(rune, Vector3(0.10, height * 0.14, 0.02), "glow", basis)
+			# Separate arms leave a 2cm lateral gap to the different-material
+			# stem; a single crossing bar would recreate overlapping planes.
+			for side: float in [-1.0, 1.0]:
+				art.box(rune + basis * Vector3(side * 0.19, 0, 0), Vector3(0.24, 0.07, 0.02), "gold", basis)
 		if index % 4 == 1:
-			for vine in range(3):
-				art.leaf(at + basis * Vector3(-0.8 + float(vine) * 0.7, height - 0.7, 0.4), 1.3, 0.30, "leaf", -angle, PI)
+			for side: float in [-1.0, 1.0]:
+				art.leaf(at + basis * Vector3(side * 1.25, height - 0.29, 0.395), height * 0.17, 0.22, "leaf", -angle, PI)
 		# Eight spatial sectors permit meaningful culling of small trim instead
 		# of one 90-metre-wide MultiMesh for every ornament material.
 		if index % 8 == 7:
-			art.flush("CapitalMasonrySector%02d" % (index / 8))
+			_flush_boundary_details(art, kit.root, index / 8)
 			art = Dressing.new(kit.root, kit.palette)
 	for index in range(16):
 		var angle := (index + 0.5) * TAU / 16.0
 		var at: Vector3 = Vector3(sin(angle), 0, -cos(angle)) * (layout.radius - 1.6)
 		_build_boundary_tower(kit, at, index)
+
+static func _flush_boundary_details(art: Dressing, root: Node3D, sector: int) -> void:
+	var before := root.get_child_count()
+	var label := "CapitalMasonrySector%02d" % sector
+	var capture_geometry := bool(root.get_meta("capture_city_scenery_geometry", false)) or bool(root.get_meta("capture_wall_geometry", false))
+	var authored_batches: Dictionary = {}
+	if capture_geometry:
+		# Keep these arrays by reference: flush shuffles optional foliage before
+		# uploading the final transforms. Dummy rendering cannot read them back.
+		for key: String in art._batches:
+			authored_batches[label + "_" + key.replace(":", "_")] = art._batches[key].transforms
+	art.flush(label)
+	for index in range(before, root.get_child_count()):
+		var batch := root.get_child(index)
+		batch.add_to_group("capital_wall_relief_batches")
+		batch.set_meta("capital_wall_sector", sector)
+		if capture_geometry:
+			batch.set_meta("authored_instance_transforms", authored_batches[String(batch.name)])
 
 static func _build_boundary_tower(kit: Architecture, at: Vector3, index: int) -> void:
 	var node := Node3D.new()
@@ -177,7 +220,7 @@ static func _build_boundary_tower(kit: Architecture, at: Vector3, index: int) ->
 	match variant:
 		0:
 			tower.box(Vector3(0, height - 1.0, 0), Vector3(1.3, 0.2, 1.3), "light_stone")
-			tower.cone(Vector3(0, height - 0.425, 0), 0.62, 0.85, "gold")
+			tower.cone(Vector3(0, height - 0.45, 0), 0.62, 0.90, "gold")
 		1:
 			tower.box(Vector3(0, height - 1.0, 0), Vector3(1.4, 0.2, 1.4), "light_stone")
 			tower.box(Vector3(0, height - 0.68, 0), Vector3(1.1, 0.44, 1.1), "bronze")

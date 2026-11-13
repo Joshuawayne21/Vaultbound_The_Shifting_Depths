@@ -35,8 +35,8 @@ static func unbaked(test, stage: Node3D) -> void:
 			highest = maxf(highest, point.y)
 			nearest = minf(nearest, Vector2(point.x, point.z).length())
 		heights[snappedf(highest, 0.01)] = true
-		test.check(covered and nearest >= 44.79 and highest >= 34.99 and highest <= 45.01, "Every opaque native tower vertex lies within camera planes and outside original walkable masonry: " + String(node.name))
-	test.check(towers == 4 and heights.has(35.0) and heights.has(38.0) and heights.has(42.0) and heights.has(45.0), "Four measured landmark silhouettes reach 35, 38, 42 and 45m")
+		test.check(covered and nearest >= 44.79 and highest >= 8.99 and highest <= 12.01, "Every opaque native tower vertex lies within camera planes and outside original walkable masonry: " + String(node.name))
+	test.check(towers == 4 and heights.has(9.0) and heights.has(10.0) and heights.has(11.0) and heights.has(12.0), "Four measured landmark silhouettes reach 9, 10, 11 and 12m")
 	var expected_booths := {
 		&"exchange_01": Vector3(12, 0, 0), &"exchange_02": Vector3(6, 0, 10.3923048),
 		&"exchange_03": Vector3(-6, 0, 10.3923048), &"exchange_04": Vector3(-12, 0, 0),

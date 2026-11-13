@@ -12,6 +12,7 @@ extends Resource
 @export var ramp_length := 8.0
 
 const CAPITAL = preload("res://resources/sanctuary/prismheart_capital.tres")
+const COURTYARD = preload("res://resources/sanctuary/exchange_courtyard.tres")
 
 const DISTRICT_NAMES := ["Portal Promenade", "Combat Coliseum", "Merchant Terraces", "Personal Sanctuary & Trophy Hall", "Master Forge", "Cosmetic Pavilion", "Spiritweaving Conservatory", "Tavern & Recruitment"]
 const DISTRICT_POIS := [&"rootbound_abyss", &"combat_arena", &"merchant_general", &"collection_hall", &"blacksmith", &"equipment", &"conservatory", &"tavern"]
@@ -78,6 +79,24 @@ func get_poi(id: StringName) -> Dictionary:
 			return {"id": id, "label": district.label, "district": id, "position": district.center, "approach": district.approach, "kind": &"district"}
 	return {}
 
+func get_exchange_connections() -> Array[Dictionary]:
+	# Existing graph, arrival and service coordinates stay unchanged. E/H reuse
+	# their authored ramp rather than adding a second conflicting floor.
+	var result: Array[Dictionary] = []
+	for district: Dictionary in get_districts():
+		var angle: float = district.angle
+		var outward := Vector3(sin(angle), 0, -cos(angle))
+		var terrace: bool = district.id in [&"E", &"H"]
+		result.append({"id": district.id, "district": district.id, "label": district.label,
+			"angle": angle, "reuses_terrace": terrace, "walking_width": float(COURTYARD.bridge_width),
+			"arch_transform": Transform3D(Basis(Vector3.UP, -angle), outward * float(COURTYARD.wall_radius)),
+			"arch_clear_width": float(COURTYARD.gate_post_center) * 2.0 - float(COURTYARD.gate_post_width),
+			"bridge_start": outward * float(COURTYARD.bridge_start_radius),
+			"deck_start": outward * float(COURTYARD.deck_start_radius) + Vector3.UP * COURTYARD.floor_height(float(COURTYARD.deck_start_radius), terrace),
+			"deck_end": outward * float(COURTYARD.deck_end_radius) + Vector3.UP * COURTYARD.floor_height(float(COURTYARD.deck_end_radius), terrace),
+			"bridge_end": outward * float(COURTYARD.bridge_end_radius) + Vector3.UP * COURTYARD.floor_height(float(COURTYARD.bridge_end_radius), terrace)})
+	return result
+
 func get_service_poi(service: StringName) -> Dictionary:
 	var aliases := {&"general": &"merchant_general", &"merchant": &"merchant_general", &"equipment": &"merchant_equipment", &"appraiser": &"merchant_appraiser", &"recruitment": &"tavern", &"forge": &"blacksmith"}
 	return get_poi(aliases.get(service, service))
@@ -126,4 +145,4 @@ func navigation_graph() -> Dictionary:
 	return {"points": points, "edges": edges}
 
 func describe() -> Dictionary:
-	return {"radius": radius, "exchange_radius": exchange_radius, "ring_radius": ring_radius, "ring_width": ring_width, "district_radius": district_radius, "path_width": path_width, "districts": get_districts(), "pois": get_pois(), "exchange_booths": get_exchange_booths(), "ramps": get_ramps()}
+	return {"radius": radius, "exchange_radius": exchange_radius, "ring_radius": ring_radius, "ring_width": ring_width, "district_radius": district_radius, "path_width": path_width, "districts": get_districts(), "pois": get_pois(), "exchange_booths": get_exchange_booths(), "exchange_connections": get_exchange_connections(), "ramps": get_ramps()}

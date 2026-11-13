@@ -93,12 +93,17 @@ func _unbaked_boundary() -> void:
 		var mesh := node.mesh as BoxMesh
 		matching = matching and mesh != null
 		if mesh == null: continue
-		heights[snappedf(mesh.size.y, 0.01)] = true
-		matching = matching and snappedf(mesh.size.y, 0.01) in [22.0, 26.0, 30.0] and is_equal_approx(mesh.size.x, 4.48) and is_equal_approx(mesh.size.z, 0.8)
 		var shape := node.get_child(0).get_child(0) as CollisionShape3D
-		matching = matching and shape.shape is BoxShape3D and shape.shape.size == mesh.size and shape.global_transform.is_equal_approx(node.global_transform)
+		var physical := shape.shape as BoxShape3D
+		matching = matching and physical != null
+		if physical == null: continue
+		heights[snappedf(physical.size.y, 0.01)] = true
+		var expected_height := is_equal_approx(physical.size.y, 4.6) or is_equal_approx(physical.size.y, 5.2) or is_equal_approx(physical.size.y, 5.8)
+		matching = matching and expected_height and is_equal_approx(mesh.size.x, 4.48) and is_equal_approx(mesh.size.z, 0.60)
+		matching = matching and is_equal_approx(physical.size.x, 4.48) and is_equal_approx(physical.size.z, 0.8) and is_equal_approx(mesh.size.y + 0.20, physical.size.y)
+		matching = matching and shape.global_basis.is_equal_approx(node.global_basis) and shape.global_position.distance_to(node.global_position + Vector3.UP * 0.10) < 0.001
 		matching = matching and absf(Vector2(node.position.x, node.position.z).length() - 44.6) < 0.001 and absf(node.position.y - mesh.size.y * 0.5) < 0.001
-	check(matching, "Raised wall native meshes and actual solid shapes match, retain footprints and rise to the authored 22/26/30m capital silhouettes")
+	check(matching, "Measured 4.6/5.2/5.8m wall envelopes retain every original horizontal footprint while inset visual masonry leaves relief depth clearance")
 	check(heights.size() >= 2, "Actual wall geometry has varied heights instead of one repeated perimeter silhouette")
 	var tower_count := 0
 	var tower_heights: Dictionary = {}
