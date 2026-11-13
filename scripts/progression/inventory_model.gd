@@ -65,13 +65,13 @@ static func migrate_legacy(items: Dictionary, equipped_item: String = "") -> Dic
 			result.legacy_reserve[id] = remaining
 	return result
 
-static func normalize_fields(value: Dictionary, source_version: int = 13) -> Dictionary:
+static func normalize_fields(value: Dictionary, source_version: int = 14) -> Dictionary:
 	return _normalize_fields(value, source_version, {})
 
 static func _normalize_fields(value: Dictionary, source_version: int, unavailable_items: Dictionary) -> Dictionary:
 	# Unavailable IDs are used only by ProfileStore's read-only classification.
 	# The normal inventory API never accepts them or creates substitute items.
-	if source_version not in [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]:
+	if source_version not in [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]:
 		return {}
 	if not value.get("inventory") is Array or value.inventory.size() > CAPACITY:
 		return {}

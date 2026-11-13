@@ -35,19 +35,19 @@ func _run() -> void:
 	_write(PATH + ".pre-v12.bak", old12)
 	var store := Store.new(PATH)
 	var migrated := store.load_profile()
-	check(not store.read_only and migrated.version == 13 and migrated.activities.version == 2, "Version12 becomes the explicit version13 two-activity namespace")
+	check(not store.read_only and migrated.version == Store.VERSION and migrated.activities.version == Progress.VERSION, "Version12 becomes the current activity namespace")
 	check(migrated.activities.open_run == source.activities.open_run \
 		and migrated.activities.records.beastwilds == source.activities.records.beastwilds \
 		and migrated.activities.next_run_serial == source.activities.next_run_serial, "Existing Beast ticket, digest, records and serial survive exactly")
 	for key: String in source:
 		if key not in ["version", "activities"]: check(migrated[key] == source[key], "Migration preserves secured profile field: " + key)
 	for amount: int in migrated.activities.records.echoes_of_eternity.values(): check(amount == 0, "New Echoes records begin at zero without claimed progress")
-	check(FileAccess.get_file_as_bytes(PATH) == bytes and not FileAccess.file_exists(PATH + ".pre-v13.bak"), "Loading alone does not write or replace player data")
-	check(store.save_profile(migrated), "First version13 save uses the existing atomic store")
-	check(FileAccess.get_file_as_bytes(PATH + ".pre-v13.bak") == bytes \
+	check(FileAccess.get_file_as_bytes(PATH) == bytes and not FileAccess.file_exists(PATH + ".pre-v%d.bak" % Store.VERSION), "Loading alone does not write or replace player data")
+	check(store.save_profile(migrated), "First current-version save uses the existing atomic store")
+	check(FileAccess.get_file_as_bytes(PATH + ".pre-v%d.bak" % Store.VERSION) == bytes \
 		and FileAccess.get_file_as_bytes(PATH + ".pre-v11.bak") == old11 \
-		and FileAccess.get_file_as_bytes(PATH + ".pre-v12.bak") == old12, "Exact pre-v13 backup is created without changing older migration backups")
-	check(Store.new(PATH).load_profile() == migrated, "Version13 fields survive same-process store reload")
+		and FileAccess.get_file_as_bytes(PATH + ".pre-v12.bak") == old12, "Exact current migration backup is created without changing older migration backups")
+	check(Store.new(PATH).load_profile() == migrated, "Migrated fields survive same-process store reload")
 	var malformed := migrated.duplicate(true)
 	malformed.activities.records.echoes_of_eternity.highest_wave = 2
 	check(Store.normalize(malformed).is_empty(), "A wave record cannot carry an inconsistent score")

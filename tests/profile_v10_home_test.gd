@@ -10,7 +10,7 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 func _run() -> void:
-	check(Store.VERSION == 13 and Home.VERSION == 3 and Home.CATALOG.valid(), "Version13/home3 supports the Conservatory and six bounded display places")
+	check(Store.VERSION == 14 and Home.VERSION == 3 and Home.CATALOG.valid(), "Version14/home3 supports the Conservatory and six bounded display places")
 	_migration()
 	_plans()
 	_preservation()

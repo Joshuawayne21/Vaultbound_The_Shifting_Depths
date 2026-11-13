@@ -23,7 +23,7 @@ func _write(path: String, bytes: String) -> void:
 	file.close()
 
 func _run() -> void:
-	check(Store.VERSION == 13 and Home.VERSION == 3, "Current profile and home namespace are independent of dungeon content versions")
+	check(Store.VERSION == 14 and Home.VERSION == 3, "Current profile and home namespace are independent of dungeon content versions")
 	for version in range(1, 8): _migration(version)
 	_schema()
 	_preservation()

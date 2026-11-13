@@ -10,7 +10,7 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 func _run() -> void:
-	check(Store.VERSION == 13 and Home.VERSION == 3 and Home.CATALOG.valid(), "Profile13/home3 catalog is bounded and independent of dungeon content")
+	check(Store.VERSION == 14 and Home.VERSION == 3 and Home.CATALOG.valid(), "Profile14/home3 catalog is bounded and independent of dungeon content")
 	_migration()
 	_models()
 	_boundaries()

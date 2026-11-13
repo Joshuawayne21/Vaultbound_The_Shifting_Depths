@@ -2,7 +2,8 @@ extends RefCounted
 ## Closed dispatch for reviewed local activities. Rootbound retains its own path.
 const Beast = preload("res://scripts/activities/activity_run_plan.gd")
 const Echoes = preload("res://scripts/activities/echoes_run_plan.gd")
-const IDS := ["beastwilds", "echoes_of_eternity"]
+const Gilded = preload("res://scripts/activities/gilded_run_plan.gd")
+const IDS := ["beastwilds", "echoes_of_eternity", "gilded_vault"]
 
 static func descriptor(id: StringName) -> Dictionary:
 	match id:
@@ -20,18 +21,27 @@ static func descriptor(id: StringName) -> Dictionary:
 				"source_script": Echoes.BREAK_SCRIPT, "return_entry": "from_echoes", "objectives_required": 5,
 				"start_text": "Local five-wave trial · solo with your recruited AI party. Secure searched rewards after wave five. No online rankings.",
 				"result_title": "TRIAL REWARDS SECURED"}
+		&"gilded_vault":
+			return {"activity_id": Gilded.ID, "definition_version": 1, "display_name": "The Gilded Vault",
+				"required_cleared_depth": 5, "world_script": Gilded.WORLD_SCRIPT,
+				"world_scene": "res://scenes/activities/gilded_vault.tscn", "exit_script": Beast.EXIT_SCRIPT,
+				"source_script": Gilded.SOURCE_SCRIPT, "return_entry": "from_gilded", "objectives_required": 3,
+				"start_text": "Local six-room treasure expedition · solve one rune puzzle, defeat its Golem and search the treasury. An optional hidden cache is trapped.",
+				"result_title": "TREASURE SECURED"}
 	return {}
 
 static func definition(id: StringName) -> Dictionary:
 	match id:
 		&"beastwilds": return Beast.definition()
 		&"echoes_of_eternity": return Echoes.definition()
+		&"gilded_vault": return Gilded.definition()
 	return {}
 
 static func create(id: StringName, seed_value: int, serial: int) -> Dictionary:
 	match id:
 		&"beastwilds": return Beast.create(seed_value, serial)
 		&"echoes_of_eternity": return Echoes.create(seed_value, serial)
+		&"gilded_vault": return Gilded.create(seed_value, serial)
 	return {}
 
 static func valid(plan: Variant) -> bool:
@@ -39,10 +49,12 @@ static func valid(plan: Variant) -> bool:
 	match plan.get("activity_id"):
 		"beastwilds": return Beast.valid(plan)
 		"echoes_of_eternity": return Echoes.valid(plan)
+		"gilded_vault": return Gilded.valid(plan)
 	return false
 
 static func digest(plan: Dictionary) -> String:
 	match plan.get("activity_id"):
 		"beastwilds": return Beast.digest(plan)
 		"echoes_of_eternity": return Echoes.digest(plan)
+		"gilded_vault": return Gilded.digest(plan)
 	return ""

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/activities/gilded_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+activity_id = &"gilded_vault"
+definition_version = 1
+display_name = "The Gilded Vault"
+required_cleared_depth = 5
+main_depthmarks = Vector2i(45, 70)
+optional_depthmarks = Vector2i(15, 25)
+main_ore = Vector2i(2, 4)
+optional_fiber = Vector2i(2, 3)
+spoon_weight = 55
+tonic_chance = 50
+trap_warning_seconds = 2.2
+trap_active_seconds = 0.2
+trap_recovery_seconds = 0.45
+trap_damage = 12.0

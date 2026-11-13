@@ -33,7 +33,7 @@ func _write(path: String, body: String) -> void:
 
 func _migration() -> void:
 	_clean()
-	check(Store.VERSION == 13 and not Access.enabled(Store.empty_profile()), "Profile13 defaults to normal requirements and grants no developer rights implicitly")
+	check(Store.VERSION == 14 and not Access.enabled(Store.empty_profile()), "Profile14 defaults to normal requirements and grants no developer rights implicitly")
 	var old := Fixtures.owned()
 	old = Home.plan_initialization(old, Fixtures.ID, int(old.revision))
 	old = Home.plan(old, &"claim_home_milestones", {}, int(old.revision)).profile

@@ -52,7 +52,7 @@ func _run() -> void:
 	check(not Plan.valid(changed), "An ordinary actor cannot replace the final existing boss")
 	check(Plan.prefix(plan, {plan.waves[4].receipt: true}) == -1, "Final boss receipt alone cannot clear skipped waves")
 	check(Plan.prefix(plan, {"forged": true}) == -1 and Plan.prefix(plan, {plan.waves[0].receipt: false}) == -1, "Forged or false wave claims are rejected")
-	check(Activities.descriptor(&"gilded_vault").is_empty() and Activities.create(&"rootbound_abyss", 1, 1).is_empty(), "Unreleased activities and Rootbound never enter the local activity dispatch")
+	check(Activities.descriptor(&"titans_gate").is_empty() and Activities.create(&"rootbound_abyss", 1, 1).is_empty(), "Unreleased activities and Rootbound never enter the local activity dispatch")
 	var fields := Progress.empty_fields()
 	var first := Progress.reserve(fields, 0, plan)
 	check(not first.is_empty() and first.records.echoes_of_eternity.entered == 1 and first.records.beastwilds.entered == 0, "One shared ticket records the admitted activity only")

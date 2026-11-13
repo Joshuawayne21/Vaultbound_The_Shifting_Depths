@@ -4,7 +4,7 @@ extends RefCounted
 ## a temporary file, and renamed only after a successful read-back. A previous
 ## valid profile is kept as .bak. This is offline persistence, not remote authority.
 
-const VERSION := 13
+const VERSION := 14
 const ActivityProgress = preload("res://scripts/progression/activity_progression.gd")
 const DepthProgress = preload("res://scripts/progression/depth_progression.gd")
 const EncounterProgress = preload("res://scripts/progression/encounter_progression.gd")
