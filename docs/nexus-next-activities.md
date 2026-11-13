@@ -1,6 +1,6 @@
-# Local activities — accepted Echoes checkpoint and proposed Gilded slice
+# Local activities — accepted Echoes and Gilded checkpoints
 
-**Echoes Stage 5b is accepted; Gilded remains proposed/unreleased.** Follow [the implemented Echoes scope](echoes-of-eternity.md) and [accepted validation](nexus-stage5b-validation.md). The Echoes design below is retained for context; Gilded design and isolated drafts do not make its gateway playable. No multiplayer, rankings, Realm Mastery or masks are added; masks remain user-deferred.
+**Echoes Stage 5b and Gilded Stage 5c are accepted local checkpoints.** Follow the implemented [Gilded scope](gilded-vault.md) and [157-mode evidence](nexus-stage5c-validation.md). The earlier [data foundation](nexus-gilded-foundation-validation.md) and [Echoes report](nexus-stage5b-validation.md) remain historical. The design notes below do not promise additional mechanics beyond those guides. No multiplayer, rankings, Realm Mastery or masks are added; masks remain user-deferred.
 
 ## 5b — Echoes of Eternity: one complete five-wave trial
 
@@ -37,9 +37,9 @@ Extend loot access through an explicit admitted activity context while preservin
 3. **Breaks and rewards:** add the two scoped choices, original-source caches, records and once-only save/return. Test touch cancellation/replay, full inventory, wipe/fall, failed save and failed destination retry.
 4. **Release:** only after acceptance, enable the exact Depth 3 route and Nexus return, update cards/HUD/current guides and verify all retained worlds. The accepted checkpoint enables exactly four major local routes, leaving six unavailable.
 
-## 5c — The Gilded Vault: separate treasure expedition
+## 5c — The Gilded Vault: accepted finite treasure expedition
 
-After accepted Echoes, propose a seeded five- or six-room route: entrance reliquary, clue gallery, plate chamber, sealed treasury guarded by the existing Corrupted Golem, return route and optional hidden alcove. Reuse compatible authored 24 m modules with ivory/gold/amber dressing, preserving door openings, source space and both-camera visibility. Required and optional connectors must be reciprocal and reachable; movement must always allow returning to abandon.
+Stage 5c uses six existing native modules: entrance temple, clue corridor, plate garden, combat temple with the original Corrupted Golem, treasury vault and optional hidden hollow. Only the optional leaf has a reveal barrier; the main loop and return spur stay open. Reuse compatible authored 24 m modules with ivory/gold/amber dressing, preserving door openings, source space and both-camera visibility. Required and optional connectors must be reciprocal and reachable; movement must always allow returning to abandon.
 
 Implement one genuine three-plate sequence puzzle. An inspectable clue gives the seeded order; the living player physically enters original bound plates. Wrong order resets safely; companion/pet overlap does not solve or reset it. Success latches once and opens a physical seal into a clear recess. Main treasure requires both the verified puzzle and actual guardian death. Use two or three seeded searchable caches with existing eligible valuables/materials/equipment; no unsupported boss drops or mask rules.
 

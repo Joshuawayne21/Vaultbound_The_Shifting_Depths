@@ -133,6 +133,7 @@ func _ready() -> void:
 	sanctuary_panel.enter_requested.connect(func() -> void: portal_entry_requested.emit())
 	sanctuary_panel.depth_selected.connect(func(depth: int) -> void: portal_depth_selected.emit(depth))
 	sanctuary_panel.map_requested.connect(open_city_map)
+	sanctuary_panel.pointers_canceled.connect(_retain_home_pointer_tails)
 	social_panel = preload("res://scripts/ui/social_panel.gd").new()
 	social_panel.name = "SocialPanel"
 	add_child(social_panel)
@@ -363,6 +364,15 @@ func open_activity_return(context: Dictionary) -> bool:
 	var opened := _open_modal(&"sanctuary")
 	return opened and mode == &"sanctuary" and sanctuary_panel.visible \
 		and sanctuary_panel.kind == &"portal" and sanctuary_panel.context == context
+
+
+func open_activity_clue(context: Dictionary) -> bool:
+	# Read-only native clue shares the modal owner, never a portal confirmation.
+	if mode != &"none" or not is_instance_valid(sanctuary_panel): return false
+	sanctuary_panel.open_panel(&"activity_clue", {}, context)
+	var opened := _open_modal(&"sanctuary")
+	return opened and mode == &"sanctuary" and sanctuary_panel.visible \
+		and sanctuary_panel.kind == &"activity_clue" and sanctuary_panel.context == context
 
 
 func bind_progression_session(session: Node) -> void:
@@ -1557,6 +1567,18 @@ func activity_status_lines() -> Dictionary:
 		elif cleared == 5: label = "5 / 5 CLEARED · SEARCH CACHES & RETURN"
 		return {"title": "ECHOES OF ETERNITY", "objectives": label,
 			"progress": float(cleared) / 5.0, "ready": cleared == 5}
+	if String(session_snapshot.get("activity_id", "")) == "gilded_vault":
+		var activity: Dictionary = session_snapshot.get("activity", {})
+		var completed := clampi(int(session_snapshot.get("objectives_completed", 0)), 0, 3)
+		var task := "SIGILS %d / 3" % clampi(int(activity.get("sequence_progress", 0)), 0, 3)
+		if bool(activity.get("puzzle_solved", false)):
+			task = "DEFEAT THE GUARDIAN"
+			if bool(activity.get("guardian_defeated", false)):
+				task = "KEEP CLEAR · ATTACKS SETTLING" if not bool(activity.get("guardian_drained", false)) else "OPEN THE MAIN TREASURY"
+		if bool(activity.get("treasury_registered", false)): task = "SEARCH, THEN RETURN"
+		if bool(activity.get("hazard_pending", false)): task = "HAZARD ACTIVE · KEEP CLEAR"
+		return {"title": "THE GILDED VAULT", "objectives": "%d / 3 OBJECTIVES · %s" % [completed, task],
+			"progress": float(completed) / 3.0, "ready": completed == 3 and not bool(activity.get("hazard_pending", false))}
 	var completed := maxi(0, int(session_snapshot.get("objectives_completed", 0)))
 	var required := maxi(1, int(session_snapshot.get("objectives_required", 1)))
 	return {"title": String(session_snapshot.get("activity_name", "Activity")).to_upper(),
@@ -1573,12 +1595,13 @@ func _draw_activity_status() -> void:
 	_text("%d DM · UNSECURED" % int(session_snapshot.get("unsecured_gold", 0)), rect.position + Vector2(rect.size.x - 14, 21), 11, GOLD, false, true)
 	_text(String(labels.objectives), rect.position + Vector2(14, 47), 10, IVORY)
 	var track := Rect2(rect.position + Vector2(180, 38), Vector2(294, 7))
-	if String(session_snapshot.get("activity_id", "")) == "echoes_of_eternity":
+	if String(session_snapshot.get("activity_id", "")) in ["echoes_of_eternity", "gilded_vault"]:
 		track = Rect2(rect.position + Vector2(14, 56), Vector2(rect.size.x - 28, 4))
 	draw_rect(track, Color(0.01, 0.03, 0.04))
 	draw_rect(Rect2(track.position, Vector2(track.size.x * float(labels.progress), track.size.y)), TEAL)
 	if bool(labels.ready):
-		_text("Search the caches, then secure at the return spring" if String(session_snapshot.get("activity_id", "")) == "echoes_of_eternity" else "Return to camp to secure your discoveries", Vector2(size.x * 0.5, rect.end.y + 20), 12, TEAL, true)
+		var hint := "Only taken rewards are secured at the return spring." if String(session_snapshot.get("activity_id", "")) == "gilded_vault" else "Search the caches, then secure at the return spring" if String(session_snapshot.get("activity_id", "")) == "echoes_of_eternity" else "Return to camp to secure your discoveries"
+		_text(hint, Vector2(size.x * 0.5, rect.end.y + 20), 12, TEAL, true)
 
 
 func _draw_expedition_status() -> void:
@@ -1743,7 +1766,7 @@ func _draw_dungeon_map() -> void:
 	var spacing := minf(25, float(layout.extent) / maxf(span.x, span.y))
 	var center: Vector2 = layout.center
 	if not returns.is_empty():
-		_text("R RETURN · E EXTRACT", rect.position + Vector2(rect.size.x * 0.5, float(layout.legend_baseline)), 8, MUTED, true)
+		_text("R RETURN SPRING" if String(session_snapshot.get("activity_id", "")) == "gilded_vault" else "R RETURN · E EXTRACT", rect.position + Vector2(rect.size.x * 0.5, float(layout.legend_baseline)), 8, MUTED, true)
 	var midpoint := (minimum + maximum) * 0.5
 	var room_data: Dictionary = {}
 	for room: Dictionary in dungeon_snapshot.get("rooms", []):
@@ -1861,8 +1884,9 @@ func _draw_pack() -> void:
 func result_display_lines() -> Dictionary:
 	if String(results_snapshot.get("run_kind", "")) == "activity":
 		var secured := String(results_snapshot.get("outcome", "")) == "activity_completed"
-		return {"title": ("CHALLENGE SECURED" if String(results_snapshot.get("activity_id", "")) == "echoes_of_eternity" else "DISCOVERIES SECURED") if secured else "ACTIVITY ENDED",
-			"detail": "Your discoveries are safe in your collection." if secured else "Unsecured finds were lost. Your secured collection is unchanged.",
+		var gilded := String(results_snapshot.get("activity_id", "")) == "gilded_vault"
+		return {"title": ("TREASURE SECURED" if gilded else "CHALLENGE SECURED" if String(results_snapshot.get("activity_id", "")) == "echoes_of_eternity" else "DISCOVERIES SECURED") if secured else "ACTIVITY ENDED",
+			"detail": ("Taken treasure is safe; remaining cache contents stayed behind." if gilded else "Your discoveries are safe in your collection.") if secured else "Unsecured finds were lost. Your secured collection is unchanged.",
 			"secured": secured, "completed": secured, "early": false,
 			"currency": "DM SECURED" if secured else "DM LOST",
 			"items": "COLLECTED & SECURED" if secured else "UNSECURED ITEMS LOST",
@@ -1907,6 +1931,9 @@ func _draw_results() -> void:
 		if String(results_snapshot.get("activity_id", "")) == "echoes_of_eternity":
 			summaries[1] = ["WAVES CLEARED", "%d / 5" % int(results_snapshot.get("completed_waves", 0))]
 			summaries[2] = ["SCORE · LOCAL RECORD", str(results_snapshot.get("score", 0))]
+		elif String(results_snapshot.get("activity_id", "")) == "gilded_vault":
+			summaries[1] = ["REQUIRED OBJECTIVES", "%d / 3" % clampi(int(results_snapshot.get("objectives_completed", 0)), 0, 3)]
+			summaries[2] = ["OPTIONAL CACHE", "FOUND" if bool(results_snapshot.get("optional_cache_registered", false)) else "NOT FOUND"]
 	for index in range(summaries.size()):
 		var at := rect.position + Vector2(30 + index * 263, 127)
 		_panel(Rect2(at, Vector2(245, 65)), Color(0.045, 0.12, 0.13, 1))

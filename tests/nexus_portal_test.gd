@@ -2,7 +2,7 @@ extends "res://tests/nexus_fixture.gd"
 ## Real authored sources, modal touch gestures and denial paths; no live server claims.
 const Access = preload("res://scripts/progression/tester_access.gd")
 const PortalScene = preload("res://scenes/world/portal.tscn")
-const UNAVAILABLE_IDS: Array[StringName] = [&"gilded_vault", &"titans_gate", &"shattered_rift", &"guild_conquest", &"chaos_gate", &"forbidden_gate"]
+const UNAVAILABLE_IDS: Array[StringName] = [&"titans_gate", &"shattered_rift", &"guild_conquest", &"chaos_gate", &"forbidden_gate"]
 
 func _initialize() -> void:
 	suite_name = "VAULTBOUND NEXUS PORTAL FOUNDATION"
@@ -25,14 +25,16 @@ func _run() -> void:
 	finish()
 
 func _registry() -> void:
-	check(Catalog.valid() and Catalog.IDS.size() == 10 and Catalog.RELEASED_ROUTES == {&"abyssal_descent": &"rootbound_abyss", &"bloodspire_arena": &"combat_arena", &"beastwilds": &"beastwilds", &"echoes_of_eternity": &"echoes_of_eternity"}, "Ten definitions expose exactly the existing dungeon, local practice, Beastwilds and five-wave Echoes routes")
+	check(Catalog.valid() and Catalog.IDS.size() == 10 and Catalog.RELEASED_ROUTES == {&"abyssal_descent": &"rootbound_abyss", &"bloodspire_arena": &"combat_arena", &"beastwilds": &"beastwilds", &"echoes_of_eternity": &"echoes_of_eternity", &"gilded_vault": &"gilded_vault"}, "Ten definitions expose exactly five reviewed routes: existing dungeon, local practice, Beastwilds, Echoes and Gilded Vault")
+	check(Catalog.RELEASED_DEPTHS == {&"abyssal_descent": 0, &"bloodspire_arena": 0, &"beastwilds": 2, &"echoes_of_eternity": 3, &"gilded_vault": 5}, "Every released gate retains its exact earned-depth requirement")
 	var unavailable: Array[StringName] = []
 	for id: StringName in Catalog.IDS:
 		if not Catalog.RELEASED_ROUTES.has(id): unavailable.append(id)
-	check(unavailable == UNAVAILABLE_IDS, "Exactly six named unreleased activities remain unavailable")
-	check(hall.ENTRY_IDS == [&"default", &"from_sanctuary", &"from_bloodspire", &"from_beastwilds", &"from_echoes"], "Echoes adds only its reviewed return alias and preserves all four existing Nexus entries")
+	check(unavailable == UNAVAILABLE_IDS, "Exactly five named unreleased activities remain unavailable")
+	check(hall.ENTRY_IDS == [&"default", &"from_sanctuary", &"from_bloodspire", &"from_beastwilds", &"from_echoes", &"from_gilded"], "Gilded adds only its reviewed return alias and preserves all five existing Nexus entries")
 	check(hall.validate_nexus_arrival(&"from_echoes") and hall.get_spawn_transform(&"from_echoes").is_equal_approx(hall.get_spawn_transform(&"from_beastwilds")) \
 		and not hall.validate_nexus_arrival(&"from_forbidden_gate"), "Echoes return validates the existing native three-member arrival floor; an unpublished alias remains denied")
+	check(hall.validate_nexus_arrival(&"from_gilded") and hall.get_spawn_transform(&"from_gilded").is_equal_approx(hall.get_spawn_transform(&"from_echoes")), "Gilded reuses the verified native three-member Nexus arrival floor without changing the existing spawn")
 	var actual: Dictionary = hall.registered_activity_sources()
 	var all_sources: Dictionary = hall.registered_portal_sources()
 	check(actual.size() == 10 and all_sources.size() == 12, "Private authored registry contains ten major gates and two legacy passages")
@@ -65,7 +67,7 @@ func _registry() -> void:
 	check(hall.registered_activity_sources().size() == 10 and hall.registered_portal_sources().size() == 12, "Caller-owned registry snapshots cannot erase authored sources")
 
 func _earned_activity_thresholds() -> void:
-	for cleared in [0, 1, 2, 3]:
+	for cleared in [0, 1, 2, 3, 4, 5, 6]:
 		var profile := Store.empty_profile()
 		profile.depth_progression = {"version": 1, "highest_unlocked_depth": cleared + 1, "highest_cleared_depth": cleared}
 		var before: Dictionary = profile.duplicate(true)
@@ -73,6 +75,10 @@ func _earned_activity_thresholds() -> void:
 		var status: Dictionary = Catalog.entry_status(profile, &"echoes_of_eternity")
 		check(status.implemented and status.destination == &"echoes_of_eternity" and status.ok == (cleared >= 3), "Echoes requires the actual earned Depth 3 threshold at cleared depth " + str(cleared))
 		if cleared < 3: check(String(status.reason).contains("Depth 3"), "Locked Echoes names its unmet earned-floor requirement")
+		var gilded: Dictionary = Catalog.entry_status(profile, &"gilded_vault")
+		check(gilded.implemented and gilded.destination == &"gilded_vault" and gilded.entry_id == &"default" \
+			and gilded.ok == (cleared >= 5), "Gilded requires an actual earned Depth 5 clear, not merely unlocked Depth 5: " + str(cleared))
+		if cleared < 5: check(String(gilded.reason).contains("Depth 5"), "Locked Gilded names its unmet earned-floor requirement")
 		check(profile == before, "Eligibility inspection cannot mutate earned progression or issue activity tickets")
 
 func _all_cards() -> void:
@@ -85,8 +91,8 @@ func _all_cards() -> void:
 			check(panel.has_depth_selector() and panel.context.selected_depth == 1, "Abyssal gateway reuses the actual earned-depth selector")
 		elif id == &"bloodspire_arena":
 			check(not panel.has_depth_selector() and " ".join(panel.context.lines).contains("LOCAL PRACTICE"), "Bloodspire explicitly offers NPC practice without ranked or matchmaking claims")
-		elif id in [&"beastwilds", &"echoes_of_eternity"]:
-			var required := 2 if id == &"beastwilds" else 3
+		elif id in [&"beastwilds", &"echoes_of_eternity", &"gilded_vault"]:
+			var required: int = {&"beastwilds": 2, &"echoes_of_eternity": 3, &"gilded_vault": 5}[id]
 			check(not panel.has_depth_selector() and not panel.entry_enabled and not panel.notice.is_empty() \
 				and not session.activity_entry_status(id).ok and not " ".join(panel.context.lines).contains("NOT IMPLEMENTED") \
 				and String(panel.notice).contains("%d" % required), "Fresh profile can inspect %s but must earn and extract Depth %d before entering" % [String(id), required])
@@ -94,6 +100,11 @@ func _all_cards() -> void:
 				var text := " ".join(panel.context.lines)
 				check(text.contains("LOCAL FIVE-WAVE TRIAL") and text.contains("existing Rootwarden") and text.contains("player-only") \
 					and text.contains("waves 2 and 4") and text.contains("no XP, masks or trophies"), "Echoes card truthfully describes its bounded local trial, temporary player choices and existing rewards")
+			if id == &"gilded_vault":
+				var text := " ".join(panel.context.lines)
+				check(text.contains("LOCAL TREASURE EXPEDITION") and text.contains("six ancient rooms") \
+					and text.contains("physical rune puzzle") and text.contains("existing Corrupted Golem") \
+					and text.contains("optional trapped cache") and text.contains("no XP, masks or trophies"), "Gilded card describes only its six-room local puzzle, native guardian and existing loot")
 			tap(panel.primary_rect().get_center())
 			panel.enter_requested.emit()
 			await frames(2)
@@ -107,7 +118,7 @@ func _all_cards() -> void:
 		game.hud.close_modals()
 
 func _source_tampering() -> void:
-	for id: StringName in [&"beastwilds", &"echoes_of_eternity"]:
+	for id: StringName in [&"beastwilds", &"echoes_of_eternity", &"gilded_vault"]:
 		var gate := await open_gate(id)
 		if gate == null: return
 		game.hud.close_modals()
@@ -240,7 +251,7 @@ func _tester_denials() -> void:
 		await frames(2)
 		check(no_travel(), "Unavailable tester intent remains inside Nexus: " + String(id))
 		game.hud.close_modals()
-	for id: StringName in [&"beastwilds", &"echoes_of_eternity"]:
+	for id: StringName in [&"beastwilds", &"echoes_of_eternity", &"gilded_vault"]:
 		if await open_gate(id) != null:
 			check(panel.entry_enabled and session.activity_entry_status(id).ok and not session.active \
 				and session.profile.activities.open_run.is_empty(), "Explicit TEST ACCESS reviews implemented %s without granting earned floor completion or reserving a visit" % String(id))

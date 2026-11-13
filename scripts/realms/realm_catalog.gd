@@ -20,8 +20,8 @@ const DEFINITIONS := {
 }
 # Expanding this allowlist requires the gameplay/return/settlement tests for that
 # activity. Setting a resource's release flag alone cannot open an empty world.
-const RELEASED_ROUTES := {&"abyssal_descent": &"rootbound_abyss", &"bloodspire_arena": &"combat_arena", &"beastwilds": &"beastwilds", &"echoes_of_eternity": &"echoes_of_eternity"}
-const RELEASED_DEPTHS := {&"abyssal_descent": 0, &"bloodspire_arena": 0, &"beastwilds": 2, &"echoes_of_eternity": 3}
+const RELEASED_ROUTES := {&"abyssal_descent": &"rootbound_abyss", &"bloodspire_arena": &"combat_arena", &"beastwilds": &"beastwilds", &"echoes_of_eternity": &"echoes_of_eternity", &"gilded_vault": &"gilded_vault"}
+const RELEASED_DEPTHS := {&"abyssal_descent": 0, &"bloodspire_arena": 0, &"beastwilds": 2, &"echoes_of_eternity": 3, &"gilded_vault": 5}
 
 static func definition(id: StringName) -> Resource:
 	return DEFINITIONS.get(id) as Resource
@@ -66,7 +66,7 @@ static func entry_status(profile: Dictionary, id: StringName) -> Dictionary:
 	if depths.is_empty():
 		result.reason = "Secured dungeon progression is unavailable."
 		return result
-	if int(depths.highest_cleared_depth) < int(data.required_cleared_depth) and not (id in [&"beastwilds", &"echoes_of_eternity"] and Tester.enabled(profile)):
+	if int(depths.highest_cleared_depth) < int(data.required_cleared_depth) and not (id in [&"beastwilds", &"echoes_of_eternity", &"gilded_vault"] and Tester.enabled(profile)):
 		result.reason = "Complete Depth %d and extract before entering." % int(data.required_cleared_depth)
 		return result
 	result.ok = true
@@ -80,7 +80,7 @@ static func information_lines(profile: Dictionary, id: StringName) -> Array[Stri
 	# Six bounded lines fit the existing card. Detailed depth information uses
 	# Game's existing reviewed depth selector instead of this compact summary.
 	var lines: Array[String] = [String(data.description), String(data.mode_summary)]
-	lines.append("AVAILABLE: LOCAL PRACTICE ONLY" if data.release_mode == "local_practice" else "ACTIVITY NOT IMPLEMENTED" if not status.implemented else "LOCAL FIVE-WAVE TRIAL" if id == &"echoes_of_eternity" else "LOCAL PVE EXPEDITION")
+	lines.append("AVAILABLE: LOCAL PRACTICE ONLY" if data.release_mode == "local_practice" else "ACTIVITY NOT IMPLEMENTED" if not status.implemented else "LOCAL FIVE-WAVE TRIAL" if id == &"echoes_of_eternity" else "LOCAL TREASURE EXPEDITION" if id == &"gilded_vault" else "LOCAL PVE EXPEDITION")
 	lines.append(String(data.proposed_requirements))
 	lines.append(String(data.reward_summary))
 	lines.append("No matchmaking, ranked progress or Realm Mastery in this foundation.")

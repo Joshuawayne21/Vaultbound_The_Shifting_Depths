@@ -5,6 +5,7 @@ signal waypoint_requested(id: StringName)
 signal enter_requested
 signal depth_selected(depth: int)
 signal map_requested
+signal pointers_canceled(ids: Array[int])
 
 const UI = preload("res://scripts/ui/ui_theme.gd")
 var kind: StringName = &"map"
@@ -26,13 +27,13 @@ func _ready() -> void:
 	hide()
 
 func open_panel(value: StringName, data: Dictionary, details: Dictionary = {}) -> void:
+	_cancel_pointers()
 	kind = value
 	snapshot = data.duplicate(true)
 	context = details.duplicate(true)
 	selected_district = &"map"
-	entry_enabled = bool(context.get("entry_enabled", false))
+	entry_enabled = kind != &"activity_clue" and bool(context.get("entry_enabled", false))
 	notice = String(context.get("entry_reason", ""))
-	_cancel_pointers()
 	show()
 	queue_redraw()
 
@@ -73,6 +74,10 @@ func _notification(what: int) -> void:
 		_cancel_pointers()
 
 func _cancel_pointers() -> void:
+	if kind == &"activity_clue" and not _pointers.is_empty():
+		var ids: Array[int] = []
+		for id: int in _pointers: ids.append(id)
+		pointers_canceled.emit(ids)
 	_pointers.clear()
 	_epoch += 1
 
@@ -80,6 +85,7 @@ func handle_event(event: InputEvent) -> void:
 	if not visible: return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.physical_keycode in [KEY_ESCAPE, KEY_M]: close_requested.emit()
+		elif event.physical_keycode in [KEY_ENTER, KEY_KP_ENTER] and kind == &"activity_clue": _activate("close")
 		elif event.physical_keycode in [KEY_ENTER, KEY_KP_ENTER] and kind == &"portal" and entry_enabled: _activate("enter")
 		elif has_depth_selector():
 			match event.physical_keycode:
@@ -120,6 +126,7 @@ func _end(id: int, point: Vector2, canceled: bool) -> void:
 
 func _hit(point: Vector2) -> String:
 	if close_rect().has_point(point): return "close"
+	if kind == &"activity_clue": return "close" if primary_rect().has_point(point) else ""
 	if kind == &"portal":
 		if has_depth_selector():
 			for index in range(4):
@@ -140,6 +147,9 @@ func _hit(point: Vector2) -> String:
 
 func _activate(action: String) -> void:
 	_cancel_pointers()
+	if kind == &"activity_clue":
+		if action == "close": close_requested.emit()
+		return
 	if action == "close": close_requested.emit()
 	elif action == "enter" and kind == &"portal" and entry_enabled:
 		entry_enabled = false
@@ -168,6 +178,9 @@ func close_rect() -> Rect2:
 
 func primary_rect() -> Rect2:
 	var rect := panel_rect()
+	if kind == &"activity_clue":
+		var width := minf(320.0, rect.size.x - 212.0)
+		return Rect2(rect.end - Vector2(width + 24.0, 78), Vector2(width, 54))
 	return Rect2(rect.end - Vector2(344, 78), Vector2(320, 54))
 
 func has_depth_selector() -> bool:
@@ -234,14 +247,16 @@ func _draw() -> void:
 	var rect := panel_rect()
 	UI.frame(self, rect, UI.PANEL, UI.GOLD, true)
 	_text(String(snapshot.get("map_title", "SANCTUARY · FOUR WINGS")) if kind == &"map" else String(context.get("title", "SANCTUARY GUIDE")), rect.position + Vector2(24, 40), 23, UI.IVORY, rect.size.x - 48)
-	_text(String(snapshot.get("map_subtitle", "N: Nexus · E: Merchants & Forge · W: Home, Pets & Appearance · S: Entrance & Recruitment")) if kind == &"map" else "LOCAL GAME · No online matchmaking", rect.position + Vector2(24, 68), 12, UI.MUTED, rect.size.x - 48)
+	_text(String(snapshot.get("map_subtitle", "N: Nexus · E: Merchants & Forge · W: Home, Pets & Appearance · S: Entrance & Recruitment")) if kind == &"map" else "READ THE ORDER · WALK ONTO THE PLATES" if kind == &"activity_clue" else "LOCAL GAME · No online matchmaking", rect.position + Vector2(24, 68), 12, UI.MUTED, rect.size.x - 48)
 	if kind == &"map": _draw_map()
+	elif kind == &"activity_clue": _draw_activity_clue()
 	else: _draw_information()
 	_button(close_rect(), "BACK", false)
 	if kind == &"map":
 		_button(clear_rect(), "CLEAR WAYPOINT", false)
 		_button(primary_rect(), "GUIDE TO DISTRICT", true)
 	elif kind == &"portal": _button(primary_rect(), String(context.get("entry_label", "ENTER")) if entry_enabled else "ENTRY UNAVAILABLE", entry_enabled, high_contrast_prompts)
+	elif kind == &"activity_clue": _button(primary_rect(), "RETURN TO EXPLORING", true)
 	else: _button(primary_rect(), "OPEN CITY MAP", true)
 	if not notice.is_empty():
 		_text(notice, rect.position + Vector2(24, rect.size.y - 94), 12, UI.prompt_ink(UI.WARNING, high_contrast_prompts), rect.size.x - 48)
@@ -277,6 +292,30 @@ func _draw_map() -> void:
 	var caption := String(snapshot.get("map_caption", "Select A–H to see district names and services."))
 	if not waypoint.is_empty(): caption = "Waypoint: " + String(waypoint.label)
 	_text(caption, panel_rect().position + Vector2(24, panel_rect().size.y - 112), 12, UI.TEAL, panel_rect().size.x - 48)
+
+func clue_rune_rect(index: int) -> Rect2:
+	var rect := panel_rect()
+	var gap := 12.0
+	var width := (rect.size.x - 64.0 - gap * 2.0) / 3.0
+	var reserved := 50.0 if rect.size.y < 320.0 else 72.0
+	var height := clampf(primary_rect().position.y - rect.position.y - 90.0 - reserved - 14.0, 26.0, 112.0)
+	return Rect2(rect.position + Vector2(32.0 + float(clampi(index, 0, 2)) * (width + gap), 90.0), Vector2(width, height))
+
+
+func _draw_activity_clue() -> void:
+	var rect := panel_rect()
+	var runes: Array = context.get("runes", [])
+	for index in range(mini(3, runes.size())):
+		var card := clue_rune_rect(index)
+		UI.frame(self, card, Color("141e32"), UI.GOLD, false)
+		_text("%d · %s" % [index + 1, String(runes[index].get("label", "RUNE")).to_upper()], card.position + Vector2(16, card.size.y * 0.5 + 7), 18, UI.IVORY, card.size.x - 32)
+	var y := clue_rune_rect(0).end.y + 18.0
+	var compact := rect.size.y < 320.0
+	_text("Walk onto the named plates. Wrong order resets." if compact else String(context.get("instruction", "Step onto the plates in this order.")), Vector2(rect.position.x + 32, y), 13, UI.IVORY, rect.size.x - 64)
+	if not compact:
+		_text("Wrong order resets. Step off before trying again.", Vector2(rect.position.x + 32, y + 22), 12, UI.MUTED, rect.size.x - 64)
+	_text("PUZZLE SOLVED" if bool(context.get("puzzle_solved", false)) else "ACCEPTED SIGILS: %d / 3" % clampi(int(context.get("sequence_progress", 0)), 0, 3), Vector2(rect.position.x + 32, y + (22 if compact else 44)), 12, UI.TEAL, rect.size.x - 64)
+
 
 func _draw_information() -> void:
 	var rect := panel_rect()

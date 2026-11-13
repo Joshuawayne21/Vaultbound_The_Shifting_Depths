@@ -23,6 +23,7 @@ const ActivityPlan = preload("res://scripts/activities/activity_run_plan.gd")
 const ActivityProgress = preload("res://scripts/progression/activity_progression.gd")
 const Activities = preload("res://scripts/activities/activity_catalog.gd")
 const EchoesPlan = preload("res://scripts/activities/echoes_run_plan.gd")
+const GildedPlan = preload("res://scripts/activities/gilded_run_plan.gd")
 const EVENT_RECORD_KEYS := ["encounter_definition_id", "content_version", "encounter_version", "objective_role",
 	"reward_profile_id", "pet_profile_id", "discovery_id", "kind", "roster_profile_id",
 	"receipt", "room_id", "depth", "drop_position", "member_deaths"]
@@ -86,8 +87,21 @@ var _echoes_upgrades: Dictionary = {}
 var _echoes_quotes: Dictionary = {}
 var _echoes_break_nonce := 0
 var _echoes_effect_context: Dictionary = {}
+var _gilded_context: Dictionary = {}
+var _gilded_claims: Dictionary = {}
+var _gilded_guardian: Dictionary = {}
+var _gilded_sequence := 0
+var _gilded_plate_armed: Dictionary = {}
+var _gilded_plate_occupied: Dictionary = {}
+var _gilded_needs_baseline := true
+var _gilded_cast: Dictionary = {}
+var _gilded_trap_source: WeakRef
+var _gilded_trap_elapsed := 0.0
+var _gilded_trap_reserved := false
+var _gilded_cast_admitting := false
 
 func _ready() -> void:
+	InputHub.controls_reset.connect(_gilded_input_reset)
 	profile = store.load_profile()
 	storage_error = store.last_error
 	_emit_changed()
@@ -249,6 +263,9 @@ func admit_activity_world(world: Node3D, context: Dictionary) -> bool:
 		return false
 	_activity_admitted_world = weakref(world)
 	if _activity_id() == EchoesPlan.ID: _echoes_effect_context = context.duplicate(true)
+	elif _activity_id() == GildedPlan.ID:
+		_gilded_context = context.duplicate(true)
+		_gilded_needs_baseline = true
 	return true
 
 func activity_context_valid(world: Node3D, generation: int) -> bool:
@@ -262,10 +279,16 @@ func _activity_descriptor() -> Dictionary:
 	return Activities.descriptor(StringName(_activity_id()))
 
 func _activity_progress_claims() -> Dictionary:
+	if _activity_id() == GildedPlan.ID: return _gilded_claims
 	return _echoes_wave_claims if _activity_id() == EchoesPlan.ID else _activity_claims
 
 func _activity_objectives_completed() -> int:
 	if _activity_id() == EchoesPlan.ID: return _echoes_wave_claims.size()
+	if _activity_id() == GildedPlan.ID:
+		var accepted := 0
+		for id: String in GildedPlan.REQUIRED_IDS:
+			if _gilded_claims.get(GildedPlan.receipt(int(_issued_activity.get("serial", 0)), id)) == true: accepted += 1
+		return accepted
 	var count := 0
 	for id: String in ActivityPlan.REQUIRED_IDS:
 		if _activity_claims.get(id) == true: count += 1
@@ -275,6 +298,10 @@ func _activity_objectives_required() -> int:
 	return 5 if _activity_id() == EchoesPlan.ID else ActivityPlan.REQUIRED_IDS.size()
 
 func _activity_complete(world: Node3D) -> bool:
+	if _activity_id() == GildedPlan.ID:
+		return GildedPlan.objectives_complete(_issued_activity.get("plan", {}), _gilded_claims) \
+			and _gilded_guardian_drained(world, run_generation) and not _gilded_hazard_pending(world) \
+			and activity_context_valid(world, run_generation)
 	if _activity_id() != EchoesPlan.ID: return ActivityPlan.objectives_complete(_activity_claims)
 	return _echoes_phase == "completed" and _echoes_wave_claims.size() == 5 \
 		and is_instance_valid(world) and world.has_method("echoes_danger_drained") and world.echoes_danger_drained(5) \
@@ -302,6 +329,10 @@ func activity_snapshot() -> Dictionary:
 			"damage_multiplier": _echoes_multiplier("echo_force"), "regen_multiplier": _echoes_multiplier("restoring_rhythm"),
 			"unclaimed_caches": _echoes_unclaimed_caches()})
 		result.can_complete = _echoes_phase == "completed" and _echoes_wave_claims.size() == 5
+	elif id == GildedPlan.ID:
+		result.merge(_gilded_summary())
+		result.required = GildedPlan.REQUIRED_IDS.duplicate()
+		result.can_complete = _activity_complete(_world) if is_instance_valid(_world) else false
 	else:
 		for slot: Dictionary in _issued_activity.plan.sources:
 			result.sources.append({"slot_id": slot.slot_id, "kind": slot.kind, "required": slot.required, "claimed": _activity_claims.has(slot.slot_id)})
@@ -382,7 +413,7 @@ func claim_activity_source(world: Node3D, source: Node3D, actor: Node, generatio
 func activity_exit_status(world: Node3D, source: Node3D, actor: Node) -> Dictionary:
 	var result := {"ok": false, "can_secure": false, "can_abandon": false, "reason": "Move closer to the return spring.",
 		"activity_id": _activity_id(), "claimed": _activity_progress_claims().keys(),
-		"required": ActivityPlan.REQUIRED_IDS.duplicate() if _activity_id() != EchoesPlan.ID else [], "total": _activity_objectives_required()}
+		"required": ActivityPlan.REQUIRED_IDS.duplicate() if _activity_id() == ActivityPlan.ID else GildedPlan.REQUIRED_IDS.duplicate() if _activity_id() == GildedPlan.ID else [], "total": _activity_objectives_required()}
 	if _activity_mutating or _activity_source_record(world, source, actor, run_generation, true).is_empty(): return result
 	if store.read_only:
 		result.reason = "The save is read-only. Your secured progress is preserved."
@@ -395,6 +426,9 @@ func activity_exit_status(world: Node3D, source: Node3D, actor: Node) -> Diction
 		result.unclaimed_caches = _echoes_unclaimed_caches()
 		result.reason = "Secure searched rewards and return. Unsearched cache contents are left behind." if result.can_secure \
 			else "Clear all five waves to secure rewards, or abandon this trial and lose its unsecured loot."
+	elif _activity_id() == GildedPlan.ID:
+		result.merge(_gilded_summary())
+		result.reason = "Secure searched treasure and return. Unsearched cache contents stay behind." if result.can_secure else String(result.return_reason)
 	else:
 		result.reason = "Secure discoveries and return" if result.can_secure else "Find the trail, egg and stranded spirit, or return without unsecured findings."
 	return result
@@ -516,7 +550,7 @@ func _activity_results(outcome: String) -> Dictionary:
 	var result := {"outcome": outcome, "run_kind": "activity", "activity_id": id, "activity_name": descriptor.get("display_name", "Activity"),
 		"serial": int(_issued_activity.get("serial", 0)), "seed": run_seed, "run_generation": run_generation,
 		"objectives_completed": _activity_objectives_completed(), "objectives_required": _activity_objectives_required(),
-		"gold": unsecured_gold, "items": _describe_items(run_items), "kills": kills if id == EchoesPlan.ID else 0, "elapsed_seconds": elapsed,
+		"gold": unsecured_gold, "items": _describe_items(run_items), "kills": kills if id in [EchoesPlan.ID, GildedPlan.ID] else 0, "elapsed_seconds": elapsed,
 		"expedition_depth": 0, "biome_id": id, "theme_id": id, "theme_label": descriptor.get("display_name", "Activity"),
 		"required_boss_id": "", "required_boss_name": "", "boss_defeated": false,
 		"secured_total": int(profile.gold), "discovered": _run_discoveries.keys(), "new_discoveries": [],
@@ -527,6 +561,10 @@ func _activity_results(outcome: String) -> Dictionary:
 	if id == EchoesPlan.ID:
 		result.merge({"completed_waves": _echoes_wave_claims.size(), "total_waves": 5,
 			"score": EchoesPlan.score(_issued_activity.get("plan", {}), _echoes_wave_claims)})
+	elif id == GildedPlan.ID:
+		result.merge(_gilded_summary())
+		result.activity_findings = {"treasuries_opened": 1 if result.treasury_registered else 0,
+			"hidden_caches_opened": 1 if result.optional_cache_registered else 0}
 	return result
 
 func begin_run(seed_value: int) -> bool:
@@ -943,7 +981,7 @@ func open_loot(view: Node3D, actor: Node) -> bool:
 	return true
 
 func _loot_access_valid(view: Node3D, actor: Node) -> bool:
-	if not active or (_location != &"rootbound_abyss" and not (_location == &"echoes_of_eternity" and loot_context_valid(_world, run_generation))) \
+	if not active or (_location != &"rootbound_abyss" and not (_location in [&"echoes_of_eternity", &"gilded_vault"] and loot_context_valid(_world, run_generation))) \
 			or actor != _player or not _actor_ready():
 		return false
 	if not _player is VaultPlayer or not _player.is_inside_tree() or not _player.is_in_group("player") or _player.downed or _player.eliminated:
@@ -1324,6 +1362,11 @@ func _pet_findings() -> Dictionary:
 	return result
 
 func _clear_run() -> void:
+	if _activity_id() == GildedPlan.ID and _activity_admitted_world != null:
+		var gilded_world := _activity_admitted_world.get_ref() as Node3D
+		if is_instance_valid(gilded_world) and gilded_world.get_script() != null and gilded_world.get_script().resource_path == GildedPlan.WORLD_SCRIPT \
+				and gilded_world.has_method("retire_gilded_runtime"):
+			gilded_world.retire_gilded_runtime(run_generation)
 	if _activity_id() == EchoesPlan.ID and _activity_admitted_world != null:
 		var old_world := _activity_admitted_world.get_ref() as Node3D
 		if is_instance_valid(old_world) and old_world.get_script() != null and old_world.get_script().resource_path == EchoesPlan.WORLD_SCRIPT \
@@ -1343,6 +1386,18 @@ func _clear_run() -> void:
 	_echoes_quotes.clear()
 	_echoes_break_nonce = 0
 	_echoes_effect_context.clear()
+	_gilded_context.clear()
+	_gilded_claims.clear()
+	_gilded_guardian.clear()
+	_gilded_sequence = 0
+	_gilded_plate_armed.clear()
+	_gilded_plate_occupied.clear()
+	_gilded_needs_baseline = true
+	_gilded_cast.clear()
+	_gilded_trap_source = null
+	_gilded_trap_elapsed = 0.0
+	_gilded_trap_reserved = false
+	_gilded_cast_admitting = false
 	_completed_early_return.clear()
 	_issued_depth.clear()
 	_configured_depth_run = false
@@ -1387,7 +1442,7 @@ func snapshot() -> Dictionary:
 		"expedition_depth": 0 if activity_running else int(_issued_depth.get("expedition_depth", 1)),
 		"biome_id": _activity_id() if activity_running else String(_issued_depth.get("biome_id", "rootbound_abyss")),
 		"depth_policy_version": 0 if activity_running else int(_issued_depth.get("depth_policy_version", 1)),
-		"tier_label": ("Five-wave trial" if _activity_id() == EchoesPlan.ID else "Discovery expedition") if activity_running else String(_issued_depth.get("policy", {}).get("tier_label", "Beginner")),
+		"tier_label": ("Five-wave trial" if _activity_id() == EchoesPlan.ID else "Rune vault expedition" if _activity_id() == GildedPlan.ID else "Discovery expedition") if activity_running else String(_issued_depth.get("policy", {}).get("tier_label", "Beginner")),
 		"highest_unlocked_depth": int(profile.depth_progression.highest_unlocked_depth),
 		"depth_progression": profile.depth_progression.duplicate(true),
 		"theme_id": _activity_id() if activity_running else String(_issued_content_plan.get("theme_id", "rootbound_abyss")),
@@ -2244,6 +2299,7 @@ func _emit_changed() -> void:
 # Echoes is a closed local trial. These methods never authorize raw dungeon loot.
 func loot_context_valid(world: Node3D, generation: int) -> bool:
 	if _location == &"rootbound_abyss": return run_context_valid(world, generation)
+	if _activity_id() == GildedPlan.ID: return _location == &"gilded_vault" and activity_context_valid(world, generation)
 	return _activity_id() == EchoesPlan.ID and _location == &"echoes_of_eternity" and activity_context_valid(world, generation)
 
 func _echoes_world_valid(world: Node3D, generation: int) -> bool:
@@ -2540,3 +2596,457 @@ func echoes_runtime_context_valid(world: Node3D, generation: int) -> bool:
 
 func cancel_echoes_upgrade(confirmation: Dictionary) -> bool:
 	return _echoes_quotes.erase(String(confirmation.get("request_id", "")))
+
+func _gilded_result(generation: int, error: String = "This vault action is unavailable.") -> Dictionary:
+	# Gilded accepts proof only from its original native sources.
+	return {"ok": false, "generation": generation, "still_current": false, "error": error}
+
+func _gilded_input_reset() -> void:
+	if active and _activity_id() == GildedPlan.ID: _gilded_needs_baseline = true
+
+func _gilded_world_valid(world: Node3D, generation: int) -> bool:
+	return _activity_id() == GildedPlan.ID and activity_context_valid(world, generation)
+
+func gilded_runtime_context_valid(world: Node3D, generation: int) -> bool:
+	# Polling compares the original admitted snapshot; mutations also verify its ticket.
+	if not active or generation != run_generation or _activity_id() != GildedPlan.ID or _gilded_context.is_empty() \
+			or _gilded_context != _issued_activity or _activity_admitted_world == null or _activity_admitted_world.get_ref() != world \
+			or not is_instance_valid(world) or world != _world or not world.is_inside_tree() or world.is_queued_for_deletion() \
+			or _location != &"gilded_vault" or world.get_script() == null or world.get_script().resource_path != GildedPlan.WORLD_SCRIPT \
+			or not is_instance_valid(_player) or not _player.is_inside_tree() or _player.is_queued_for_deletion(): return false
+	var game := get_tree().current_scene
+	if not is_instance_valid(game) or game.get_script() == null or game.get_script().resource_path != "res://scripts/systems/game.gd" \
+			or game.get("active_world") != world or game.get("player") != _player or game.get("current_location") != _location \
+			or world.get_parent() != game.get("world_root") or _player.get_parent() != game \
+			or not world.has_method("activity_runtime_matches"): return false
+	return bool(world.activity_runtime_matches(_gilded_context)) and active and generation == run_generation \
+		and is_instance_valid(world) and world == _world and _gilded_context == _issued_activity
+
+func _gilded_slot(slot_id: String) -> Dictionary:
+	if _gilded_context.is_empty(): return {}
+	for row: Dictionary in _gilded_context.plan.sources:
+		if row.slot_id == slot_id: return row.duplicate(true)
+	return {}
+
+func _gilded_has(slot_id: String) -> bool:
+	return not _gilded_context.is_empty() and _gilded_claims.get(GildedPlan.receipt(int(_gilded_context.serial), slot_id)) == true
+
+func _gilded_source_valid(world: Node3D, source: Node3D, slot_id: String, generation: int) -> bool:
+	if not gilded_runtime_context_valid(world, generation) or not is_instance_valid(source) or not source.is_inside_tree() \
+			or source.is_queued_for_deletion() or not world.is_ancestor_of(source) or source.get_script() == null \
+			or source.get_world_3d() != world.get_world_3d() or source.get_viewport() != world.get_viewport() \
+			or not world.has_method("owns_source"): return false
+	var slot := _gilded_slot(slot_id)
+	return not slot.is_empty() and source.get_script().resource_path == slot.script and bool(world.owns_source(source, slot_id)) \
+		and is_instance_valid(world) and is_instance_valid(source) and not source.is_queued_for_deletion() \
+		and gilded_runtime_context_valid(world, generation)
+
+func _gilded_actor_available(actor: Node, idle: bool = true) -> bool:
+	return is_instance_valid(actor) and actor == _player and actor is VaultPlayer and actor.is_inside_tree() \
+		and not actor.is_queued_for_deletion() and actor.health > 0.0 and not actor.downed and not actor.eliminated \
+		and actor.controls_enabled and InputHub.is_gameplay_input_available() and (not idle or _actor_ready())
+
+func _gilded_reached(world: Node3D, source: Node3D, actor: Node, generation: int, allowed: Array) -> Dictionary:
+	if not _gilded_world_valid(world, generation) or not _gilded_actor_available(actor) or not is_instance_valid(source) \
+			or not source.is_inside_tree() or source.is_queued_for_deletion() or not source.is_visible_in_tree() \
+			or not world.has_method("gilded_source_record") or not source.global_position.is_finite() or not actor.global_position.is_finite(): return {}
+	var radius: Variant = source.get("interaction_radius")
+	if not (radius is int or radius is float) or not is_finite(float(radius)) or radius <= 0.0 or radius > 3.0 \
+			or actor.global_position.distance_to(source.global_position) > float(radius) \
+			or actor.get_world_3d() != world.get_world_3d() or actor.get_viewport() != world.get_viewport() \
+			or not CombatRules.visible_from(actor, actor.global_position + Vector3.UP * 1.2, source.global_position + Vector3.UP * 0.65): return {}
+	var record: Variant = world.gilded_source_record(source, actor)
+	if not is_instance_valid(world) or not is_instance_valid(source) or not is_instance_valid(actor) \
+			or not ActivityPlan.exact_keys(record, ["slot_id", "kind", "receipt", "room_id"]) \
+			or record.slot_id not in allowed or not _gilded_source_valid(world, source, String(record.slot_id), generation): return {}
+	var expected := _gilded_slot(String(record.slot_id))
+	if record.kind != expected.kind or record.receipt != expected.receipt or record.room_id != expected.room_id \
+			or not _gilded_world_valid(world, generation) or not _gilded_actor_available(actor): return {}
+	return expected
+
+func gilded_clue_snapshot(world: Node3D, source: Node3D, actor: Node, generation: int) -> Dictionary:
+	var result := {"ok": false, "generation": generation, "title": "Vault Rune Inscription", "runes": [],
+		"instruction": "", "sequence_progress": 0, "puzzle_solved": false, "error": "Move closer to the original inscription."}
+	if _activity_mutating or _gilded_reached(world, source, actor, generation, ["clue_tablet"]).is_empty(): return result
+	result.ok = true
+	result.error = ""
+	result.instruction = "Step onto these three runes in order. Step away between entries. A wrong rune resets the sequence without damage."
+	for id: String in _gilded_context.plan.puzzle.order: result.runes.append({"id": id, "label": id.to_upper()})
+	result.sequence_progress = _gilded_sequence
+	result.puzzle_solved = _gilded_has("rune_puzzle")
+	return result
+
+func sample_gilded_plates(world: Node3D, puzzle: Node3D, actor: Node, generation: int) -> Dictionary:
+	var result := _gilded_result(generation)
+	result.merge({"edge_slot": "", "sequence_progress": 0, "puzzle_solved": false, "reset": false})
+	if _activity_mutating or not _gilded_actor_available(actor, false) \
+			or not _gilded_source_valid(world, puzzle, "rune_puzzle", generation) \
+			or not world.has_method("gilded_plate_record") or not world.has_method("gilded_plate_floor_valid") \
+			or not world.has_method("gilded_clock_available") or not bool(world.gilded_clock_available()): return result
+	var record: Variant = world.gilded_plate_record(puzzle, actor)
+	if not is_instance_valid(world) or not is_instance_valid(puzzle) or not is_instance_valid(actor) \
+			or not ActivityPlan.exact_keys(record, ["receipt", "plates"]) or record.receipt != _gilded_context.plan.puzzle.receipt \
+			or not record.plates is Array or record.plates.size() != 3: return result
+	var rules: Dictionary = _gilded_context.plan.puzzle
+	var occupied := {}
+	var outside := {}
+	var edges: Array[String] = []
+	var count := 0
+	for index in range(3):
+		var row: Variant = record.plates[index]
+		var id: String = rules.plate_ids[index]
+		if not ActivityPlan.exact_keys(row, ["slot_id", "source"]) or row.slot_id != id or not is_instance_valid(row.source) \
+				or not row.source is Area3D or not _gilded_source_valid(world, row.source, id, generation): return result
+		var plate := row.source as Area3D
+		var offset: Vector3 = actor.global_position - plate.global_position
+		var distance := Vector2(offset.x, offset.z).length()
+		outside[id] = distance > float(rules.rearm_radius)
+		var floor_valid := bool(world.gilded_plate_floor_valid(plate, actor))
+		if not is_instance_valid(world) or not is_instance_valid(actor) or not is_instance_valid(plate) \
+				or not _gilded_source_valid(world, plate, id, generation): return result
+		occupied[id] = distance <= float(rules.inside_radius) and absf(offset.y) <= float(rules.height_tolerance) \
+			and actor.is_on_floor() and floor_valid and plate.overlaps_body(actor)
+		if occupied[id]:
+			count += 1
+			if _gilded_plate_armed.get(id, false) and not _gilded_plate_occupied.get(id, false): edges.append(id)
+	if count > 1 or not _gilded_source_valid(world, puzzle, "rune_puzzle", generation) or not _gilded_actor_available(actor, false) \
+			or not bool(world.gilded_clock_available()): return result
+	# Full ticket/plan proof only at physical edges, not each distant poll.
+	if not edges.is_empty() and not _gilded_world_valid(world, generation): return result
+	_activity_mutating = true
+	if _gilded_needs_baseline:
+		for id: String in rules.plate_ids: _gilded_plate_armed[id] = bool(outside[id])
+		_gilded_needs_baseline = false
+		edges.clear()
+	else:
+		for id: String in rules.plate_ids:
+			if outside[id]: _gilded_plate_armed[id] = true
+	_gilded_plate_occupied = occupied
+	var changed_state := false
+	if not edges.is_empty() and not _gilded_has("rune_puzzle"):
+		var id := edges[0]
+		_gilded_plate_armed[id] = false
+		result.edge_slot = id
+		var expected := "plate_" + String(rules.order[_gilded_sequence])
+		if id == expected:
+			_gilded_sequence += 1
+			if _gilded_sequence == 3: _gilded_claims[String(rules.receipt)] = true
+		else:
+			_gilded_sequence = 0
+			result.reset = true
+		changed_state = true
+	result.merge({"ok": true, "sequence_progress": _gilded_sequence, "puzzle_solved": _gilded_has("rune_puzzle"), "error": ""}, true)
+	_activity_mutating = false
+	if changed_state: _emit_changed()
+	result.still_current = is_instance_valid(world) and gilded_runtime_context_valid(world, generation)
+	return result
+
+func admit_gilded_guardian(world: Node3D, guardian: Node3D, generation: int) -> Dictionary:
+	var result := _gilded_result(generation)
+	if _activity_mutating or not _gilded_guardian.is_empty() or not _gilded_world_valid(world, generation) \
+			or not is_instance_valid(guardian) or not guardian.is_inside_tree() or guardian.is_queued_for_deletion() \
+			or not world.has_method("gilded_guardian_record") or not world.has_method("owns_gilded_guardian") \
+			or not world.has_method("validate_gilded_guardian_spawn") or not world.has_method("gilded_clock_available") \
+			or not bool(world.gilded_clock_available()): return result
+	_activity_mutating = true
+	var record: Variant = world.gilded_guardian_record(guardian)
+	var expected: Dictionary = _gilded_context.plan.guardian
+	var member: Dictionary = expected.actor
+	var valid := ActivityPlan.exact_keys(record, ["slot_id", "receipt", "actor"])
+	if valid:
+		valid = record.slot_id == expected.slot_id and record.receipt == expected.receipt and record.actor == guardian \
+			and is_instance_valid(guardian) and guardian.is_inside_tree() and guardian.is_node_ready() and not guardian.is_queued_for_deletion() \
+			and is_instance_valid(guardian.get_parent()) and world.is_ancestor_of(guardian) and guardian.global_position.is_finite() \
+			and guardian.get_viewport() == world.get_viewport() and guardian.get_world_3d() == world.get_world_3d() \
+			and GildedPlan.actor_data_matches(guardian, member) and guardian.get("combat_active") == false \
+			and guardian.process_mode == Node.PROCESS_MODE_DISABLED and guardian.get("collision_layer") == 0 and guardian.get("collision_mask") == 0 \
+			and not guardian.is_in_group("enemies") and not guardian.is_in_group("combat_targets") and not guardian.is_in_group("combat_telegraphs") \
+			and not guardian.is_in_group("bosses") and guardian.get("state") == &"idle" \
+			and is_equal_approx(float(guardian.get("health")), GildedPlan.actor_max_health(member)) \
+			and is_equal_approx(float(guardian.get("max_health")), GildedPlan.actor_max_health(member)) \
+			and bool(world.owns_gilded_guardian(guardian)) and bool(world.validate_gilded_guardian_spawn(guardian))
+	if valid:
+		for ally: Node in get_tree().get_nodes_in_group("party_members"):
+			if ally is Node3D and ally.is_inside_tree() and not ally.is_queued_for_deletion() and ally.get_world_3d() == world.get_world_3d() \
+					and (float(ally.get("health")) > 0.0 or ally.get("downed") == true) and guardian.global_position.distance_to(ally.global_position) < 6.0:
+				valid = false
+				break
+	if valid: valid = is_instance_valid(world) and is_instance_valid(guardian) and not guardian.is_queued_for_deletion() and _gilded_world_valid(world, generation)
+	if valid:
+		_gilded_guardian = {"reference": weakref(guardian), "instance_id": guardian.get_instance_id(),
+			"parent_id": guardian.get_parent().get_instance_id(), "member": member.duplicate(true)}
+	_activity_mutating = false
+	if not valid: return result
+	_emit_changed()
+	return {"ok": true, "generation": generation, "still_current": is_instance_valid(world) and _gilded_world_valid(world, generation), "error": ""}
+
+func _gilded_guardian_original(world: Node3D, guardian: Node3D, generation: int) -> bool:
+	return not _gilded_guardian.is_empty() and gilded_runtime_context_valid(world, generation) and is_instance_valid(guardian) \
+		and guardian.is_inside_tree() and not guardian.is_queued_for_deletion() and _gilded_guardian.reference.get_ref() == guardian \
+		and int(_gilded_guardian.instance_id) == guardian.get_instance_id() and is_instance_valid(guardian.get_parent()) \
+		and guardian.get_parent().get_instance_id() == int(_gilded_guardian.parent_id) and world.is_ancestor_of(guardian) \
+		and world.has_method("owns_gilded_guardian") and GildedPlan.actor_data_matches(guardian, _gilded_guardian.member) \
+		and bool(world.owns_gilded_guardian(guardian)) and is_instance_valid(world) and is_instance_valid(guardian) \
+		and gilded_runtime_context_valid(world, generation)
+
+func record_gilded_guardian_death(world: Node3D, guardian: Node3D, generation: int) -> Dictionary:
+	var result := _gilded_result(generation)
+	result.guardian_defeated = false
+	if _activity_mutating or _gilded_has("guardian") or not _gilded_world_valid(world, generation) \
+			or not _gilded_guardian_original(world, guardian, generation) or not world.has_method("gilded_guardian_death_record"): return result
+	_activity_mutating = true
+	var record: Variant = world.gilded_guardian_death_record(guardian)
+	var valid := ActivityPlan.exact_keys(record, ["slot_id", "receipt", "archetype"])
+	if valid:
+		valid = record.slot_id == "guardian" and record.receipt == _gilded_guardian.member.receipt and record.archetype == "golem" \
+			and _gilded_guardian_original(world, guardian, generation) and guardian.get("state") == &"dead" and float(guardian.get("health")) == 0.0 \
+			and _gilded_world_valid(world, generation)
+	if valid:
+		_gilded_claims[String(record.receipt)] = true
+		kills += 1
+	_activity_mutating = false
+	if not valid: return result
+	_emit_changed()
+	return {"ok": true, "generation": generation, "still_current": is_instance_valid(world) and _gilded_world_valid(world, generation),
+		"guardian_defeated": true, "error": ""}
+
+func _gilded_guardian_drained(world: Node3D, generation: int) -> bool:
+	if not _gilded_has("guardian") or _gilded_guardian.is_empty() or not is_instance_valid(world) \
+			or not world.has_method("gilded_guardian_drained"): return false
+	var guardian := _gilded_guardian.reference.get_ref() as Node3D
+	if not is_instance_valid(guardian) or not _gilded_guardian_original(world, guardian, generation) \
+			or guardian.get("state") != &"dead" or float(guardian.get("health")) != 0.0 \
+			or guardian.get("attack_dispatch_in_progress") != false or not guardian.has_method("get_danger_zones") \
+			or not guardian.get_danger_zones().is_empty(): return false
+	return bool(world.gilded_guardian_drained()) and is_instance_valid(world) and is_instance_valid(guardian) \
+		and _gilded_guardian_original(world, guardian, generation) and guardian.get("attack_dispatch_in_progress") == false
+
+func reveal_gilded_branch(world: Node3D, source: Node3D, actor: Node, generation: int) -> Dictionary:
+	var result := _gilded_result(generation)
+	result.merge({"authorized": false, "already_authorized": false, "receipt": ""})
+	if _activity_mutating: return result
+	_activity_mutating = true
+	var slot := _gilded_reached(world, source, actor, generation, ["hidden_reveal"])
+	if slot.is_empty():
+		_activity_mutating = false
+		return result
+	var was_authorized := _gilded_has("hidden_reveal")
+	_gilded_claims[String(slot.receipt)] = true
+	_activity_mutating = false
+	if not was_authorized: _emit_changed()
+	return {"ok": true, "generation": generation, "still_current": is_instance_valid(world) and _gilded_world_valid(world, generation),
+		"authorized": true, "already_authorized": was_authorized, "receipt": String(slot.receipt), "error": ""}
+
+func _gilded_branch_open(world: Node3D, generation: int) -> bool:
+	return _gilded_has("hidden_reveal") and gilded_runtime_context_valid(world, generation) \
+		and world.has_method("gilded_branch_physically_open") and bool(world.gilded_branch_physically_open()) \
+		and is_instance_valid(world) and gilded_runtime_context_valid(world, generation)
+
+func _gilded_treasury_readiness(world: Node3D, slot_id: String, generation: int) -> String:
+	if slot_id == "main_treasury":
+		if not _gilded_has("rune_puzzle"): return "Solve the three-rune sequence to release this treasury."
+		if not _gilded_has("guardian"): return "Defeat the vault's original Golem guardian."
+		if not _gilded_guardian_drained(world, generation): return "Wait for the guardian's last attack to clear."
+	elif slot_id == "optional_treasury":
+		if not _gilded_branch_open(world, generation): return "Reveal the hidden passage and wait for it to open."
+		if not _gilded_has("optional_trap"): return "The hidden treasury is trapped. Its warning gives time to step clear."
+	else: return "This treasury is unavailable."
+	return ""
+
+func gilded_treasury_status(world: Node3D, source: Node3D, actor: Node, generation: int) -> Dictionary:
+	var result := {"ok": false, "generation": generation, "slot_id": "", "action": "locked", "reason": "Move closer to the treasury.", "registered": false, "cache_id": ""}
+	if _activity_mutating: return result
+	var slot := _gilded_reached(world, source, actor, generation, ["main_treasury", "optional_treasury"])
+	if slot.is_empty(): return result
+	result.ok = true
+	result.slot_id = slot.slot_id
+	var reward_id := String(slot.receipt) + "_reward"
+	if _gilded_claims.has(slot.receipt):
+		result.registered = true
+		result.cache_id = _loot_ledger.source_cache(reward_id)
+		var cache := _loot_ledger.snapshot(String(result.cache_id))
+		result.action = "empty" if not cache.is_empty() and cache.empty else "search"
+		result.reason = "This treasury is empty." if result.action == "empty" else "Search the released cache. Unclaimed contents remain available."
+		return result
+	result.reason = _gilded_treasury_readiness(world, String(slot.slot_id), generation)
+	if result.reason.is_empty():
+		result.action = "register"
+		result.reason = "Release this treasury's searchable cache."
+	elif slot.slot_id == "optional_treasury" and _gilded_branch_open(world, generation):
+		result.action = "wait" if _gilded_trap_reserved else "trigger_trap"
+		if _gilded_trap_reserved: result.reason = "Wait for the trap warning, impact and recovery to finish."
+	if not is_instance_valid(world) or not _gilded_world_valid(world, generation): result.ok = false
+	return result
+
+func open_gilded_treasury(world: Node3D, source: Node3D, actor: Node, generation: int) -> Dictionary:
+	var result := _gilded_result(generation)
+	result.merge({"slot_id": "", "registered": false, "cache_id": ""})
+	if _activity_mutating: return result
+	_activity_mutating = true
+	var slot := _gilded_reached(world, source, actor, generation, ["main_treasury", "optional_treasury"])
+	if slot.is_empty():
+		_activity_mutating = false
+		return result
+	var expected := GildedPlan.treasury(_gilded_context.plan, String(slot.slot_id))
+	if _gilded_claims.has(slot.receipt):
+		_activity_mutating = false
+		return {"ok": true, "generation": generation, "still_current": true, "error": "", "slot_id": slot.slot_id,
+			"registered": true, "cache_id": _loot_ledger.source_cache(String(expected.reward.chest_id))}
+	var reason := _gilded_treasury_readiness(world, String(slot.slot_id), generation)
+	var valid := reason.is_empty() and world.has_method("gilded_cache_record")
+	var record: Variant = world.gilded_cache_record(source) if valid else {}
+	if valid:
+		valid = ActivityPlan.exact_keys(record, ["slot_id", "receipt", "room_id", "position"]) and record.slot_id == expected.slot_id \
+			and record.receipt == expected.receipt and record.room_id == expected.cache.room_id and record.position is Vector3 and record.position.is_finite()
+	if valid:
+		var point: Array = expected.cache.position
+		var cell: Array = _gilded_context.plan.layout.rooms[int(expected.cache.room_id)].cell
+		var anchor := Vector3(int(cell[0]) * GildedPlan.ROOM_SIZE + float(point[0]), float(point[1]), int(cell[1]) * GildedPlan.ROOM_SIZE + float(point[2]))
+		valid = record.position.is_equal_approx(world.to_global(anchor)) and _gilded_source_valid(world, source, String(slot.slot_id), generation) \
+			and _gilded_world_valid(world, generation)
+	var registered := {}
+	if valid:
+		var reward := _validate_reward(expected.reward)
+		if not reward.is_empty(): registered = _loot_ledger.register(reward, int(record.room_id), record.position, String(expected.cache.kind))
+		valid = bool(registered.get("ok", false))
+	if valid: _gilded_claims[String(slot.receipt)] = true
+	_activity_mutating = false
+	if not valid:
+		if not reason.is_empty(): result.error = reason
+		return result
+	loot_changed.emit()
+	if is_instance_valid(world) and _gilded_world_valid(world, generation): _emit_changed()
+	return {"ok": true, "generation": generation, "still_current": is_instance_valid(world) and _gilded_world_valid(world, generation),
+		"slot_id": slot.slot_id, "registered": true, "cache_id": String(registered.id), "error": ""}
+
+func begin_gilded_trap(world: Node3D, treasury: Node3D, trap: Node3D, actor: Node, generation: int) -> Dictionary:
+	var result := _gilded_result(generation)
+	result.issued = false
+	if _activity_mutating or _gilded_trap_reserved or not _gilded_cast.is_empty(): return result
+	_activity_mutating = true
+	var slot := _gilded_reached(world, treasury, actor, generation, ["optional_treasury"])
+	var valid := not slot.is_empty() and _gilded_branch_open(world, generation) \
+		and _gilded_source_valid(world, trap, "optional_trap", generation) and world.has_method("gilded_trap_escape_valid") \
+		and trap.has_method("can_begin_issued") and trap.has_method("begin_issued") and trap.has_method("issued_cast_snapshot") \
+		and trap.has_method("native_cast_snapshot") and trap.has_method("native_terminal_record")
+	if valid: valid = bool(trap.can_begin_issued()) and bool(world.gilded_trap_escape_valid(trap, actor))
+	if valid: valid = is_instance_valid(world) and is_instance_valid(trap) and is_instance_valid(treasury) \
+		and is_instance_valid(actor) and _gilded_source_valid(world, trap, "optional_trap", generation) \
+		and _gilded_world_valid(world, generation) and _gilded_actor_available(actor)
+	if not valid:
+		_activity_mutating = false
+		return result
+	var rule: Dictionary = _gilded_context.plan.trap
+	var cell: Array = _gilded_context.plan.layout.rooms[int(rule.room_id)].cell
+	var point: Array = rule.position
+	var position := world.to_global(Vector3(int(cell[0]) * GildedPlan.ROOM_SIZE + float(point[0]), float(point[1]), int(cell[1]) * GildedPlan.ROOM_SIZE + float(point[2])))
+	var issued := {"activity_id": GildedPlan.ID, "serial": int(_gilded_context.serial), "generation": generation,
+		"source_receipt": String(rule.receipt), "cast_serial": 1, "attack_id": CombatRules.next_attack_id(), "room_id": int(rule.room_id),
+		"shape": {"shape": &"circle", "position": position, "radius": float(rule.radius), "height_tolerance": float(rule.height_tolerance)},
+		"warning_seconds": float(rule.warning_seconds), "active_seconds": float(rule.active_seconds),
+		"recovery_seconds": float(rule.recovery_seconds), "damage": float(rule.damage)}
+	_gilded_cast = issued.duplicate(true)
+	_gilded_trap_source = weakref(trap)
+	_gilded_trap_elapsed = 0.0
+	_gilded_cast_admitting = true
+	var accepted := bool(trap.begin_issued(issued.duplicate(true)))
+	_gilded_cast_admitting = false
+	var same: bool = is_instance_valid(world) and is_instance_valid(trap) and run_generation == generation \
+		and _gilded_cast == issued and _gilded_trap_source != null and _gilded_trap_source.get_ref() == trap \
+		and _gilded_world_valid(world, generation)
+	if same:
+		var native: Variant = trap.issued_cast_snapshot()
+		# A native accepted/cancelled warning is spent even if a callback returns false.
+		_gilded_trap_reserved = native is Dictionary and native == issued
+		accepted = accepted and _gilded_trap_reserved and gilded_trap_cast_valid(world, trap, issued)
+		if not _gilded_trap_reserved:
+			_gilded_cast.clear()
+			_gilded_trap_source = null
+			_gilded_trap_elapsed = 0.0
+	else: accepted = false
+	_activity_mutating = false
+	if not accepted: return result
+	_emit_changed()
+	return {"ok": true, "generation": generation, "still_current": is_instance_valid(world) and _gilded_world_valid(world, generation), "issued": true, "error": ""}
+
+func gilded_trap_cast_valid(world: Node3D, trap: Node3D, issued: Dictionary) -> bool:
+	if _gilded_cast.is_empty() or issued != _gilded_cast or _gilded_trap_source == null \
+			or not is_instance_valid(trap) or _gilded_trap_source.get_ref() != trap \
+			or not _gilded_source_valid(world, trap, "optional_trap", int(issued.get("generation", -1))) \
+			or not _gilded_branch_open(world, int(issued.get("generation", -1))) \
+			or not trap.has_method("issued_cast_snapshot") or not trap.has_method("native_cast_snapshot"): return false
+	var copied: Variant = trap.issued_cast_snapshot()
+	var state: Variant = trap.native_cast_snapshot()
+	if not copied is Dictionary or not state is Dictionary or state.get("phase") == "cancelled": return false
+	if copied != issued and not (_gilded_cast_admitting and _activity_mutating and copied.is_empty() and state.get("phase") == "sealed"): return false
+	return is_instance_valid(world) and is_instance_valid(trap) and _gilded_cast == issued \
+		and gilded_runtime_context_valid(world, int(issued.generation))
+
+func _physics_process(delta: float) -> void:
+	# Independent native elapsed proof, never a public caller-delta grant API.
+	if _gilded_cast.is_empty() or not _gilded_trap_reserved or _gilded_has("optional_trap") \
+			or _gilded_trap_source == null or not is_finite(delta) or delta <= 0.0: return
+	var trap := _gilded_trap_source.get_ref() as Node3D
+	if not is_instance_valid(_world) or not is_instance_valid(trap) or not gilded_trap_cast_valid(_world, trap, _gilded_cast) \
+			or not _world.has_method("gilded_clock_available") or not bool(_world.gilded_clock_available()): return
+	_gilded_trap_elapsed += minf(delta, 0.1)
+
+func record_gilded_trap_terminal(world: Node3D, trap: Node3D, generation: int) -> Dictionary:
+	var result := _gilded_result(generation)
+	result.trap_spent = false
+	if _activity_mutating or not _gilded_trap_reserved or not _gilded_world_valid(world, generation) \
+			or not gilded_trap_cast_valid(world, trap, _gilded_cast) or not trap.has_method("native_terminal_record"): return result
+	if _gilded_has("optional_trap"):
+		return {"ok": true, "generation": generation, "still_current": true, "trap_spent": true, "error": ""}
+	_activity_mutating = true
+	var record: Variant = trap.native_terminal_record()
+	var state: Variant = trap.native_cast_snapshot()
+	var keys := ["source_receipt", "cast_serial", "attack_id", "cause", "warning_completed", "impact_attempted", "recovery_completed", "delivery_in_progress"]
+	var valid := ActivityPlan.exact_keys(record, keys) and state is Dictionary
+	if valid:
+		valid = record.source_receipt == _gilded_cast.source_receipt and record.cast_serial == 1 and record.attack_id == _gilded_cast.attack_id \
+			and record.cause == "spent" and record.warning_completed == true and record.impact_attempted == true and record.recovery_completed == true \
+			and record.delivery_in_progress == false and state.get("phase") == "spent" and state.get("delivery_in_progress") == false \
+			and _gilded_trap_elapsed + 0.000001 >= float(_gilded_cast.warning_seconds) + float(_gilded_cast.active_seconds) + float(_gilded_cast.recovery_seconds) \
+			and is_instance_valid(world) and is_instance_valid(trap) and gilded_trap_cast_valid(world, trap, _gilded_cast) \
+			and _gilded_world_valid(world, generation)
+	if valid: _gilded_claims[String(record.source_receipt)] = true
+	_activity_mutating = false
+	if not valid: return result
+	_emit_changed()
+	return {"ok": true, "generation": generation, "still_current": is_instance_valid(world) and _gilded_world_valid(world, generation), "trap_spent": true, "error": ""}
+
+func gilded_trap_snapshot() -> Dictionary:
+	var result := {"phase": "sealed", "remaining": 0.0, "shape": {}, "delivery_in_progress": false}
+	if _gilded_cast.is_empty(): return result
+	result.shape = _gilded_cast.get("shape", {}).duplicate(true)
+	result.phase = "cancelled"
+	if _gilded_trap_source == null: return result
+	var trap := _gilded_trap_source.get_ref() as Node3D
+	if not is_instance_valid(trap) or not is_instance_valid(_world) or not _gilded_source_valid(_world, trap, "optional_trap", run_generation): return result
+	var native: Variant = trap.native_cast_snapshot()
+	if native is Dictionary:
+		result.phase = "impact" if native.get("phase") == "active" else String(native.get("phase", "cancelled"))
+		result.remaining = maxf(0.0, float(native.get("remaining", 0.0)))
+		result.delivery_in_progress = native.get("delivery_in_progress", false) == true
+	return result
+
+func _gilded_hazard_pending(world: Node3D) -> bool:
+	if _gilded_trap_reserved and not _gilded_has("optional_trap"): return true
+	if not is_instance_valid(world) or not world.has_method("gilded_damage_delivery_in_progress"): return true
+	return bool(world.gilded_damage_delivery_in_progress())
+
+func _gilded_summary() -> Dictionary:
+	var main := _gilded_has("main_treasury")
+	var guardian := _gilded_has("guardian")
+	var puzzle := _gilded_has("rune_puzzle")
+	var pending := _gilded_hazard_pending(_world) if is_instance_valid(_world) and not _gilded_context.is_empty() else false
+	var drained := main or (is_instance_valid(_world) and _gilded_guardian_drained(_world, run_generation))
+	var reason := "Solve the rune sequence, defeat the guardian and release the main treasury, or abandon this visit without its unsecured loot."
+	if main and guardian and puzzle:
+		reason = "Wait for active traps and attack delivery to finish, or abandon this visit without its unsecured loot." if pending \
+			else "Secure searched treasure and return. Unsearched cache contents stay behind."
+	return {"sequence_progress": _gilded_sequence, "puzzle_solved": puzzle, "guardian_defeated": guardian,
+		"guardian_drained": drained, "treasury_registered": main, "branch_revealed": _gilded_has("hidden_reveal"),
+		"trap_state": String(gilded_trap_snapshot().phase), "optional_cache_registered": _gilded_has("optional_treasury"),
+		"hazard_pending": pending, "unclaimed_caches": _echoes_unclaimed_caches(), "return_reason": reason}

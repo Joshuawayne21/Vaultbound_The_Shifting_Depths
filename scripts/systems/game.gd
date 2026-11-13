@@ -9,6 +9,7 @@ const LEVELS := {
 	&"realm_nexus": "res://scenes/world/realm_nexus.tscn",
 	&"beastwilds": "res://scenes/activities/beastwilds.tscn",
 	&"echoes_of_eternity": "res://scenes/activities/echoes_of_eternity.tscn",
+	&"gilded_vault": "res://scenes/activities/gilded_vault.tscn",
 	&"dungeon": "res://scenes/world/dungeon.tscn",
 	&"combat_arena": "res://scenes/world/combat_arena.tscn",
 	&"rootbound_abyss": "res://scenes/world/rootbound_abyss.tscn",
@@ -840,6 +841,7 @@ func _wire_world_travel(world: Node3D) -> void:
 		if not _activity_world_descriptor(world).is_empty():
 			_bind_activity_exit(portal, world)
 			_bind_echoes_break(portal, world)
+			_bind_gilded_clue(portal, world)
 		if portal.has_signal("travel_requested"): _bind_world_travel_signal(portal, world)
 		if portal.has_signal("portal_info_requested") and not portal.portal_info_requested.is_connected(_on_portal_information):
 			portal.portal_info_requested.connect(_on_portal_information)
@@ -1263,7 +1265,7 @@ func _portal_information_lines(destination: StringName, depth_status: Dictionary
 					lines[index] = "Testing a locked depth does not skip earned depth progression. Rewards still require extraction."
 		if debug_expedition_seed >= 0: lines[seed_row] = "Developer seed: %d · layout and modifiers are generated on entry." % debug_expedition_seed
 	elif destination == &"realm_nexus":
-		lines = ["NEXUS OF REALMS · Sanctuary activity hall", "Explore ten gateways grouped in Adventure, Conflict and Ascension.", "Abyssal depths, Beastwilds discoveries and local Bloodspire practice are playable.", "Other activities are unavailable. The entrance gateway returns to Sanctuary."]
+		lines = ["NEXUS OF REALMS · Sanctuary activity hall", "Explore ten gateways grouped in Adventure, Conflict and Ascension.", "Play Abyssal depths, Beastwilds, Echoes, the Gilded Vault and local Bloodspire practice.", "Other activities are unavailable. The entrance gateway returns to Sanctuary."]
 	elif destination == &"sanctuary":
 		lines = ["SANCTUARY · Return to the shared city", "Arrive at the north promenade near the Nexus entrance.", "Your secured equipment, home, pets and companions remain intact."]
 	elif destination == &"combat_arena":
@@ -1444,6 +1446,9 @@ func _on_respawn() -> void:
 					player.reset_for_spawn(world.get_spawn_transform(&"default"))
 					camera_rig.reset_position()
 					player.set_controls_enabled(true)
+					if current_location == &"gilded_vault" and active_world == world and ExpeditionSession.run_generation == generation:
+						# A same-vault fall re-baselines physical plate edges, not progression.
+						InputHub.reset_controls()
 				return
 			if ExpeditionSession.active:
 				if not ExpeditionSession.activity_context_valid(world, generation): return
@@ -1696,6 +1701,11 @@ func _on_activity_exit_requested(source: Node3D, world_reference: WeakRef, sourc
 	if not completed and String(descriptor.activity_id) == "echoes_of_eternity":
 		lines.append("Waves cleared: %d / 5" % int(status.get("completed_waves", 0)))
 		lines.append("Unsearched caches remain here. Only collected rewards can be secured.")
+	elif not completed and String(descriptor.activity_id) == "gilded_vault":
+		var progress: Dictionary = ExpeditionSession.activity_snapshot()
+		lines.append("Required objectives: %d / 3 · Unsearched caches: %d" % [clampi(int(progress.get("objectives_completed", 0)), 0, 3), maxi(0, int(progress.get("unclaimed_caches", 0)))])
+		var reason := String(progress.get("return_reason", "")).strip_edges()
+		lines.append((reason if not reason.is_empty() else "An active hazard is resolving. Wait to secure, or abandon now.") if bool(progress.get("hazard_pending", false)) else "Only taken treasure is secured. Remaining cache contents stay behind.")
 	elif not completed:
 		var found := 0
 		for id: String in status.get("required", []):
@@ -1704,10 +1714,10 @@ func _on_activity_exit_requested(source: Node3D, world_reference: WeakRef, sourc
 	if completed:
 		lines.append("This activity is already closed. Retry the same safe return; no new rewards are issued.")
 	elif abandon:
-		lines.append("ABANDON: all unsecured items, Depthmarks and pet findings from this visit will be lost.")
+		lines.append("ABANDON: this visit's unsecured treasure and Depthmarks will be lost." if String(descriptor.activity_id) == "gilded_vault" else "ABANDON: all unsecured items, Depthmarks and pet findings from this visit will be lost.")
 		lines.append("Previously secured equipment, pets, home and dungeon progress remain unchanged.")
 	else:
-		lines.append("Secure this visit's discoveries and return to the Nexus.")
+		lines.append("Secure the treasure already taken and return to the Nexus." if String(descriptor.activity_id) == "gilded_vault" else "Secure this visit's discoveries and return to the Nexus.")
 		lines.append("Capacity or save failure keeps this world and its pending finds available for retry.")
 	lines.append("CLOSE keeps you here. Confirm only when ready to leave.")
 	var opened: bool = hud.expedition_overlay.open_activity_return({"title": String(descriptor.get("display_name", "Activity")).to_upper() + " · RETURN",
@@ -1856,12 +1866,12 @@ func _recover_activity_entry(candidate: Node3D, previous: Node3D, previous_locat
 
 func _activity_descriptor(id: StringName) -> Dictionary:
 	# This closed shell allowlist cannot dispatch arbitrary future catalog content.
-	return ACTIVITIES.descriptor(id) if id in [&"beastwilds", &"echoes_of_eternity"] else {}
+	return ACTIVITIES.descriptor(id) if id in [&"beastwilds", &"echoes_of_eternity", &"gilded_vault"] else {}
 
 
 func _activity_world_descriptor(world: Node3D) -> Dictionary:
 	if not is_instance_valid(world) or world.get_script() == null: return {}
-	for id: StringName in [&"beastwilds", &"echoes_of_eternity"]:
+	for id: StringName in [&"beastwilds", &"echoes_of_eternity", &"gilded_vault"]:
 		var descriptor := _activity_descriptor(id)
 		if not descriptor.is_empty() and world.get_script().resource_path == String(descriptor.world_script): return descriptor
 	return {}
@@ -2016,3 +2026,67 @@ func _retire_echoes_review() -> void:
 	var retired := _echoes_break_review.duplicate(true)
 	_echoes_break_review.clear()
 	_cancel_echoes_offer(retired)
+
+
+func _gilded_clue_source_valid(source: Node3D, world: Node3D, generation: int) -> bool:
+	if transitioning or not _application_focused or current_location != &"gilded_vault" \
+		or generation != ExpeditionSession.run_generation or not ExpeditionSession.active \
+		or not is_instance_valid(world) or world != active_world or world.get_parent() != world_root \
+		or world.is_queued_for_deletion() or world.get_script() == null \
+		or world.get_script().resource_path != "res://scripts/activities/gilded_level.gd" \
+		or not is_instance_valid(source) or not source.is_inside_tree() or source.is_queued_for_deletion() \
+		or source.get_script() == null or source.get_script().resource_path != "res://scripts/activities/gilded_clue.gd" \
+		or not world.owns_source(source, "clue_tablet") \
+		or not ExpeditionSession.gilded_runtime_context_valid(world, generation) \
+		or not is_instance_valid(player) or player.health <= 0.0 or player.downed or player.eliminated \
+		or player.combat.state != &"idle" or not is_instance_valid(party) or party.world != world or party.leader != player:
+		return false
+	var radius: Variant = source.get("interaction_radius")
+	if not (radius is float or radius is int) or not is_finite(float(radius)) \
+		or float(radius) <= 0.0 or float(radius) > 3.0 \
+		or not player.global_position.is_finite() or not source.global_position.is_finite(): return false
+	return player.global_position.distance_to(source.global_position) <= float(radius) \
+		and CombatRules.visible_from(player, player.global_position + Vector3.UP * 1.3, source.global_position + Vector3.UP * 1.6)
+
+
+func _bind_gilded_clue(source: Node, world: Node3D) -> void:
+	if world.get_script() == null or world.get_script().resource_path != "res://scripts/activities/gilded_level.gd" \
+		or source.get_script() == null or source.get_script().resource_path != "res://scripts/activities/gilded_clue.gd" \
+		or not world.owns_source(source, "clue_tablet") or not source.has_signal("gilded_clue_requested"): return
+	for connection: Dictionary in source.get_signal_connection_list("gilded_clue_requested"):
+		var callback: Callable = connection.callable
+		if callback.get_object() == self and callback.get_method() == &"_on_gilded_clue_requested":
+			source.disconnect("gilded_clue_requested", callback)
+	source.connect("gilded_clue_requested", _on_gilded_clue_requested.bind(weakref(world), weakref(source), ExpeditionSession.run_generation))
+
+
+func _on_gilded_clue_requested(source: Node3D, world_reference: WeakRef, source_reference: WeakRef, generation: int) -> void:
+	var world := world_reference.get_ref() as Node3D
+	if source_reference.get_ref() != source or not _gilded_clue_source_valid(source, world, generation) \
+		or _modal_open or hud.expedition_overlay.mode != &"none" or not player.controls_enabled or not InputHub.controls_enabled: return
+	# Read before the modal pauses native controls. This query has no reward or
+	# puzzle edge, and the displayed order is never submitted as a solution.
+	var status: Dictionary = source.get_clue_status(player)
+	if not bool(status.get("ok", false)) or int(status.get("generation", -1)) != generation:
+		hud.show_message(String(status.get("error", "This tablet is unavailable.")))
+		return
+	var runes: Variant = status.get("runes")
+	if not runes is Array or runes.size() != 3: return
+	var seen: Array[String] = []
+	for rune: Variant in runes:
+		if not rune is Dictionary or String(rune.get("id", "")) not in ["sun", "moon", "star"] \
+			or String(rune.get("label", "")).strip_edges().is_empty() or seen.has(String(rune.id)): return
+		seen.append(String(rune.id))
+	if not _gilded_clue_source_valid(source, world, generation) or hud.expedition_overlay.mode != &"none": return
+	var paused_player: WeakRef = weakref(player)
+	var paused_combat: PlayerCombat = player.combat
+	var paused_attack_cooldown: float = paused_combat.attack_cooldown
+	_city_review_epoch += 1
+	var opened: bool = hud.expedition_overlay.open_activity_clue(status)
+	if not opened or not _gilded_clue_source_valid(source, world, generation) \
+		or paused_player.get_ref() != player or not is_instance_valid(paused_combat) \
+		or player.combat != paused_combat or paused_combat.actor != player: return
+	# Preserve the same native timer through this read-only modal. Keep the
+	# legacy action-cancel policy for all existing unrelated menus unchanged.
+	if is_finite(paused_attack_cooldown) and paused_attack_cooldown >= 0.0:
+		paused_combat.attack_cooldown = maxf(paused_attack_cooldown, paused_combat.attack_cooldown)
