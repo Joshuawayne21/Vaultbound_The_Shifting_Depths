@@ -231,8 +231,8 @@ func _draw() -> void:
 	if _font == null: return
 	var rect := panel_rect()
 	UI.frame(self, rect, UI.PANEL, UI.GOLD, true)
-	_text("SANCTUARY DISTRICT MAP" if kind == &"map" else String(context.get("title", "SANCTUARY GUIDE")), rect.position + Vector2(24, 40), 23, UI.IVORY, rect.size.x - 48)
-	_text("Choose a district, then follow a waypoint on foot." if kind == &"map" else "LOCAL GAME · No online matchmaking", rect.position + Vector2(24, 68), 12, UI.MUTED, rect.size.x - 48)
+	_text("SANCTUARY · FOUR WINGS" if kind == &"map" else String(context.get("title", "SANCTUARY GUIDE")), rect.position + Vector2(24, 40), 23, UI.IVORY, rect.size.x - 48)
+	_text("N: Nexus · E: Merchants & Forge · W: Home, Pets & Appearance · S: Entrance & Recruitment" if kind == &"map" else "LOCAL GAME · No online matchmaking", rect.position + Vector2(24, 68), 12, UI.MUTED, rect.size.x - 48)
 	if kind == &"map": _draw_map()
 	else: _draw_information()
 	_button(close_rect(), "BACK", false)

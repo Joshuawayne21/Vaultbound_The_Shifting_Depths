@@ -50,15 +50,15 @@ func _layout_and_floor() -> void:
 		district_ids_valid = district_ids_valid and ids.count(id) == 1
 	check(district_ids_valid, "All eight authored districts occur once")
 	var expected := {
-		&"default": Transform3D(Basis.IDENTITY, Vector3(0, 0.15, 8)),
+		&"default": Transform3D(Basis.IDENTITY, Vector3(0, 0.95, 31)),
 		&"from_dungeon": Transform3D(Basis.IDENTITY, Vector3(0, 0.15, -5.4)),
 		&"from_abyss": Transform3D(Basis(Vector3.UP, -PI / 2.0), Vector3(3.5, 0.15, -5.5)),
 		&"from_hall": Transform3D(Basis(Vector3.UP, -PI / 2.0), Vector3(-3.5, 0.15, -6.5)),
 	}
 	for id: StringName in expected:
 		var spawn: Transform3D = city.get_spawn_transform(id)
-		check(spawn.is_equal_approx(expected[id]), "Existing arrival position and heading remain exact: " + String(id))
-		check(_clear_floor(spawn.origin - Vector3.UP * 0.15), "Existing arrival remains grounded and free of solid architecture: " + String(id))
+		check(spawn.is_equal_approx(expected[id]), "Foyer default and preserved return arrival contracts remain exact: " + String(id))
+		check(_clear_floor(spawn.origin - Vector3.UP * 0.15), "City arrival remains grounded and free of solid architecture: " + String(id))
 	for index in range(16):
 		var direction := Vector3(sin(TAU * index / 16.0), 0, cos(TAU * index / 16.0))
 		check(_clear_floor(direction * 19.0), "Ring road has continuous capsule clearance at sample %d" % index)
@@ -70,7 +70,7 @@ func _layout_and_floor() -> void:
 		check(not poi_ids.has(poi.id), "Point of interest identity is unique: " + String(poi.id))
 		poi_ids[poi.id] = true
 		check(_clear_floor(city.get_poi_approach_position(poi.id)), "Point of interest has a clear grounded approach: " + String(poi.id))
-	check(layout.ramps.size() == 2, "Forge and Tavern each expose one accessible terrace ramp")
+	check(layout.ramps.size() == 2, "Foyer and appearance pavilion retain the two accessible terrace ramps")
 	for ramp: Dictionary in layout.ramps:
 		check(is_equal_approx(float(ramp.height), 0.8) and float(ramp.width) >= 8.0 and float(ramp.length) >= 8.0, "Terrace %s retains a broad gentle 0.8-metre ascent" % ramp.id)
 		var lateral := Vector3(ramp.top - ramp.bottom).cross(Vector3.UP).normalized()
@@ -94,9 +94,9 @@ func _services() -> void:
 	if check(tavern != null, "The relocated Tavern retains its recruitment interaction"):
 		player.reset_for_spawn(Transform3D(Basis.IDENTITY, city.get_poi_approach_position(&"tavern") + Vector3.UP * 0.15))
 		await frames(5)
-		check(player.is_on_floor() and player.interaction_target == tavern, "Raised Tavern approach selects the actual recruitment counter")
+		check(player.is_on_floor() and player.interaction_target == tavern, "Southern Tavern approach selects the actual recruitment counter")
 		input_hub.request_action(&"interact")
-		check(game.hud.expedition_overlay.mode == &"recruit", "Terrace Tavern opens the original recruitment modal")
+		check(game.hud.expedition_overlay.mode == &"recruit", "Southern Tavern opens the original recruitment modal")
 	game.hud.close_modals()
 
 func _camera_samples() -> void:

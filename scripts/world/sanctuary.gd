@@ -17,7 +17,7 @@ const VisualStyle = preload("res://scripts/visual/visual_style.gd")
 const CITY_LAYOUT = preload("res://resources/sanctuary/city_layout.tres")
 
 var display_name := "THE SANCTUARY"
-var objective := "Explore the eight districts · Find the city guide at the Ring Exchange"
+var objective := "Four Sanctuary wings · North: Nexus · East: merchants · West: personal · South: social"
 # Authored instance identities, recorded once during construction. Read-only
 # callers receive a detached map; looking up a name never enrolls a new source.
 var _exchange_sources: Dictionary = {}
@@ -116,8 +116,9 @@ func _build_terminals() -> void:
 		&"map": "Choose the city guide or a LOCAL TEST Exchange. DEMO / NOT LIVE: synthetic accounts, items and TEST DM only. Nothing enters your real collection; online player trading remains unavailable.",
 		&"equipment": "Preview your owned equipment and appearance using the existing equipment viewer. Cosmetic purchases and a separate cosmetic catalog are not available in this build.",
 		&"conservatory": "Weave earned cosmetic pets, explore their journal, and choose one companion to follow you. Expedition ingredients remain unsecured until extraction.",
+		&"foyer_guide": "North: Nexus · East: merchants/Forge · West: home/pets/appearance · South: recruitment",
 	}
-	for id: StringName in [&"map", &"equipment", &"conservatory"]:
+	for id: StringName in [&"map", &"equipment", &"conservatory", &"foyer_guide"]:
 		var data: Dictionary = CITY_LAYOUT.get_poi(id)
 		var terminal := Terminal.new()
 		terminal.name = String(id).capitalize() + "CityTerminal"
@@ -189,8 +190,9 @@ func get_companion_navigation_graph() -> Dictionary:
 	return graph
 
 func get_spawn_transform(entry_id: StringName) -> Transform3D:
-	# These four original transforms are persistent transition contracts.
-	var spawn_position := Vector3(0, 0.15, 8.0)
+	# New arrivals face the Exchange from the southern Grand Foyer. Existing
+	# expedition and home return entries keep their established safe transforms.
+	var spawn_position := Vector3(0, 0.95, 31.0)
 	if entry_id == &"from_dungeon":
 		spawn_position = Vector3(0, 0.15, -5.4)
 	if entry_id == &"from_abyss":

@@ -1,6 +1,6 @@
 # Nexus of Realms — staged integration plan
 
-**Stage 0: audit and recoverable baseline.** Sanctuary reorganization and the ten-portal foundation are planned here; no new stage is accepted by this document. The next city checkpoint targets **0.7.0-nexus1 / Android code 30**. Read the [system audit](nexus-system-audit.md) for actual functionality, save contracts and missing systems.
+**Stage 1 accepted: 0.7.0-nexus1 / Android code 30.** The four-wing city reorganization passed 9,270 native checks across 38 modes; see the [stage evidence](nexus-stage1-validation.md). The next checkpoint is the streamed Nexus and shared portal foundation. Later rows below remain plans until separately verified. Read the [original system audit](nexus-system-audit.md) for the recoverable baseline and save contracts. The user has deferred Masks of the Abyss definitions and integration to a later update; existing mask collectibles stay unchanged.
 
 The latest written brief supersedes the older blueprint's wing assignments: **north = Nexus; east = merchants/crafting; west = cosmetics/home/pets; south = guild/social and entrance**. The existing central Exchange, Living Prismheart, six shared DEMO booths and eight arch/bridge routes remain the circulation framework. Four functional wings can contain multiple existing spokes; reorganization must not delete working destinations.
 

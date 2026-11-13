@@ -7,6 +7,9 @@ const PROFILE_ROOT := "/tmp/vaultbound-home6-booths-profile"
 const DEMO_ROOT := "/tmp/vaultbound-6f-home6-booths-demo"
 const SPACE := "66106610661066106610661066106610"
 const BOOTHS: Array[StringName] = [&"exchange_01", &"exchange_02", &"exchange_03", &"exchange_04", &"exchange_05", &"exchange_06"]
+const LEGACY_POIS: Array[StringName] = [&"rootbound_abyss", &"dungeon", &"combat_arena", &"training_target",
+	&"merchant_appraiser", &"merchant_general", &"merchant_equipment", &"blacksmith", &"tavern",
+	&"collection_hall", &"conservatory", &"equipment", &"map"]
 var controller: Node
 var session: Node
 var settings: Node
@@ -88,7 +91,14 @@ func _registry_contract() -> void:
 	detached.clear()
 	check(game.active_world.registered_exchange_sources() == sources, "Clearing a registry snapshot cannot enroll or erase sources")
 	var layout: Dictionary = game.active_world.get_city_layout()
-	check(layout.pois.size() == 13 and layout.exchange_booths.size() == 6, "Legacy map POIs remain intact; booths are a separate list")
+	var poi_counts: Dictionary = {}
+	for poi: Dictionary in layout.pois:
+		var id := StringName(poi.id)
+		poi_counts[id] = int(poi_counts.get(id, 0)) + 1
+	var intact: bool = layout.pois.size() == 14 and poi_counts.get(&"foyer_guide", 0) == 1
+	for id: StringName in LEGACY_POIS:
+		intact = intact and poi_counts.get(id, 0) == 1
+	check(intact and layout.exchange_booths.size() == 6, "All thirteen legacy map POIs and one arrival guide remain unique; six booths stay in their separate list")
 	check(sources[&"map"].position == Vector3(-10, 0, 8) and game.active_world.get_poi_approach_position(&"map") == Vector3(-8.5, 0, 8), "Original City Guide position, approach and alias remain exact")
 	for id: StringName in BOOTHS:
 		check(sources.has(id), "Required booth identity is registered: %s" % id)

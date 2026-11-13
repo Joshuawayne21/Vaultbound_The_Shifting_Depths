@@ -19,6 +19,7 @@ func _run() -> void:
 		return
 	var profile: Dictionary = session.profile.duplicate(true)
 	var points: Array[Vector3] = [Vector3(0, 0.15, 8), Vector3(0, 0.15, 0), game.active_world.get_poi_approach_position(&"collection_hall") + Vector3.UP * 0.15]
+	points.append(game.active_world.get_spawn_transform(&"default").origin)
 	for service: Node3D in get_nodes_in_group("commerce_services"):
 		points.append(sanctuary_service_approach(service))
 	for quality in range(3):

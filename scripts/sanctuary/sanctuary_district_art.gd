@@ -11,20 +11,144 @@ static func build(root: Node3D, layout: Resource) -> void:
 		quarter.name = "District%sArchitecture" % String(district.id)
 		quarter.position = district.center
 		quarter.rotation.y = -float(district.angle)
+		quarter.set_meta("wing", district.wing)
+		quarter.set_meta("district_style", district.style)
+		quarter.add_to_group("sanctuary_district_architecture")
 		root.add_child(quarter)
 		var kit := Architecture.new(quarter)
 		var art := Dressing.new(quarter, kit.palette)
-		match String(district.id):
-			"A": _promenade(kit, art)
-			"B": _coliseum(kit, art)
-			"C": _market(kit, art)
-			"D": _gallery(kit, art)
-			"E": _forge(kit, art)
-			"F": _pavilion(kit, art)
-			"G": _conservatory(kit, art)
-			"H": _tavern(kit, art)
+		match StringName(district.style):
+			&"nexus": _promenade(kit, art)
+			&"training": _coliseum(kit, art)
+			&"market": _market(kit, art)
+			&"forge": _forge(kit, art)
+			&"foyer": _foyer(kit, art)
+			&"social": _social_court(kit, art)
+			&"personal_gardens": _personal_gardens(kit, art)
+			&"cosmetic": _pavilion(kit, art)
 		# Keep detail batches local to a single district, rather than city-wide.
 		art.flush("District%sCraftwork" % String(district.id))
+
+static func _foyer(kit: Architecture, art: Dressing) -> void:
+	# The south arrival reuses the complete supported E terrace. A broad open
+	# colonnade frames its route; the foyer guide and party spawn have clear lanes.
+	kit.root.add_to_group("sanctuary_arrival_foyer")
+	kit.palette["ivory"] = preload("res://resources/materials/home_ivory.tres")
+	kit.palette["azure"] = preload("res://resources/materials/home_royal_blue.tres")
+	kit.palette["light_stone"] = kit.palette["ivory"]
+	for z: float in [2.1, -4.7]:
+		for side: float in [-1.0, 1.0]:
+			var at := Vector3(side * 5.6, 0, z)
+			kit.column(at, 4.4)
+			_camera_box_at(kit.root, at + Vector3.UP * 2.6, Vector3(1.6, 5.2, 1.6), "FoyerColumnEnvelope")
+		_foyer_arch(kit, z)
+	for side: float in [-1.0, 1.0]:
+		kit.box(Vector3(side * 5.6, 5.15, -1.3), Vector3(0.5, 0.3, 7.6), "ivory", true)
+		# The plinths and basins stay beyond the eight-metre public route.
+		var statue := Vector3(side * 5.6, 0, -1.35)
+		kit.cylinder(statue + Vector3.UP * 0.24, 0.62, 0.48, "ivory", true, 8)
+		kit.cone(statue + Vector3.UP * 1.08, 0.38, 1.2, "azure")
+		art.facet(statue + Vector3.UP * 1.9, Vector3(0.27, 0.38, 0.27), "gold")
+		art.facet(statue + Vector3(0, 1.38, 0.32), Vector3(0.2, 0.4, 0.18), "crystal")
+		_camera_box_at(kit.root, statue + Vector3.UP * 1.15, Vector3(1.3, 2.3, 1.3), "FoyerStatueEnvelope")
+		var basin := Vector3(side * 5.6, 0, -3.1)
+		kit.cylinder(basin + Vector3.UP * 0.12, 0.72, 0.24, "ivory", true, 12)
+		kit.cylinder(basin + Vector3.UP * 0.245, 0.60, 0.012, "water", false, 16)
+		art.facet(basin + Vector3.UP * 0.65, Vector3(0.12, 0.32, 0.12), "glow")
+		_camera_box_at(kit.root, basin + Vector3.UP * 0.5, Vector3(1.5, 1.0, 1.5), "FoyerBasinEnvelope")
+		for z: float in [-2.2, -3.9]:
+			art.fern(Vector3(side * 6.3, 0.12, z), 0.48, z + side)
+			art.blossom(Vector3(side * 6.05, 0.38, z), 0.70)
+		for z: float in [1.3, -4.0]:
+			art.facet(Vector3(side * 5.0, 3.7, z), Vector3(0.16, 0.25, 0.16), "glow")
+			_camera_box_at(kit.root, Vector3(side * 5.0, 3.7, z), Vector3(0.35, 0.55, 0.35), "FoyerLanternEnvelope")
+		# Colored ribbons are outside the clear path and below the side eaves.
+		kit.box(Vector3(side * 5.6, 4.05, -1.3), Vector3(0.035, 1.3, 1.45), "azure")
+		_camera_box_at(kit.root, Vector3(side * 5.6, 4.05, -1.3), Vector3(0.08, 1.35, 1.5), "FoyerBannerEnvelope")
+	# Raised visual inlays are separated from the retained deck's 0.0155m top.
+	kit.box(Vector3(0, 0.028, -1.1), Vector3(2.8, 0.012, 7.0), "ivory")
+	for side: float in [-1.0, 1.0]:
+		kit.box(Vector3(side * 1.46, 0.041, -1.1), Vector3(0.07, 0.008, 7.0), "gold")
+	for z: float in [1.0, -1.1, -3.2]:
+		var mosaic := kit.box(Vector3(0, 0.045, z), Vector3(0.75, 0.006, 0.75), "azure")
+		mosaic.rotation.y = PI / 4.0
+	var title := kit.label("GRAND FOYER", Vector3(0, 8.05, 2.1), 30, Color("e4cc8a"))
+	title.pixel_size = 0.005
+	var guide := kit.label("GRAND EXCHANGE · NORTH", Vector3(0, 5.4, -4.7), 23, Color("b6dedb"))
+	guide.pixel_size = 0.004
+	guide.visibility_range_end = 26.0
+
+static func _foyer_arch(kit: Architecture, z: float) -> void:
+	# One colored mesh and twelve real convex segments. The centre is open;
+	# no bounding box seals the passage or lets the camera cross the crown.
+	var arch := Node3D.new()
+	arch.name = "FoyerFrontArch" if z > 0 else "FoyerRearArch"
+	arch.position.z = z
+	arch.add_to_group("sanctuary_wing_arches")
+	kit.root.add_child(arch)
+	var body := StaticBody3D.new()
+	body.name = "OpenArchCollision"
+	body.collision_layer = 1
+	body.collision_mask = 2
+	arch.add_child(body)
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for index in range(12):
+		var a := float(index) * PI / 12.0
+		var b := float(index + 1) * PI / 12.0
+		var polygon := PackedVector2Array([Vector2(cos(a) * 4.8, 5.0 + sin(a) * 2.2), Vector2(cos(a) * 6.4, 5.0 + sin(a) * 2.7), Vector2(cos(b) * 6.4, 5.0 + sin(b) * 2.7), Vector2(cos(b) * 4.8, 5.0 + sin(b) * 2.2)])
+		var points := PackedVector3Array()
+		for depth: float in [0.45, -0.45]:
+			for point: Vector2 in polygon: points.append(Vector3(point.x, point.y, depth))
+		var bounds := ConvexPolygonShape3D.new()
+		bounds.points = points
+		var collider := CollisionShape3D.new()
+		collider.shape = bounds
+		body.add_child(collider)
+		var tint := Color("c4a35d") if index in [0, 5, 6, 11] else Color("dddccf")
+		for face: Array in [[0, 1, 2, 3], [4, 7, 6, 5], [0, 4, 5, 1], [3, 2, 6, 7], [0, 3, 7, 4], [1, 5, 6, 2]]:
+			var normal := (points[face[1]] - points[face[0]]).cross(points[face[2]] - points[face[0]]).normalized()
+			for corner: int in [0, 2, 1, 0, 3, 2]:
+				surface.set_normal(normal)
+				surface.set_color(tint)
+				surface.add_vertex(points[face[corner]])
+	var material := StandardMaterial3D.new()
+	material.vertex_color_use_as_albedo = true
+	material.roughness = 0.84
+	var mesh := kit.mesh_instance(surface.commit(), Vector3.ZERO, material, arch)
+	mesh.name = "CurvedIvoryArch"
+	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+
+static func _social_court(kit: Architecture, art: Dressing) -> void:
+	_tavern(kit, art)
+	for side: float in [-1.0, 1.0]:
+		kit.box(Vector3(side * 5.6, 0.4, 0.8), Vector3(1.4, 0.8, 0.65), "light_stone", true)
+		kit.box(Vector3(side * 5.6, 0.86, 0.8), Vector3(1.55, 0.12, 0.78), "wood")
+		art.facet(Vector3(side * 5.6, 2.3, -5.0), Vector3(0.35, 0.6, 0.12), "gold")
+	var title := kit.label("SOCIAL COURT · ADVENTURER RECRUITMENT", Vector3(0, 4.25, -3.8), 25, Color("e8d8ad"))
+	title.pixel_size = 0.004
+	# A named gathering place is not an online guild service or leaderboard.
+	var notice := kit.label("Guild systems await online infrastructure", Vector3(0, 3.85, -3.8), 18, Color("b7c9c4"))
+	notice.pixel_size = 0.0032
+
+static func _personal_gardens(kit: Architecture, art: Dressing) -> void:
+	_conservatory(kit, art)
+	# The existing gold home gate occupies the left bay; the real Spiritweaving
+	# terminal occupies the right. Display/ownership authority stays unchanged.
+	var title := kit.label("PERSONAL SANCTUARY · PET GARDENS", Vector3(0, 5.35, -3.7), 25, Color("c7e7d0"))
+	title.pixel_size = 0.004
+	for side: float in [-1.0, 1.0]:
+		art.fern(Vector3(side * 6.1, 0.06, -2.0), 0.7, side)
+		art.blossom(Vector3(side * 6.0, 0.35, -1.8), 0.85)
+
+static func _camera_box_at(parent: Node3D, at: Vector3, size: Vector3, label: String) -> void:
+	var anchor := Node3D.new()
+	anchor.name = label
+	anchor.position = at
+	parent.add_child(anchor)
+	var bounds := BoxShape3D.new()
+	bounds.size = size
+	_camera_shape(anchor, bounds)
 
 static func _promenade(kit: Architecture, art: Dressing) -> void:
 	# Paired watch spires frame the two existing passages and their shared horizon.
@@ -90,7 +214,7 @@ static func _gallery(kit: Architecture, art: Dressing) -> void:
 	art.facet(Vector3(0, 7.75, -6.6), Vector3(0.75, 0.8, 0.45), "gold")
 
 static func _forge(kit: Architecture, art: Dressing) -> void:
-	# Broad masonry workshop and a chimney are readable above the raised forecourt.
+	# Broad masonry workshop and chimney reuse the established forge silhouette.
 	_facade(kit, art, Vector3(-1.0, 0, -6.3), 10.4, 4.1, "stone", "flame")
 	_gable_roof(kit, Vector3(-1.0, 4.5, -6.3), 10.8, 3.1, 1.2, "dark_stone")
 	kit.box(Vector3(5.25, 3.6, -6.2), Vector3(1.7, 7.2, 1.8), "dark_stone", true)

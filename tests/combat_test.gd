@@ -473,7 +473,8 @@ func _arena_travel_and_death() -> void:
 	await eventually(func() -> bool: return game.transitioning, 1.0)
 	if await arrive(&"sanctuary"):
 		check(player.health == player.max_health and player.controls_enabled, "Death restores the player safely in Sanctuary")
-		check(player.global_position.distance_to(Vector3(0, 0, 8)) < 0.6, "Death uses the safe Sanctuary default spawn")
+		await frames(12)
+		check(player.global_position.distance_to(Vector3(0, 0.8, 31)) < 0.6 and player.is_on_floor(), "Death uses the grounded southern Foyer default spawn")
 		check(get_nodes_in_group("enemies").is_empty(), "Death recovery leaves no stale arena enemies")
 		check(game.player.get_instance_id() == player_id, "Death recovery retains the same gameplay controller")
 

@@ -63,7 +63,7 @@ static func unbaked(test, stage: Node3D) -> void:
 
 static func arrivals_and_approaches(test, city: Node3D, player: CharacterBody3D) -> void:
 	var expected := {
-		&"default": Transform3D(Basis.IDENTITY, Vector3(0, 0.15, 8)),
+		&"default": Transform3D(Basis.IDENTITY, Vector3(0, 0.95, 31)),
 		&"from_dungeon": Transform3D(Basis.IDENTITY, Vector3(0, 0.15, -5.4)),
 		&"from_abyss": Transform3D(Basis(Vector3.UP, -PI / 2.0), Vector3(3.5, 0.15, -5.5)),
 		&"from_hall": Transform3D(Basis(Vector3.UP, -PI / 2.0), Vector3(-3.5, 0.15, -6.5)),
@@ -73,7 +73,7 @@ static func arrivals_and_approaches(test, city: Node3D, player: CharacterBody3D)
 		var clear := at.is_equal_approx(expected[id])
 		for offset: Vector3 in [Vector3.ZERO, Vector3(-1.6, 0, 2.2), Vector3(1.6, 0, 2.2)]:
 			clear = clear and _capsule_clear(city, player, at * offset)
-		test.check(clear, "Original transition transform and all three arrival capsules remain clear: " + String(id))
+		test.check(clear, "Foyer default or preserved return transform and all three arrival capsules remain clear: " + String(id))
 	for row: Dictionary in Layout.get_exchange_booths():
 		var foot: Vector3 = row.approach + Vector3.UP * 0.08
 		var ray := PhysicsRayQueryParameters3D.create(foot + Vector3.UP * 1.52, row.position + Vector3.UP * 1.6, 1)

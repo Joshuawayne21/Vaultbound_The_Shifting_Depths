@@ -14,8 +14,12 @@ extends Resource
 const CAPITAL = preload("res://resources/sanctuary/prismheart_capital.tres")
 const COURTYARD = preload("res://resources/sanctuary/exchange_courtyard.tres")
 
-const DISTRICT_NAMES := ["Portal Promenade", "Combat Coliseum", "Merchant Terraces", "Personal Sanctuary & Trophy Hall", "Master Forge", "Cosmetic Pavilion", "Spiritweaving Conservatory", "Tavern & Recruitment"]
-const DISTRICT_POIS := [&"rootbound_abyss", &"combat_arena", &"merchant_general", &"collection_hall", &"blacksmith", &"equipment", &"conservatory", &"tavern"]
+# A–H identify the eight existing physical spokes, not service ownership. The
+# four wings group those spokes without rebuilding the ring, bridges or ramps.
+const DISTRICT_NAMES := ["Nexus Promenade", "Nexus Training Court", "Merchant Bazaar", "Master Forge & Crafting", "Grand Foyer", "Guild Court & Recruitment", "Personal Sanctuary & Pet Gardens", "Cosmetic Pavilion"]
+const DISTRICT_POIS := [&"rootbound_abyss", &"combat_arena", &"merchant_general", &"blacksmith", &"foyer_guide", &"tavern", &"collection_hall", &"equipment"]
+const DISTRICT_WINGS := [&"north", &"north", &"east", &"east", &"south", &"south", &"west", &"west"]
+const DISTRICT_STYLES := [&"nexus", &"training", &"market", &"forge", &"foyer", &"social", &"personal_gardens", &"cosmetic"]
 
 func district_transform(id: StringName) -> Transform3D:
 	var index := clampi(String(id).unicode_at(0) - 65, 0, 7) if not String(id).is_empty() else 0
@@ -29,8 +33,18 @@ func get_districts() -> Array[Dictionary]:
 		var id := StringName(String.chr(65 + index))
 		var transform := district_transform(id)
 		var approach := transform * Vector3(0, 0, 0 if index in [4, 7] else 2.5)
-		result.append({"id": id, "name": DISTRICT_NAMES[index], "label": "%s · %s" % [id, DISTRICT_NAMES[index]], "center": transform.origin, "approach": approach, "angle": index * TAU / 8.0, "height": transform.origin.y, "poi_id": DISTRICT_POIS[index]})
+		result.append({"id": id, "name": DISTRICT_NAMES[index], "label": "%s · %s" % [id, DISTRICT_NAMES[index]], "center": transform.origin, "approach": approach, "angle": index * TAU / 8.0, "height": transform.origin.y, "poi_id": DISTRICT_POIS[index], "wing": DISTRICT_WINGS[index], "style": DISTRICT_STYLES[index]})
 	return result
+
+func get_wings() -> Array[Dictionary]:
+	# Information and navigation only. These entries do not claim that future
+	# online guilds, banking or unfinished Nexus activities are available.
+	return [
+		{"id": &"north", "name": "Nexus of Realms", "label": "NORTH · NEXUS & TRAINING", "district_ids": [&"A", &"B"], "center": district_transform(&"A").origin, "waypoint_id": &"A"},
+		{"id": &"east", "name": "Merchant District", "label": "EAST · MERCHANTS & CRAFTERS", "district_ids": [&"C", &"D"], "center": district_transform(&"C").origin, "waypoint_id": &"C"},
+		{"id": &"west", "name": "Personal & Cosmetic District", "label": "WEST · HOME, PETS & APPEARANCE", "district_ids": [&"G", &"H"], "center": district_transform(&"G").origin, "waypoint_id": &"G"},
+		{"id": &"south", "name": "Grand Foyer & Social District", "label": "SOUTH · ARRIVAL & RECRUITMENT", "district_ids": [&"E", &"F"], "center": district_transform(&"E").origin, "waypoint_id": &"E"},
+	]
 
 func get_pois() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
@@ -41,11 +55,12 @@ func get_pois() -> Array[Dictionary]:
 	result.append(_poi(&"merchant_appraiser", "Iris · Relic Appraiser", &"C", Vector3(-4.2, 0, -2), 1.6, &"merchant"))
 	result.append(_poi(&"merchant_general", "Mara · General Merchant", &"C", Vector3(0, 0, -2), 1.6, &"merchant"))
 	result.append(_poi(&"merchant_equipment", "Dain · Equipment Trader", &"C", Vector3(4.2, 0, -2), 1.6, &"merchant"))
-	result.append(_poi(&"collection_hall", "Personal Sanctuary · Your Home", &"D", Vector3(0, 0, -2), 2.1, &"portal"))
-	result.append(_poi(&"blacksmith", "Brann · Master Forge", &"E", Vector3(0, 0, -1.4), 1.6, &"blacksmith"))
-	result.append(_poi(&"equipment", "Equipment & Appearance Preview", &"F", Vector3.ZERO, 1.8, &"equipment"))
-	result.append(_poi(&"conservatory", "Conservatory & Collection Guide", &"G", Vector3.ZERO, 1.8, &"conservatory"))
-	result.append(_poi(&"tavern", "The Lantern & Root · Recruitment", &"H", Vector3(0, 0, -1), 1.8, &"recruitment"))
+	result.append(_poi(&"collection_hall", "Personal Sanctuary · Your Home", &"G", Vector3(-3.5, 0, -2), 2.1, &"portal"))
+	result.append(_poi(&"blacksmith", "Brann · Master Forge", &"D", Vector3(0, 0, -1.4), 1.6, &"blacksmith"))
+	result.append(_poi(&"equipment", "Equipment & Appearance Preview", &"H", Vector3(0, 0, -1.8), 1.8, &"equipment"))
+	result.append(_poi(&"conservatory", "Conservatory & Collection Guide", &"G", Vector3(3.5, 0, 0), 1.8, &"conservatory"))
+	result.append(_poi(&"tavern", "The Lantern & Root · Recruitment", &"F", Vector3(0, 0, -1), 1.8, &"recruitment"))
+	result.append(_poi(&"foyer_guide", "Welcome to Sanctuary · City Guide", &"E", Vector3(-4.45, 0, 0), 1.8, &"guide"))
 	result.append({"id": &"map", "label": "Ring Exchange · City Guide", "district": &"exchange", "position": Vector3(-10, 0, 8), "approach": Vector3(-8.5, 0, 8), "kind": &"map", "rotation": PI / 2.0})
 	return result
 
@@ -65,7 +80,8 @@ func get_exchange_booths() -> Array[Dictionary]:
 
 func _poi(id: StringName, label: String, district: StringName, local_position: Vector3, approach_distance: float, kind: StringName) -> Dictionary:
 	var transform := district_transform(district)
-	return {"id": id, "label": label, "district": district, "position": transform * local_position, "approach": transform * (local_position + Vector3(0, 0, approach_distance)), "kind": kind, "rotation": transform.basis.get_euler().y}
+	var sector := clampi(String(district).unicode_at(0) - 65, 0, 7)
+	return {"id": id, "label": label, "district": district, "wing": DISTRICT_WINGS[sector], "position": transform * local_position, "approach": transform * (local_position + Vector3(0, 0, approach_distance)), "kind": kind, "rotation": transform.basis.get_euler().y}
 
 func get_poi(id: StringName) -> Dictionary:
 	for poi: Dictionary in get_pois():
@@ -80,8 +96,8 @@ func get_poi(id: StringName) -> Dictionary:
 	return {}
 
 func get_exchange_connections() -> Array[Dictionary]:
-	# Existing graph, arrival and service coordinates stay unchanged. E/H reuse
-	# their authored ramp rather than adding a second conflicting floor.
+	# The physical graph and district axes stay unchanged while services regroup
+	# by wing. E/H reuse their authored ramps without a second conflicting floor.
 	var result: Array[Dictionary] = []
 	for district: Dictionary in get_districts():
 		var angle: float = district.angle
@@ -107,7 +123,9 @@ func get_ramps() -> Array[Dictionary]:
 		var transform := district_transform(id)
 		var bottom := transform * Vector3(0, -terrace_height, 11.5)
 		var top := transform * Vector3(0, 0, 2.5)
-		result.append({"id": &"forge" if id == &"E" else &"tavern", "district": id, "bottom": bottom, "top": top, "center": transform * Vector3(0, -terrace_height * 0.5, 7), "width": path_width, "length": ramp_length, "height": terrace_height})
+		# Retain legacy ramp IDs for existing callers; their new public use is
+		# described separately instead of changing physical transition contracts.
+		result.append({"id": &"forge" if id == &"E" else &"tavern", "label": "Grand Foyer approach" if id == &"E" else "Cosmetic Pavilion approach", "district": id, "bottom": bottom, "top": top, "center": transform * Vector3(0, -terrace_height * 0.5, 7), "width": path_width, "length": ramp_length, "height": terrace_height})
 	return result
 
 func navigation_graph() -> Dictionary:
@@ -145,4 +163,4 @@ func navigation_graph() -> Dictionary:
 	return {"points": points, "edges": edges}
 
 func describe() -> Dictionary:
-	return {"radius": radius, "exchange_radius": exchange_radius, "ring_radius": ring_radius, "ring_width": ring_width, "district_radius": district_radius, "path_width": path_width, "districts": get_districts(), "pois": get_pois(), "exchange_booths": get_exchange_booths(), "exchange_connections": get_exchange_connections(), "ramps": get_ramps()}
+	return {"radius": radius, "exchange_radius": exchange_radius, "ring_radius": ring_radius, "ring_width": ring_width, "district_radius": district_radius, "path_width": path_width, "wings": get_wings(), "districts": get_districts(), "pois": get_pois(), "exchange_booths": get_exchange_booths(), "exchange_connections": get_exchange_connections(), "ramps": get_ramps()}
