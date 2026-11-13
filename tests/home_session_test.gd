@@ -52,7 +52,7 @@ func _cases() -> void:
 	source = game.active_world
 	DirAccess.make_dir_recursive_absolute(PATH + ".tmp")
 	check(not session.prepare_home_entry(source, player) and session.profile == before
-		and FileAccess.get_file_as_bytes(PATH) == bytes and not FileAccess.file_exists(PATH + ".pre-v11.bak"),
+		and FileAccess.get_file_as_bytes(PATH) == bytes and not FileAccess.file_exists(PATH + ".pre-v%d.bak" % Store.VERSION),
 		"Failed first-entry write publishes neither identity nor progression and keeps exact old bytes")
 	DirAccess.remove_absolute(PATH + ".tmp")
 	var observed := {"calls": 0, "accepted": false}

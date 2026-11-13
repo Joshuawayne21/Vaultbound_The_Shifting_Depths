@@ -21,7 +21,7 @@ func _run() -> void:
 func _clean() -> void:
 	DirAccess.make_dir_recursive_absolute(PATH.get_base_dir())
 	for file: String in DirAccess.open(PATH.get_base_dir()).get_files(): DirAccess.remove_absolute(PATH.get_base_dir().path_join(file))
-	for suffix: String in [".tmp", ".pre-v11.bak.tmp", ".bak.tmp"]:
+	for suffix: String in [".tmp", ".pre-v%d.bak.tmp" % Store.VERSION, ".bak.tmp"]:
 		if DirAccess.dir_exists_absolute(PATH + suffix): DirAccess.remove_absolute(PATH + suffix)
 
 func _write(path: String, body: String) -> void:
@@ -32,7 +32,7 @@ func _write(path: String, body: String) -> void:
 
 func _migration() -> void:
 	_clean()
-	check(Store.VERSION == 11 and not Access.enabled(Store.empty_profile()), "Profile11 defaults to normal requirements and grants no developer rights implicitly")
+	check(Store.VERSION == 12 and not Access.enabled(Store.empty_profile()), "Profile12 defaults to normal requirements and grants no developer rights implicitly")
 	var old := Fixtures.owned()
 	old = Home.plan_initialization(old, Fixtures.ID, int(old.revision))
 	old = Home.plan(old, &"claim_home_milestones", {}, int(old.revision)).profile
@@ -45,11 +45,11 @@ func _migration() -> void:
 	var store := Store.new(PATH)
 	var loaded := store.load_profile()
 	var expected := old.duplicate(true)
-	expected.version = 11
+	expected.version = Store.VERSION
 	expected.tester_access = Access.empty_fields()
 	check(not store.read_only and loaded == expected, "Version10 migration preserves every owned field, display, companion, depth and identity while adding disabled test access")
-	check(FileAccess.get_file_as_string(PATH) == bytes and not FileAccess.file_exists(PATH + ".pre-v11.bak"), "Loading never writes test access or replaces a real save")
-	check(store.save_profile(loaded) and FileAccess.get_file_as_string(PATH + ".pre-v11.bak") == bytes \
+	check(FileAccess.get_file_as_string(PATH) == bytes and not FileAccess.file_exists(PATH + ".pre-v%d.bak" % Store.VERSION), "Loading never writes test access or replaces a real save")
+	check(store.save_profile(loaded) and FileAccess.get_file_as_string(PATH + ".pre-v%d.bak" % Store.VERSION) == bytes \
 		and FileAccess.get_file_as_string(PATH + ".pre-v10.bak") == "retain-exact-home4-history", "First write protects exact v10 bytes and retains earlier migration history")
 	var on := Access.plan(loaded, true, int(loaded.revision))
 	check(on.ok and store.save_profile(on.profile) and Access.enabled(Store.new(PATH).load_profile()), "An explicit enabled flag persists through an independent profile reader")

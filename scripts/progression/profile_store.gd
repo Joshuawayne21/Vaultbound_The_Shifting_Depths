@@ -4,7 +4,8 @@ extends RefCounted
 ## a temporary file, and renamed only after a successful read-back. A previous
 ## valid profile is kept as .bak. This is offline persistence, not remote authority.
 
-const VERSION := 11
+const VERSION := 12
+const ActivityProgress = preload("res://scripts/progression/activity_progression.gd")
 const DepthProgress = preload("res://scripts/progression/depth_progression.gd")
 const EncounterProgress = preload("res://scripts/progression/encounter_progression.gd")
 const TesterAccess = preload("res://scripts/progression/tester_access.gd")
@@ -35,6 +36,7 @@ static func empty_profile() -> Dictionary:
 		"statistics": {"completed": 0, "deaths": 0,
 			"total_gold": 0, "total_kills": 0, "best_seconds": 0.0, "last_seed": 0}}
 	profile.merge(VaultInventory.empty_fields(), true)
+	profile["activities"] = ActivityProgress.empty_fields()
 	profile["pets"] = VaultPetProgression.empty_fields()
 	profile["depth_progression"] = DepthProgress.empty_fields()
 	profile["encounter_records"] = EncounterProgress.empty_fields()
@@ -151,6 +153,8 @@ static func normalize(value: Variant) -> Dictionary:
 static func _normalize(value: Variant, unavailable_items: Dictionary, unavailable_pets: bool = false) -> Dictionary:
 	if not value is Dictionary or not _integer(value.get("version"), 1, VERSION):
 		return {}
+	if not ActivityProgress.preservation_error(value).is_empty():
+		return {}
 	if not TesterAccess.preservation_error(value).is_empty():
 		return {}
 	if not DepthProgress.preservation_error(value).is_empty():
@@ -191,6 +195,9 @@ static func _normalize(value: Variant, unavailable_items: Dictionary, unavailabl
 		result.pets = pets
 	result.gold = int(value.gold)
 	result.revision = int(value.get("revision", 0))
+	var activities := ActivityProgress.normalize(value.get("activities"), int(result.revision)) if int(value.version) >= ActivityProgress.FIRST_PROFILE_VERSION else ActivityProgress.migrate(value, int(result.revision))
+	if activities.is_empty(): return {}
+	result.activities = activities
 	for id: Variant in value.get("items", {}):
 		if not id is String or String(id).is_empty() or String(id).length() > 96:
 			return {}
@@ -303,6 +310,8 @@ static func _unsupported_profile_reason(value: Variant) -> String:
 	if (version is int or version is float) and is_finite(float(version)) and float(version) > VERSION:
 		return "This profile uses a newer format. Secured data was left unchanged."
 	if value is Dictionary:
+		var activity_error := ActivityProgress.preservation_error(value)
+		if not activity_error.is_empty(): return activity_error
 		var tester_error := TesterAccess.preservation_error(value)
 		if not tester_error.is_empty(): return tester_error
 		var depth_error := DepthProgress.preservation_error(value)

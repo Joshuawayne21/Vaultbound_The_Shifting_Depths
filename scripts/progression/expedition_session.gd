@@ -19,6 +19,8 @@ const EncounterProgress = preload("res://scripts/progression/encounter_progressi
 const TesterAccess = preload("res://scripts/progression/tester_access.gd")
 const HomeProgress = preload("res://scripts/progression/home_progression.gd")
 const Content = preload("res://scripts/expedition/dungeon_content.gd")
+const ActivityPlan = preload("res://scripts/activities/activity_run_plan.gd")
+const ActivityProgress = preload("res://scripts/progression/activity_progression.gd")
 const EVENT_RECORD_KEYS := ["encounter_definition_id", "content_version", "encounter_version", "objective_role",
 	"reward_profile_id", "pet_profile_id", "discovery_id", "kind", "roster_profile_id",
 	"receipt", "room_id", "depth", "drop_position", "member_deaths"]
@@ -68,6 +70,11 @@ var _home_mutating := false
 var _home_quotes: Dictionary = {}
 var _tester_quotes: Dictionary = {}
 var _tester_mutating := false
+var _issued_activity: Dictionary = {}
+var _activity_claims: Dictionary = {}
+var _completed_activity_return: Dictionary = {}
+var _activity_mutating := false
+var _activity_admitted_world: WeakRef
 
 func _ready() -> void:
 	profile = store.load_profile()
@@ -90,9 +97,10 @@ func _process(delta: float) -> void:
 func configure_storage(path: String) -> bool:
 	# Test harnesses pass a unique /tmp path. Changing storage during a live run
 	# could redirect earned rewards, so it is deliberately rejected.
-	if active or path.is_empty():
+	if active or _activity_mutating or path.is_empty():
 		return false
 	_completed_early_return.clear()
+	_completed_activity_return.clear()
 	store = VaultProfileStore.new(path)
 	profile = store.load_profile()
 	close_service()
@@ -100,6 +108,367 @@ func configure_storage(path: String) -> bool:
 	_emit_changed()
 	pet_changed.emit(PetProgress.active_appearance(profile))
 	return not store.read_only
+
+func activity_entry_status(activity_id: StringName) -> Dictionary:
+	var definition := ActivityPlan.definition()
+	var result := {"ok": false, "activity_id": String(activity_id), "reason": "This activity is unavailable.", "required_cleared_depth": 2}
+	if activity_id != &"beastwilds" or definition.is_empty(): return result
+	if store.read_only:
+		result.reason = storage_error if not storage_error.is_empty() else "Secured progression is read-only."
+	elif active or _activity_mutating:
+		result.reason = "An expedition is already in progress."
+	elif ActivityProgress.normalize(profile.get("activities"), int(profile.revision)).is_empty() \
+			or int(profile.revision) >= VaultProfileStore.MAX_COUNT - 1 or int(profile.activities.next_run_serial) >= VaultProfileStore.MAX_COUNT \
+			or run_generation >= VaultProfileStore.MAX_COUNT:
+		result.reason = "Activity progression cannot admit another visit. Your secured progress was preserved."
+	elif int(profile.depth_progression.highest_cleared_depth) < int(definition.required_cleared_depth) and not TesterAccess.enabled(profile):
+		result.reason = "Complete dungeon floor %d to explore the Beastwilds." % int(definition.required_cleared_depth)
+	else:
+		result.ok = true
+		result.reason = "Local exploration · find tracks, an egg and a stranded spirit, then secure your discoveries. Pet capture is not available."
+	return result
+
+func begin_activity_run(activity_id: StringName, seed_value: int) -> bool:
+	var status := activity_entry_status(activity_id)
+	if not bool(status.ok) or not ActivityPlan.integer(seed_value, 0):
+		notice.emit(String(status.reason) if not bool(status.ok) else "This activity seed is invalid.")
+		return false
+	var plan := ActivityPlan.create(seed_value, int(profile.activities.next_run_serial))
+	var fields := ActivityProgress.reserve(profile.activities, int(profile.revision), plan)
+	if plan.is_empty() or fields.is_empty(): return false
+	var next := profile.duplicate(true)
+	next.activities = fields
+	next.revision = int(next.revision) + 1
+	_activity_mutating = true
+	if not store.save_profile(next):
+		storage_error = store.last_error
+		_activity_mutating = false
+		notice.emit("Could not reserve this visit: " + storage_error + " Your secured progress was preserved.")
+		return false
+	profile = next
+	storage_error = ""
+	_clear_run()
+	active = true
+	run_seed = seed_value
+	run_generation += 1
+	var generation := run_generation
+	_issued_activity = {"activity_id": "beastwilds", "definition_version": 1,
+		"serial": int(plan.serial), "seed": seed_value, "generation": generation, "plan": plan.duplicate(true)}
+	elapsed = 0.0
+	kills = 0
+	last_results.clear()
+	var context := issued_activity_context()
+	_activity_mutating = false
+	_emit_changed()
+	var admitted := activity_transition_matches(context)
+	if not admitted and active and run_generation == generation:
+		_retire_failed_activity_admission(context)
+	return admitted
+
+func _retire_failed_activity_admission(context: Dictionary) -> void:
+	# A changed listener can corrupt this attempt before begin returns. The
+	# original local snapshot, never the now-mutated issued fields, identifies
+	# the ticket. A callback-created replacement owns another generation.
+	if not active or _activity_mutating or not ActivityPlan.exact_keys(context,
+			["activity_id", "definition_version", "serial", "seed", "generation", "plan"]) \
+			or not ActivityPlan.integer(context.generation, 1) or int(context.generation) != run_generation \
+			or not ActivityPlan.valid(context.plan): return
+	var generation := run_generation
+	_activity_mutating = true
+	var next := profile.duplicate(true)
+	var records := ActivityProgress.finish(next.activities, int(next.revision), context.plan, "abandoned", 0.0, 0, {})
+	var message := ""
+	if not records.is_empty():
+		next.activities = records
+		next.revision = int(next.revision) + 1
+		if store.save_profile(next):
+			profile = next
+			storage_error = ""
+		else:
+			storage_error = store.last_error
+			message = "The interrupted visit could not be retired on disk. Secured possessions were preserved; this visit cannot resume."
+	# A missing/mismatched durable ticket is never rewritten from the snapshot.
+	# Its existing profile remains untouched while this unadmitted runtime ends.
+	_clear_run()
+	_activity_mutating = false
+	_emit_changed()
+	if not message.is_empty() and not active and run_generation == generation:
+		notice.emit(message)
+
+func issued_activity_context() -> Dictionary:
+	return _issued_activity.duplicate(true) if active else {}
+
+func activity_transition_matches(context: Dictionary) -> bool:
+	if not active or not ActivityPlan.exact_keys(_issued_activity,
+			["activity_id", "definition_version", "serial", "seed", "generation", "plan"]) \
+			or _issued_activity.activity_id != "beastwilds" or _issued_activity.definition_version != 1 \
+			or not ActivityPlan.integer(_issued_activity.generation, 1) or not ActivityPlan.integer(_issued_activity.seed, 0) \
+			or not ActivityPlan.integer(_issued_activity.serial, 1) or not ActivityPlan.valid(_issued_activity.plan): return false
+	return context == _issued_activity and run_generation == int(_issued_activity.generation) \
+		and run_seed == int(_issued_activity.seed) and _issued_activity.serial == _issued_activity.plan.serial \
+		and _issued_activity.seed == _issued_activity.plan.seed \
+		and ActivityProgress.ticket_matches(profile.activities, int(profile.revision), _issued_activity.plan)
+
+func abort_unentered_activity(context: Dictionary) -> bool:
+	if _activity_mutating or not activity_transition_matches(context): return false
+	var generation := run_generation
+	_fail_activity("abandoned")
+	return not active and run_generation == generation
+
+func _activity_world_identity_valid(world: Node3D, generation: int) -> bool:
+	if not activity_transition_matches(_issued_activity) or generation != run_generation \
+			or _location != &"beastwilds" or not is_instance_valid(world) or world != _world \
+			or not world.is_inside_tree() or world.is_queued_for_deletion() or world.get_script() == null \
+			or world.get_script().resource_path != ActivityPlan.WORLD_SCRIPT or not world.has_method("issued_activity_context"):
+		return false
+	var issued: Variant = world.issued_activity_context()
+	return issued is Dictionary and issued == _issued_activity and generation == run_generation \
+		and world == _world and activity_transition_matches(_issued_activity)
+
+func admit_activity_world(world: Node3D, context: Dictionary) -> bool:
+	if _activity_mutating or not activity_transition_matches(context) or not _activity_world_identity_valid(world, run_generation): return false
+	var game := get_tree().current_scene
+	if not is_instance_valid(game) or not game.is_inside_tree() or game.is_queued_for_deletion() \
+			or game.get_script() == null or game.get_script().resource_path != "res://scripts/systems/game.gd" \
+			or game.get("active_world") != world or game.get("player") != _player or game.get("current_location") != &"beastwilds" \
+			or world.get_parent() != game.get("world_root") or not is_instance_valid(_player) or _player.get_parent() != game:
+		return false
+	_activity_admitted_world = weakref(world)
+	return true
+
+func activity_context_valid(world: Node3D, generation: int) -> bool:
+	return _activity_admitted_world != null and _activity_admitted_world.get_ref() == world \
+		and _activity_world_identity_valid(world, generation)
+
+func _activity_objectives_completed() -> int:
+	var count := 0
+	for id: String in ActivityPlan.REQUIRED_IDS:
+		if _activity_claims.get(id) == true: count += 1
+	return count
+
+func activity_snapshot() -> Dictionary:
+	# Read-only observers can run inside changed callbacks before admission
+	# cleanup. Never traverse a plan that a prior callback invalidated.
+	var result := {"active": activity_transition_matches(_issued_activity), "activity_id": "beastwilds",
+		"serial": int(_issued_activity.get("serial", 0)), "seed": run_seed, "generation": run_generation,
+		"activity_name": "The Beastwilds", "run_kind": "activity",
+		"objectives_completed": _activity_objectives_completed(), "objectives_required": ActivityPlan.REQUIRED_IDS.size(),
+		"claimed": _activity_claims.keys(), "required": ActivityPlan.REQUIRED_IDS.duplicate(),
+		"total": ActivityPlan.REQUIRED_IDS.size(), "sources": [], "can_complete": false,
+		"records": profile.activities.records.beastwilds.duplicate(true),
+		"interrupted_visit": not active and not profile.activities.open_run.is_empty()}
+	if not bool(result.active): return result
+	for slot: Dictionary in _issued_activity.plan.sources:
+		result.sources.append({"slot_id": slot.slot_id, "kind": slot.kind,
+			"required": slot.required, "claimed": _activity_claims.has(slot.slot_id)})
+	result.can_complete = ActivityPlan.objectives_complete(_activity_claims)
+	return result
+
+func _activity_source_record(world: Node3D, source: Node3D, actor: Node, generation: int, exit_source: bool) -> Dictionary:
+	if not activity_context_valid(world, generation) or actor != _player or not _actor_ready() \
+			or not _player is VaultPlayer or not _player.is_inside_tree() or _player.is_queued_for_deletion() \
+			or _player.downed or _player.eliminated or not _player.controls_enabled or not InputHub.controls_enabled \
+			or not is_instance_valid(source) or not source.is_inside_tree() or source.is_queued_for_deletion() \
+			or not world.is_ancestor_of(source) or not source.is_visible_in_tree() \
+			or source.get_viewport() != world.get_viewport() or _player.get_viewport() != world.get_viewport() \
+			or source.get_world_3d() != _player.get_world_3d() or source.get_script() == null \
+			or source.get_script().resource_path != (ActivityPlan.EXIT_SCRIPT if exit_source else ActivityPlan.SOURCE_SCRIPT) \
+			or not world.has_method("owns_source") \
+			or not world.has_method("activity_exit_record" if exit_source else "activity_claim_record"):
+		return {}
+	var radius: Variant = source.get("interaction_radius")
+	if not (radius is float or radius is int) or not is_finite(float(radius)) or radius <= 0.0 or radius > 3.0 \
+			or not source.global_position.is_finite() or not _player.global_position.is_finite() \
+			or _player.global_position.distance_to(source.global_position) > float(radius) \
+			or not CombatRules.visible_from(_player, _player.global_position + Vector3.UP * 1.2, source.global_position + Vector3.UP * 0.65):
+		return {}
+	var record: Variant = world.activity_exit_record(source, actor) if exit_source else world.activity_claim_record(source, actor)
+	if not is_instance_valid(world) or not is_instance_valid(source) or source.is_queued_for_deletion() \
+			or not activity_context_valid(world, generation): return {}
+	if not ActivityPlan.exact_keys(record, ["slot_id", "kind", "receipt"]) or not record.slot_id is String \
+			or not record.kind is String or not record.receipt is String: return {}
+	var expected: Dictionary = _issued_activity.plan.exit if exit_source else ActivityPlan.source(_issued_activity.plan, record.slot_id)
+	if expected.is_empty() or record.slot_id != expected.slot_id or record.kind != expected.kind or record.receipt != expected.receipt \
+			or not bool(world.owns_source(source, String(record.slot_id))) \
+			or not is_instance_valid(world) or not is_instance_valid(source) or source.is_queued_for_deletion() \
+			or not activity_context_valid(world, generation): return {}
+	return expected.duplicate(true)
+
+func claim_activity_source(world: Node3D, source: Node3D, actor: Node, generation: int) -> Dictionary:
+	var rejected := {"ok": false, "generation": generation, "still_current": false, "error": "Move closer to this discovery."}
+	if _activity_mutating or store.read_only: return rejected
+	_activity_mutating = true
+	var slot := _activity_source_record(world, source, actor, generation, false)
+	if slot.is_empty() or _activity_claims.has(slot.slot_id) or _claimed.has(slot.receipt):
+		_activity_mutating = false
+		return rejected
+	rejected.still_current = true
+	var reward := _validate_reward(slot.reward)
+	var prepared := _prepare_reward(reward) if not reward.is_empty() else {}
+	var pending := _pet_pending.duplicate(true)
+	if slot.kind in ["egg", "rescue"]:
+		var findings := PetCatalog.findings_for(run_seed, String(slot.receipt), String(slot.kind))
+		# Beastwilds sources grant existing ingredients/recipes, not Rootbound's
+		# secret-room achievement counters or a captured/owned creature.
+		if not findings.is_empty():
+			for key: String in findings.statistics: findings.statistics[key] = 0
+			pending = PetProgress.append_findings(_pet_pending, findings, String(slot.receipt))
+		else: pending = {}
+	if prepared.is_empty() or pending.is_empty() or PetProgress.secure(profile, pending).is_empty() \
+			or int(profile.statistics.total_gold) > VaultProfileStore.MAX_COUNT - unsecured_gold - int(reward.get("gold", 0)) \
+			or not is_instance_valid(world) or not is_instance_valid(source) or not activity_context_valid(world, generation):
+		_activity_mutating = false
+		rejected.error = "Make room for these findings before trying again. Your discovery remains available."
+		return rejected
+	_activity_claims[String(slot.slot_id)] = true
+	_claimed[String(slot.receipt)] = true
+	_pet_pending = pending
+	_apply_reward(reward, prepared)
+	_activity_mutating = false
+	if slot.kind == "track":
+		_emit_changed()
+		if is_instance_valid(world) and activity_context_valid(world, generation): notice.emit("Creature trail recorded · find the egg and stranded spirit")
+	else:
+		_publish_reward(reward, [], generation)
+		if is_instance_valid(world) and activity_context_valid(world, generation) and slot.kind in ["egg", "rescue"]:
+			notice.emit("Spiritweaving discovery · unsecured · return to keep ingredients and memory")
+	return {"ok": true, "generation": generation, "still_current": is_instance_valid(world) and activity_context_valid(world, generation), "error": ""}
+
+func activity_exit_status(world: Node3D, source: Node3D, actor: Node) -> Dictionary:
+	var result := {"ok": false, "can_secure": false, "can_abandon": false, "reason": "Move closer to the return spring.",
+		"activity_id": "beastwilds", "claimed": _activity_claims.keys(), "required": ActivityPlan.REQUIRED_IDS.duplicate(), "total": ActivityPlan.REQUIRED_IDS.size()}
+	if _activity_mutating or _activity_source_record(world, source, actor, run_generation, true).is_empty(): return result
+	if store.read_only:
+		result.reason = "The save is read-only. Your secured progress is preserved."
+		return result
+	result.ok = true
+	result.can_abandon = true
+	result.can_secure = ActivityPlan.objectives_complete(_activity_claims)
+	result.reason = "Secure discoveries and return" if result.can_secure else "Find the trail, egg and stranded spirit, or return without unsecured findings."
+	return result
+
+func settle_activity(world: Node3D, source: Node3D, actor: Node, generation: int) -> Dictionary:
+	return _finish_activity_at_source(world, source, actor, generation, false)
+
+func abandon_activity(world: Node3D, source: Node3D, actor: Node, generation: int) -> Dictionary:
+	return _finish_activity_at_source(world, source, actor, generation, true)
+
+func _finish_activity_at_source(world: Node3D, source: Node3D, actor: Node, generation: int, abandon: bool) -> Dictionary:
+	var rejected := {"ok": false, "generation": generation, "still_current": false, "outcome": "", "return_token": {}, "error": "This return spring is unavailable."}
+	if _activity_mutating or store.read_only: return rejected
+	_activity_mutating = true
+	var slot := _activity_source_record(world, source, actor, generation, true)
+	if slot.is_empty() or (not abandon and not ActivityPlan.objectives_complete(_activity_claims)):
+		_activity_mutating = false
+		rejected.error = "Complete the three discovery objectives before securing findings."
+		return rejected
+	rejected.still_current = true
+	var next := profile.duplicate(true)
+	var records := ActivityProgress.finish(next.activities, int(next.revision), _issued_activity.plan,
+		"abandoned" if abandon else "completed", elapsed, 0 if abandon else unsecured_gold, _activity_claims)
+	if records.is_empty():
+		_activity_mutating = false
+		rejected.error = "This visit could not be verified. Your secured progress was preserved."
+		return rejected
+	var newly_discovered: Array[String] = []
+	if not abandon:
+		if int(next.gold) > VaultProfileStore.MAX_COUNT - unsecured_gold \
+				or int(next.statistics.total_gold) > VaultProfileStore.MAX_COUNT - unsecured_gold \
+				or not VaultInventory.add_items(next, run_items, run_seed):
+			_activity_mutating = false
+			rejected.error = "Make room for unsecured materials, then try the spring again."
+			return rejected
+		var secured_pets := PetProgress.secure(next, _pet_pending)
+		if secured_pets.is_empty():
+			_activity_mutating = false
+			rejected.error = "Spiritweaving findings could not be secured. Your visit remains retryable."
+			return rejected
+		# A non-dungeon visit must not backfill legacy achievement counters.
+		secured_pets.achievements = next.pets.achievements.duplicate()
+		next.pets = secured_pets
+		next.gold = int(next.gold) + unsecured_gold
+		next.statistics.total_gold = int(next.statistics.total_gold) + unsecured_gold
+		for id: String in _run_discoveries:
+			if not next.discoveries.has(id):
+				next.discoveries.append(id)
+				newly_discovered.append(id)
+		next.discoveries.sort()
+		newly_discovered.sort()
+	next.activities = records
+	next.revision = int(next.revision) + 1
+	# No awaits/signals occur between final source proof, candidate and save.
+	if not store.save_profile(next):
+		storage_error = store.last_error
+		_activity_mutating = false
+		rejected.error = "Return could not save: " + storage_error + " Findings remain available for retry."
+		return rejected
+	profile = next
+	storage_error = ""
+	var outcome := "abandoned" if abandon else "activity_completed"
+	var token := {"activity_id": "beastwilds", "serial": int(_issued_activity.serial),
+		"generation": generation, "outcome": outcome, "receipt": String(slot.receipt)}
+	var result := _activity_results(outcome)
+	result.new_discoveries = newly_discovered
+	result.return_token = token.duplicate(true)
+	last_results = result.duplicate(true)
+	_clear_run()
+	_completed_activity_return = {"world": weakref(world), "source": weakref(source),
+		"world_id": world.get_instance_id(), "source_id": source.get_instance_id(), "token": token.duplicate(true), "revision": int(profile.revision)}
+	_activity_mutating = false
+	_publish_finished(result, generation)
+	return {"ok": true, "generation": generation,
+		"still_current": is_instance_valid(world) and is_instance_valid(source) and completed_activity_return_matches(world, source, generation, token),
+		"outcome": outcome, "return_token": token.duplicate(true), "error": ""}
+
+func completed_activity_return_matches(world: Node3D, source: Node3D, generation: int, token: Dictionary) -> bool:
+	if active or generation != run_generation or _completed_activity_return.is_empty() \
+			or not is_instance_valid(world) or not is_instance_valid(source) or world.is_queued_for_deletion() or source.is_queued_for_deletion() \
+			or token != _completed_activity_return.token or _completed_activity_return.world.get_ref() != world \
+			or _completed_activity_return.source.get_ref() != source or world.get_instance_id() != _completed_activity_return.world_id \
+			or source.get_instance_id() != _completed_activity_return.source_id \
+			or int(profile.revision) < int(_completed_activity_return.revision) or last_results.get("return_token") != token \
+			or last_results.get("run_generation") != generation or not world.has_method("owns_source"):
+		return false
+	return bool(world.owns_source(source, "return_spring"))
+
+func _fail_activity(reason: String) -> void:
+	if not active or _issued_activity.is_empty() or _activity_mutating: return
+	_activity_mutating = true
+	var generation := run_generation
+	var outcome := "death" if reason in ["death", "defeated"] else "abandoned"
+	var result := _activity_results(outcome)
+	var next := profile.duplicate(true)
+	var records := ActivityProgress.finish(next.activities, int(next.revision), _issued_activity.plan, outcome, elapsed, 0, _activity_claims)
+	var message := ""
+	if not records.is_empty():
+		next.activities = records
+		next.revision = int(next.revision) + 1
+		if store.save_profile(next):
+			profile = next
+			storage_error = ""
+		else:
+			storage_error = store.last_error
+			message = "The loss record could not save. Secured possessions were preserved; this interrupted visit cannot resume."
+	else:
+		message = "This visit could not be recorded. Secured possessions were preserved."
+	result.activity_records = profile.activities.records.beastwilds.duplicate(true)
+	last_results = result.duplicate(true)
+	_clear_run()
+	_activity_mutating = false
+	_publish_finished(result, generation, message)
+
+func _activity_results(outcome: String) -> Dictionary:
+	return {"outcome": outcome, "run_kind": "activity", "activity_id": "beastwilds", "activity_name": "The Beastwilds",
+		"serial": int(_issued_activity.get("serial", 0)), "seed": run_seed, "run_generation": run_generation,
+		"objectives_completed": _activity_objectives_completed(), "objectives_required": ActivityPlan.REQUIRED_IDS.size(),
+		"gold": unsecured_gold, "items": _describe_items(run_items), "kills": 0, "elapsed_seconds": elapsed,
+		"expedition_depth": 0, "biome_id": "beastwilds", "theme_id": "beastwilds", "theme_label": "The Beastwilds",
+		"required_boss_id": "", "required_boss_name": "", "boss_defeated": false,
+		"secured_total": int(profile.gold), "discovered": _run_discoveries.keys(), "new_discoveries": [],
+		"completed": int(profile.statistics.completed), "activity_records": profile.activities.records.beastwilds.duplicate(true),
+		"pet_findings": _pet_findings(), "activity_findings": {"eggs_found": 1 if _activity_claims.has("glade_egg") else 0,
+			"rescues": 1 if _activity_claims.has("pool_rescue") else 0}, "companion_experience": {}, "character_experience": 0,
+		"character_level": int(profile.character.level)}
 
 func begin_run(seed_value: int) -> bool:
 	# Deliberate compatibility for isolated legacy fixtures, never Game travel.
@@ -128,7 +497,7 @@ func issued_run_plan() -> Dictionary:
 	return _issued_content_plan.duplicate(true) if active else {}
 
 func _begin_depth_run(seed_value: int, depth: int, configured: bool, content_mode: bool = false) -> bool:
-	if active:
+	if active or _activity_mutating:
 		notice.emit("An expedition is already in progress.")
 		return false
 	if store.read_only:
@@ -144,6 +513,7 @@ func _begin_depth_run(seed_value: int, depth: int, configured: bool, content_mod
 		notice.emit("This expedition content is unavailable. Your secured progress was preserved.")
 		return false
 	_completed_early_return.clear()
+	_completed_activity_return.clear()
 	_issued_content_plan = plan.duplicate(true)
 	var expected_depth := {"expedition_depth": depth, "biome_id": String(policy.biome_id),
 		"depth_policy_version": int(policy.policy_version), "policy": policy.duplicate(true)}
@@ -183,7 +553,7 @@ func has_claimed(chest_id: String) -> bool:
 	return _claimed.has(chest_id)
 
 func collect_reward(reward: Dictionary) -> bool:
-	if not active:
+	if not active or not _issued_activity.is_empty():
 		return false
 	var validated := _validate_reward(reward)
 	if validated.is_empty() or _claimed.has(validated.chest_id) or _loot_ledger.has_source(validated.chest_id):
@@ -243,7 +613,7 @@ func _publish_reward(validated: Dictionary, activated_sources: Array, generation
 	notice.emit(" · ".join(parts) + " · unsecured")
 
 func register_loot(reward: Dictionary, room_id: int, at: Vector3, kind: String, merge_id: String = "") -> Dictionary:
-	if not active:
+	if not active or not _issued_activity.is_empty():
 		return {"ok": false, "id": "", "created": false}
 	var validated := _validate_reward(reward)
 	if validated.is_empty() or _claimed.has(validated.chest_id):
@@ -618,7 +988,7 @@ func _validate_reward(reward: Dictionary) -> Dictionary:
 		"items": normalized, "value": value, "cursed": String(category) == "cursed"}
 
 func add_kill(archetype: String = "") -> void:
-	if not _issued_content_plan.is_empty():
+	if not _issued_content_plan.is_empty() or not _issued_activity.is_empty():
 		return
 	if active:
 		kills += 1
@@ -629,7 +999,7 @@ func add_kill(archetype: String = "") -> void:
 func mark_boss_defeated() -> void:
 	# Compatibility helper for deliberate pure/legacy fixtures. Production must
 	# admit the actual registered required boss through complete_encounter.
-	if not _issued_content_plan.is_empty():
+	if not _issued_content_plan.is_empty() or not _issued_activity.is_empty():
 		return
 	if active and not boss_defeated:
 		boss_defeated = true
@@ -638,6 +1008,7 @@ func mark_boss_defeated() -> void:
 		_emit_changed()
 
 func extract() -> bool:
+	if not _issued_activity.is_empty(): return false
 	var generation := run_generation
 	if not active or not boss_defeated:
 		notice.emit("Defeat %s to awaken the extraction spring." % _issued_boss_label())
@@ -830,6 +1201,9 @@ func completed_early_return_matches(world: Node3D, source: Node3D, generation: i
 	return bool(world.completed_early_exit_matches(source, generation, token))
 
 func fail_run(reason: String = "death") -> void:
+	if not _issued_activity.is_empty():
+		_fail_activity(reason)
+		return
 	if not active:
 		return
 	var generation := run_generation
@@ -868,6 +1242,7 @@ func _publish_finished(result: Dictionary, generation: int, message: String = ""
 	results_ready.emit(result.duplicate(true))
 
 func _results(outcome: String) -> Dictionary:
+	if not _issued_activity.is_empty(): return _activity_results(outcome)
 	return {"outcome": outcome, "seed": run_seed, "run_generation": run_generation, "gold": unsecured_gold,
 		"expedition_depth": int(_issued_depth.get("expedition_depth", 1)),
 		"biome_id": String(_issued_depth.get("biome_id", "rootbound_abyss")),
@@ -890,6 +1265,10 @@ func _pet_findings() -> Dictionary:
 
 func _clear_run() -> void:
 	active = false
+	_issued_activity.clear()
+	_activity_claims.clear()
+	_completed_activity_return.clear()
+	_activity_admitted_world = null
 	_completed_early_return.clear()
 	_issued_depth.clear()
 	_configured_depth_run = false
@@ -923,18 +1302,23 @@ func _describe_items(items: Dictionary) -> Array[Dictionary]:
 	return result
 
 func snapshot() -> Dictionary:
+	var activity_running := active and not _issued_activity.is_empty()
 	var bag := _describe_items(run_items)
 	var inventory := _describe_items(profile.items)
 	return {"active": active, "run_seed": run_seed, "run_generation": run_generation, "unsecured_gold": unsecured_gold,
-		"expedition_depth": int(_issued_depth.get("expedition_depth", 1)),
-		"biome_id": String(_issued_depth.get("biome_id", "rootbound_abyss")),
-		"depth_policy_version": int(_issued_depth.get("depth_policy_version", 1)),
-		"tier_label": String(_issued_depth.get("policy", {}).get("tier_label", "Beginner")),
+		"run_kind": "activity" if activity_running else "abyssal" if active else "",
+		"activity_id": "beastwilds" if activity_running else "", "activity_name": "The Beastwilds" if activity_running else "",
+		"objectives_completed": _activity_objectives_completed(), "objectives_required": ActivityPlan.REQUIRED_IDS.size() if activity_running else 0,
+		"activity": activity_snapshot(),
+		"expedition_depth": 0 if activity_running else int(_issued_depth.get("expedition_depth", 1)),
+		"biome_id": "beastwilds" if activity_running else String(_issued_depth.get("biome_id", "rootbound_abyss")),
+		"depth_policy_version": 0 if activity_running else int(_issued_depth.get("depth_policy_version", 1)),
+		"tier_label": "Discovery expedition" if activity_running else String(_issued_depth.get("policy", {}).get("tier_label", "Beginner")),
 		"highest_unlocked_depth": int(profile.depth_progression.highest_unlocked_depth),
 		"depth_progression": profile.depth_progression.duplicate(true),
-		"theme_id": String(_issued_content_plan.get("theme_id", "rootbound_abyss")),
-		"theme_label": _issued_theme_label(), "required_boss_id": String(_issued_content_plan.get("required_boss_id", "rootwarden")),
-		"required_boss_name": _issued_boss_label(), "encounter_records": profile.encounter_records.duplicate(true),
+		"theme_id": "beastwilds" if activity_running else String(_issued_content_plan.get("theme_id", "rootbound_abyss")),
+		"theme_label": "The Beastwilds" if activity_running else _issued_theme_label(), "required_boss_id": "" if activity_running else String(_issued_content_plan.get("required_boss_id", "rootwarden")),
+		"required_boss_name": "" if activity_running else _issued_boss_label(), "encounter_records": profile.encounter_records.duplicate(true),
 		"secured_gold": int(profile.gold), "bag": bag, "run_items": bag,
 		"inventory": inventory, "secured_items": inventory, "discoveries": profile.discoveries.duplicate(),
 		"boss_defeated": boss_defeated, "kills": kills, "elapsed": elapsed, "elapsed_seconds": elapsed,
@@ -1030,6 +1414,9 @@ func consume_item(item_id: String, player: Node) -> bool:
 	if active and int(run_items.get(item_id, 0)) > 0:
 		_reduce_item(run_items, item_id)
 	elif int(profile.items.get(item_id, 0)) > 0:
+		if active and not _issued_activity.is_empty() and int(profile.revision) >= VaultProfileStore.MAX_COUNT - 1:
+			notice.emit("Return from this activity before using secured supplies; its final save is reserved.")
+			return false
 		var next := profile.duplicate(true)
 		if not VaultInventory.consume_items(next, {item_id: 1}):
 			return false
@@ -1445,6 +1832,8 @@ func _commit_tester_access(trusted: Dictionary) -> bool:
 	return true
 
 func bind_game_context(player: Node, location: StringName, world: Node3D = null) -> void:
+	if _activity_admitted_world != null and (_activity_admitted_world.get_ref() != world or location != &"beastwilds"):
+		_activity_admitted_world = null
 	_player = player
 	_location = location
 	_world = world
@@ -1631,6 +2020,8 @@ func _service_visible(station: Node3D) -> bool:
 func _action_error(action: StringName, arguments: Dictionary) -> String:
 	if store.read_only:
 		return "The save is read-only. Existing progress is preserved."
+	if active and not _issued_activity.is_empty() and int(profile.revision) >= VaultProfileStore.MAX_COUNT - 1:
+		return "Return from this activity before changing saved equipment or supplies; its final save is reserved."
 	if not _actor_ready():
 		return "Finish your combat action before changing equipment or supplies"
 	var changing_weapon := action == &"activate_loadout" or (action == &"unequip" and String(arguments.get("slot", "")) in VaultInventory.LOADOUT_SLOTS)

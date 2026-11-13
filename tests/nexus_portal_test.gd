@@ -2,6 +2,7 @@ extends "res://tests/nexus_fixture.gd"
 ## Real authored sources, modal touch gestures and denial paths; no live server claims.
 const Access = preload("res://scripts/progression/tester_access.gd")
 const PortalScene = preload("res://scenes/world/portal.tscn")
+const UNAVAILABLE_IDS: Array[StringName] = [&"gilded_vault", &"titans_gate", &"shattered_rift", &"guild_conquest", &"echoes_of_eternity", &"chaos_gate", &"forbidden_gate"]
 
 func _initialize() -> void:
 	suite_name = "VAULTBOUND NEXUS PORTAL FOUNDATION"
@@ -23,7 +24,11 @@ func _run() -> void:
 	finish()
 
 func _registry() -> void:
-	check(Catalog.valid() and Catalog.IDS.size() == 10 and Catalog.RELEASED_ROUTES.size() == 2, "Ten definitions expose exactly the existing expedition and local-practice routes")
+	check(Catalog.valid() and Catalog.IDS.size() == 10 and Catalog.RELEASED_ROUTES == {&"abyssal_descent": &"rootbound_abyss", &"bloodspire_arena": &"combat_arena", &"beastwilds": &"beastwilds"}, "Ten definitions expose exactly the existing dungeon, local practice and earned Beastwilds discovery routes")
+	var unavailable: Array[StringName] = []
+	for id: StringName in Catalog.IDS:
+		if not Catalog.RELEASED_ROUTES.has(id): unavailable.append(id)
+	check(unavailable == UNAVAILABLE_IDS, "Exactly seven named unreleased activities remain unavailable")
 	var actual: Dictionary = hall.registered_activity_sources()
 	var all_sources: Dictionary = hall.registered_portal_sources()
 	check(actual.size() == 10 and all_sources.size() == 12, "Private authored registry contains ten major gates and two legacy passages")
@@ -59,12 +64,19 @@ func _all_cards() -> void:
 	for id: StringName in Catalog.IDS:
 		var gate := await open_gate(id)
 		if gate == null: continue
-		var available: bool = Catalog.RELEASED_ROUTES.has(id)
+		var available: bool = id in [&"abyssal_descent", &"bloodspire_arena"]
 		check(panel.entry_enabled == available and game._city_portal_route.get("activity_id") == id, "Physical card availability and captured activity agree: " + String(id))
 		if id == &"abyssal_descent":
 			check(panel.has_depth_selector() and panel.context.selected_depth == 1, "Abyssal gateway reuses the actual earned-depth selector")
 		elif id == &"bloodspire_arena":
 			check(not panel.has_depth_selector() and " ".join(panel.context.lines).contains("LOCAL PRACTICE"), "Bloodspire explicitly offers NPC practice without ranked or matchmaking claims")
+		elif id == &"beastwilds":
+			check(not panel.has_depth_selector() and not panel.entry_enabled and not panel.notice.is_empty() \
+				and not session.activity_entry_status(id).ok and not " ".join(panel.context.lines).contains("NOT IMPLEMENTED"), "Fresh profile can inspect Beastwilds but must earn dungeon floor two before entering")
+			tap(panel.primary_rect().get_center())
+			panel.enter_requested.emit()
+			await frames(2)
+			check(no_travel() and session.profile.activities.open_run.is_empty(), "Locked Beastwilds review cannot reserve an activity serial or write a ticket")
 		else:
 			check(not panel.notice.is_empty() and " ".join(panel.context.lines).contains("NOT IMPLEMENTED"), "Unfinished activity explains unavailable gameplay: " + String(id))
 			tap(panel.primary_rect().get_center())
@@ -82,7 +94,7 @@ func _source_tampering() -> void:
 	gate.activity_id = &""
 	gate.destination = &"combat_arena"
 	gate.interact(game.player)
-	check(overlay.mode == &"none" and not hall.owns_portal_source(gate), "Stripping an unavailable activity ID cannot masquerade as an unrestricted legacy practice gate")
+	check(overlay.mode == &"none" and not hall.owns_portal_source(gate), "Stripping a locked activity ID cannot masquerade as an unrestricted legacy practice gate")
 	gate.activity_id = original_id
 	gate.destination = original_destination
 	check(hall.owns_portal_source(gate), "Restoring exact source identity restores only the originally authored gate")
@@ -198,13 +210,15 @@ func _tester_denials() -> void:
 	var saved := save_files()
 	var fully_earned: Dictionary = session.profile.duplicate(true)
 	fully_earned.depth_progression = {"version": 1, "highest_unlocked_depth": 51, "highest_cleared_depth": 50}
-	for id: StringName in Catalog.IDS:
-		if Catalog.RELEASED_ROUTES.has(id): continue
+	for id: StringName in UNAVAILABLE_IDS:
 		check(not Catalog.entry_status(fully_earned, id).ok, "Even earned depth fifty cannot invent missing activity/backend content: " + String(id))
 		if await open_gate(id) == null: continue
 		check(not panel.entry_enabled and not Catalog.entry_status(session.profile, id).ok, "TEST ACCESS cannot create absent gameplay/backend content: " + String(id))
 		panel.enter_requested.emit()
 		await frames(2)
 		check(no_travel(), "Unavailable tester intent remains inside Nexus: " + String(id))
+		game.hud.close_modals()
+	if await open_gate(&"beastwilds") != null:
+		check(panel.entry_enabled and session.activity_entry_status(&"beastwilds").ok and not session.active, "Explicit TEST ACCESS can review the implemented discovery visit without claiming earned floor completion")
 		game.hud.close_modals()
 	check(session.profile == secured and save_files() == saved, "Unavailable TEST ACCESS browsing preserves earned progression and exact save/backup bytes")

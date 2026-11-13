@@ -1,0 +1,14 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/activities/activity_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+activity_id = &"beastwilds"
+definition_version = 1
+display_name = "The Beastwilds"
+required_cleared_depth = 2
+egg_depthmarks = Vector2i(4, 8)
+rescue_depthmarks = Vector2i(6, 10)
+forage_depthmarks = Vector2i(8, 12)
+forage_fiber = Vector2i(2, 4)

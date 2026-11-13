@@ -345,6 +345,16 @@ func open_city_information(kind: StringName, context: Dictionary) -> void:
 	_open_modal(&"sanctuary")
 
 
+func open_activity_return(context: Dictionary) -> bool:
+	# A reviewed activity exit reuses the existing portal card without inventing
+	# a Sanctuary map snapshot or authorizing any reward from presentation data.
+	if mode != &"none" or not is_instance_valid(sanctuary_panel): return false
+	sanctuary_panel.open_panel(&"portal", {}, context)
+	var opened := _open_modal(&"sanctuary")
+	return opened and mode == &"sanctuary" and sanctuary_panel.visible \
+		and sanctuary_panel.kind == &"portal" and sanctuary_panel.context == context
+
+
 func bind_progression_session(session: Node) -> void:
 	progression_session = session
 	if is_instance_valid(graphics_panel): graphics_panel.bind_session(session)
@@ -1516,7 +1526,33 @@ func _draw_storage_warning() -> void:
 	_text("Open Pack for details.", rect.position + Vector2(12, 61), 11, MUTED)
 
 
+func activity_status_lines() -> Dictionary:
+	var completed := maxi(0, int(session_snapshot.get("objectives_completed", 0)))
+	var required := maxi(1, int(session_snapshot.get("objectives_required", 1)))
+	return {"title": String(session_snapshot.get("activity_name", "Activity")).to_upper(),
+		"objectives": "%d / %d DISCOVERIES" % [mini(completed, required), required],
+		"progress": clampf(float(completed) / float(required), 0.0, 1.0),
+		"ready": completed >= required}
+
+
+func _draw_activity_status() -> void:
+	var rect := Rect2(Vector2(size.x * 0.5 - 250, 128 + _safe().y), Vector2(500, 64))
+	var labels := activity_status_lines()
+	_panel(rect, PANEL)
+	_text(String(labels.title), rect.position + Vector2(14, 21), 11, MUTED)
+	_text("%d DM · UNSECURED" % int(session_snapshot.get("unsecured_gold", 0)), rect.position + Vector2(rect.size.x - 14, 21), 11, GOLD, false, true)
+	_text(String(labels.objectives), rect.position + Vector2(14, 47), 10, IVORY)
+	var track := Rect2(rect.position + Vector2(180, 38), Vector2(294, 7))
+	draw_rect(track, Color(0.01, 0.03, 0.04))
+	draw_rect(Rect2(track.position, Vector2(track.size.x * float(labels.progress), 7)), TEAL)
+	if bool(labels.ready):
+		_text("Return to camp to secure your discoveries", Vector2(size.x * 0.5, rect.end.y + 20), 12, TEAL, true)
+
+
 func _draw_expedition_status() -> void:
+	if String(session_snapshot.get("run_kind", "")) == "activity":
+		_draw_activity_status()
+		return
 	var rect := Rect2(Vector2(size.x * 0.5 - 250, 128 + _safe().y), Vector2(500, 64))
 	_panel(rect, PANEL)
 	var floor_number := int(dungeon_snapshot.get("expedition_depth", session_snapshot.get("expedition_depth", dungeon_snapshot.get("floor", 1))))
@@ -1791,6 +1827,14 @@ func _draw_pack() -> void:
 
 
 func result_display_lines() -> Dictionary:
+	if String(results_snapshot.get("run_kind", "")) == "activity":
+		var secured := String(results_snapshot.get("outcome", "")) == "activity_completed"
+		return {"title": "DISCOVERIES SECURED" if secured else "ACTIVITY ENDED",
+			"detail": "Your discoveries are safe in your collection." if secured else "Unsecured finds were lost. Your secured collection is unchanged.",
+			"secured": secured, "completed": secured, "early": false,
+			"currency": "DM SECURED" if secured else "DM LOST",
+			"items": "COLLECTED & SECURED" if secured else "UNSECURED ITEMS LOST",
+			"xp": maxi(0, int(results_snapshot.get("character_experience", 0)))}
 	var outcome := String(results_snapshot.get("outcome", ""))
 	var early := outcome == "secured_early"
 	var completed := outcome == "extracted"
@@ -1817,12 +1861,17 @@ func _draw_results() -> void:
 	var seconds := int(results_snapshot.get("elapsed_seconds", 0))
 	var seed_value := int(results_snapshot.get("seed", 0))
 	var completed_depth := int(results_snapshot.get("expedition_depth", 1))
-	_text("%s · DEPTH %d · SEED %d · %02d:%02d" % [String(results_snapshot.get("theme_label", "Rootbound Abyss")).to_upper(), completed_depth, seed_value, seconds / 60, seconds % 60], rect.position + Vector2(30, 105), 12, MUTED)
+	var activity_result := String(results_snapshot.get("run_kind", "")) == "activity"
+	var route_line := "%s · SEED %d · %02d:%02d" % [String(results_snapshot.get("activity_name", "Activity")).to_upper(), seed_value, seconds / 60, seconds % 60] if activity_result else "%s · DEPTH %d · SEED %d · %02d:%02d" % [String(results_snapshot.get("theme_label", "Rootbound Abyss")).to_upper(), completed_depth, seed_value, seconds / 60, seconds % 60]
+	_text(route_line, rect.position + Vector2(30, 105), 12, MUTED)
 	var summaries := [
 		[String(presentation.currency), str(results_snapshot.get("gold", 0))],
 		["DEFEATED · KILL XP" if presentation.early else "ENEMIES DEFEATED", "%d · %d XP" % [int(results_snapshot.get("kills", 0)), int(presentation.xp)] if presentation.early else str(results_snapshot.get("kills", 0))],
 		[String(results_snapshot.get("required_boss_name", "Rootwarden")).to_upper(), "DEFEATED" if bool(results_snapshot.get("boss_defeated", false)) else "STILL WATCHING"],
 	]
+	if activity_result:
+		summaries[1] = ["DISCOVERIES", "%d / %d" % [int(results_snapshot.get("objectives_completed", 0)), int(results_snapshot.get("objectives_required", 0))]]
+		summaries[2] = ["OUTCOME", "COMPLETED" if success else "ENDED"]
 	for index in range(summaries.size()):
 		var at := rect.position + Vector2(30 + index * 263, 127)
 		_panel(Rect2(at, Vector2(245, 65)), Color(0.045, 0.12, 0.13, 1))
@@ -1864,7 +1913,11 @@ func _draw_pet_findings(rect: Rect2) -> void:
 		var column := index / 6
 		var at := rect.position + Vector2(32 + column * (rect.size.x - 64) * 0.5, 287 + (index % 6) * 26)
 		_text("%s × %d" % [String(row.get("label", row.get("id", "Ingredient"))), int(row.get("quantity", 0))], at, 13, IVORY)
-	_text("EGGS %d  ·  RESCUES %d  ·  ROOTWARDEN MEMORIES %d" % [int(findings.get("eggs_found", 0)), int(findings.get("rescues", 0)), int(findings.get("rootwarden_victories", 0))], rect.position + Vector2(32, 452), 12, GOLD)
+	var discovery_line := "EGGS %d  ·  RESCUES %d  ·  ROOTWARDEN MEMORIES %d" % [int(findings.get("eggs_found", 0)), int(findings.get("rescues", 0)), int(findings.get("rootwarden_victories", 0))]
+	if String(results_snapshot.get("run_kind", "")) == "activity":
+		var earned: Dictionary = results_snapshot.get("activity_findings", {})
+		discovery_line = "EGGS %d  ·  SPIRITS RESCUED %d" % [int(earned.get("eggs_found", 0)), int(earned.get("rescues", 0))]
+	_text(discovery_line, rect.position + Vector2(32, 452), 12, GOLD)
 	_text("COSMETIC COLLECTION · No inventory or party slots used", rect.position + Vector2(32, rect.size.y - 49), 11, MUTED)
 
 

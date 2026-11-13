@@ -32,6 +32,7 @@ var _records: Dictionary = {}
 var _channels: Dictionary = {}
 var _wipe_pending := false
 var _snapshot_time := 0.0
+var _admitted_activity_generation := -1
 
 func _ready() -> void:
 	add_to_group("party_system")
@@ -183,6 +184,31 @@ func enter_world(value: Node3D, destination: StringName) -> void:
 				actor.stamina = actor.max_stamina
 			actor.navigator.clear()
 	changed.emit(snapshot())
+
+func admit_activity_generation(context: Dictionary) -> bool:
+	# Game calls this only after native admission has bound the existing Session.
+	# Re-entering a room or recovering from a fall cannot refill revive budgets.
+	if not is_instance_valid(_session) or not is_instance_valid(world) or not is_instance_valid(leader) \
+		or context.is_empty() or not _session.activity_transition_matches(context) \
+		or not _session.activity_context_valid(world, int(context.get("generation", -1))) \
+		or StringName(context.get("activity_id", "")) != location:
+		return false
+	var game := get_parent()
+	if not is_instance_valid(game) or game.get_script() == null \
+		or game.get_script().resource_path != "res://scripts/systems/game.gd" \
+		or game.party != self or game.player != leader or game.active_world != world \
+		or game.current_location != location or world.get_parent() != game.world_root:
+		return false
+	var generation := int(context.generation)
+	if generation == _admitted_activity_generation: return true
+	if generation < _admitted_activity_generation: return false
+	_admitted_activity_generation = generation
+	for id: String in members:
+		_records[id].revives_used = 0
+	changed.emit(snapshot())
+	return _session.activity_transition_matches(context) and _session.activity_context_valid(world, generation) \
+		and game.active_world == world and game.current_location == location
+
 
 func set_paused(value: bool) -> void:
 	paused = value

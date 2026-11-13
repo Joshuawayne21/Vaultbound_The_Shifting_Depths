@@ -2,6 +2,7 @@ extends RefCounted
 ## Read-only catalog for the first Nexus foundation. No save schema or mastery
 ## counter is invented before an activity has verified completion sources.
 const Depths = preload("res://scripts/progression/depth_progression.gd")
+const Tester = preload("res://scripts/progression/tester_access.gd")
 const IDS: Array[StringName] = [&"abyssal_descent", &"beastwilds", &"gilded_vault", &"titans_gate",
 	&"bloodspire_arena", &"shattered_rift", &"guild_conquest",
 	&"echoes_of_eternity", &"chaos_gate", &"forbidden_gate"]
@@ -19,7 +20,7 @@ const DEFINITIONS := {
 }
 # Expanding this allowlist requires the gameplay/return/settlement tests for that
 # activity. Setting a resource's release flag alone cannot open an empty world.
-const RELEASED_ROUTES := {&"abyssal_descent": &"rootbound_abyss", &"bloodspire_arena": &"combat_arena"}
+const RELEASED_ROUTES := {&"abyssal_descent": &"rootbound_abyss", &"bloodspire_arena": &"combat_arena", &"beastwilds": &"beastwilds"}
 
 static func definition(id: StringName) -> Resource:
 	return DEFINITIONS.get(id) as Resource
@@ -42,8 +43,8 @@ static func valid() -> bool:
 			or data.required_cleared_depth < 0 or data.required_cleared_depth > 50: return false
 		galleries[data.gallery] += 1
 		if RELEASED_ROUTES.has(id):
-			if data.destination != RELEASED_ROUTES[id] or data.required_cleared_depth != 0: return false
-			if data.release_mode != ("local_expedition" if id == &"abyssal_descent" else "local_practice"): return false
+			if data.destination != RELEASED_ROUTES[id] or data.required_cleared_depth != (2 if id == &"beastwilds" else 0): return false
+			if data.release_mode != ("local_practice" if id == &"bloodspire_arena" else "local_expedition"): return false
 		elif data.release_mode != "unavailable" or data.destination != &"" or String(data.unavailable_reason).is_empty():
 			return false
 	return galleries == {"adventure": 4, "conflict": 3, "ascension": 3}
@@ -64,7 +65,7 @@ static func entry_status(profile: Dictionary, id: StringName) -> Dictionary:
 	if depths.is_empty():
 		result.reason = "Secured dungeon progression is unavailable."
 		return result
-	if int(depths.highest_cleared_depth) < int(data.required_cleared_depth):
+	if int(depths.highest_cleared_depth) < int(data.required_cleared_depth) and not (id == &"beastwilds" and Tester.enabled(profile)):
 		result.reason = "Complete Depth %d and extract before entering." % int(data.required_cleared_depth)
 		return result
 	result.ok = true

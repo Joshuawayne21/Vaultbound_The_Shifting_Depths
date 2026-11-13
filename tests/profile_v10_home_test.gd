@@ -9,7 +9,7 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 func _run() -> void:
-	check(Store.VERSION == 11 and Home.VERSION == 3 and Home.CATALOG.valid(), "Version11/home3 supports the Conservatory and six bounded display places")
+	check(Store.VERSION == 12 and Home.VERSION == 3 and Home.CATALOG.valid(), "Version12/home3 supports the Conservatory and six bounded display places")
 	_migration()
 	_plans()
 	_preservation()
@@ -34,7 +34,7 @@ func _old() -> Dictionary:
 func _clean() -> void:
 	DirAccess.make_dir_recursive_absolute(PATH.get_base_dir())
 	for file: String in DirAccess.open(PATH.get_base_dir()).get_files(): DirAccess.remove_absolute(PATH.get_base_dir().path_join(file))
-	for suffix: String in [".tmp", ".pre-v11.bak.tmp", ".bak.tmp"]:
+	for suffix: String in [".tmp", ".pre-v%d.bak.tmp" % Store.VERSION, ".bak.tmp"]:
 		if DirAccess.dir_exists_absolute(PATH + suffix): DirAccess.remove_absolute(PATH + suffix)
 
 func _write(path: String, value: String) -> void:
@@ -52,12 +52,12 @@ func _migration() -> void:
 	var store := Store.new(PATH)
 	var loaded := store.load_profile()
 	var expected := old.duplicate(true)
-	expected.version = 11
+	expected.version = Store.VERSION
 	expected.home.version = 3
 	expected.home.pet_displays = Home.empty_pet_displays()
 	check(loaded == expected and not store.read_only, "Version9 retains every identity, unlock, style, trophy, pet, item and progression field; only six empty references are added")
-	check(FileAccess.get_file_as_string(PATH) == bytes and not FileAccess.file_exists(PATH + ".pre-v11.bak"), "Loading the prior foyer build never rewrites its save")
-	check(store.save_profile(loaded) and FileAccess.get_file_as_string(PATH + ".pre-v11.bak") == bytes \
+	check(FileAccess.get_file_as_string(PATH) == bytes and not FileAccess.file_exists(PATH + ".pre-v%d.bak" % Store.VERSION), "Loading the prior foyer build never rewrites its save")
+	check(store.save_profile(loaded) and FileAccess.get_file_as_string(PATH + ".pre-v%d.bak" % Store.VERSION) == bytes \
 		and FileAccess.get_file_as_string(PATH + ".pre-v9.bak") == "preserved-prior-home-migration", "First explicit v10 save protects exact previous bytes and all older backups")
 	check(Store.new(PATH).load_profile() == Store.normalize(JSON.parse_string(JSON.stringify(expected, "", true, true))), "A new store restores the entire migrated foyer profile")
 	var fresh := Store.empty_profile()
@@ -154,7 +154,7 @@ func _preservation() -> void:
 		"Empty new home displays retain the existing full-backup recovery policy for unrelated corrupt pet data")
 
 func _write_failures() -> void:
-	for suffix: String in [".tmp", ".pre-v11.bak.tmp", ".bak.tmp"]:
+	for suffix: String in [".tmp", ".pre-v%d.bak.tmp" % Store.VERSION, ".bak.tmp"]:
 		_clean()
 		var bytes := JSON.stringify(_old(), "", true, true)
 		_write(PATH, bytes)
@@ -165,5 +165,5 @@ func _write_failures() -> void:
 		check(plan.ok and not store.save_profile(plan.profile) and FileAccess.get_file_as_string(PATH) == bytes \
 			and old.home.pet_displays == Home.empty_pet_displays(), "Interrupted display save publishes no assignment: " + suffix)
 		DirAccess.remove_absolute(PATH + suffix)
-		check(store.save_profile(plan.profile) and FileAccess.get_file_as_string(PATH + ".pre-v11.bak") == bytes \
+		check(store.save_profile(plan.profile) and FileAccess.get_file_as_string(PATH + ".pre-v%d.bak" % Store.VERSION) == bytes \
 			and Store.new(PATH).load_profile().home.pet_displays.north_meadow == "lantern_fox", "Retry saves one valid assignment and retains exact v9 bytes: " + suffix)

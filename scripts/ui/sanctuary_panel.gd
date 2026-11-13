@@ -241,7 +241,7 @@ func _draw() -> void:
 	if kind == &"map":
 		_button(clear_rect(), "CLEAR WAYPOINT", false)
 		_button(primary_rect(), "GUIDE TO DISTRICT", true)
-	elif kind == &"portal": _button(primary_rect(), "ENTER" if entry_enabled else "ENTRY UNAVAILABLE", entry_enabled, high_contrast_prompts)
+	elif kind == &"portal": _button(primary_rect(), String(context.get("entry_label", "ENTER")) if entry_enabled else "ENTRY UNAVAILABLE", entry_enabled, high_contrast_prompts)
 	else: _button(primary_rect(), "OPEN CITY MAP", true)
 	if not notice.is_empty():
 		_text(notice, rect.position + Vector2(24, rect.size.y - 94), 12, UI.prompt_ink(UI.WARNING, high_contrast_prompts), rect.size.x - 48)

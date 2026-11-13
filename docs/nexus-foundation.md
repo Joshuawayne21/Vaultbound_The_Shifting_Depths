@@ -1,8 +1,12 @@
 # Nexus of Realms — foundation
 
-**Build `0.7.0-nexus2` / Android code 31 passed 11,226 native checks across 49 modes and 47 suites.** The separate hall, guarded activity cards and existing gameplay routes are the accepted Stages 2–4 foundation. See [the validation report](nexus-foundation-validation.md) and [Android route](nexus-foundation-android.md). Rendered visual quality, physical Android testing and installation on a player device are not claimed.
+**Historical foundation build `0.7.0-nexus2` / Android code 31 passed 11,226 native checks across 49 modes and 47 suites.** The separate hall, guarded activity cards and existing gameplay routes are the accepted Stages 2–4 foundation. See [the validation report](nexus-foundation-validation.md) and [Android route](nexus-foundation-android.md). Rendered visual quality, physical Android testing and installation on a player device are not claimed.
 
 The foundation introduces a separately loaded northern Nexus interior, ten individually styled activity gateways, a shared interaction card and guarded routes into existing gameplay. It does not complete ten new activities. Abyssal Descent uses the existing progressive PvE expedition; Bloodspire offers existing NPC combat practice. The other eight activities show their intended identity and an explicit unavailable reason, with entry disabled.
+
+## Current activity extension
+
+Build `0.7.0-nexus5a` / code 32 adds the [Beastwilds discovery loop](beastwilds.md), with accepted native evidence in [its separate report](nexus-stage5a-validation.md). The accepted foundation counts and profile-v11 scope below describe the original nexus2 checkpoint. Beastwilds is the only newly enabled route; seven major activities remain unavailable. This extension adds profile v12/activity-v1 rather than treating discoveries as Rootbound clears.
 
 ## Finding the hall
 

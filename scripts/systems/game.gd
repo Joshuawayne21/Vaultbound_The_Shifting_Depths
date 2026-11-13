@@ -7,6 +7,7 @@ signal scene_changed(destination: StringName)
 const LEVELS := {
 	&"sanctuary": "res://scenes/world/sanctuary.tscn",
 	&"realm_nexus": "res://scenes/world/realm_nexus.tscn",
+	&"beastwilds": "res://scenes/activities/beastwilds.tscn",
 	&"dungeon": "res://scenes/world/dungeon.tscn",
 	&"combat_arena": "res://scenes/world/combat_arena.tscn",
 	&"rootbound_abyss": "res://scenes/world/rootbound_abyss.tscn",
@@ -47,6 +48,7 @@ var _inspected_companion_id := ""
 var _city_waypoint: Dictionary = {}
 var _city_portal_source: WeakRef
 var _city_portal_route: Dictionary = {}
+var _activity_exit_review: Dictionary = {}
 var _city_content_advisory: Dictionary = {}
 var _city_review_epoch := 0
 var _application_focused := true
@@ -121,7 +123,7 @@ func _process(delta: float) -> void:
 		hud.expedition_overlay.pet_panel.refresh_snapshot()
 	elif hud.expedition_overlay.mode == &"pet_name":
 		hud.expedition_overlay.pet_name_panel.refresh_source()
-	if current_location == &"rootbound_abyss" and is_instance_valid(active_world) and active_world.has_method("snapshot"):
+	if current_location in [&"rootbound_abyss", &"beastwilds"] and is_instance_valid(active_world) and active_world.has_method("snapshot"):
 		hud.set_dungeon_snapshot(active_world.snapshot())
 	elif _portal_hub_context() and not transitioning:
 		_publish_city_snapshot()
@@ -135,6 +137,7 @@ func _notification(what: int) -> void:
 		_application_focused = false
 		_home_navigation_epoch += 1
 		_city_review_epoch += 1
+		_activity_exit_review.clear()
 		_city_portal_source = null
 		_city_portal_route.clear()
 		_city_content_advisory.clear()
@@ -167,9 +170,12 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	if transitioning:
 		return
 	var request_world := active_world
+	var request_location := current_location
+	var request_pet := _pet_presenter
 	var home_room_identity := ""
-	if not completed_return.is_empty() and (destination != &"sanctuary" or entry_id != &"from_abyss" \
-			or not _completed_return_current(completed_return, request_world, request_world)):
+	var completed_route := _completed_return_route(completed_return)
+	if not completed_return.is_empty() and (completed_route.is_empty() or destination != completed_route.destination \
+			or entry_id != completed_route.entry or not _completed_return_current(completed_return, request_world, request_world)):
 		return
 	if not LEVELS.has(destination):
 		hud.show_message("That passage is not available in this build.")
@@ -241,7 +247,45 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	var issued_seed := -1
 	var issued_context: Dictionary = {}
 	var issued_plan: Dictionary = {}
-	if destination == &"rootbound_abyss":
+	var activity_owner: Dictionary = {}
+	if destination == &"beastwilds":
+		# The authority owns the ticket/seed/plan; the gate supplies only intent.
+		if current_location != &"realm_nexus" or not _portal_hub_context() or not _application_focused \
+			or _modal_open or ExpeditionSession.active or entry_id != &"default" \
+			or not is_instance_valid(player) or not player.controls_enabled or not InputHub.controls_enabled \
+			or player.health <= 0.0 or player.downed or player.eliminated or player.combat.state != &"idle" \
+			or not is_instance_valid(party) or party.world != request_world or party.leader != player:
+			next_world.free()
+			return
+		var status: Dictionary = ExpeditionSession.activity_entry_status(&"beastwilds")
+		if not bool(status.get("ok", false)):
+			next_world.free()
+			hud.show_message(String(status.get("reason", "Beastwilds entry is unavailable.")))
+			return
+		var selected_activity_seed := expedition_seed if expedition_seed >= 0 else debug_expedition_seed
+		if selected_activity_seed < 0: selected_activity_seed = int(Time.get_unix_time_from_system()) ^ Time.get_ticks_usec()
+		selected_activity_seed = absi(selected_activity_seed) % 2147483647
+		var request_serial := _travel_serial
+		activity_owner = {"game_id": get_instance_id(), "player": weakref(player), "party": weakref(party)}
+		if not ExpeditionSession.begin_activity_run(&"beastwilds", selected_activity_seed):
+			next_world.free()
+			return
+		issued_context = ExpeditionSession.issued_activity_context()
+		issued_generation = int(issued_context.get("generation", -1))
+		issued_seed = int(issued_context.get("seed", -1))
+		if transitioning or _travel_serial != request_serial or active_world != request_world \
+			or current_location != &"realm_nexus" or not _application_focused or _modal_open \
+			or _return_node(activity_owner, "player") != player or _return_node(activity_owner, "party") != party \
+			or not is_instance_valid(request_world) or request_world.get_parent() != world_root \
+			or request_world.is_queued_for_deletion() or party.world != request_world or party.leader != player \
+			or not ExpeditionSession.activity_transition_matches(issued_context) \
+			or next_world.get_script() == null or next_world.get_script().resource_path != "res://scripts/activities/beastwilds_level.gd" \
+			or not next_world.has_method("configure_activity") or not next_world.configure_activity(issued_context) \
+			or not _activity_candidate_matches(next_world, issued_context):
+			next_world.free()
+			_abort_unentered_run(issued_generation, issued_seed, issued_context)
+			return
+	elif destination == &"rootbound_abyss":
 		if ExpeditionSession.active:
 			next_world.free()
 			hud.show_message("Finish or abandon the current expedition before starting another.")
@@ -280,6 +324,26 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 			next_world.free()
 			_abort_unentered_run(issued_generation, issued_seed, issued_context, issued_plan)
 			return
+	elif current_location == &"beastwilds":
+		issued_generation = ExpeditionSession.run_generation
+		if not is_instance_valid(request_world) or request_world.get_script() == null \
+			or request_world.get_script().resource_path != "res://scripts/activities/beastwilds_level.gd" \
+			or int(request_world.issued_activity_context().get("generation", -1)) != issued_generation:
+			next_world.free()
+			return
+		if not completed_return.is_empty():
+			if not _completed_return_current(completed_return, request_world, request_world):
+				next_world.free()
+				return
+		elif ExpeditionSession.active:
+			# Shell-owned death/abandon recovery loses only this unsecured visit.
+			if not ExpeditionSession.activity_context_valid(request_world, issued_generation):
+				next_world.free()
+				return
+			ExpeditionSession.fail_run("abandoned")
+		if ExpeditionSession.active or ExpeditionSession.run_generation != issued_generation:
+			next_world.free()
+			return
 	elif current_location == &"rootbound_abyss":
 		# Extraction already commits and closes the run. Every other departure
 		# discards only its unsecured bag; the secured profile is untouched.
@@ -303,6 +367,7 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	_travel_serial += 1
 	var travel_serial := _travel_serial
 	_city_review_epoch += 1
+	_activity_exit_review.clear()
 	_set_pet_suspended(true)
 	_city_waypoint.clear()
 	_city_portal_source = null
@@ -320,11 +385,17 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	var fade_out := create_tween()
 	fade_out.tween_method(hud.set_transition, 0.0 if active_world != null else 1.0, 1.0, 0.18)
 	await fade_out.finished
+	if issued_context.has("activity_id") and not _activity_transition_owner(issued_context, activity_owner, travel_serial, request_world, request_world):
+		await _recover_activity_entry(next_world, request_world, request_location, request_pet, issued_context, activity_owner, travel_serial)
+		return
 	if not completed_return.is_empty() and not _completed_return_owned(completed_return, request_world, request_world, travel_serial):
 		await _recover_completed_return(next_world, completed_return, travel_serial)
 		return
 	if not _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan):
-		_cancel_candidate_travel(next_world, issued_generation, issued_seed, issued_context, issued_plan)
+		if issued_context.has("activity_id"):
+			await _recover_activity_entry(next_world, request_world, request_location, request_pet, issued_context, activity_owner, travel_serial)
+		else:
+			_cancel_candidate_travel(next_world, issued_generation, issued_seed, issued_context, issued_plan)
 		return
 	# Retain the safe world until candidate _ready callbacks and floor registration
 	# complete. A replacement run must never inherit this request's old dungeon.
@@ -335,29 +406,48 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	var candidate_process := next_world.process_mode
 	next_world.process_mode = Node.PROCESS_MODE_DISABLED
 	world_root.add_child(next_world)
+	if issued_context.has("activity_id") and (not _activity_transition_owner(issued_context, activity_owner, travel_serial, previous_world, previous_world) \
+		or not next_world.has_method("bind_activity_actor") or not next_world.bind_activity_actor(player, self)):
+		await _recover_activity_entry(next_world, request_world, request_location, request_pet, issued_context, activity_owner, travel_serial)
+		return
 	if not completed_return.is_empty() and not _completed_return_owned(completed_return, request_world, request_world, travel_serial):
 		await _recover_completed_return(next_world, completed_return, travel_serial)
 		return
+	if issued_context.has("activity_id") and not _activity_transition_owner(issued_context, activity_owner, travel_serial, previous_world, previous_world):
+		await _recover_activity_entry(next_world, request_world, request_location, request_pet, issued_context, activity_owner, travel_serial)
+		return
 	if not _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan) or not _candidate_ready_valid(next_world, issued_context, issued_plan):
-		_cancel_candidate_travel(next_world, issued_generation, issued_seed, issued_context, issued_plan)
+		if issued_context.has("activity_id"):
+			await _recover_activity_entry(next_world, request_world, request_location, request_pet, issued_context, activity_owner, travel_serial)
+		else:
+			_cancel_candidate_travel(next_world, issued_generation, issued_seed, issued_context, issued_plan)
 		return
 	_keep_world_collision(next_world)
 	active_world = next_world
 	current_location = destination
 	ExpeditionSession.bind_game_context(player, destination, active_world)
+	if issued_context.has("activity_id") and not _activity_transition_owner(issued_context, activity_owner, travel_serial, next_world, previous_world):
+		await _recover_activity_entry(next_world, request_world, request_location, request_pet, issued_context, activity_owner, travel_serial)
+		return
 	if not completed_return.is_empty() and not _completed_return_owned(completed_return, next_world, request_world, travel_serial):
 		await _recover_completed_return(next_world, completed_return, travel_serial)
 		return
 	demo_exchange.bind_game_context(player, destination, active_world)
+	if issued_context.has("activity_id") and not _activity_transition_owner(issued_context, activity_owner, travel_serial, next_world, previous_world):
+		await _recover_activity_entry(next_world, request_world, request_location, request_pet, issued_context, activity_owner, travel_serial)
+		return
 	if not completed_return.is_empty() and not _completed_return_owned(completed_return, next_world, request_world, travel_serial):
 		await _recover_completed_return(next_world, completed_return, travel_serial)
 		return
 	# The same identity is required after binding and the next physics boundary.
 	if _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan): await get_tree().physics_frame
+	if issued_context.has("activity_id") and not _activity_transition_owner(issued_context, activity_owner, travel_serial, next_world, previous_world):
+		await _recover_activity_entry(next_world, request_world, request_location, request_pet, issued_context, activity_owner, travel_serial)
+		return
 	if not completed_return.is_empty() and not _completed_return_owned(completed_return, next_world, request_world, travel_serial):
 		await _recover_completed_return(next_world, completed_return, travel_serial)
 		return
-	if not completed_return.is_empty() and not _completed_return_arrival_valid(next_world):
+	if not completed_return.is_empty() and not _completed_return_arrival_valid(next_world, completed_return):
 		await _recover_completed_return(next_world, completed_return, travel_serial)
 		return
 	var combat_admitted := true
@@ -375,6 +465,10 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 			and _travel_serial == travel_serial and next_world.get_script() != null \
 			and next_world.get_script().resource_path == "res://scripts/world/realm_nexus.gd" \
 			and next_world.has_method("validate_nexus_arrival") and next_world.validate_nexus_arrival(entry_id)
+	if issued_context.has("activity_id"):
+		combat_admitted = _activity_candidate_ready(next_world, issued_context) \
+			and _activity_transition_owner(issued_context, activity_owner, travel_serial, next_world, previous_world) \
+			and next_world.has_method("validate_activity_arrival") and next_world.validate_activity_arrival(entry_id)
 	if not issued_plan.is_empty() and _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan) \
 			and _candidate_ready_valid(next_world, issued_context, issued_plan):
 		# Native candidate floor/capsules exist now. Only its private issued
@@ -382,6 +476,9 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 		combat_admitted = next_world.has_method("prepare_combat_admission") and next_world.prepare_combat_admission() \
 			and next_world.has_method("combat_admission_valid") and next_world.combat_admission_valid()
 	if not combat_admitted or not _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan) or not _candidate_ready_valid(next_world, issued_context, issued_plan):
+		if issued_context.has("activity_id"):
+			await _recover_activity_entry(next_world, request_world, request_location, request_pet, issued_context, activity_owner, travel_serial)
+			return
 		active_world = previous_world
 		current_location = previous_location
 		ExpeditionSession.bind_game_context(player, previous_location, previous_world)
@@ -395,34 +492,52 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	if is_instance_valid(previous_world):
 		_pet_presenter = null
 		world_root.remove_child(previous_world)
-		if issued_plan.is_empty() and completed_return.is_empty(): previous_world.queue_free()
+		if issued_plan.is_empty() and not issued_context.has("activity_id") and completed_return.is_empty(): previous_world.queue_free()
 		else: _travel_retained_world = previous_world
 	next_world.process_mode = candidate_process
 	player.reset_for_spawn(active_world.get_spawn_transform(entry_id))
+	if issued_context.has("activity_id") and not _activity_transition_owner(issued_context, activity_owner, travel_serial, next_world, previous_world):
+		await _recover_activity_entry(next_world, request_world, request_location, request_pet, issued_context, activity_owner, travel_serial)
+		return
 	if not completed_return.is_empty() and not _completed_return_owned(completed_return, next_world, previous_world, travel_serial):
 		await _recover_completed_return(next_world, completed_return, travel_serial)
 		return
 	player.apply_progression(ExpeditionSession.profile)
+	if issued_context.has("activity_id") and not _activity_transition_owner(issued_context, activity_owner, travel_serial, next_world, previous_world):
+		await _recover_activity_entry(next_world, request_world, request_location, request_pet, issued_context, activity_owner, travel_serial)
+		return
 	if not completed_return.is_empty() and not _completed_return_owned(completed_return, next_world, previous_world, travel_serial):
 		await _recover_completed_return(next_world, completed_return, travel_serial)
 		return
 	party.enter_world(active_world, destination)
+	if issued_context.has("activity_id") and not _activity_transition_owner(issued_context, activity_owner, travel_serial, next_world, next_world):
+		await _recover_activity_entry(next_world, request_world, request_location, request_pet, issued_context, activity_owner, travel_serial)
+		return
 	if not completed_return.is_empty() and not _completed_return_owned(completed_return, next_world, next_world, travel_serial):
 		await _recover_completed_return(next_world, completed_return, travel_serial)
 		return
 	camera_rig.reset_position()
 	_wire_world_travel(active_world)
 	hud.set_location(active_world.display_name, active_world.objective)
-	if destination != &"rootbound_abyss":
+	if issued_context.has("activity_id") and not _activity_transition_owner(issued_context, activity_owner, travel_serial, next_world, next_world):
+		await _recover_activity_entry(next_world, request_world, request_location, request_pet, issued_context, activity_owner, travel_serial)
+		return
+	if destination not in [&"rootbound_abyss", &"beastwilds"]:
 		hud.set_dungeon_snapshot({})
 	# The candidate floor was registered before committing the world replacement.
 	party.ensure_safe_arrivals()
 	_sync_pet_presenter()
+	if issued_context.has("activity_id") and not _activity_transition_owner(issued_context, activity_owner, travel_serial, next_world, next_world):
+		await _recover_activity_entry(next_world, request_world, request_location, request_pet, issued_context, activity_owner, travel_serial)
+		return
 	var fade_in := create_tween()
 	fade_in.tween_method(hud.set_transition, 1.0, 0.0, 0.25)
 	await fade_in.finished
+	if issued_context.has("activity_id") and not _activity_transition_owner(issued_context, activity_owner, travel_serial, next_world, next_world):
+		await _recover_activity_entry(next_world, request_world, request_location, request_pet, issued_context, activity_owner, travel_serial)
+		return
 	if not completed_return.is_empty() and (not _completed_return_owned(completed_return, next_world, next_world, travel_serial) \
-			or not _completed_return_arrival_valid(next_world)):
+			or not _completed_return_arrival_valid(next_world, completed_return)):
 		await _recover_completed_return(next_world, completed_return, travel_serial)
 		return
 	if not issued_plan.is_empty() and (not _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan) \
@@ -431,6 +546,16 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 		await _restore_after_content_fade(next_world, previous_world, previous_location, previous_player_transform,
 			previous_pet, issued_generation, issued_seed, issued_context, issued_plan)
 		return
+	if issued_context.has("activity_id"):
+		if not _activity_candidate_ready(next_world, issued_context) \
+			or not _activity_transition_owner(issued_context, activity_owner, travel_serial, next_world, next_world) \
+			or not next_world.validate_activity_arrival(entry_id) \
+			or not ExpeditionSession.admit_activity_world(next_world, issued_context) \
+			or not _activity_transition_owner(issued_context, activity_owner, travel_serial, next_world, next_world) \
+			or not party.admit_activity_generation(issued_context) \
+			or not _activity_transition_owner(issued_context, activity_owner, travel_serial, next_world, next_world):
+			await _recover_activity_entry(next_world, request_world, request_location, request_pet, issued_context, activity_owner, travel_serial)
+			return
 	if is_instance_valid(_travel_retained_world): _travel_retained_world.queue_free()
 	_travel_retained_world = null
 	transitioning = false
@@ -442,7 +567,7 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	scene_changed.emit(destination)
 	if _portal_hub_context():
 		_publish_city_snapshot()
-	if destination == &"sanctuary":
+	if destination == &"sanctuary" or (destination == &"realm_nexus" and completed_return.get("activity_id") == "beastwilds"):
 		hud.present_pending_results()
 
 
@@ -460,6 +585,7 @@ func _return_node(context: Dictionary, key: String) -> Node:
 
 
 func _completed_return_proof(context: Dictionary) -> bool:
+	if context.has("activity_id"): return _completed_activity_return_proof(context)
 	if not is_inside_tree() or is_queued_for_deletion() or int(context.get("game_id", 0)) != get_instance_id(): return false
 	var world := _return_node(context, "world") as Node3D
 	var source := _return_node(context, "source") as Node3D
@@ -476,8 +602,10 @@ func _completed_return_current(context: Dictionary, expected_world: Node3D, expe
 			or party.world != expected_party_world or party.leader != player:
 		return false
 	var source_world := _return_node(context, "world") as Node3D
-	if expected_world == source_world: return current_location == &"rootbound_abyss"
-	return current_location == &"sanctuary" and (source_world.get_parent() == world_root \
+	var route := _completed_return_route(context)
+	if route.is_empty(): return false
+	if expected_world == source_world: return current_location == route.source
+	return current_location == route.destination and (source_world.get_parent() == world_root \
 		or (source_world.get_parent() == null and source_world == _travel_retained_world))
 
 
@@ -500,10 +628,16 @@ func _on_completed_return_request(destination: StringName, entry_id: StringName,
 func _completed_return_deferred(context: Dictionary) -> void:
 	var world := _return_node(context, "world") as Node3D
 	if transitioning or not _application_focused or not _completed_return_current(context, world, world): return
-	change_location(&"sanctuary", &"from_abyss", -1, 1, context)
+	var route := _completed_return_route(context)
+	if not route.is_empty(): change_location(StringName(route.destination), StringName(route.entry), -1, 1, context)
 
 
-func _completed_return_arrival_valid(candidate: Node3D) -> bool:
+func _completed_return_arrival_valid(candidate: Node3D, context: Dictionary = {}) -> bool:
+	if context.has("activity_id"):
+		return context.get("activity_id") == "beastwilds" and is_instance_valid(candidate) \
+			and candidate.get_parent() == world_root and candidate.get_script() != null \
+			and candidate.get_script().resource_path == "res://scripts/world/realm_nexus.gd" \
+			and candidate.has_method("validate_nexus_arrival") and candidate.validate_nexus_arrival(&"from_beastwilds")
 	# This native check runs at travel boundaries, not every frame. The retained
 	# dungeon must not supply a false floor or obstruct the Sanctuary candidate.
 	if not is_instance_valid(candidate) or candidate.get_parent() != world_root or not candidate.has_method("get_spawn_transform"): return false
@@ -558,6 +692,8 @@ func _discard_lost_return(candidate: Node3D, source_world: Node3D) -> void:
 
 
 func _recover_completed_return(candidate: Node3D, context: Dictionary, serial: int) -> void:
+	var route := _completed_return_route(context)
+	if route.is_empty(): return
 	var source_world := _return_node(context, "world") as Node3D
 	var owner_world := active_world
 	var owner_party_world: Node3D = party.world if is_instance_valid(party) else null
@@ -570,7 +706,7 @@ func _recover_completed_return(candidate: Node3D, context: Dictionary, serial: i
 		# Admission failed before departure. The floor stays CLOSED, and only
 		# the registered source can retry travel using the existing saved token.
 		active_world = source_world
-		current_location = &"rootbound_abyss"
+		current_location = StringName(route.source)
 		ExpeditionSession.bind_game_context(player, current_location, source_world)
 		if not _return_recovery_owned(context, serial, source_world, source_world):
 			_discard_lost_return(candidate, source_world)
@@ -580,15 +716,15 @@ func _recover_completed_return(candidate: Node3D, context: Dictionary, serial: i
 			_discard_lost_return(candidate, source_world)
 			return
 		_discard_unowned_return_candidate(candidate)
-		_finish_return_recovery("Loot is secured. The Sanctuary arrival was unavailable; try the Return spring again.")
+		_finish_return_recovery("This activity is closed. The Nexus arrival was unavailable; retry the Return spring." if context.has("activity_id") else "Loot is secured. The Sanctuary arrival was unavailable; try the Return spring again.")
 		return
 	# Recover only our own shell. A historical commit never reopens an active
 	# dungeon or grants permission to overwrite a newer Game/party owner.
 	var restore := candidate
 	var invalid_arrival := is_instance_valid(restore) and restore == active_world and owner_party_world == restore \
-		and restore.get_parent() == world_root and not _completed_return_arrival_valid(restore)
+		and restore.get_parent() == world_root and not _completed_return_arrival_valid(restore, context)
 	if invalid_arrival or not is_instance_valid(restore) or restore.is_queued_for_deletion() or not restore.has_method("get_spawn_transform"):
-		var packed := load(LEVELS[&"sanctuary"]) as PackedScene
+		var packed := load(LEVELS[StringName(route.destination)]) as PackedScene
 		if packed == null: return
 		restore = packed.instantiate() as Node3D
 		if restore == null or not restore.has_method("get_spawn_transform"):
@@ -603,7 +739,7 @@ func _recover_completed_return(candidate: Node3D, context: Dictionary, serial: i
 	elif restore.get_parent() != world_root:
 		return
 	active_world = restore
-	current_location = &"sanctuary"
+	current_location = StringName(route.destination)
 	ExpeditionSession.bind_game_context(player, current_location, restore)
 	if not _return_recovery_owned(context, serial, restore, owner_party_world): return
 	demo_exchange.bind_game_context(player, current_location, restore)
@@ -613,16 +749,16 @@ func _recover_completed_return(candidate: Node3D, context: Dictionary, serial: i
 	_keep_world_collision(restore)
 	await get_tree().physics_frame
 	if not _return_recovery_owned(context, serial, restore, owner_party_world): return
-	if not _completed_return_arrival_valid(restore):
+	if not _completed_return_arrival_valid(restore, context):
 		# This cannot be presented as a successful arrival. Preserve the saved
 		# profile and keep actors suspended rather than placing them over no floor.
-		hud.show_message("Loot is saved, but the Sanctuary floor is unavailable. Restart to return safely.")
+		hud.show_message("This activity is closed, but the return floor is unavailable. Restart to return safely." if context.has("activity_id") else "Loot is saved, but the Sanctuary floor is unavailable. Restart to return safely.")
 		return
 	restore.process_mode = Node.PROCESS_MODE_INHERIT
 	_pet_presenter = null
 	_wire_world_travel(restore)
 	if not _return_recovery_owned(context, serial, restore, owner_party_world): return
-	player.reset_for_spawn(restore.get_spawn_transform(&"from_abyss"))
+	player.reset_for_spawn(restore.get_spawn_transform(StringName(route.entry)))
 	if not _return_recovery_owned(context, serial, restore, owner_party_world): return
 	player.apply_progression(ExpeditionSession.profile)
 	if not _return_recovery_owned(context, serial, restore, owner_party_world): return
@@ -685,6 +821,8 @@ func _resume_return_focus() -> void:
 func _wire_world_travel(world: Node3D) -> void:
 	for portal: Node in get_tree().get_nodes_in_group("interactables"):
 		if not world.is_ancestor_of(portal): continue
+		if world.get_script() != null and world.get_script().resource_path == "res://scripts/activities/beastwilds_level.gd":
+			_bind_activity_exit(portal, world)
 		if portal.has_signal("travel_requested"): _bind_world_travel_signal(portal, world)
 		if portal.has_signal("portal_info_requested") and not portal.portal_info_requested.is_connected(_on_portal_information):
 			portal.portal_info_requested.connect(_on_portal_information)
@@ -705,7 +843,7 @@ func _bind_world_travel_signal(source: Node, world: Node3D) -> void:
 			source.disconnect("travel_requested", callback)
 	# All twelve Nexus portals use the reviewed card path. Never wire a raw
 	# travel signal that could bypass authored ownership or unavailable gates.
-	if world.get_script() != null and world.get_script().resource_path == "res://scripts/world/realm_nexus.gd": return
+	if world.get_script() != null and world.get_script().resource_path in ["res://scripts/world/realm_nexus.gd", "res://scripts/activities/beastwilds_level.gd"]: return
 	if world.has_method("registered_checkpoints") and world.registered_checkpoints().has(source):
 		source.connect("travel_requested", _on_completed_return_request.bind(weakref(world), weakref(source), ExpeditionSession.run_generation))
 	else:
@@ -753,6 +891,9 @@ func _restore_after_content_fade(candidate: Node3D, previous: Node3D, location: 
 
 func _travel_generation_valid(generation: int, seed_value: int, issued_context: Dictionary = {}, issued_plan: Dictionary = {}) -> bool:
 	if generation < 0: return true
+	if issued_context.has("activity_id"):
+		return generation == int(issued_context.get("generation", -1)) and seed_value == int(issued_context.get("seed", -1)) \
+			and ExpeditionSession.activity_transition_matches(issued_context)
 	if ExpeditionSession.run_generation != generation: return false
 	if seed_value < 0: return not ExpeditionSession.active
 	return ExpeditionSession.active and ExpeditionSession.run_seed == seed_value \
@@ -761,6 +902,7 @@ func _travel_generation_valid(generation: int, seed_value: int, issued_context: 
 
 
 func _candidate_depth_matches(candidate: Node3D, issued_context: Dictionary, issued_plan: Dictionary = {}) -> bool:
+	if issued_context.has("activity_id"): return issued_plan.is_empty() and _activity_candidate_matches(candidate, issued_context)
 	if not issued_plan.is_empty():
 		if not is_instance_valid(candidate) or not candidate.has_method("issued_run_plan") or candidate.issued_run_plan() != issued_plan: return false
 	if issued_context.is_empty(): return true
@@ -775,6 +917,7 @@ func _candidate_depth_matches(candidate: Node3D, issued_context: Dictionary, iss
 
 
 func _candidate_ready_valid(candidate: Node3D, issued_context: Dictionary, issued_plan: Dictionary = {}) -> bool:
+	if issued_context.has("activity_id"): return issued_plan.is_empty() and _activity_candidate_ready(candidate, issued_context)
 	if issued_context.is_empty(): return true
 	return _candidate_depth_matches(candidate, issued_context, issued_plan) and candidate.get("validation_errors").is_empty() \
 		and not candidate.get("rooms").is_empty() and candidate.validate_generation() and candidate.get("validation_errors").is_empty()
@@ -785,7 +928,10 @@ func _abort_unentered_run(generation: int, seed_value: int, issued_context: Dict
 	# create a replacement with the same seed/depth and a different generation.
 	if generation < 0 or seed_value < 0 or issued_context.is_empty(): return
 	if not _travel_generation_valid(generation, seed_value, issued_context, issued_plan): return
-	ExpeditionSession.fail_run("abandoned")
+	if issued_context.has("activity_id"):
+		ExpeditionSession.abort_unentered_activity(issued_context)
+	else:
+		ExpeditionSession.fail_run("abandoned")
 	# No expedition was entered, so do not queue an empty expedition-results card.
 	if not ExpeditionSession.active and ExpeditionSession.run_generation == generation \
 			and int(hud.pending_results.get("run_generation", -1)) == generation:
@@ -980,6 +1126,9 @@ func _city_portal_local_status(source: Node3D) -> Dictionary:
 		if ExpeditionSession.active: return {"ok": false, "reason": "Finish the current expedition before entering another activity."}
 		var activity: Dictionary = REALMS.entry_status(ExpeditionSession.profile, activity_id)
 		if not bool(activity.ok): return {"ok": false, "reason": String(activity.reason)}
+		if activity_id == &"beastwilds":
+			var status: Dictionary = ExpeditionSession.activity_entry_status(activity_id)
+			if not bool(status.get("ok", false)): return {"ok": false, "reason": String(status.get("reason", "Activity entry is unavailable."))}
 	if _city_portal_route.destination == &"rootbound_abyss":
 		if typeof(_city_portal_route.get("expedition_depth")) != TYPE_INT \
 				or _city_portal_route.get("depth_policy_version") != DEPTH_POLICY.policy_version:
@@ -1001,6 +1150,9 @@ func _city_portal_route_matches(source: Node3D) -> bool:
 
 
 func _on_portal_enter() -> void:
+	if not _activity_exit_review.is_empty():
+		_on_activity_exit_confirmed()
+		return
 	var source := _city_portal_source.get_ref() as Node3D if _city_portal_source != null else null
 	if hud.expedition_overlay.mode != &"sanctuary" or hud.expedition_overlay.sanctuary_panel.kind != &"portal": return
 	var admission := _city_portal_admission(source)
@@ -1033,6 +1185,9 @@ func _travel_from_city_portal(reference: WeakRef, destination: StringName, entry
 		var activity: Dictionary = REALMS.entry_status(ExpeditionSession.profile, activity_id)
 		if data.is_empty() or not bool(activity.ok) or ExpeditionSession.active \
 			or activity.destination != destination or activity.entry_id != entry_id or not LEVELS.has(destination):
+			hud.show_message("Activity entry changed. Review the gateway again.")
+			return
+		if activity_id == &"beastwilds" and not bool(ExpeditionSession.activity_entry_status(activity_id).get("ok", false)):
 			hud.show_message("Activity entry changed. Review the gateway again.")
 			return
 	if destination == &"rootbound_abyss":
@@ -1091,7 +1246,7 @@ func _portal_information_lines(destination: StringName, depth_status: Dictionary
 					lines[index] = "Testing a locked depth does not skip earned depth progression. Rewards still require extraction."
 		if debug_expedition_seed >= 0: lines[seed_row] = "Developer seed: %d · layout and modifiers are generated on entry." % debug_expedition_seed
 	elif destination == &"realm_nexus":
-		lines = ["NEXUS OF REALMS · Sanctuary activity hall", "Explore ten gateways grouped in Adventure, Conflict and Ascension.", "Abyssal Descent and local Bloodspire practice are playable.", "Other activities are unavailable. The entrance gateway returns to Sanctuary."]
+		lines = ["NEXUS OF REALMS · Sanctuary activity hall", "Explore ten gateways grouped in Adventure, Conflict and Ascension.", "Abyssal depths, Beastwilds discoveries and local Bloodspire practice are playable.", "Other activities are unavailable. The entrance gateway returns to Sanctuary."]
 	elif destination == &"sanctuary":
 		lines = ["SANCTUARY · Return to the shared city", "Arrive at the north promenade near the Nexus entrance.", "Your secured equipment, home, pets and companions remain intact."]
 	elif destination == &"combat_arena":
@@ -1130,7 +1285,7 @@ func _on_source_travel(destination: StringName, entry_id: StringName, source_wor
 	# Interactions can originate in the physics step; tree mutation must be deferred.
 	# Nexus world signals have no unreviewed route. Shell-owned death/fall/wipe
 	# recovery still calls the deferred context guard directly.
-	if current_location == &"realm_nexus": return
+	if current_location in [&"realm_nexus", &"beastwilds"]: return
 	if not is_instance_valid(source_world) or source_world != active_world or source_world.is_queued_for_deletion() or generation != ExpeditionSession.run_generation: return
 	_travel_if_context_current.call_deferred(destination, entry_id, weakref(source_world), generation, ExpeditionSession.active)
 
@@ -1263,6 +1418,20 @@ func _on_respawn() -> void:
 				return
 			ExpeditionSession.fail_run("defeated")
 			if ExpeditionSession.active or ExpeditionSession.run_generation != generation or active_world != world: return
+		if current_location == &"beastwilds":
+			if not is_instance_valid(world) or world.get_script() == null \
+				or world.get_script().resource_path != "res://scripts/activities/beastwilds_level.gd" \
+				or int(world.issued_activity_context().get("generation", -1)) != generation: return
+			if player.health > 0.0:
+				if world.activity_ready_valid() and world.validate_activity_arrival(&"default"):
+					player.reset_for_spawn(world.get_spawn_transform(&"default"))
+					camera_rig.reset_position()
+					player.set_controls_enabled(true)
+				return
+			if ExpeditionSession.active:
+				if not ExpeditionSession.activity_context_valid(world, generation): return
+				ExpeditionSession.fail_run("defeated")
+				if ExpeditionSession.active or ExpeditionSession.run_generation != generation or active_world != world: return
 		if (current_location == &"personal_sanctuary" or HOME_ROOMS.has(current_location)) and player.health > 0.0:
 			# A home fall reuses its admitted scene and saved identity. Room entry
 			# restrictions must not trap a player by trying to enter from itself.
@@ -1281,11 +1450,14 @@ func _on_party_wipe() -> void:
 	if transitioning:
 		return
 	if current_location == &"rootbound_abyss" and (not is_instance_valid(active_world) or active_world.get("run_generation") != ExpeditionSession.run_generation): return
+	if current_location == &"beastwilds" and (not is_instance_valid(active_world) or active_world.get_script() == null \
+		or active_world.get_script().resource_path != "res://scripts/activities/beastwilds_level.gd" \
+		or int(active_world.issued_activity_context().get("generation", -1)) != ExpeditionSession.run_generation): return
 	party.set_paused(true)
 	hud.show_message("The party falls · Returning safely to Sanctuary")
 	var world := active_world
 	var generation := ExpeditionSession.run_generation
-	if current_location == &"rootbound_abyss" and ExpeditionSession.active:
+	if current_location in [&"rootbound_abyss", &"beastwilds"] and ExpeditionSession.active:
 		ExpeditionSession.fail_run("defeated")
 		if ExpeditionSession.active or ExpeditionSession.run_generation != generation or active_world != world: return
 	if is_instance_valid(world):
@@ -1308,6 +1480,7 @@ func _on_modal_changed(open: bool) -> void:
 			_world_process_mode = active_world.process_mode
 			active_world.process_mode = Node.PROCESS_MODE_DISABLED
 	else:
+		_activity_exit_review.clear()
 		_inspected_companion_id = ""
 		_city_portal_source = null
 		_city_portal_route.clear()
@@ -1417,3 +1590,229 @@ func _sync_pet_presenter() -> void:
 func _set_pet_suspended(value: bool) -> void:
 	var current := _pet_presenter.get_ref() as Node3D if _pet_presenter != null else null
 	if is_instance_valid(current): current.set_suspended(value)
+
+
+# Beastwilds uses an independently admitted activity context, never a depth plan.
+func _activity_candidate_matches(candidate: Node3D, context: Dictionary) -> bool:
+	return context.get("activity_id") == "beastwilds" and is_instance_valid(candidate) \
+		and not candidate.is_queued_for_deletion() and candidate.get_script() != null \
+		and candidate.get_script().resource_path == "res://scripts/activities/beastwilds_level.gd" \
+		and candidate.has_method("issued_activity_context") and candidate.issued_activity_context() == context
+
+
+func _activity_candidate_ready(candidate: Node3D, context: Dictionary) -> bool:
+	return _activity_candidate_matches(candidate, context) and candidate.is_inside_tree() \
+		and candidate.has_method("activity_ready_valid") and candidate.activity_ready_valid()
+
+
+func _activity_transition_owner(context: Dictionary, owner: Dictionary, serial: int, expected_world: Node3D, expected_party_world: Node3D) -> bool:
+	if not context.has("activity_id"): return true
+	if not _application_focused or _modal_open or not is_instance_valid(expected_world) or expected_world.get_script() == null: return false
+	var expected_location: StringName = &"beastwilds" if expected_world.get_script().resource_path == "res://scripts/activities/beastwilds_level.gd" else &"realm_nexus"
+	return current_location == expected_location and ExpeditionSession.activity_transition_matches(context) \
+		and _return_recovery_owned(owner, serial, expected_world, expected_party_world)
+
+
+func _completed_return_route(context: Dictionary) -> Dictionary:
+	if not context.has("activity_id"):
+		return {"source": &"rootbound_abyss", "destination": &"sanctuary", "entry": &"from_abyss"}
+	if context.get("activity_id") == "beastwilds":
+		return {"source": &"beastwilds", "destination": &"realm_nexus", "entry": &"from_beastwilds"}
+	return {}
+
+
+func _completed_activity_return_proof(context: Dictionary) -> bool:
+	if context.get("activity_id") != "beastwilds" or not is_inside_tree() or is_queued_for_deletion() \
+		or int(context.get("game_id", 0)) != get_instance_id() or _return_node(context, "player") != player \
+		or _return_node(context, "party") != party or not context.get("token") is Dictionary:
+		return false
+	var world := _return_node(context, "world") as Node3D
+	var source := _return_node(context, "source") as Node3D
+	if not is_instance_valid(world) or not is_instance_valid(source) or world.get_script() == null \
+		or world.get_script().resource_path != "res://scripts/activities/beastwilds_level.gd": return false
+	return ExpeditionSession.completed_activity_return_matches(world, source, int(context.get("generation", -1)), context.token)
+
+
+func _activity_exit_source_valid(source: Node3D, world: Node3D) -> bool:
+	if transitioning or not _application_focused or current_location != &"beastwilds" \
+		or not is_instance_valid(world) or world != active_world or world.get_parent() != world_root \
+		or world.is_queued_for_deletion() or world.get_script() == null \
+		or world.get_script().resource_path != "res://scripts/activities/beastwilds_level.gd" \
+		or not is_instance_valid(source) or not source.is_inside_tree() or source.is_queued_for_deletion() \
+		or source.get_script() == null or source.get_script().resource_path != "res://scripts/activities/activity_exit.gd" \
+		or not world.has_method("owns_source") or not world.owns_source(source, "return_spring") \
+		or not is_instance_valid(player) or player.health <= 0.0 or player.downed or player.eliminated \
+		or player.combat.state != &"idle" or not is_instance_valid(party) or party.world != world or party.leader != player:
+		return false
+	var radius: Variant = source.get("interaction_radius")
+	if not (radius is float or radius is int) or not is_finite(float(radius)) \
+		or float(radius) <= 0.0 or float(radius) > 3.0 \
+		or not player.global_position.is_finite() or not source.global_position.is_finite(): return false
+	return player.global_position.distance_to(source.global_position) <= float(radius) \
+		and CombatRules.visible_from(player, player.global_position + Vector3.UP * 1.3, source.global_position + Vector3.UP * 1.6)
+
+
+func _on_activity_exit_requested(source: Node3D, world_reference: WeakRef, source_reference: WeakRef, generation: int) -> void:
+	var world := world_reference.get_ref() as Node3D
+	if source_reference.get_ref() != source or generation != ExpeditionSession.run_generation \
+		or not _activity_exit_source_valid(source, world) or hud.expedition_overlay.mode != &"none": return
+	var status: Dictionary = source.get_exit_status(player)
+	if not bool(status.get("ok", false)):
+		hud.show_message(String(status.get("reason", "This return is unavailable.")))
+		return
+	var completed := bool(status.get("completed_return", false))
+	var abandon := not completed and not bool(status.get("can_secure", false))
+	if not completed and not bool(status.get("can_secure" if not abandon else "can_abandon", false)): return
+	_city_review_epoch += 1
+	_activity_exit_review = {"game_id": get_instance_id(), "world": world_reference, "source": source_reference,
+		"player": weakref(player), "party": weakref(party), "generation": generation, "serial": _travel_serial,
+		"completed": completed, "abandon": abandon}
+	var lines: Array[String] = ["BEASTWILDS · Return spring"]
+	if not completed:
+		var found := 0
+		for id: String in status.get("required", []):
+			if status.get("claimed", []).has(id): found += 1
+		lines.append("Required discoveries: %d / %d" % [found, int(status.get("total", 3))])
+	if completed:
+		lines.append("This activity is already closed. Retry the same safe return; no new rewards are issued.")
+	elif abandon:
+		lines.append("ABANDON: all unsecured items, Depthmarks and pet findings from this visit will be lost.")
+		lines.append("Previously secured equipment, pets, home and dungeon progress remain unchanged.")
+	else:
+		lines.append("Secure this visit's discoveries and return to the Nexus.")
+		lines.append("Capacity or save failure keeps this world and its pending finds available for retry.")
+	lines.append("CLOSE keeps you here. Confirm only when ready to leave.")
+	var opened: bool = hud.expedition_overlay.open_activity_return({"title": "THE BEASTWILDS · RETURN",
+		"lines": lines, "entry_enabled": true, "entry_reason": "",
+		"entry_label": "RETURN TO NEXUS" if completed else "ABANDON & RETURN" if abandon else "SECURE & RETURN"})
+	if not opened or not _activity_exit_source_valid(source, world):
+		_activity_exit_review.clear()
+		return
+	_activity_exit_review.epoch = _city_review_epoch
+
+
+func _on_activity_exit_confirmed() -> void:
+	var context := _activity_exit_review.duplicate(true)
+	var world := _return_node(context, "world") as Node3D
+	var source := _return_node(context, "source") as Node3D
+	if hud.expedition_overlay.mode != &"sanctuary" or hud.expedition_overlay.sanctuary_panel.kind != &"portal" \
+		or context.is_empty() or int(context.get("epoch", -1)) != _city_review_epoch \
+		or int(context.get("serial", -1)) != _travel_serial or int(context.get("generation", -1)) != ExpeditionSession.run_generation \
+		or _return_node(context, "player") != player or _return_node(context, "party") != party \
+		or not _activity_exit_source_valid(source, world):
+		hud.expedition_overlay.sanctuary_panel.set_entry_available(false, "Return changed. Close and review the spring again.")
+		return
+	_activity_exit_review.clear()
+	hud.close_modals()
+	_confirm_activity_exit_deferred.call_deferred(context)
+
+
+func _confirm_activity_exit_deferred(context: Dictionary) -> void:
+	var world := _return_node(context, "world") as Node3D
+	var source := _return_node(context, "source") as Node3D
+	if int(context.get("game_id", 0)) != get_instance_id() or int(context.get("epoch", -1)) != _city_review_epoch \
+		or int(context.get("serial", -1)) != _travel_serial or int(context.get("generation", -1)) != ExpeditionSession.run_generation \
+		or _return_node(context, "player") != player or _return_node(context, "party") != party \
+		or hud.expedition_overlay.mode != &"none" or not _activity_exit_source_valid(source, world): return
+	var status: Dictionary = source.get_exit_status(player)
+	var allowed_intent := bool(status.get("can_abandon" if bool(context.abandon) else "can_secure", false))
+	var abandon_terms_changed := bool(context.abandon) and bool(status.get("can_secure", false))
+	if not bool(status.get("ok", false)) or bool(status.get("completed_return", false)) != bool(context.completed) \
+		or (not bool(context.completed) and (not allowed_intent or abandon_terms_changed)):
+		hud.show_message("Return terms changed. Review the spring again.")
+		return
+	_city_review_epoch += 1 # Consume intent before any save/results callback.
+	var result: Dictionary = source.confirm_exit(player, bool(context.abandon))
+	if not bool(result.get("ok", false)) and is_instance_valid(world) and world == active_world \
+		and ExpeditionSession.run_generation == int(context.generation):
+		hud.show_message(String(result.get("error", "Return could not complete. Your pending finds remain here.")))
+
+
+func _on_activity_return_requested(source: Node3D, result: Dictionary, world_reference: WeakRef, source_reference: WeakRef, generation: int) -> void:
+	var world := world_reference.get_ref() as Node3D
+	if transitioning or not _application_focused or source_reference.get_ref() != source \
+		or not bool(result.get("ok", false)) or not bool(result.get("still_current", false)) \
+		or int(result.get("generation", -1)) != generation or not result.get("return_token") is Dictionary:
+		return
+	var context := {"game_id": get_instance_id(), "activity_id": "beastwilds", "world": world_reference,
+		"source": source_reference, "player": weakref(player), "party": weakref(party), "generation": generation,
+		"token": result.return_token.duplicate(true)}
+	if not _completed_return_current(context, world, world): return
+	_completed_return_deferred.call_deferred(context)
+
+
+func _bind_activity_exit(source: Node, world: Node3D) -> void:
+	if source.get_script() == null or source.get_script().resource_path != "res://scripts/activities/activity_exit.gd" \
+		or not world.has_method("owns_source") or not world.owns_source(source, "return_spring"): return
+	for signal_name: StringName in [&"activity_exit_requested", &"activity_return_requested"]:
+		if not source.has_signal(signal_name): return
+		for connection: Dictionary in source.get_signal_connection_list(signal_name):
+			var callback: Callable = connection.callable
+			if callback.get_object() == self and callback.get_method() in [&"_on_activity_exit_requested", &"_on_activity_return_requested"]:
+				source.disconnect(signal_name, callback)
+	source.connect("activity_exit_requested", _on_activity_exit_requested.bind(weakref(world), weakref(source), ExpeditionSession.run_generation))
+	source.connect("activity_return_requested", _on_activity_return_requested.bind(weakref(world), weakref(source), ExpeditionSession.run_generation))
+
+
+func _recover_activity_entry(candidate: Node3D, previous: Node3D, previous_location: StringName,
+		previous_pet: WeakRef, context: Dictionary, owner: Dictionary, serial: int) -> void:
+	# Failure can retire only this shell's candidate. A replacement world/party
+	# never inherits an old request's pause, input, run cancellation or placement.
+	var owned_world := active_world
+	var owned_party_world: Node3D = party.world if is_instance_valid(party) else null
+	if owned_world not in [candidate, previous] or owned_party_world not in [candidate, previous] \
+		or not _return_recovery_owned(owner, serial, owned_world, owned_party_world):
+		_discard_unowned_return_candidate(candidate)
+		if previous != active_world and previous != owned_party_world and is_instance_valid(previous) and previous.get_parent() == null:
+			_retire_return_source(previous)
+		return
+	if previous_location != &"realm_nexus" or not is_instance_valid(previous) or previous.is_queued_for_deletion() \
+		or previous.get_script() == null or previous.get_script().resource_path != "res://scripts/world/realm_nexus.gd":
+		hud.show_message("Activity entry stopped. The retained Nexus is unavailable; restart to return safely.")
+		return
+	_abort_unentered_run(int(context.get("generation", -1)), int(context.get("seed", -1)), context)
+	if not _return_recovery_owned(owner, serial, owned_world, owned_party_world):
+		_discard_unowned_return_candidate(candidate)
+		return
+	if previous.get_parent() == null:
+		previous.process_mode = Node.PROCESS_MODE_DISABLED
+		world_root.add_child(previous)
+		if not _return_recovery_owned(owner, serial, owned_world, owned_party_world): return
+	elif previous.get_parent() != world_root:
+		return
+	active_world = previous
+	current_location = previous_location
+	ExpeditionSession.bind_game_context(player, previous_location, previous)
+	if not _return_recovery_owned(owner, serial, previous, owned_party_world): return
+	demo_exchange.bind_game_context(player, previous_location, previous)
+	if not _return_recovery_owned(owner, serial, previous, owned_party_world): return
+	_keep_world_collision(previous)
+	await get_tree().physics_frame
+	if not _return_recovery_owned(owner, serial, previous, owned_party_world): return
+	if not previous.validate_nexus_arrival(&"default"):
+		hud.show_message("Your secured progress is safe. The Nexus recovery floor is unavailable; restart to return.")
+		return
+	previous.process_mode = Node.PROCESS_MODE_INHERIT
+	# The retained world still owns its original follower. Restore its identity
+	# before syncing; the discarded candidate owns any temporary new follower.
+	var retained_pet := previous_pet.get_ref() as Node3D if previous_pet != null else null
+	_pet_presenter = previous_pet if is_instance_valid(retained_pet) and not retained_pet.is_queued_for_deletion() \
+		and retained_pet.get_parent() == previous else null
+	player.reset_for_spawn(previous.get_spawn_transform(&"default"))
+	if not _return_recovery_owned(owner, serial, previous, owned_party_world): return
+	player.apply_progression(ExpeditionSession.profile)
+	if not _return_recovery_owned(owner, serial, previous, owned_party_world): return
+	party.enter_world(previous, previous_location)
+	if not _return_recovery_owned(owner, serial, previous, previous): return
+	_discard_unowned_return_candidate(candidate)
+	if _travel_retained_world == previous: _travel_retained_world = null
+	camera_rig.reset_position()
+	_wire_world_travel(previous)
+	if not _return_recovery_owned(owner, serial, previous, previous): return
+	hud.set_location(previous.display_name, previous.objective)
+	hud.set_dungeon_snapshot({})
+	party.ensure_safe_arrivals()
+	if not _return_recovery_owned(owner, serial, previous, previous): return
+	_sync_pet_presenter()
+	if not _return_recovery_owned(owner, serial, previous, previous): return
+	_finish_return_recovery("Activity entry could not complete. Your secured progress is safe in the Nexus.")
