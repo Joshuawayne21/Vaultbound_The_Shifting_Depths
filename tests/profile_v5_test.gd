@@ -18,6 +18,7 @@ func _run() -> void:
 		_clean()
 		var legacy := Store.empty_profile()
 		legacy.version = version
+		legacy.erase("activities")
 		legacy.gold = 61
 		legacy.erase("pets")
 		legacy.erase("depth_progression")
@@ -48,12 +49,13 @@ func _run() -> void:
 		_write(PATH + ".pre-v4.bak", "previous immutable backup")
 		var store := Store.new(PATH)
 		var migrated := store.load_profile()
-		check(not store.read_only and migrated.version == Store.VERSION and migrated.pets == VaultPetProgression.empty_fields(), "Version %d receives empty cosmetic defaults" % version)
+		check(not store.read_only and migrated.version == Store.VERSION and migrated.pets == VaultPetProgression.empty_fields() and migrated.activities == Store.ActivityProgress.empty_fields(), "Version %d receives empty cosmetic and activity defaults" % version)
 		if version == 4:
 			var restored := migrated.duplicate(true)
 			restored.erase("pets")
 			restored.erase("depth_progression")
 			restored.erase("encounter_records")
+			restored.erase("activities")
 			restored.version = 4
 			check(restored == legacy, "Complete v4 +10 equipment, rolls, loadout, display, receipts, stock, recruited roster and progression are unchanged")
 		check(FileAccess.get_file_as_string(PATH) == exact and not FileAccess.file_exists(PATH + ".pre-v%d.bak" % Store.VERSION), "Version %d load never writes" % version)

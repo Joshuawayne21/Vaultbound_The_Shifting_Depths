@@ -21,6 +21,8 @@ const HomeProgress = preload("res://scripts/progression/home_progression.gd")
 const Content = preload("res://scripts/expedition/dungeon_content.gd")
 const ActivityPlan = preload("res://scripts/activities/activity_run_plan.gd")
 const ActivityProgress = preload("res://scripts/progression/activity_progression.gd")
+const Activities = preload("res://scripts/activities/activity_catalog.gd")
+const EchoesPlan = preload("res://scripts/activities/echoes_run_plan.gd")
 const EVENT_RECORD_KEYS := ["encounter_definition_id", "content_version", "encounter_version", "objective_role",
 	"reward_profile_id", "pet_profile_id", "discovery_id", "kind", "roster_profile_id",
 	"receipt", "room_id", "depth", "drop_position", "member_deaths"]
@@ -75,6 +77,15 @@ var _activity_claims: Dictionary = {}
 var _completed_activity_return: Dictionary = {}
 var _activity_mutating := false
 var _activity_admitted_world: WeakRef
+var _echoes_phase := ""
+var _echoes_wave := 0
+var _echoes_roster: Dictionary = {}
+var _echoes_deaths: Dictionary = {}
+var _echoes_wave_claims: Dictionary = {}
+var _echoes_upgrades: Dictionary = {}
+var _echoes_quotes: Dictionary = {}
+var _echoes_break_nonce := 0
+var _echoes_effect_context: Dictionary = {}
 
 func _ready() -> void:
 	profile = store.load_profile()
@@ -110,9 +121,10 @@ func configure_storage(path: String) -> bool:
 	return not store.read_only
 
 func activity_entry_status(activity_id: StringName) -> Dictionary:
-	var definition := ActivityPlan.definition()
-	var result := {"ok": false, "activity_id": String(activity_id), "reason": "This activity is unavailable.", "required_cleared_depth": 2}
-	if activity_id != &"beastwilds" or definition.is_empty(): return result
+	var descriptor := Activities.descriptor(activity_id)
+	var definition := Activities.definition(activity_id)
+	var result := {"ok": false, "activity_id": String(activity_id), "reason": "This activity is unavailable.", "required_cleared_depth": int(descriptor.get("required_cleared_depth", 0))}
+	if descriptor.is_empty() or definition.is_empty(): return result
 	if store.read_only:
 		result.reason = storage_error if not storage_error.is_empty() else "Secured progression is read-only."
 	elif active or _activity_mutating:
@@ -122,10 +134,10 @@ func activity_entry_status(activity_id: StringName) -> Dictionary:
 			or run_generation >= VaultProfileStore.MAX_COUNT:
 		result.reason = "Activity progression cannot admit another visit. Your secured progress was preserved."
 	elif int(profile.depth_progression.highest_cleared_depth) < int(definition.required_cleared_depth) and not TesterAccess.enabled(profile):
-		result.reason = "Complete dungeon floor %d to explore the Beastwilds." % int(definition.required_cleared_depth)
+		result.reason = "Complete dungeon floor %d to enter %s." % [int(definition.required_cleared_depth), descriptor.display_name]
 	else:
 		result.ok = true
-		result.reason = "Local exploration · find tracks, an egg and a stranded spirit, then secure your discoveries. Pet capture is not available."
+		result.reason = descriptor.start_text
 	return result
 
 func begin_activity_run(activity_id: StringName, seed_value: int) -> bool:
@@ -133,7 +145,7 @@ func begin_activity_run(activity_id: StringName, seed_value: int) -> bool:
 	if not bool(status.ok) or not ActivityPlan.integer(seed_value, 0):
 		notice.emit(String(status.reason) if not bool(status.ok) else "This activity seed is invalid.")
 		return false
-	var plan := ActivityPlan.create(seed_value, int(profile.activities.next_run_serial))
+	var plan := Activities.create(activity_id, seed_value, int(profile.activities.next_run_serial))
 	var fields := ActivityProgress.reserve(profile.activities, int(profile.revision), plan)
 	if plan.is_empty() or fields.is_empty(): return false
 	var next := profile.duplicate(true)
@@ -152,11 +164,12 @@ func begin_activity_run(activity_id: StringName, seed_value: int) -> bool:
 	run_seed = seed_value
 	run_generation += 1
 	var generation := run_generation
-	_issued_activity = {"activity_id": "beastwilds", "definition_version": 1,
+	_issued_activity = {"activity_id": String(activity_id), "definition_version": 1,
 		"serial": int(plan.serial), "seed": seed_value, "generation": generation, "plan": plan.duplicate(true)}
 	elapsed = 0.0
 	kills = 0
 	last_results.clear()
+	if activity_id == &"echoes_of_eternity": _echoes_phase = "awaiting_start"
 	var context := issued_activity_context()
 	_activity_mutating = false
 	_emit_changed()
@@ -172,7 +185,7 @@ func _retire_failed_activity_admission(context: Dictionary) -> void:
 	if not active or _activity_mutating or not ActivityPlan.exact_keys(context,
 			["activity_id", "definition_version", "serial", "seed", "generation", "plan"]) \
 			or not ActivityPlan.integer(context.generation, 1) or int(context.generation) != run_generation \
-			or not ActivityPlan.valid(context.plan): return
+			or not Activities.valid(context.plan): return
 	var generation := run_generation
 	_activity_mutating = true
 	var next := profile.duplicate(true)
@@ -201,9 +214,10 @@ func issued_activity_context() -> Dictionary:
 func activity_transition_matches(context: Dictionary) -> bool:
 	if not active or not ActivityPlan.exact_keys(_issued_activity,
 			["activity_id", "definition_version", "serial", "seed", "generation", "plan"]) \
-			or _issued_activity.activity_id != "beastwilds" or _issued_activity.definition_version != 1 \
+			or _issued_activity.activity_id not in Activities.IDS or _issued_activity.definition_version != 1 \
 			or not ActivityPlan.integer(_issued_activity.generation, 1) or not ActivityPlan.integer(_issued_activity.seed, 0) \
-			or not ActivityPlan.integer(_issued_activity.serial, 1) or not ActivityPlan.valid(_issued_activity.plan): return false
+			or not ActivityPlan.integer(_issued_activity.serial, 1) or not Activities.valid(_issued_activity.plan) \
+			or _issued_activity.activity_id != _issued_activity.plan.activity_id: return false
 	return context == _issued_activity and run_generation == int(_issued_activity.generation) \
 		and run_seed == int(_issued_activity.seed) and _issued_activity.serial == _issued_activity.plan.serial \
 		and _issued_activity.seed == _issued_activity.plan.seed \
@@ -217,9 +231,9 @@ func abort_unentered_activity(context: Dictionary) -> bool:
 
 func _activity_world_identity_valid(world: Node3D, generation: int) -> bool:
 	if not activity_transition_matches(_issued_activity) or generation != run_generation \
-			or _location != &"beastwilds" or not is_instance_valid(world) or world != _world \
+			or _location != StringName(_issued_activity.get("activity_id", "")) or not is_instance_valid(world) or world != _world \
 			or not world.is_inside_tree() or world.is_queued_for_deletion() or world.get_script() == null \
-			or world.get_script().resource_path != ActivityPlan.WORLD_SCRIPT or not world.has_method("issued_activity_context"):
+			or world.get_script().resource_path != _activity_descriptor().get("world_script", "") or not world.has_method("issued_activity_context"):
 		return false
 	var issued: Variant = world.issued_activity_context()
 	return issued is Dictionary and issued == _issued_activity and generation == run_generation \
@@ -230,41 +244,72 @@ func admit_activity_world(world: Node3D, context: Dictionary) -> bool:
 	var game := get_tree().current_scene
 	if not is_instance_valid(game) or not game.is_inside_tree() or game.is_queued_for_deletion() \
 			or game.get_script() == null or game.get_script().resource_path != "res://scripts/systems/game.gd" \
-			or game.get("active_world") != world or game.get("player") != _player or game.get("current_location") != &"beastwilds" \
+			or game.get("active_world") != world or game.get("player") != _player or game.get("current_location") != _location \
 			or world.get_parent() != game.get("world_root") or not is_instance_valid(_player) or _player.get_parent() != game:
 		return false
 	_activity_admitted_world = weakref(world)
+	if _activity_id() == EchoesPlan.ID: _echoes_effect_context = context.duplicate(true)
 	return true
 
 func activity_context_valid(world: Node3D, generation: int) -> bool:
 	return _activity_admitted_world != null and _activity_admitted_world.get_ref() == world \
 		and _activity_world_identity_valid(world, generation)
 
+func _activity_id() -> String:
+	return String(_issued_activity.get("activity_id", ""))
+
+func _activity_descriptor() -> Dictionary:
+	return Activities.descriptor(StringName(_activity_id()))
+
+func _activity_progress_claims() -> Dictionary:
+	return _echoes_wave_claims if _activity_id() == EchoesPlan.ID else _activity_claims
+
 func _activity_objectives_completed() -> int:
+	if _activity_id() == EchoesPlan.ID: return _echoes_wave_claims.size()
 	var count := 0
 	for id: String in ActivityPlan.REQUIRED_IDS:
 		if _activity_claims.get(id) == true: count += 1
 	return count
 
+func _activity_objectives_required() -> int:
+	return 5 if _activity_id() == EchoesPlan.ID else ActivityPlan.REQUIRED_IDS.size()
+
+func _activity_complete(world: Node3D) -> bool:
+	if _activity_id() != EchoesPlan.ID: return ActivityPlan.objectives_complete(_activity_claims)
+	return _echoes_phase == "completed" and _echoes_wave_claims.size() == 5 \
+		and is_instance_valid(world) and world.has_method("echoes_danger_drained") and world.echoes_danger_drained(5) \
+		and activity_context_valid(world, run_generation)
+
 func activity_snapshot() -> Dictionary:
-	# Read-only observers can run inside changed callbacks before admission
-	# cleanup. Never traverse a plan that a prior callback invalidated.
-	var result := {"active": activity_transition_matches(_issued_activity), "activity_id": "beastwilds",
+	# Safe inside admission callbacks even when a prior listener corrupts plan.
+	var admitted := activity_transition_matches(_issued_activity)
+	var id := _activity_id()
+	if id not in Activities.IDS: id = "beastwilds"
+	var descriptor := Activities.descriptor(StringName(id))
+	var result := {"active": admitted, "activity_id": id,
 		"serial": int(_issued_activity.get("serial", 0)), "seed": run_seed, "generation": run_generation,
-		"activity_name": "The Beastwilds", "run_kind": "activity",
-		"objectives_completed": _activity_objectives_completed(), "objectives_required": ActivityPlan.REQUIRED_IDS.size(),
-		"claimed": _activity_claims.keys(), "required": ActivityPlan.REQUIRED_IDS.duplicate(),
-		"total": ActivityPlan.REQUIRED_IDS.size(), "sources": [], "can_complete": false,
-		"records": profile.activities.records.beastwilds.duplicate(true),
+		"activity_name": descriptor.display_name, "run_kind": "activity",
+		"objectives_completed": _activity_objectives_completed(), "objectives_required": int(descriptor.objectives_required),
+		"claimed": _activity_progress_claims().keys(), "required": ActivityPlan.REQUIRED_IDS.duplicate() if id == ActivityPlan.ID else [],
+		"total": int(descriptor.objectives_required), "sources": [], "can_complete": false,
+		"records": profile.activities.records[id].duplicate(true),
 		"interrupted_visit": not active and not profile.activities.open_run.is_empty()}
-	if not bool(result.active): return result
-	for slot: Dictionary in _issued_activity.plan.sources:
-		result.sources.append({"slot_id": slot.slot_id, "kind": slot.kind,
-			"required": slot.required, "claimed": _activity_claims.has(slot.slot_id)})
-	result.can_complete = ActivityPlan.objectives_complete(_activity_claims)
+	if not admitted: return result
+	if id == EchoesPlan.ID:
+		result.merge({"phase": _echoes_phase, "wave": _echoes_wave, "completed_waves": _echoes_wave_claims.size(), "total_waves": 5,
+			"score": EchoesPlan.score(_issued_activity.plan, _echoes_wave_claims), "upgrade_required": _echoes_upgrade_required(),
+			"choices": EchoesPlan.choices(_issued_activity.plan), "selected_upgrades": _echoes_upgrades.duplicate(true),
+			"damage_multiplier": _echoes_multiplier("echo_force"), "regen_multiplier": _echoes_multiplier("restoring_rhythm"),
+			"unclaimed_caches": _echoes_unclaimed_caches()})
+		result.can_complete = _echoes_phase == "completed" and _echoes_wave_claims.size() == 5
+	else:
+		for slot: Dictionary in _issued_activity.plan.sources:
+			result.sources.append({"slot_id": slot.slot_id, "kind": slot.kind, "required": slot.required, "claimed": _activity_claims.has(slot.slot_id)})
+		result.can_complete = ActivityPlan.objectives_complete(_activity_claims)
 	return result
 
 func _activity_source_record(world: Node3D, source: Node3D, actor: Node, generation: int, exit_source: bool) -> Dictionary:
+	if not exit_source and _activity_id() != ActivityPlan.ID: return {}
 	if not activity_context_valid(world, generation) or actor != _player or not _actor_ready() \
 			or not _player is VaultPlayer or not _player.is_inside_tree() or _player.is_queued_for_deletion() \
 			or _player.downed or _player.eliminated or not _player.controls_enabled or not InputHub.controls_enabled \
@@ -272,7 +317,7 @@ func _activity_source_record(world: Node3D, source: Node3D, actor: Node, generat
 			or not world.is_ancestor_of(source) or not source.is_visible_in_tree() \
 			or source.get_viewport() != world.get_viewport() or _player.get_viewport() != world.get_viewport() \
 			or source.get_world_3d() != _player.get_world_3d() or source.get_script() == null \
-			or source.get_script().resource_path != (ActivityPlan.EXIT_SCRIPT if exit_source else ActivityPlan.SOURCE_SCRIPT) \
+			or source.get_script().resource_path != (_activity_descriptor().get("exit_script", "") if exit_source else ActivityPlan.SOURCE_SCRIPT) \
 			or not world.has_method("owns_source") \
 			or not world.has_method("activity_exit_record" if exit_source else "activity_claim_record"):
 		return {}
@@ -336,15 +381,22 @@ func claim_activity_source(world: Node3D, source: Node3D, actor: Node, generatio
 
 func activity_exit_status(world: Node3D, source: Node3D, actor: Node) -> Dictionary:
 	var result := {"ok": false, "can_secure": false, "can_abandon": false, "reason": "Move closer to the return spring.",
-		"activity_id": "beastwilds", "claimed": _activity_claims.keys(), "required": ActivityPlan.REQUIRED_IDS.duplicate(), "total": ActivityPlan.REQUIRED_IDS.size()}
+		"activity_id": _activity_id(), "claimed": _activity_progress_claims().keys(),
+		"required": ActivityPlan.REQUIRED_IDS.duplicate() if _activity_id() != EchoesPlan.ID else [], "total": _activity_objectives_required()}
 	if _activity_mutating or _activity_source_record(world, source, actor, run_generation, true).is_empty(): return result
 	if store.read_only:
 		result.reason = "The save is read-only. Your secured progress is preserved."
 		return result
 	result.ok = true
 	result.can_abandon = true
-	result.can_secure = ActivityPlan.objectives_complete(_activity_claims)
-	result.reason = "Secure discoveries and return" if result.can_secure else "Find the trail, egg and stranded spirit, or return without unsecured findings."
+	result.can_secure = _activity_complete(world)
+	if _activity_id() == EchoesPlan.ID:
+		result.completed_waves = _echoes_wave_claims.size()
+		result.unclaimed_caches = _echoes_unclaimed_caches()
+		result.reason = "Secure searched rewards and return. Unsearched cache contents are left behind." if result.can_secure \
+			else "Clear all five waves to secure rewards, or abandon this trial and lose its unsecured loot."
+	else:
+		result.reason = "Secure discoveries and return" if result.can_secure else "Find the trail, egg and stranded spirit, or return without unsecured findings."
 	return result
 
 func settle_activity(world: Node3D, source: Node3D, actor: Node, generation: int) -> Dictionary:
@@ -358,14 +410,14 @@ func _finish_activity_at_source(world: Node3D, source: Node3D, actor: Node, gene
 	if _activity_mutating or store.read_only: return rejected
 	_activity_mutating = true
 	var slot := _activity_source_record(world, source, actor, generation, true)
-	if slot.is_empty() or (not abandon and not ActivityPlan.objectives_complete(_activity_claims)):
+	if slot.is_empty() or (not abandon and not _activity_complete(world)):
 		_activity_mutating = false
-		rejected.error = "Complete the three discovery objectives before securing findings."
+		rejected.error = "Complete this activity’s required objectives before securing findings."
 		return rejected
 	rejected.still_current = true
 	var next := profile.duplicate(true)
 	var records := ActivityProgress.finish(next.activities, int(next.revision), _issued_activity.plan,
-		"abandoned" if abandon else "completed", elapsed, 0 if abandon else unsecured_gold, _activity_claims)
+		"abandoned" if abandon else "completed", elapsed, 0 if abandon else unsecured_gold, _activity_progress_claims())
 	if records.is_empty():
 		_activity_mutating = false
 		rejected.error = "This visit could not be verified. Your secured progress was preserved."
@@ -378,14 +430,15 @@ func _finish_activity_at_source(world: Node3D, source: Node3D, actor: Node, gene
 			_activity_mutating = false
 			rejected.error = "Make room for unsecured materials, then try the spring again."
 			return rejected
-		var secured_pets := PetProgress.secure(next, _pet_pending)
-		if secured_pets.is_empty():
-			_activity_mutating = false
-			rejected.error = "Spiritweaving findings could not be secured. Your visit remains retryable."
-			return rejected
-		# A non-dungeon visit must not backfill legacy achievement counters.
-		secured_pets.achievements = next.pets.achievements.duplicate()
-		next.pets = secured_pets
+		if _activity_id() == ActivityPlan.ID:
+			var secured_pets := PetProgress.secure(next, _pet_pending)
+			if secured_pets.is_empty():
+				_activity_mutating = false
+				rejected.error = "Spiritweaving findings could not be secured. Your visit remains retryable."
+				return rejected
+			# A non-dungeon visit must not backfill legacy achievement counters.
+			secured_pets.achievements = next.pets.achievements.duplicate()
+			next.pets = secured_pets
 		next.gold = int(next.gold) + unsecured_gold
 		next.statistics.total_gold = int(next.statistics.total_gold) + unsecured_gold
 		for id: String in _run_discoveries:
@@ -405,7 +458,7 @@ func _finish_activity_at_source(world: Node3D, source: Node3D, actor: Node, gene
 	profile = next
 	storage_error = ""
 	var outcome := "abandoned" if abandon else "activity_completed"
-	var token := {"activity_id": "beastwilds", "serial": int(_issued_activity.serial),
+	var token := {"activity_id": _activity_id(), "serial": int(_issued_activity.serial),
 		"generation": generation, "outcome": outcome, "receipt": String(slot.receipt)}
 	var result := _activity_results(outcome)
 	result.new_discoveries = newly_discovered
@@ -438,7 +491,7 @@ func _fail_activity(reason: String) -> void:
 	var outcome := "death" if reason in ["death", "defeated"] else "abandoned"
 	var result := _activity_results(outcome)
 	var next := profile.duplicate(true)
-	var records := ActivityProgress.finish(next.activities, int(next.revision), _issued_activity.plan, outcome, elapsed, 0, _activity_claims)
+	var records := ActivityProgress.finish(next.activities, int(next.revision), _issued_activity.plan, outcome, elapsed, 0, _activity_progress_claims())
 	var message := ""
 	if not records.is_empty():
 		next.activities = records
@@ -451,24 +504,30 @@ func _fail_activity(reason: String) -> void:
 			message = "The loss record could not save. Secured possessions were preserved; this interrupted visit cannot resume."
 	else:
 		message = "This visit could not be recorded. Secured possessions were preserved."
-	result.activity_records = profile.activities.records.beastwilds.duplicate(true)
+	result.activity_records = profile.activities.records[_activity_id()].duplicate(true)
 	last_results = result.duplicate(true)
 	_clear_run()
 	_activity_mutating = false
 	_publish_finished(result, generation, message)
 
 func _activity_results(outcome: String) -> Dictionary:
-	return {"outcome": outcome, "run_kind": "activity", "activity_id": "beastwilds", "activity_name": "The Beastwilds",
+	var id := _activity_id()
+	var descriptor := _activity_descriptor()
+	var result := {"outcome": outcome, "run_kind": "activity", "activity_id": id, "activity_name": descriptor.get("display_name", "Activity"),
 		"serial": int(_issued_activity.get("serial", 0)), "seed": run_seed, "run_generation": run_generation,
-		"objectives_completed": _activity_objectives_completed(), "objectives_required": ActivityPlan.REQUIRED_IDS.size(),
-		"gold": unsecured_gold, "items": _describe_items(run_items), "kills": 0, "elapsed_seconds": elapsed,
-		"expedition_depth": 0, "biome_id": "beastwilds", "theme_id": "beastwilds", "theme_label": "The Beastwilds",
+		"objectives_completed": _activity_objectives_completed(), "objectives_required": _activity_objectives_required(),
+		"gold": unsecured_gold, "items": _describe_items(run_items), "kills": kills if id == EchoesPlan.ID else 0, "elapsed_seconds": elapsed,
+		"expedition_depth": 0, "biome_id": id, "theme_id": id, "theme_label": descriptor.get("display_name", "Activity"),
 		"required_boss_id": "", "required_boss_name": "", "boss_defeated": false,
 		"secured_total": int(profile.gold), "discovered": _run_discoveries.keys(), "new_discoveries": [],
-		"completed": int(profile.statistics.completed), "activity_records": profile.activities.records.beastwilds.duplicate(true),
+		"completed": int(profile.statistics.completed), "activity_records": profile.activities.records.get(id, {}).duplicate(true),
 		"pet_findings": _pet_findings(), "activity_findings": {"eggs_found": 1 if _activity_claims.has("glade_egg") else 0,
 			"rescues": 1 if _activity_claims.has("pool_rescue") else 0}, "companion_experience": {}, "character_experience": 0,
 		"character_level": int(profile.character.level)}
+	if id == EchoesPlan.ID:
+		result.merge({"completed_waves": _echoes_wave_claims.size(), "total_waves": 5,
+			"score": EchoesPlan.score(_issued_activity.get("plan", {}), _echoes_wave_claims)})
+	return result
 
 func begin_run(seed_value: int) -> bool:
 	# Deliberate compatibility for isolated legacy fixtures, never Game travel.
@@ -884,7 +943,8 @@ func open_loot(view: Node3D, actor: Node) -> bool:
 	return true
 
 func _loot_access_valid(view: Node3D, actor: Node) -> bool:
-	if not active or _location != &"rootbound_abyss" or actor != _player or not _actor_ready():
+	if not active or (_location != &"rootbound_abyss" and not (_location == &"echoes_of_eternity" and loot_context_valid(_world, run_generation))) \
+			or actor != _player or not _actor_ready():
 		return false
 	if not _player is VaultPlayer or not _player.is_inside_tree() or not _player.is_in_group("player") or _player.downed or _player.eliminated:
 		return false
@@ -1264,11 +1324,25 @@ func _pet_findings() -> Dictionary:
 	return result
 
 func _clear_run() -> void:
+	if _activity_id() == EchoesPlan.ID and _activity_admitted_world != null:
+		var old_world := _activity_admitted_world.get_ref() as Node3D
+		if is_instance_valid(old_world) and old_world.get_script() != null and old_world.get_script().resource_path == EchoesPlan.WORLD_SCRIPT \
+				and old_world.has_method("retire_echoes_runtime"):
+			old_world.retire_echoes_runtime(run_generation)
 	active = false
 	_issued_activity.clear()
 	_activity_claims.clear()
 	_completed_activity_return.clear()
 	_activity_admitted_world = null
+	_echoes_phase = ""
+	_echoes_wave = 0
+	_echoes_roster.clear()
+	_echoes_deaths.clear()
+	_echoes_wave_claims.clear()
+	_echoes_upgrades.clear()
+	_echoes_quotes.clear()
+	_echoes_break_nonce = 0
+	_echoes_effect_context.clear()
 	_completed_early_return.clear()
 	_issued_depth.clear()
 	_configured_depth_run = false
@@ -1307,17 +1381,17 @@ func snapshot() -> Dictionary:
 	var inventory := _describe_items(profile.items)
 	return {"active": active, "run_seed": run_seed, "run_generation": run_generation, "unsecured_gold": unsecured_gold,
 		"run_kind": "activity" if activity_running else "abyssal" if active else "",
-		"activity_id": "beastwilds" if activity_running else "", "activity_name": "The Beastwilds" if activity_running else "",
-		"objectives_completed": _activity_objectives_completed(), "objectives_required": ActivityPlan.REQUIRED_IDS.size() if activity_running else 0,
+		"activity_id": _activity_id() if activity_running else "", "activity_name": _activity_descriptor().get("display_name", "") if activity_running else "",
+		"objectives_completed": _activity_objectives_completed(), "objectives_required": _activity_objectives_required() if activity_running else 0,
 		"activity": activity_snapshot(),
 		"expedition_depth": 0 if activity_running else int(_issued_depth.get("expedition_depth", 1)),
-		"biome_id": "beastwilds" if activity_running else String(_issued_depth.get("biome_id", "rootbound_abyss")),
+		"biome_id": _activity_id() if activity_running else String(_issued_depth.get("biome_id", "rootbound_abyss")),
 		"depth_policy_version": 0 if activity_running else int(_issued_depth.get("depth_policy_version", 1)),
-		"tier_label": "Discovery expedition" if activity_running else String(_issued_depth.get("policy", {}).get("tier_label", "Beginner")),
+		"tier_label": ("Five-wave trial" if _activity_id() == EchoesPlan.ID else "Discovery expedition") if activity_running else String(_issued_depth.get("policy", {}).get("tier_label", "Beginner")),
 		"highest_unlocked_depth": int(profile.depth_progression.highest_unlocked_depth),
 		"depth_progression": profile.depth_progression.duplicate(true),
-		"theme_id": "beastwilds" if activity_running else String(_issued_content_plan.get("theme_id", "rootbound_abyss")),
-		"theme_label": "The Beastwilds" if activity_running else _issued_theme_label(), "required_boss_id": "" if activity_running else String(_issued_content_plan.get("required_boss_id", "rootwarden")),
+		"theme_id": _activity_id() if activity_running else String(_issued_content_plan.get("theme_id", "rootbound_abyss")),
+		"theme_label": _activity_descriptor().get("display_name", "") if activity_running else _issued_theme_label(), "required_boss_id": "" if activity_running else String(_issued_content_plan.get("required_boss_id", "rootwarden")),
 		"required_boss_name": "" if activity_running else _issued_boss_label(), "encounter_records": profile.encounter_records.duplicate(true),
 		"secured_gold": int(profile.gold), "bag": bag, "run_items": bag,
 		"inventory": inventory, "secured_items": inventory, "discoveries": profile.discoveries.duplicate(),
@@ -1832,7 +1906,7 @@ func _commit_tester_access(trusted: Dictionary) -> bool:
 	return true
 
 func bind_game_context(player: Node, location: StringName, world: Node3D = null) -> void:
-	if _activity_admitted_world != null and (_activity_admitted_world.get_ref() != world or location != &"beastwilds"):
+	if _activity_admitted_world != null and (_activity_admitted_world.get_ref() != world or location != StringName(_activity_id())):
 		_activity_admitted_world = null
 	_player = player
 	_location = location
@@ -2166,3 +2240,303 @@ func _reduce_item(items: Dictionary, item_id: String) -> void:
 
 func _emit_changed() -> void:
 	changed.emit(snapshot())
+
+# Echoes is a closed local trial. These methods never authorize raw dungeon loot.
+func loot_context_valid(world: Node3D, generation: int) -> bool:
+	if _location == &"rootbound_abyss": return run_context_valid(world, generation)
+	return _activity_id() == EchoesPlan.ID and _location == &"echoes_of_eternity" and activity_context_valid(world, generation)
+
+func _echoes_world_valid(world: Node3D, generation: int) -> bool:
+	return _activity_id() == EchoesPlan.ID and activity_context_valid(world, generation)
+
+func _echoes_director_valid(world: Node3D, director: Node3D, generation: int, read_only: bool = false) -> bool:
+	if not (_echoes_fast_context_valid(world, generation) if read_only else _echoes_world_valid(world, generation)) or not is_instance_valid(director) or not director.is_inside_tree() \
+			or director.is_queued_for_deletion() or not world.is_ancestor_of(director) or director.get_script() == null \
+			or director.get_script().resource_path != EchoesPlan.DIRECTOR_SCRIPT or not world.has_method("owns_source"): return false
+	return bool(world.owns_source(director, "trial_director")) and is_instance_valid(world) and is_instance_valid(director) \
+		and not director.is_queued_for_deletion() and (_echoes_fast_context_valid(world, generation) if read_only else _echoes_world_valid(world, generation))
+
+func echoes_director_status(world: Node3D, director: Node3D, generation: int) -> Dictionary:
+	var valid := _echoes_director_valid(world, director, generation, true)
+	return {"ok": valid, "phase": _echoes_phase if valid else "", "wave": _echoes_wave if valid else 0,
+		"cleared": _echoes_wave_claims.size() if valid else 0, "wave_admitted": valid and not _echoes_roster.is_empty(),
+		"error": "" if valid else "This trial director is unavailable."}
+
+func _echoes_result(generation: int, error: String = "This trial action is unavailable.") -> Dictionary:
+	return {"ok": false, "generation": generation, "still_current": false, "wave": 0, "error": error}
+
+func admit_echoes_roster(world: Node3D, director: Node3D, wave_number: int, generation: int) -> Dictionary:
+	var result := _echoes_result(generation)
+	if _activity_mutating or not _echoes_director_valid(world, director, generation) \
+			or _echoes_phase != "awaiting_roster" or wave_number != _echoes_wave or not _echoes_roster.is_empty() \
+			or not world.has_method("echoes_roster_record") or not world.has_method("owns_echoes_actor") \
+			or not world.has_method("validate_echoes_spawn_candidate") \
+			or not is_instance_valid(_player) or not _player is VaultPlayer or _player.health <= 0.0 or _player.downed or _player.eliminated \
+			or not _player.controls_enabled or not InputHub.controls_enabled: return result
+	_activity_mutating = true
+	var record: Variant = world.echoes_roster_record(director, wave_number)
+	var expected := EchoesPlan.wave(_issued_activity.get("plan", {}), wave_number)
+	var candidate := {}
+	var valid := not expected.is_empty() and ActivityPlan.exact_keys(record, ["wave", "receipt", "members"])
+	if valid:
+		valid = record.wave == wave_number and record.receipt == expected.receipt and record.members is Array \
+			and record.members.size() == expected.members.size()
+	if valid:
+		for index in range(expected.members.size()):
+			var member: Dictionary = expected.members[index]
+			var actual: Variant = record.members[index]
+			if not ActivityPlan.exact_keys(actual, ["member_id", "receipt", "actor"]) or actual.member_id != member.member_id \
+					or actual.receipt != member.receipt or not is_instance_valid(actual.actor) or not actual.actor is Node3D:
+				valid = false
+				break
+			var actor := actual.actor as Node3D
+			if not actor.is_inside_tree() or actor.is_queued_for_deletion() or not actor.is_node_ready() \
+					or not is_instance_valid(actor.get_parent()) or not world.is_ancestor_of(actor) or not actor.global_position.is_finite() \
+					or actor.get_viewport() != world.get_viewport() or actor.get_world_3d() != world.get_world_3d() \
+					or not EchoesPlan.actor_data_matches(actor, member) or actor.get("combat_active") != false \
+					or actor.process_mode != Node.PROCESS_MODE_DISABLED or actor.get("collision_layer") != 0 or actor.get("collision_mask") != 0 \
+					or actor.is_in_group("enemies") or actor.is_in_group("combat_targets") or actor.is_in_group("combat_telegraphs") or actor.is_in_group("bosses") \
+					or actor.get("state") != &"idle" or not is_equal_approx(float(actor.get("health")), EchoesPlan.actor_max_health(member)) \
+					or not is_equal_approx(float(actor.get("max_health")), EchoesPlan.actor_max_health(member)) \
+					or not bool(world.owns_echoes_actor(actor, String(member.member_id))) \
+					or not bool(world.validate_echoes_spawn_candidate(actor, String(member.member_id))):
+				valid = false
+				break
+			for ally: Node in get_tree().get_nodes_in_group("party_members"):
+				if ally is Node3D and ally.is_inside_tree() and not ally.is_queued_for_deletion() \
+						and ally.get_world_3d() == world.get_world_3d() and (float(ally.get("health")) > 0.0 or ally.get("downed") == true) \
+						and actor.global_position.distance_to(ally.global_position) < 6.0:
+					valid = false
+					break
+			if not valid: break
+			for bound: Dictionary in candidate.values():
+				var previous := bound.reference.get_ref() as Node3D
+				if int(bound.instance_id) == actor.get_instance_id() or not is_instance_valid(previous): valid = false
+				elif actor.global_position.distance_to(previous.global_position) < float(member.data_snapshot.get("collision_radius", 1.1)) + float(bound.member.data_snapshot.get("collision_radius", 1.1)) + 0.4:
+					valid = false
+			if not valid: break
+			candidate[member.member_id] = {"reference": weakref(actor), "instance_id": actor.get_instance_id(),
+				"parent_id": actor.get_parent().get_instance_id(), "member": member.duplicate(true)}
+	if valid: valid = _echoes_director_valid(world, director, generation) and wave_number == _echoes_wave and _echoes_phase == "awaiting_roster"
+	if valid:
+		_echoes_roster = candidate
+		_echoes_deaths.clear()
+		_echoes_phase = "fighting"
+	_activity_mutating = false
+	if not valid: return result
+	_emit_changed()
+	return {"ok": true, "generation": generation, "still_current": is_instance_valid(world) and _echoes_world_valid(world, generation),
+		"wave": wave_number, "error": ""}
+
+func record_echoes_death(world: Node3D, enemy: Node3D, generation: int) -> Dictionary:
+	var result := _echoes_result(generation)
+	result.all_dead = false
+	if _activity_mutating or not _echoes_world_valid(world, generation) or _echoes_phase != "fighting" \
+			or not is_instance_valid(enemy) or not enemy.is_inside_tree() or enemy.is_queued_for_deletion() \
+			or not world.has_method("echoes_death_record") or not world.has_method("owns_echoes_actor"): return result
+	_activity_mutating = true
+	var record: Variant = world.echoes_death_record(enemy)
+	var valid := ActivityPlan.exact_keys(record, ["wave", "member_id", "receipt", "archetype"])
+	if valid: valid = record.wave == _echoes_wave and _echoes_roster.has(record.member_id) and not _echoes_deaths.has(record.receipt)
+	if valid:
+		var bound: Dictionary = _echoes_roster[record.member_id]
+		var member: Dictionary = bound.member
+		valid = bound.reference.get_ref() == enemy and int(bound.instance_id) == enemy.get_instance_id() \
+			and record.receipt == member.receipt and record.archetype == member.archetype \
+			and is_instance_valid(enemy.get_parent()) and enemy.get_parent().get_instance_id() == int(bound.parent_id) \
+			and world.is_ancestor_of(enemy) and enemy.get("state") == &"dead" and float(enemy.get("health")) == 0.0 \
+			and EchoesPlan.actor_data_matches(enemy, member) and bool(world.owns_echoes_actor(enemy, String(member.member_id)))
+	if valid: valid = is_instance_valid(world) and is_instance_valid(enemy) and not enemy.is_queued_for_deletion() and _echoes_world_valid(world, generation)
+	var wave_number := _echoes_wave
+	if valid:
+		_echoes_deaths[record.receipt] = true
+		kills += 1
+	_activity_mutating = false
+	if not valid: return result
+	# Terminal evidence precedes every observer and survives later corpse culling.
+	var all_dead := _echoes_deaths.size() == _echoes_roster.size()
+	_emit_changed()
+	return {"ok": true, "generation": generation, "still_current": is_instance_valid(world) and _echoes_world_valid(world, generation),
+		"wave": wave_number, "all_dead": all_dead, "error": ""}
+
+func complete_echoes_wave(world: Node3D, director: Node3D, wave_number: int, generation: int) -> Dictionary:
+	var result := _echoes_result(generation)
+	result.cache_id = ""
+	if _activity_mutating or not _echoes_director_valid(world, director, generation) or _echoes_phase != "fighting" \
+			or wave_number != _echoes_wave or wave_number != _echoes_wave_claims.size() + 1 or _echoes_roster.is_empty() \
+			or _echoes_deaths.size() != _echoes_roster.size() or not world.has_method("echoes_danger_drained") \
+			or not world.has_method("echoes_cache_record"): return result
+	_activity_mutating = true
+	var expected := EchoesPlan.wave(_issued_activity.plan, wave_number)
+	var valid := not expected.is_empty() and not _echoes_wave_claims.has(expected.receipt) and bool(world.echoes_danger_drained(wave_number))
+	if valid:
+		for member: Dictionary in expected.members:
+			if _echoes_deaths.get(member.receipt) != true: valid = false
+	var record: Variant = world.echoes_cache_record(director, wave_number) if valid else {}
+	if valid:
+		valid = ActivityPlan.exact_keys(record, ["wave", "receipt", "room_id", "position"]) and record.wave == wave_number \
+			and record.receipt == expected.receipt and record.room_id == expected.cache.room_id and record.position is Vector3 and record.position.is_finite()
+	if valid:
+		var point: Array = expected.cache.position
+		valid = record.position.is_equal_approx(world.to_global(Vector3(point[0], point[1], point[2]))) \
+			and _echoes_director_valid(world, director, generation)
+	var registered := {}
+	if valid:
+		var reward := _validate_reward(expected.reward)
+		if not reward.is_empty(): registered = _loot_ledger.register(reward, int(record.room_id), record.position, String(expected.cache.kind))
+		valid = bool(registered.get("ok", false))
+	if valid:
+		_echoes_wave_claims[expected.receipt] = true
+		_echoes_phase = "completed" if wave_number == 5 else "break"
+		_echoes_break_nonce += 1
+		_echoes_quotes.clear()
+	_activity_mutating = false
+	if not valid: return result
+	# No fabricated kill/clear/XP/trophy: cache and accepted objective install once.
+	loot_changed.emit()
+	if is_instance_valid(world) and _echoes_world_valid(world, generation): _emit_changed()
+	return {"ok": true, "generation": generation, "still_current": is_instance_valid(world) and _echoes_world_valid(world, generation),
+		"wave": wave_number, "cache_id": String(registered.id), "error": ""}
+
+func _echoes_shrine_valid(world: Node3D, source: Node3D, actor: Node, generation: int) -> bool:
+	if not _echoes_fast_context_valid(world, generation) or actor != _player or not _actor_ready() or not actor is VaultPlayer \
+			or not actor.is_inside_tree() or actor.is_queued_for_deletion() or actor.downed or actor.eliminated \
+			or not actor.controls_enabled or not InputHub.controls_enabled or not is_instance_valid(source) \
+			or not source.is_inside_tree() or source.is_queued_for_deletion() or not source.is_visible_in_tree() \
+			or not world.is_ancestor_of(source) or source.get_script() == null or source.get_script().resource_path != EchoesPlan.BREAK_SCRIPT \
+			or source.get_world_3d() != actor.get_world_3d() or source.get_viewport() != world.get_viewport() \
+			or not world.has_method("owns_source") or not world.has_method("echoes_break_record"): return false
+	var radius: Variant = source.get("interaction_radius")
+	if not (radius is float or radius is int) or not is_finite(float(radius)) or radius <= 0.0 or radius > 3.0 \
+			or not source.global_position.is_finite() or not actor.global_position.is_finite() \
+			or actor.global_position.distance_to(source.global_position) > float(radius) \
+			or not CombatRules.visible_from(actor, actor.global_position + Vector3.UP * 1.2, source.global_position + Vector3.UP * 0.65): return false
+	if not _echoes_world_valid(world, generation): return false
+	var record: Variant = world.echoes_break_record(source, actor)
+	return ActivityPlan.exact_keys(record, ["slot_id", "kind", "receipt"]) and record == _issued_activity.plan.break_source \
+		and bool(world.owns_source(source, "break_shrine")) and is_instance_valid(world) and is_instance_valid(source) \
+		and not source.is_queued_for_deletion() and _echoes_world_valid(world, generation)
+
+func _echoes_upgrade_required() -> bool:
+	return _echoes_phase == "break" and _echoes_wave in [2, 4] and not _echoes_upgrades.has(str(_echoes_wave))
+
+func echoes_break_status(world: Node3D, source: Node3D, actor: Node, generation: int) -> Dictionary:
+	var result := {"ok": false, "phase": "", "wave": 0, "completed_waves": 0, "total_waves": 5,
+		"upgrade_required": false, "can_continue": false, "choices": [], "reason": "Move closer to the trial shrine."}
+	if _activity_mutating or not _echoes_shrine_valid(world, source, actor, generation): return result
+	result.ok = true
+	result.phase = _echoes_phase
+	result.wave = _echoes_wave
+	result.completed_waves = _echoes_wave_claims.size()
+	result.upgrade_required = _echoes_upgrade_required()
+	result.choices = EchoesPlan.choices(_issued_activity.plan) if result.upgrade_required else []
+	var drained := world.has_method("echoes_danger_drained") and bool(world.echoes_danger_drained(_echoes_wave))
+	if not is_instance_valid(world) or not is_instance_valid(source) or not is_instance_valid(actor) or not _echoes_world_valid(world, generation):
+		result.ok = false
+		result.reason = "This trial changed."
+		return result
+	result.can_continue = drained and _echoes_phase in ["awaiting_start", "break"] and not result.upgrade_required and _echoes_wave < 5
+	result.reason = "Choose one temporary upgrade, then begin the next wave." if result.upgrade_required \
+		else "Start the five-wave trial." if _echoes_phase == "awaiting_start" else "Start the next wave when your party is ready." if result.can_continue \
+		else "Search remaining caches, then use the return spring." if _echoes_phase == "completed" else "Finish the current wave and wait for its attacks to clear."
+	return result
+
+func quote_echoes_upgrade(world: Node3D, source: Node3D, actor: Node, generation: int) -> Dictionary:
+	var status := echoes_break_status(world, source, actor, generation)
+	if not bool(status.get("ok", false)) or not bool(status.get("upgrade_required", false)) \
+			or not world.echoes_danger_drained(_echoes_wave) or not _echoes_world_valid(world, generation):
+		return {"ok": false, "error": "No upgrade is available at this break."}
+	_echoes_quotes.clear()
+	_quote_sequence += 1
+	var request_id := "echoes_%d_%d_%d" % [generation, _echoes_break_nonce, _quote_sequence]
+	_echoes_quotes[request_id] = {"world": weakref(world), "source": weakref(source), "actor": weakref(actor),
+		"generation": generation, "serial": int(_issued_activity.serial), "wave": _echoes_wave,
+		"nonce": _echoes_break_nonce, "revision": int(profile.revision), "choices": EchoesPlan.CHOICE_IDS.duplicate()}
+	return {"ok": true, "request_id": request_id, "generation": generation, "wave": _echoes_wave,
+		"choices": status.choices.duplicate(true), "error": ""}
+
+func commit_echoes_upgrade(confirmation: Dictionary) -> Dictionary:
+	var request_id := String(confirmation.get("request_id", ""))
+	var result := _echoes_result(run_generation)
+	result.choice_id = ""
+	if _activity_mutating or not ActivityPlan.exact_keys(confirmation, ["request_id", "choice_id"]) \
+			or not confirmation.choice_id is String or not _echoes_quotes.has(request_id): return result
+	var trusted: Dictionary = _echoes_quotes[request_id]
+	_echoes_quotes.erase(request_id)
+	var world := trusted.world.get_ref() as Node3D
+	var source := trusted.source.get_ref() as Node3D
+	var actor := trusted.actor.get_ref() as Node3D
+	var generation := int(trusted.generation)
+	if not is_instance_valid(world) or not is_instance_valid(source) or not is_instance_valid(actor) \
+			or not _echoes_upgrade_required() or generation != run_generation or int(trusted.serial) != int(_issued_activity.get("serial", -1)) \
+			or int(trusted.wave) != _echoes_wave or int(trusted.nonce) != _echoes_break_nonce or int(trusted.revision) != int(profile.revision) \
+			or confirmation.choice_id not in trusted.choices or not _echoes_shrine_valid(world, source, actor, generation) \
+			or not world.echoes_danger_drained(_echoes_wave) or not _echoes_world_valid(world, generation): return result
+	_activity_mutating = true
+	_echoes_quotes.clear()
+	_echoes_upgrades[str(_echoes_wave)] = confirmation.choice_id
+	_echoes_break_nonce += 1
+	_activity_mutating = false
+	_emit_changed()
+	return {"ok": true, "generation": generation, "still_current": is_instance_valid(world) and _echoes_world_valid(world, generation),
+		"wave": int(trusted.wave), "choice_id": confirmation.choice_id, "error": ""}
+
+func continue_echoes(world: Node3D, source: Node3D, actor: Node, generation: int) -> Dictionary:
+	var result := _echoes_result(generation)
+	var status := echoes_break_status(world, source, actor, generation)
+	if not bool(status.get("ok", false)) or not bool(status.get("can_continue", false)) or _activity_mutating: return result
+	_activity_mutating = true
+	_echoes_wave += 1
+	var wave_number := _echoes_wave
+	_echoes_phase = "awaiting_roster"
+	_echoes_roster.clear()
+	_echoes_deaths.clear()
+	_echoes_quotes.clear()
+	_echoes_break_nonce += 1
+	_activity_mutating = false
+	_emit_changed()
+	return {"ok": true, "generation": generation, "still_current": is_instance_valid(world) and _echoes_world_valid(world, generation),
+		"wave": wave_number, "error": ""}
+
+func _echoes_multiplier(choice_id: String) -> float:
+	if _echoes_effect_context.is_empty() or _echoes_effect_context != _issued_activity: return 1.0
+	var count := 0
+	for choice: String in _echoes_upgrades.values():
+		if choice == choice_id: count += 1
+	var definition: Dictionary = _echoes_effect_context.plan.definition
+	var step := float(definition.damage_step if choice_id == "echo_force" else definition.regeneration_step)
+	return 1.0 + mini(count, 2) * step
+
+func _echoes_fast_context_valid(world: Node3D, generation: int) -> bool:
+	if not active or generation != run_generation or _activity_id() != EchoesPlan.ID or _echoes_effect_context.is_empty() \
+			or _echoes_effect_context != _issued_activity or _activity_admitted_world == null or _activity_admitted_world.get_ref() != world \
+			or not is_instance_valid(world) or world != _world or not world.is_inside_tree() or world.is_queued_for_deletion() \
+			or _location != &"echoes_of_eternity" or world.get_script() == null or world.get_script().resource_path != EchoesPlan.WORLD_SCRIPT \
+			or not is_instance_valid(_player) or not _player.is_inside_tree() or _player.is_queued_for_deletion(): return false
+	var game := get_tree().current_scene
+	if not is_instance_valid(game) or game.get_script() == null or game.get_script().resource_path != "res://scripts/systems/game.gd" \
+			or game.get("active_world") != world or game.get("player") != _player or game.get("current_location") != _location \
+			or world.get_parent() != game.get("world_root") or _player.get_parent() != game \
+			or not world.has_method("activity_runtime_matches"): return false
+	return bool(world.activity_runtime_matches(_echoes_effect_context)) and active and generation == run_generation \
+		and is_instance_valid(world) and world == _world and _echoes_effect_context == _issued_activity
+
+func echoes_effects(world: Node3D, actor: Node, generation: int) -> Dictionary:
+	var neutral := {"damage_multiplier": 1.0, "regen_multiplier": 1.0}
+	# Per-physics consumer: compare captured data; never reconstruct plans/RNG here.
+	if not is_instance_valid(actor) or actor != _player or not actor is VaultPlayer \
+			or actor.health <= 0.0 or actor.downed or actor.eliminated or not _echoes_fast_context_valid(world, generation): return neutral
+	return {"damage_multiplier": minf(1.12, _echoes_multiplier("echo_force")), "regen_multiplier": minf(1.24, _echoes_multiplier("restoring_rhythm"))}
+
+func _echoes_unclaimed_caches() -> int:
+	var count := 0
+	for record: Dictionary in _loot_ledger.records():
+		if not bool(record.empty): count += 1
+	return count
+
+func echoes_runtime_context_valid(world: Node3D, generation: int) -> bool:
+	# For source presentation/polling only; mutation APIs perform full validation.
+	return _echoes_fast_context_valid(world, generation)
+
+func cancel_echoes_upgrade(confirmation: Dictionary) -> bool:
+	return _echoes_quotes.erase(String(confirmation.get("request_id", "")))

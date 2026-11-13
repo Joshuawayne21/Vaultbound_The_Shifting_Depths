@@ -41,6 +41,7 @@ func _run() -> void:
 	for version in range(1, 8):
 		var old := Store.empty_profile()
 		old.version = version
+		old.erase("activities")
 		old.statistics.completed = 19
 		old.statistics.total_kills = 120
 		old.monster_discoveries = ["rootwarden", "skeleton", "archer", "golem"]

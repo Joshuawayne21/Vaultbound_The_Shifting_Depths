@@ -21,6 +21,7 @@ func _clean() -> void:
 func _legacy(version: int) -> Dictionary:
 	var result := Fixtures.owned() if version == 5 else Store.empty_profile()
 	result.version = version
+	result.erase("activities")
 	result.erase("depth_progression")
 	result.erase("encounter_records")
 	result.gold = 813

@@ -1,12 +1,12 @@
-# Next local activities — proposed implementation slices
+# Local activities — accepted Echoes checkpoint and proposed Gilded slice
 
-**Proposal only; neither activity described here is implemented or accepted.** Use the accepted [Beastwilds Stage 5a baseline](nexus-stage5a-validation.md); its native evidence does not validate these proposed activities. The current Echoes and Gilded portals remain unavailable. This plan does not add multiplayer, rankings, Realm Mastery or masks; the user explicitly deferred Masks of the Abyss.
+**Echoes Stage 5b is accepted; Gilded remains proposed/unreleased.** Follow [the implemented Echoes scope](echoes-of-eternity.md) and [accepted validation](nexus-stage5b-validation.md). The Echoes design below is retained for context; Gilded design and isolated drafts do not make its gateway playable. No multiplayer, rankings, Realm Mastery or masks are added; masks remain user-deferred.
 
 ## 5b — Echoes of Eternity: one complete five-wave trial
 
-Start with an original spectral courtyard, open combat floor, readable spawn gates, upgrade shrine and safe return alcove. Reuse the existing combat controllers, enemy scenes, companion AI, two cameras and touchscreen controls. Normal entry would require a cleared/extracted Depth 3; existing offline TEST ACCESS could bypass eligibility once this activity actually works.
+Start with an original spectral courtyard, open combat floor, readable spawn gates, upgrade shrine and safe return alcove. Reuse the existing combat controllers, enemy scenes, companion AI, two cameras and touchscreen controls. Normal entry requires a cleared/extracted Depth 3; existing offline TEST ACCESS bypasses that admission requirement.
 
-| Wave | Proposed existing enemies | Purpose |
+| Wave | Existing enemies | Purpose |
 | --- | --- | --- |
 | 1 | Two Skeleton Warriors | Melee spacing and spawn warning |
 | 2 | Skeleton Warrior and Goblin Archer | Mixed melee/ranged pressure |
@@ -18,7 +18,7 @@ This is a local five-wave trial with the recruited AI party, not endless surviva
 
 Wave completion must come from the original registered actors reaching verified death states. Missing/freed/replaced actors and repeated death signals cannot advance a wave or pay again. A frozen plan owns roster, receipts, rewards and break choices. Clean up only the retired wave's attacks/projectiles; do not replace the existing Proving Grounds or forge Rootbound depth admission to make newer dungeon bosses run.
 
-After waves 2 and 4, propose one of exactly two clearly temporary player-only bonuses: +6% outgoing damage or +12% stamina regeneration. These are initial balance proposals. Bind the choice to the original shrine, generation and break, allow only one confirmed choice per break, and require explicit NEXT WAVE. Do not refill health/stamina, reset cooldowns/revives, mutate equipment or persist the bonus. Apply identity/default effects outside the owning run and preserve the same limits through weapon/camera changes.
+After waves 2 and 4, choose one of exactly two temporary player-only bonuses: +6% outgoing damage or +12% stamina regeneration. These are the accepted initial balance values. Bind the choice to the original shrine, generation and break, allow only one confirmed choice per break, and require explicit CONTINUE. Do not refill health/stamina, reset cooldowns/revives, mutate equipment or persist the bonus. Apply identity/default effects outside the owning run and preserve the same limits through weapon/camera changes.
 
 Use the existing searchable loot interface, Session-owned unsecured bag and capacity checks, with at most one cache per cleared wave. Capacity failure leaves rewards searchable. Five verified waves enable explicit SECURE & RETURN; earlier departure is disclosed abandonment. The initial slice grants no character or companion XP. The trial must never grant Rootbound clears, Rootwarden trophies, Ancient discoveries or dungeon-specific secret achievements.
 
@@ -26,16 +26,16 @@ Use the existing searchable loot interface, Session-owned unsecured bag and capa
 
 The Beastwilds v1 plan and its existing receipts/digests remain stable. Add a small explicit activity dispatcher and a separate Echoes plan rather than relaxing the Beast-only schema into arbitrary scene-provided authority. Keep canonical IDs/scripts, original source identity, native admission, reviewed/deferred input checks, completed-return proofs and the existing single Session/inventory/save owner.
 
-Select the next profile/activity schema versions from the accepted baseline; do not reserve numbers while another migration is landing. Preserve normalized Beast records and any interrupted open ticket exactly. A shared monotonic serial must reconcile the sum of per-activity entries, with only one open ticket; retire an interrupted Beast visit against Beast's row. Unknown future IDs, fields and versions remain protected, with exact pre-migration backup and verified writes. Inspecting a locked portal must not write progression.
+Echoes uses profile 13/activity 2 against accepted Beast profile 12/activity 1. Preserve normalized Beast records and any interrupted open ticket exactly. A shared monotonic serial must reconcile the sum of per-activity entries, with only one open ticket; retire an interrupted Beast visit against Beast's row. Unknown future IDs, fields and versions remain protected, with exact pre-migration backup and verified writes. Inspecting a locked portal must not write progression.
 
 Extend loot access through an explicit admitted activity context while preserving the unchanged depth context, view identity, source receipt, generation, reach, line of sight and quote checks. Do not reopen generic arbitrary-reward helpers or create another inventory. Proposed local records include highest verified wave, objective-based score and fastest complete trial; they are not an online leaderboard.
 
-## Independently testable Echoes checkpoints
+## Echoes checkpoint design retained after native acceptance
 
 1. **Compatibility:** add the closed dispatcher, migration and frozen plan while leaving entry unavailable. Preserve Beast golden plans/receipts, older saves, interrupted-ticket ownership and all current admission/settlement fixtures.
 2. **Actual combat:** build the native courtyard and five-wave director with real existing enemy/boss actors. Verify a full combat run, spawning, all death-source/failure cases, companion reactions and both cameras. Keep entry unavailable until settlement works.
 3. **Breaks and rewards:** add the two scoped choices, original-source caches, records and once-only save/return. Test touch cancellation/replay, full inventory, wipe/fall, failed save and failed destination retry.
-4. **Release:** only after acceptance, enable the exact Depth 3 route and Nexus return, update cards/HUD/current guides and verify all retained worlds. Four major routes would then be playable and six remain unavailable; this is a proposed future count.
+4. **Release:** only after acceptance, enable the exact Depth 3 route and Nexus return, update cards/HUD/current guides and verify all retained worlds. The accepted checkpoint enables exactly four major local routes, leaving six unavailable.
 
 ## 5c — The Gilded Vault: separate treasure expedition
 

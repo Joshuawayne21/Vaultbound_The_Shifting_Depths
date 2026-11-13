@@ -13,6 +13,7 @@ func _run() -> void:
 	check(fresh.encounter_records == Progress.empty_fields(), "New profiles do not invent past boss discoveries")
 	var old := fresh.duplicate(true)
 	old.version = 6
+	old.erase("activities")
 	old.erase("encounter_records")
 	old.statistics.completed = 19
 	old.monster_discoveries = ["rootwarden"]

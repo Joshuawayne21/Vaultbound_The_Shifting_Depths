@@ -48,6 +48,7 @@ static func prepare_profile(path: String) -> bool:
 	# through the current writer. Every real progression file is fingerprinted.
 	var legacy := rich.duplicate(true)
 	legacy.version = 4
+	legacy.erase("activities")
 	legacy.erase("pets")
 	legacy.erase("depth_progression")
 	legacy.erase("encounter_records")

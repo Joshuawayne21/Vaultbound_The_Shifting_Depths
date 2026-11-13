@@ -14,6 +14,7 @@ func prepare_crystal_profile(path: String, fresh: bool) -> bool:
 		# Crystal discovery is inferred from old clears or crystal-named items.
 		var legacy: Dictionary = session.profile.duplicate(true)
 		legacy.version = 6
+		legacy.erase("activities")
 		legacy.erase("encounter_records")
 		legacy.monster_discoveries = ["rootwarden"]
 		legacy.depth_progression = {"version": 1, "highest_unlocked_depth": 31, "highest_cleared_depth": 30}

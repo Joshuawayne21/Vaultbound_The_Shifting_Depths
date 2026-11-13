@@ -34,12 +34,12 @@ func _run() -> void:
 	var historical_bytes := FileAccess.get_file_as_bytes(PATH + ".pre-v11.bak")
 	var store := Store.new(PATH)
 	var loaded := store.load_profile()
-	check(not store.read_only and loaded.version == 12 and loaded.activities == Progress.empty_fields(), "v11 migrates only the new empty activity namespace")
+	check(not store.read_only and loaded.version == Store.VERSION and loaded.activities == Progress.empty_fields(), "v11 migrates only the new empty activity namespace")
 	for key: String in old:
 		if key != "version": check(loaded[key] == old[key], "Existing saved section retained: " + key)
 	check(FileAccess.get_file_as_string(PATH) == bytes, "Loading migration never rewrites the old save")
-	check(store.save_profile(loaded) and FileAccess.get_file_as_string(PATH + ".pre-v12.bak") == bytes, "First write preserves exact pre-v12 bytes")
-	check(FileAccess.get_file_as_bytes(PATH + ".pre-v11.bak") == historical_bytes, "Creating pre-v12 backup preserves every byte of the earlier pre-v11 migration backup")
+	check(store.save_profile(loaded) and FileAccess.get_file_as_string(PATH + ".pre-v%d.bak" % Store.VERSION) == bytes, "First current-version write preserves exact historical v11 bytes")
+	check(FileAccess.get_file_as_bytes(PATH + ".pre-v11.bak") == historical_bytes, "Creating the current-version backup preserves every byte of the earlier pre-v11 migration backup")
 	check(Store.new(PATH).load_profile() == loaded, "Migrated profile survives an independent store reload in this process")
 	var missing := loaded.duplicate(true)
 	missing.erase("activities")
@@ -48,7 +48,7 @@ func _run() -> void:
 		_clean()
 		var future := loaded.duplicate(true)
 		match kind:
-			"namespace_version": future.activities.version = 2
+			"namespace_version": future.activities.version = Progress.VERSION + 1
 			"namespace_field": future.activities.future_rewards = ["keep_me"]
 			"record_id": future.activities.records.future_realm = {}
 			"record_field": future.activities.records.beastwilds.future_achievements = ["keep_me"]

@@ -78,6 +78,7 @@ func _run() -> void:
 	for version in range(1, 8):
 		var old := Store.empty_profile()
 		old.version = version
+		old.erase("activities")
 		old.statistics.completed = 9
 		old.monster_discoveries = ["rootwarden"]
 		if version < 7: old.erase("encounter_records")

@@ -14,10 +14,12 @@ func spend(amount: float, delay: float = 0.65) -> bool:
 	recovery_delay = maxf(recovery_delay, delay)
 	return true
 
-func tick(delta: float, can_regenerate: bool = true) -> void:
+func tick(delta: float, can_regenerate: bool = true, temporary_regeneration_multiplier: float = 1.0) -> void:
 	recovery_delay = maxf(0.0, recovery_delay - delta)
 	if recovery_delay <= 0.0 and can_regenerate:
-		current = minf(maximum, current + regeneration * delta)
+		# Only the rate changes. Spending, recovery delay and the current budget are preserved.
+		var rate := clampf(temporary_regeneration_multiplier, 1.0, 1.24) if is_finite(temporary_regeneration_multiplier) else 1.0
+		current = minf(maximum, current + regeneration * rate * delta)
 
 func reset() -> void:
 	current = maximum

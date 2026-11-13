@@ -8,6 +8,7 @@ const LEVELS := {
 	&"sanctuary": "res://scenes/world/sanctuary.tscn",
 	&"realm_nexus": "res://scenes/world/realm_nexus.tscn",
 	&"beastwilds": "res://scenes/activities/beastwilds.tscn",
+	&"echoes_of_eternity": "res://scenes/activities/echoes_of_eternity.tscn",
 	&"dungeon": "res://scenes/world/dungeon.tscn",
 	&"combat_arena": "res://scenes/world/combat_arena.tscn",
 	&"rootbound_abyss": "res://scenes/world/rootbound_abyss.tscn",
@@ -23,6 +24,7 @@ const LEVELS := {
 }
 const HOME_ROOMS := {&"home_conservatory": &"pet_conservatory", &"home_armory": &"armory", &"home_companion_hall": &"companion_hall", &"home_relic_library": &"relic_library", &"home_personal_chamber": &"personal_chamber", &"home_wardrobe": &"wardrobe", &"home_rooftop_garden": &"rooftop_garden"}
 const REALMS = preload("res://scripts/realms/realm_catalog.gd")
+const ACTIVITIES = preload("res://scripts/activities/activity_catalog.gd")
 const DEPTH_POLICY = preload("res://resources/expedition/depth_policy.tres")
 const DUNGEON_CONTENT = preload("res://scripts/expedition/dungeon_content.gd")
 
@@ -49,6 +51,7 @@ var _city_waypoint: Dictionary = {}
 var _city_portal_source: WeakRef
 var _city_portal_route: Dictionary = {}
 var _activity_exit_review: Dictionary = {}
+var _echoes_break_review: Dictionary = {}
 var _city_content_advisory: Dictionary = {}
 var _city_review_epoch := 0
 var _application_focused := true
@@ -91,6 +94,8 @@ func _ready() -> void:
 	hud.equipment_requested.connect(_equip_item)
 	hud.city_waypoint_requested.connect(_on_city_waypoint)
 	hud.portal_entry_requested.connect(_on_portal_enter)
+	hud.expedition_overlay.echoes_continue_requested.connect(_on_echoes_continue_requested)
+	hud.expedition_overlay.echoes_upgrade_requested.connect(_on_echoes_upgrade_requested)
 	hud.portal_depth_selected.connect(_on_portal_depth_selected)
 	hud.emote_requested.connect(_on_emote_requested)
 	hud.actor_inspection_requested.connect(_on_actor_inspection)
@@ -123,7 +128,7 @@ func _process(delta: float) -> void:
 		hud.expedition_overlay.pet_panel.refresh_snapshot()
 	elif hud.expedition_overlay.mode == &"pet_name":
 		hud.expedition_overlay.pet_name_panel.refresh_source()
-	if current_location in [&"rootbound_abyss", &"beastwilds"] and is_instance_valid(active_world) and active_world.has_method("snapshot"):
+	if (current_location == &"rootbound_abyss" or not _activity_descriptor(current_location).is_empty()) and is_instance_valid(active_world) and active_world.has_method("snapshot"):
 		hud.set_dungeon_snapshot(active_world.snapshot())
 	elif _portal_hub_context() and not transitioning:
 		_publish_city_snapshot()
@@ -138,11 +143,14 @@ func _notification(what: int) -> void:
 		_home_navigation_epoch += 1
 		_city_review_epoch += 1
 		_activity_exit_review.clear()
+		_retire_echoes_review()
 		_city_portal_source = null
 		_city_portal_route.clear()
 		_city_content_advisory.clear()
 		if is_node_ready() and is_instance_valid(hud):
 			hud.expedition_overlay.sanctuary_panel.set_entry_available(false, "Entry canceled when focus changed. Reopen this portal to review it.")
+			if is_instance_valid(hud.expedition_overlay.echoes_panel):
+				hud.expedition_overlay.echoes_panel.expire("Review canceled when focus changed. Interact with the shrine again.")
 	elif what in [NOTIFICATION_APPLICATION_FOCUS_IN, NOTIFICATION_APPLICATION_RESUMED]:
 		_application_focused = true
 		if is_node_ready(): _resume_return_focus()
@@ -248,7 +256,7 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	var issued_context: Dictionary = {}
 	var issued_plan: Dictionary = {}
 	var activity_owner: Dictionary = {}
-	if destination == &"beastwilds":
+	if not _activity_descriptor(destination).is_empty():
 		# The authority owns the ticket/seed/plan; the gate supplies only intent.
 		if current_location != &"realm_nexus" or not _portal_hub_context() or not _application_focused \
 			or _modal_open or ExpeditionSession.active or entry_id != &"default" \
@@ -257,17 +265,17 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 			or not is_instance_valid(party) or party.world != request_world or party.leader != player:
 			next_world.free()
 			return
-		var status: Dictionary = ExpeditionSession.activity_entry_status(&"beastwilds")
+		var status: Dictionary = ExpeditionSession.activity_entry_status(destination)
 		if not bool(status.get("ok", false)):
 			next_world.free()
-			hud.show_message(String(status.get("reason", "Beastwilds entry is unavailable.")))
+			hud.show_message(String(status.get("reason", "Activity entry is unavailable.")))
 			return
 		var selected_activity_seed := expedition_seed if expedition_seed >= 0 else debug_expedition_seed
 		if selected_activity_seed < 0: selected_activity_seed = int(Time.get_unix_time_from_system()) ^ Time.get_ticks_usec()
 		selected_activity_seed = absi(selected_activity_seed) % 2147483647
 		var request_serial := _travel_serial
 		activity_owner = {"game_id": get_instance_id(), "player": weakref(player), "party": weakref(party)}
-		if not ExpeditionSession.begin_activity_run(&"beastwilds", selected_activity_seed):
+		if not ExpeditionSession.begin_activity_run(destination, selected_activity_seed):
 			next_world.free()
 			return
 		issued_context = ExpeditionSession.issued_activity_context()
@@ -279,7 +287,7 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 			or not is_instance_valid(request_world) or request_world.get_parent() != world_root \
 			or request_world.is_queued_for_deletion() or party.world != request_world or party.leader != player \
 			or not ExpeditionSession.activity_transition_matches(issued_context) \
-			or next_world.get_script() == null or next_world.get_script().resource_path != "res://scripts/activities/beastwilds_level.gd" \
+			or next_world.get_script() == null or next_world.get_script().resource_path != String(_activity_descriptor(destination).world_script) \
 			or not next_world.has_method("configure_activity") or not next_world.configure_activity(issued_context) \
 			or not _activity_candidate_matches(next_world, issued_context):
 			next_world.free()
@@ -324,10 +332,10 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 			next_world.free()
 			_abort_unentered_run(issued_generation, issued_seed, issued_context, issued_plan)
 			return
-	elif current_location == &"beastwilds":
+	elif not _activity_descriptor(current_location).is_empty():
 		issued_generation = ExpeditionSession.run_generation
 		if not is_instance_valid(request_world) or request_world.get_script() == null \
-			or request_world.get_script().resource_path != "res://scripts/activities/beastwilds_level.gd" \
+			or request_world.get_script().resource_path != String(_activity_descriptor(current_location).world_script) \
 			or int(request_world.issued_activity_context().get("generation", -1)) != issued_generation:
 			next_world.free()
 			return
@@ -368,6 +376,7 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	var travel_serial := _travel_serial
 	_city_review_epoch += 1
 	_activity_exit_review.clear()
+	_retire_echoes_review()
 	_set_pet_suspended(true)
 	_city_waypoint.clear()
 	_city_portal_source = null
@@ -522,7 +531,7 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	if issued_context.has("activity_id") and not _activity_transition_owner(issued_context, activity_owner, travel_serial, next_world, next_world):
 		await _recover_activity_entry(next_world, request_world, request_location, request_pet, issued_context, activity_owner, travel_serial)
 		return
-	if destination not in [&"rootbound_abyss", &"beastwilds"]:
+	if destination != &"rootbound_abyss" and _activity_descriptor(destination).is_empty():
 		hud.set_dungeon_snapshot({})
 	# The candidate floor was registered before committing the world replacement.
 	party.ensure_safe_arrivals()
@@ -556,6 +565,12 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 			or not _activity_transition_owner(issued_context, activity_owner, travel_serial, next_world, next_world):
 			await _recover_activity_entry(next_world, request_world, request_location, request_pet, issued_context, activity_owner, travel_serial)
 			return
+	if destination == &"echoes_of_eternity":
+		if not player.bind_activity_effects(next_world, ExpeditionSession, issued_generation):
+			await _recover_activity_entry(next_world, request_world, request_location, request_pet, issued_context, activity_owner, travel_serial)
+			return
+	else:
+		player.clear_activity_effects()
 	if is_instance_valid(_travel_retained_world): _travel_retained_world.queue_free()
 	_travel_retained_world = null
 	transitioning = false
@@ -567,7 +582,7 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	scene_changed.emit(destination)
 	if _portal_hub_context():
 		_publish_city_snapshot()
-	if destination == &"sanctuary" or (destination == &"realm_nexus" and completed_return.get("activity_id") == "beastwilds"):
+	if destination == &"sanctuary" or (destination == &"realm_nexus" and not _activity_descriptor(StringName(completed_return.get("activity_id", ""))).is_empty()):
 		hud.present_pending_results()
 
 
@@ -634,10 +649,11 @@ func _completed_return_deferred(context: Dictionary) -> void:
 
 func _completed_return_arrival_valid(candidate: Node3D, context: Dictionary = {}) -> bool:
 	if context.has("activity_id"):
-		return context.get("activity_id") == "beastwilds" and is_instance_valid(candidate) \
+		var descriptor := _activity_descriptor(StringName(context.get("activity_id", "")))
+		return not descriptor.is_empty() and is_instance_valid(candidate) \
 			and candidate.get_parent() == world_root and candidate.get_script() != null \
 			and candidate.get_script().resource_path == "res://scripts/world/realm_nexus.gd" \
-			and candidate.has_method("validate_nexus_arrival") and candidate.validate_nexus_arrival(&"from_beastwilds")
+			and candidate.has_method("validate_nexus_arrival") and candidate.validate_nexus_arrival(StringName(descriptor.return_entry))
 	# This native check runs at travel boundaries, not every frame. The retained
 	# dungeon must not supply a false floor or obstruct the Sanctuary candidate.
 	if not is_instance_valid(candidate) or candidate.get_parent() != world_root or not candidate.has_method("get_spawn_transform"): return false
@@ -821,8 +837,9 @@ func _resume_return_focus() -> void:
 func _wire_world_travel(world: Node3D) -> void:
 	for portal: Node in get_tree().get_nodes_in_group("interactables"):
 		if not world.is_ancestor_of(portal): continue
-		if world.get_script() != null and world.get_script().resource_path == "res://scripts/activities/beastwilds_level.gd":
+		if not _activity_world_descriptor(world).is_empty():
 			_bind_activity_exit(portal, world)
+			_bind_echoes_break(portal, world)
 		if portal.has_signal("travel_requested"): _bind_world_travel_signal(portal, world)
 		if portal.has_signal("portal_info_requested") and not portal.portal_info_requested.is_connected(_on_portal_information):
 			portal.portal_info_requested.connect(_on_portal_information)
@@ -843,7 +860,7 @@ func _bind_world_travel_signal(source: Node, world: Node3D) -> void:
 			source.disconnect("travel_requested", callback)
 	# All twelve Nexus portals use the reviewed card path. Never wire a raw
 	# travel signal that could bypass authored ownership or unavailable gates.
-	if world.get_script() != null and world.get_script().resource_path in ["res://scripts/world/realm_nexus.gd", "res://scripts/activities/beastwilds_level.gd"]: return
+	if world.get_script() != null and (world.get_script().resource_path == "res://scripts/world/realm_nexus.gd" or not _activity_world_descriptor(world).is_empty()): return
 	if world.has_method("registered_checkpoints") and world.registered_checkpoints().has(source):
 		source.connect("travel_requested", _on_completed_return_request.bind(weakref(world), weakref(source), ExpeditionSession.run_generation))
 	else:
@@ -1126,7 +1143,7 @@ func _city_portal_local_status(source: Node3D) -> Dictionary:
 		if ExpeditionSession.active: return {"ok": false, "reason": "Finish the current expedition before entering another activity."}
 		var activity: Dictionary = REALMS.entry_status(ExpeditionSession.profile, activity_id)
 		if not bool(activity.ok): return {"ok": false, "reason": String(activity.reason)}
-		if activity_id == &"beastwilds":
+		if not _activity_descriptor(activity_id).is_empty():
 			var status: Dictionary = ExpeditionSession.activity_entry_status(activity_id)
 			if not bool(status.get("ok", false)): return {"ok": false, "reason": String(status.get("reason", "Activity entry is unavailable."))}
 	if _city_portal_route.destination == &"rootbound_abyss":
@@ -1187,7 +1204,7 @@ func _travel_from_city_portal(reference: WeakRef, destination: StringName, entry
 			or activity.destination != destination or activity.entry_id != entry_id or not LEVELS.has(destination):
 			hud.show_message("Activity entry changed. Review the gateway again.")
 			return
-		if activity_id == &"beastwilds" and not bool(ExpeditionSession.activity_entry_status(activity_id).get("ok", false)):
+		if not _activity_descriptor(activity_id).is_empty() and not bool(ExpeditionSession.activity_entry_status(activity_id).get("ok", false)):
 			hud.show_message("Activity entry changed. Review the gateway again.")
 			return
 	if destination == &"rootbound_abyss":
@@ -1285,7 +1302,7 @@ func _on_source_travel(destination: StringName, entry_id: StringName, source_wor
 	# Interactions can originate in the physics step; tree mutation must be deferred.
 	# Nexus world signals have no unreviewed route. Shell-owned death/fall/wipe
 	# recovery still calls the deferred context guard directly.
-	if current_location in [&"realm_nexus", &"beastwilds"]: return
+	if current_location == &"realm_nexus" or not _activity_descriptor(current_location).is_empty(): return
 	if not is_instance_valid(source_world) or source_world != active_world or source_world.is_queued_for_deletion() or generation != ExpeditionSession.run_generation: return
 	_travel_if_context_current.call_deferred(destination, entry_id, weakref(source_world), generation, ExpeditionSession.active)
 
@@ -1418,9 +1435,9 @@ func _on_respawn() -> void:
 				return
 			ExpeditionSession.fail_run("defeated")
 			if ExpeditionSession.active or ExpeditionSession.run_generation != generation or active_world != world: return
-		if current_location == &"beastwilds":
+		if not _activity_descriptor(current_location).is_empty():
 			if not is_instance_valid(world) or world.get_script() == null \
-				or world.get_script().resource_path != "res://scripts/activities/beastwilds_level.gd" \
+				or world.get_script().resource_path != String(_activity_descriptor(current_location).get("world_script", "")) \
 				or int(world.issued_activity_context().get("generation", -1)) != generation: return
 			if player.health > 0.0:
 				if world.activity_ready_valid() and world.validate_activity_arrival(&"default"):
@@ -1450,14 +1467,14 @@ func _on_party_wipe() -> void:
 	if transitioning:
 		return
 	if current_location == &"rootbound_abyss" and (not is_instance_valid(active_world) or active_world.get("run_generation") != ExpeditionSession.run_generation): return
-	if current_location == &"beastwilds" and (not is_instance_valid(active_world) or active_world.get_script() == null \
-		or active_world.get_script().resource_path != "res://scripts/activities/beastwilds_level.gd" \
+	if not _activity_descriptor(current_location).is_empty() and (not is_instance_valid(active_world) or active_world.get_script() == null \
+		or active_world.get_script().resource_path != String(_activity_descriptor(current_location).get("world_script", "")) \
 		or int(active_world.issued_activity_context().get("generation", -1)) != ExpeditionSession.run_generation): return
 	party.set_paused(true)
 	hud.show_message("The party falls · Returning safely to Sanctuary")
 	var world := active_world
 	var generation := ExpeditionSession.run_generation
-	if current_location in [&"rootbound_abyss", &"beastwilds"] and ExpeditionSession.active:
+	if (current_location == &"rootbound_abyss" or not _activity_descriptor(current_location).is_empty()) and ExpeditionSession.active:
 		ExpeditionSession.fail_run("defeated")
 		if ExpeditionSession.active or ExpeditionSession.run_generation != generation or active_world != world: return
 	if is_instance_valid(world):
@@ -1481,6 +1498,7 @@ func _on_modal_changed(open: bool) -> void:
 			active_world.process_mode = Node.PROCESS_MODE_DISABLED
 	else:
 		_activity_exit_review.clear()
+		_retire_echoes_review()
 		_inspected_companion_id = ""
 		_city_portal_source = null
 		_city_portal_route.clear()
@@ -1592,11 +1610,12 @@ func _set_pet_suspended(value: bool) -> void:
 	if is_instance_valid(current): current.set_suspended(value)
 
 
-# Beastwilds uses an independently admitted activity context, never a depth plan.
+# Explicit catalog activities use an independently admitted context, never a depth plan.
 func _activity_candidate_matches(candidate: Node3D, context: Dictionary) -> bool:
-	return context.get("activity_id") == "beastwilds" and is_instance_valid(candidate) \
+	var descriptor := _activity_descriptor(StringName(context.get("activity_id", "")))
+	return not descriptor.is_empty() and is_instance_valid(candidate) \
 		and not candidate.is_queued_for_deletion() and candidate.get_script() != null \
-		and candidate.get_script().resource_path == "res://scripts/activities/beastwilds_level.gd" \
+		and candidate.get_script().resource_path == String(descriptor.world_script) \
 		and candidate.has_method("issued_activity_context") and candidate.issued_activity_context() == context
 
 
@@ -1608,7 +1627,10 @@ func _activity_candidate_ready(candidate: Node3D, context: Dictionary) -> bool:
 func _activity_transition_owner(context: Dictionary, owner: Dictionary, serial: int, expected_world: Node3D, expected_party_world: Node3D) -> bool:
 	if not context.has("activity_id"): return true
 	if not _application_focused or _modal_open or not is_instance_valid(expected_world) or expected_world.get_script() == null: return false
-	var expected_location: StringName = &"beastwilds" if expected_world.get_script().resource_path == "res://scripts/activities/beastwilds_level.gd" else &"realm_nexus"
+	var descriptor := _activity_descriptor(StringName(context.get("activity_id", "")))
+	if descriptor.is_empty(): return false
+	if expected_world.get_script().resource_path not in [String(descriptor.world_script), "res://scripts/world/realm_nexus.gd"]: return false
+	var expected_location := StringName(descriptor.activity_id) if expected_world.get_script().resource_path == String(descriptor.world_script) else &"realm_nexus"
 	return current_location == expected_location and ExpeditionSession.activity_transition_matches(context) \
 		and _return_recovery_owned(owner, serial, expected_world, expected_party_world)
 
@@ -1616,28 +1638,30 @@ func _activity_transition_owner(context: Dictionary, owner: Dictionary, serial: 
 func _completed_return_route(context: Dictionary) -> Dictionary:
 	if not context.has("activity_id"):
 		return {"source": &"rootbound_abyss", "destination": &"sanctuary", "entry": &"from_abyss"}
-	if context.get("activity_id") == "beastwilds":
-		return {"source": &"beastwilds", "destination": &"realm_nexus", "entry": &"from_beastwilds"}
+	var descriptor := _activity_descriptor(StringName(context.get("activity_id", "")))
+	if not descriptor.is_empty():
+		return {"source": StringName(descriptor.activity_id), "destination": &"realm_nexus", "entry": StringName(descriptor.return_entry)}
 	return {}
 
 
 func _completed_activity_return_proof(context: Dictionary) -> bool:
-	if context.get("activity_id") != "beastwilds" or not is_inside_tree() or is_queued_for_deletion() \
+	var descriptor := _activity_descriptor(StringName(context.get("activity_id", "")))
+	if descriptor.is_empty() or not is_inside_tree() or is_queued_for_deletion() \
 		or int(context.get("game_id", 0)) != get_instance_id() or _return_node(context, "player") != player \
 		or _return_node(context, "party") != party or not context.get("token") is Dictionary:
 		return false
 	var world := _return_node(context, "world") as Node3D
 	var source := _return_node(context, "source") as Node3D
 	if not is_instance_valid(world) or not is_instance_valid(source) or world.get_script() == null \
-		or world.get_script().resource_path != "res://scripts/activities/beastwilds_level.gd": return false
+		or world.get_script().resource_path != String(descriptor.world_script): return false
 	return ExpeditionSession.completed_activity_return_matches(world, source, int(context.get("generation", -1)), context.token)
 
 
 func _activity_exit_source_valid(source: Node3D, world: Node3D) -> bool:
-	if transitioning or not _application_focused or current_location != &"beastwilds" \
+	if transitioning or not _application_focused or _activity_descriptor(current_location).is_empty() \
 		or not is_instance_valid(world) or world != active_world or world.get_parent() != world_root \
 		or world.is_queued_for_deletion() or world.get_script() == null \
-		or world.get_script().resource_path != "res://scripts/activities/beastwilds_level.gd" \
+		or world.get_script().resource_path != String(_activity_descriptor(current_location).get("world_script", "")) \
 		or not is_instance_valid(source) or not source.is_inside_tree() or source.is_queued_for_deletion() \
 		or source.get_script() == null or source.get_script().resource_path != "res://scripts/activities/activity_exit.gd" \
 		or not world.has_method("owns_source") or not world.owns_source(source, "return_spring") \
@@ -1667,8 +1691,12 @@ func _on_activity_exit_requested(source: Node3D, world_reference: WeakRef, sourc
 	_activity_exit_review = {"game_id": get_instance_id(), "world": world_reference, "source": source_reference,
 		"player": weakref(player), "party": weakref(party), "generation": generation, "serial": _travel_serial,
 		"completed": completed, "abandon": abandon}
-	var lines: Array[String] = ["BEASTWILDS · Return spring"]
-	if not completed:
+	var descriptor := _activity_world_descriptor(world)
+	var lines: Array[String] = [String(descriptor.get("display_name", "Activity")).to_upper() + " · Return spring"]
+	if not completed and String(descriptor.activity_id) == "echoes_of_eternity":
+		lines.append("Waves cleared: %d / 5" % int(status.get("completed_waves", 0)))
+		lines.append("Unsearched caches remain here. Only collected rewards can be secured.")
+	elif not completed:
 		var found := 0
 		for id: String in status.get("required", []):
 			if status.get("claimed", []).has(id): found += 1
@@ -1682,13 +1710,16 @@ func _on_activity_exit_requested(source: Node3D, world_reference: WeakRef, sourc
 		lines.append("Secure this visit's discoveries and return to the Nexus.")
 		lines.append("Capacity or save failure keeps this world and its pending finds available for retry.")
 	lines.append("CLOSE keeps you here. Confirm only when ready to leave.")
-	var opened: bool = hud.expedition_overlay.open_activity_return({"title": "THE BEASTWILDS · RETURN",
+	var opened: bool = hud.expedition_overlay.open_activity_return({"title": String(descriptor.get("display_name", "Activity")).to_upper() + " · RETURN",
 		"lines": lines, "entry_enabled": true, "entry_reason": "",
 		"entry_label": "RETURN TO NEXUS" if completed else "ABANDON & RETURN" if abandon else "SECURE & RETURN"})
 	if not opened or not _activity_exit_source_valid(source, world):
 		_activity_exit_review.clear()
+		_retire_echoes_review()
 		return
 	_activity_exit_review.epoch = _city_review_epoch
+	_activity_exit_review.modal_token = hud.expedition_overlay.activity_return_review_token()
+	_activity_exit_review.card = hud.expedition_overlay.sanctuary_panel.context.duplicate(true)
 
 
 func _on_activity_exit_confirmed() -> void:
@@ -1696,6 +1727,8 @@ func _on_activity_exit_confirmed() -> void:
 	var world := _return_node(context, "world") as Node3D
 	var source := _return_node(context, "source") as Node3D
 	if hud.expedition_overlay.mode != &"sanctuary" or hud.expedition_overlay.sanctuary_panel.kind != &"portal" \
+		or int(context.get("modal_token", -1)) != hud.expedition_overlay.activity_return_review_token() \
+		or context.get("card", {}) != hud.expedition_overlay.sanctuary_panel.context \
 		or context.is_empty() or int(context.get("epoch", -1)) != _city_review_epoch \
 		or int(context.get("serial", -1)) != _travel_serial or int(context.get("generation", -1)) != ExpeditionSession.run_generation \
 		or _return_node(context, "player") != player or _return_node(context, "party") != party \
@@ -1703,6 +1736,7 @@ func _on_activity_exit_confirmed() -> void:
 		hud.expedition_overlay.sanctuary_panel.set_entry_available(false, "Return changed. Close and review the spring again.")
 		return
 	_activity_exit_review.clear()
+	_retire_echoes_review()
 	hud.close_modals()
 	_confirm_activity_exit_deferred.call_deferred(context)
 
@@ -1734,7 +1768,9 @@ func _on_activity_return_requested(source: Node3D, result: Dictionary, world_ref
 		or not bool(result.get("ok", false)) or not bool(result.get("still_current", false)) \
 		or int(result.get("generation", -1)) != generation or not result.get("return_token") is Dictionary:
 		return
-	var context := {"game_id": get_instance_id(), "activity_id": "beastwilds", "world": world_reference,
+	var descriptor := _activity_world_descriptor(world)
+	if descriptor.is_empty(): return
+	var context := {"game_id": get_instance_id(), "activity_id": String(descriptor.activity_id), "world": world_reference,
 		"source": source_reference, "player": weakref(player), "party": weakref(party), "generation": generation,
 		"token": result.return_token.duplicate(true)}
 	if not _completed_return_current(context, world, world): return
@@ -1816,3 +1852,167 @@ func _recover_activity_entry(candidate: Node3D, previous: Node3D, previous_locat
 	_sync_pet_presenter()
 	if not _return_recovery_owned(owner, serial, previous, previous): return
 	_finish_return_recovery("Activity entry could not complete. Your secured progress is safe in the Nexus.")
+
+
+func _activity_descriptor(id: StringName) -> Dictionary:
+	# This closed shell allowlist cannot dispatch arbitrary future catalog content.
+	return ACTIVITIES.descriptor(id) if id in [&"beastwilds", &"echoes_of_eternity"] else {}
+
+
+func _activity_world_descriptor(world: Node3D) -> Dictionary:
+	if not is_instance_valid(world) or world.get_script() == null: return {}
+	for id: StringName in [&"beastwilds", &"echoes_of_eternity"]:
+		var descriptor := _activity_descriptor(id)
+		if not descriptor.is_empty() and world.get_script().resource_path == String(descriptor.world_script): return descriptor
+	return {}
+
+func _echoes_break_source_valid(source: Node3D, world: Node3D, generation: int) -> bool:
+	if transitioning or not _application_focused or current_location != &"echoes_of_eternity" \
+		or generation != ExpeditionSession.run_generation or not ExpeditionSession.active \
+		or not is_instance_valid(world) or world != active_world or world.get_parent() != world_root \
+		or world.is_queued_for_deletion() or world.get_script() == null \
+		or world.get_script().resource_path != "res://scripts/activities/echoes_level.gd" \
+		or not is_instance_valid(source) or not source.is_inside_tree() or source.is_queued_for_deletion() \
+		or source.get_script() == null or source.get_script().resource_path != "res://scripts/activities/echoes_break.gd" \
+		or not world.owns_source(source, "break_shrine") \
+		or int(world.issued_activity_context().get("generation", -1)) != generation \
+		or not is_instance_valid(player) or player.health <= 0.0 or player.downed or player.eliminated \
+		or player.combat.state != &"idle" or not is_instance_valid(party) or party.world != world or party.leader != player:
+		return false
+	var radius: Variant = source.get("interaction_radius")
+	if not (radius is float or radius is int) or not is_finite(float(radius)) \
+		or float(radius) <= 0.0 or float(radius) > 3.0 \
+		or not player.global_position.is_finite() or not source.global_position.is_finite(): return false
+	return player.global_position.distance_to(source.global_position) <= float(radius) \
+		and CombatRules.visible_from(player, player.global_position + Vector3.UP * 1.3, source.global_position + Vector3.UP * 1.6)
+
+
+func _bind_echoes_break(source: Node, world: Node3D) -> void:
+	if world.get_script() == null or world.get_script().resource_path != "res://scripts/activities/echoes_level.gd" \
+		or source.get_script() == null or source.get_script().resource_path != "res://scripts/activities/echoes_break.gd" \
+		or not world.owns_source(source, "break_shrine") or not source.has_signal("echoes_break_requested"): return
+	for connection: Dictionary in source.get_signal_connection_list("echoes_break_requested"):
+		var callback: Callable = connection.callable
+		if callback.get_object() == self and callback.get_method() == &"_on_echoes_break_requested":
+			source.disconnect("echoes_break_requested", callback)
+	source.connect("echoes_break_requested", _on_echoes_break_requested.bind(weakref(world), weakref(source), ExpeditionSession.run_generation))
+
+
+func _on_echoes_break_requested(source: Node3D, world_reference: WeakRef, source_reference: WeakRef, generation: int) -> void:
+	var world := world_reference.get_ref() as Node3D
+	if source_reference.get_ref() != source or not _echoes_break_source_valid(source, world, generation) \
+		or _modal_open or hud.expedition_overlay.mode != &"none" or not player.controls_enabled or not InputHub.controls_enabled: return
+	# Authority sees the live source before the UI pauses gameplay. No modal polling.
+	var status: Dictionary = source.get_break_status(player)
+	if not bool(status.get("ok", false)):
+		hud.show_message(String(status.get("reason", "The Echo shrine is not ready.")))
+		return
+	var quote: Dictionary = {}
+	if bool(status.get("upgrade_required", false)):
+		quote = ExpeditionSession.quote_echoes_upgrade(world, source, player, generation)
+		if not bool(quote.get("ok", false)) or int(quote.get("generation", -1)) != generation \
+			or int(quote.get("wave", -1)) != int(status.get("wave", -2)) \
+			or String(quote.get("request_id", "")).is_empty(): return
+		status["choices"] = quote.get("choices", []).duplicate(true)
+	if not _echoes_break_source_valid(source, world, generation) or hud.expedition_overlay.mode != &"none": return
+	# The legacy modal path cancels actions, including the idle attack cooldown.
+	# Keep that behavior elsewhere, but do not let this shrine shorten its timer.
+	var paused_player: WeakRef = weakref(player)
+	var paused_combat: PlayerCombat = player.combat
+	var paused_attack_cooldown: float = paused_combat.attack_cooldown
+	_city_review_epoch += 1
+	_echoes_break_review = {"game_id": get_instance_id(), "world": world_reference, "source": source_reference,
+		"player": weakref(player), "party": weakref(party), "generation": generation, "serial": _travel_serial,
+		"phase": String(status.get("phase", "")), "wave": int(status.get("wave", -1)),
+		"upgrade_required": bool(status.get("upgrade_required", false)), "request_id": String(quote.get("request_id", "")),
+		"display": status.duplicate(true)}
+	var opened: bool = hud.expedition_overlay.open_echoes_break(status)
+	if not opened or not _echoes_break_source_valid(source, world, generation) \
+		or paused_player.get_ref() != player or not is_instance_valid(paused_combat) \
+		or player.combat != paused_combat or paused_combat.actor != player:
+		_retire_echoes_review()
+		return
+	# Modal callbacks may replace owners or increase a timer. Restore only this
+	# same admitted player's original combat component, never a lower cooldown.
+	if is_finite(paused_attack_cooldown) and paused_attack_cooldown >= 0.0:
+		paused_combat.attack_cooldown = maxf(paused_attack_cooldown, paused_combat.attack_cooldown)
+	_echoes_break_review["epoch"] = _city_review_epoch
+	_echoes_break_review["modal_token"] = hud.expedition_overlay.echoes_review_token()
+
+
+func _on_echoes_continue_requested() -> void:
+	_confirm_echoes_review("")
+
+
+func _on_echoes_upgrade_requested(choice_id: String) -> void:
+	if choice_id in ["echo_force", "restoring_rhythm"]: _confirm_echoes_review(choice_id)
+
+
+func _confirm_echoes_review(choice_id: String) -> void:
+	var context := _echoes_break_review.duplicate(true)
+	var world := _return_node(context, "world") as Node3D
+	var source := _return_node(context, "source") as Node3D
+	if context.is_empty() or hud.expedition_overlay.mode != &"echoes_break" \
+		or int(context.get("modal_token", -1)) != hud.expedition_overlay.echoes_review_token() \
+		or hud.expedition_overlay.echoes_panel.context != context.get("display", {}) \
+		or int(context.get("epoch", -1)) != _city_review_epoch or int(context.get("serial", -1)) != _travel_serial \
+		or _return_node(context, "player") != player or _return_node(context, "party") != party \
+		or not _echoes_break_source_valid(source, world, int(context.get("generation", -1))):
+		_retire_echoes_review()
+		hud.expedition_overlay.echoes_panel.expire("Review expired. Close and interact with the shrine again.")
+		return
+	var wants_upgrade := not choice_id.is_empty()
+	if wants_upgrade != bool(context.get("upgrade_required", false)): return
+	if wants_upgrade:
+		var offered := false
+		for choice: Dictionary in context.display.get("choices", []):
+			if String(choice.get("id", "")) == choice_id: offered = true
+		if not offered or String(context.get("request_id", "")).is_empty(): return
+	elif not bool(context.display.get("can_continue", false)): return
+	_echoes_break_review.clear()
+	hud.close_modals()
+	_confirm_echoes_deferred.call_deferred(context, choice_id)
+
+
+func _confirm_echoes_deferred(context: Dictionary, choice_id: String) -> void:
+	var world := _return_node(context, "world") as Node3D
+	var source := _return_node(context, "source") as Node3D
+	var generation := int(context.get("generation", -1))
+	if int(context.get("game_id", 0)) != get_instance_id() or int(context.get("epoch", -1)) != _city_review_epoch \
+		or int(context.get("serial", -1)) != _travel_serial or _return_node(context, "player") != player \
+		or _return_node(context, "party") != party or _modal_open or hud.expedition_overlay.mode != &"none" \
+		or not _echoes_break_source_valid(source, world, generation) \
+		or not player.controls_enabled or not InputHub.controls_enabled:
+		_cancel_echoes_offer(context)
+		return
+	var status: Dictionary = source.get_break_status(player)
+	var wants_upgrade := not choice_id.is_empty()
+	if not bool(status.get("ok", false)) or String(status.get("phase", "")) != String(context.phase) \
+		or int(status.get("wave", -1)) != int(context.wave) \
+		or bool(status.get("upgrade_required", false)) != wants_upgrade \
+		or (not wants_upgrade and not bool(status.get("can_continue", false))):
+		_cancel_echoes_offer(context)
+		hud.show_message("The challenge changed. Review the Echo shrine again.")
+		return
+	_city_review_epoch += 1 # Consume reviewed intent before callbacks can replace the run.
+	var result: Dictionary = ExpeditionSession.commit_echoes_upgrade({"request_id": String(context.request_id), "choice_id": choice_id}) \
+		if wants_upgrade else source.confirm_continue(player)
+	if not is_instance_valid(world) or world != active_world or generation != ExpeditionSession.run_generation: return
+	if not bool(result.get("ok", false)):
+		hud.show_message(String(result.get("error", "The shrine action could not complete. Review it again.")))
+		return
+	if int(result.get("generation", -1)) != generation or not bool(result.get("still_current", false)): return
+	if wants_upgrade:
+		hud.show_message("Temporary boon selected. Continue when ready.")
+		_on_echoes_break_requested.call_deferred(source, weakref(world), weakref(source), generation)
+
+
+func _cancel_echoes_offer(context: Dictionary) -> void:
+	var request_id := String(context.get("request_id", ""))
+	if not request_id.is_empty(): ExpeditionSession.cancel_echoes_upgrade({"request_id": request_id})
+
+
+func _retire_echoes_review() -> void:
+	var retired := _echoes_break_review.duplicate(true)
+	_echoes_break_review.clear()
+	_cancel_echoes_offer(retired)

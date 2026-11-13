@@ -23,6 +23,7 @@ func _run() -> void:
 		_clean()
 		var old := Fixtures.owned() if version >= 5 else Store.empty_profile()
 		old.version = version
+		old.erase("activities")
 		old.erase("encounter_records")
 		old.gold = 711
 		old.statistics.completed = 12
@@ -85,6 +86,7 @@ func _run() -> void:
 			"mixed_depth": unknown.highest_unlocked_depth = 99
 			"legacy_boss_records":
 				unknown.version = 6
+				unknown.erase("activities")
 				unknown.erase("encounter_records")
 				unknown.boss_records = {"rootwarden": 99}
 		_write(PATH, JSON.stringify(unknown))

@@ -1,5 +1,6 @@
 extends "res://tests/test_harness.gd"
 const Store = preload("res://scripts/progression/profile_store.gd")
+const ActivityProgress = preload("res://scripts/progression/activity_progression.gd")
 const Home = preload("res://scripts/progression/home_progression.gd")
 const Fixtures = preload("res://tests/home_test_fixtures.gd")
 const PATH := "/tmp/vaultbound-home-management-v9/profile.json"
@@ -9,7 +10,7 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 func _run() -> void:
-	check(Store.VERSION == 12 and Home.VERSION == 3 and Home.CATALOG.valid(), "Profile12/home3 catalog is bounded and independent of dungeon content")
+	check(Store.VERSION == 13 and Home.VERSION == 3 and Home.CATALOG.valid(), "Profile13/home3 catalog is bounded and independent of dungeon content")
 	_migration()
 	_models()
 	_boundaries()
@@ -24,6 +25,7 @@ func _owned() -> Dictionary:
 func _old() -> Dictionary:
 	var old := Fixtures.owned()
 	old.version = 8
+	old.erase("activities")
 	old.home = {"version": 1, "id": Fixtures.ID}
 	return old
 
@@ -49,10 +51,11 @@ func _migration() -> void:
 	var loaded := store.load_profile()
 	var expected := old.duplicate(true)
 	expected.version = Store.VERSION
+	expected.activities = ActivityProgress.empty_fields()
 	expected.home = Home.empty_fields()
 	expected.home.id = Fixtures.ID
 	expected.home.unlocked_rooms = Home.BASE_ROOMS.duplicate()
-	check(loaded == expected and not store.read_only, "Migration retains exact identity and all owned fields, adding only base home3 choices")
+	check(loaded == expected and not store.read_only, "Migration retains exact identity and all owned fields, adding base home3 choices and empty activity records")
 	check(loaded.home.unlocked_styles == ["royal_azure"] and loaded.home.unlocked_rooms == ["foyer", "trophy_hall"],
 		"Historical eligibility does not grant cosmetic or room milestones during normalization")
 	check(FileAccess.get_file_as_string(PATH) == bytes and not FileAccess.file_exists(PATH + ".pre-v%d.bak" % Store.VERSION), "Loading performs no migration write")

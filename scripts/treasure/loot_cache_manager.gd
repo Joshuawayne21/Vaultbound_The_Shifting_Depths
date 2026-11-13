@@ -185,6 +185,12 @@ func _context_valid() -> bool:
 	if not is_inside_tree() or is_queued_for_deletion() or not is_instance_valid(authority) \
 			or int(authority.get("run_generation")) != _run_generation:
 		return false
+	if authority.has_method("loot_context_valid"):
+		# Session dispatches only the unchanged dungeon context and the exact
+		# admitted Echoes context. Discovery visits cannot produce these caches.
+		var world := _world.get_ref() as Node3D if _world != null else null
+		return is_instance_valid(world) and world.is_ancestor_of(self) and world.get_viewport() == get_viewport() \
+			and bool(authority.loot_context_valid(world, _run_generation))
 	if authority.has_method("run_context_valid"):
 		var world := _world.get_ref() as Node3D if _world != null else null
 		return is_instance_valid(world) and world.is_ancestor_of(self) and world.get_viewport() == get_viewport() \

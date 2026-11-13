@@ -51,6 +51,8 @@ static func legacy(version: int) -> Dictionary:
 	var result := owned()
 	if result.is_empty(): return {}
 	result.version = version
+	# Historical fixtures predate the activity namespace; do not carry today's schema into them.
+	if version < 12: result.erase("activities")
 	result.erase("home")
 	if version < 7: result.erase("encounter_records")
 	if version < 6: result.erase("depth_progression")

@@ -79,6 +79,7 @@ func _migration() -> void:
 	_clean()
 	var old := _owned()
 	old.version = 3
+	old.erase("activities")
 	old.erase("depth_progression")
 	old.erase("encounter_records")
 	var exact := " \n" + JSON.stringify(old, "  ", false, true) + "\n"
@@ -94,11 +95,12 @@ func _migration() -> void:
 		return
 	var expected := old.duplicate(true)
 	expected.version = Store.VERSION
+	expected.activities = Store.ActivityProgress.empty_fields()
 	expected.depth_progression = {"version": 1, "highest_unlocked_depth": 2, "highest_cleared_depth": 1}
 	expected.encounter_records = {"version": 1, "themes": ["rootbound_abyss"], "entries": {
 		"rootwarden": {"discovered_before_tracking": true, "secured_defeats": 0,
 			"highest_recorded_depth": 0, "first_recorded_revision": 0, "first_recorded_utc": 0}}}
-	check(current == expected and current.inventory == old.inventory, "Migration adds only schema/depth and proven legacy discovery fields, preserving every UID, roll, enhancement and prior progression field without inventing encounter totals or dates")
+	check(current == expected and current.inventory == old.inventory, "Migration adds only schema/depth, empty activity records and proven legacy discovery fields, preserving every UID, roll, enhancement and prior progression field without inventing encounter totals or dates")
 	check(FileAccess.get_file_as_string(PATH) == exact and not FileAccess.file_exists(PATH + ".pre-v%d.bak" % Store.VERSION), "Loading alone neither rewrites nor backs up the original save")
 	check(store.save_profile(current), "First current-schema write succeeds after preservation")
 	check(FileAccess.get_file_as_string(PATH + ".pre-v%d.bak" % Store.VERSION) == exact and FileAccess.get_file_as_string(PATH + ".bak") == exact, "Permanent pre-current and rotating backup preserve exact version-three bytes")
@@ -129,6 +131,7 @@ func _versioned_limits() -> void:
 	for source_version: int in [2, 3]:
 		var old := base.duplicate(true)
 		old.version = source_version
+		old.erase("activities")
 		if source_version == 2:
 			old.erase("active_loadout")
 			for slot: String in Inventory.SLOTS:
@@ -156,6 +159,7 @@ func _versioned_limits() -> void:
 func _unavailable_profile(source_version: int = 4) -> Dictionary:
 	var value := _owned()
 	value.version = source_version
+	value.erase("activities")
 	_entry(value, "traveler_sword").item_id = "future_catalog_blade"
 	if source_version == 2:
 		value.erase("active_loadout")

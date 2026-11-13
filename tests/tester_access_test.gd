@@ -1,5 +1,6 @@
 extends "res://tests/test_harness.gd"
 const Store = preload("res://scripts/progression/profile_store.gd")
+const ActivityProgress = preload("res://scripts/progression/activity_progression.gd")
 const Access = preload("res://scripts/progression/tester_access.gd")
 const Home = preload("res://scripts/progression/home_progression.gd")
 const Depth = preload("res://scripts/progression/depth_progression.gd")
@@ -32,12 +33,13 @@ func _write(path: String, body: String) -> void:
 
 func _migration() -> void:
 	_clean()
-	check(Store.VERSION == 12 and not Access.enabled(Store.empty_profile()), "Profile12 defaults to normal requirements and grants no developer rights implicitly")
+	check(Store.VERSION == 13 and not Access.enabled(Store.empty_profile()), "Profile13 defaults to normal requirements and grants no developer rights implicitly")
 	var old := Fixtures.owned()
 	old = Home.plan_initialization(old, Fixtures.ID, int(old.revision))
 	old = Home.plan(old, &"claim_home_milestones", {}, int(old.revision)).profile
 	old = Home.plan(old, &"set_pet_display", {"slot_id": "north_meadow", "pet_id": "lantern_fox"}, int(old.revision)).profile
 	old.version = 10
+	old.erase("activities")
 	old.erase("tester_access")
 	var bytes := " \n" + JSON.stringify(old, "  ", false, true) + "\n"
 	_write(PATH, bytes)
@@ -46,8 +48,9 @@ func _migration() -> void:
 	var loaded := store.load_profile()
 	var expected := old.duplicate(true)
 	expected.version = Store.VERSION
+	expected.activities = ActivityProgress.empty_fields()
 	expected.tester_access = Access.empty_fields()
-	check(not store.read_only and loaded == expected, "Version10 migration preserves every owned field, display, companion, depth and identity while adding disabled test access")
+	check(not store.read_only and loaded == expected, "Version10 migration preserves every owned field, display, companion, depth and identity while adding disabled test access and empty activity records")
 	check(FileAccess.get_file_as_string(PATH) == bytes and not FileAccess.file_exists(PATH + ".pre-v%d.bak" % Store.VERSION), "Loading never writes test access or replaces a real save")
 	check(store.save_profile(loaded) and FileAccess.get_file_as_string(PATH + ".pre-v%d.bak" % Store.VERSION) == bytes \
 		and FileAccess.get_file_as_string(PATH + ".pre-v10.bak") == "retain-exact-home4-history", "First write protects exact v10 bytes and retains earlier migration history")

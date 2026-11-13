@@ -10,6 +10,7 @@ func prepare_management_world(path: String, fresh: bool = true) -> bool:
 			if DirAccess.dir_exists_absolute(path + suffix): DirAccess.remove_absolute(path + suffix)
 		var old := HomeFixtures.owned()
 		old.version = 8
+		old.erase("activities")
 		old.home = {"version": 1, "id": HomeFixtures.ID}
 		original_profile_bytes = " \n" + JSON.stringify(old, "  ", false, true) + "\n"
 		var file := FileAccess.open(path, FileAccess.WRITE)

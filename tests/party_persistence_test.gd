@@ -31,6 +31,7 @@ func _legacy_profile() -> Dictionary:
 	var profile: Dictionary = Store.empty_profile()
 	# This fixture deliberately represents the historical count-only format.
 	profile.version = 1
+	profile.erase("activities")
 	profile.erase("companions")
 	profile.gold = 77
 	profile.items = {"temple_blade": 1, "root_fiber": 4}

@@ -72,6 +72,7 @@ func _owned() -> Dictionary:
 func _version_two_profile() -> Dictionary:
 	var profile := _owned()
 	profile.version = 2
+	profile.erase("activities")
 	for entry: Dictionary in profile.inventory:
 		entry.modifiers = {"max_health": 4.0} if entry.item_id == "temple_blade" else {}
 	profile.erase("active_loadout")

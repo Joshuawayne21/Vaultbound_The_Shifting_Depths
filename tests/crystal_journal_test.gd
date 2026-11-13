@@ -13,6 +13,7 @@ func _run() -> void:
 	for filename: String in DirAccess.open(PATH.get_base_dir()).get_files(): DirAccess.remove_absolute(PATH.get_base_dir().path_join(filename))
 	var legacy := Store.empty_profile()
 	legacy.version = 6
+	legacy.erase("activities")
 	legacy.erase("encounter_records")
 	legacy.statistics.completed = 13
 	legacy.monster_discoveries = ["rootwarden", "skeleton"]

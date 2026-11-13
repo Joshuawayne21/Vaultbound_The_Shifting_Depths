@@ -11,6 +11,8 @@ signal portal_entry_requested
 signal portal_depth_selected(depth: int)
 signal emote_requested(id: StringName)
 signal actor_inspection_requested(id: String)
+signal echoes_continue_requested
+signal echoes_upgrade_requested(choice_id: String)
 
 const GOLD := VaultUITheme.GOLD
 const IVORY := VaultUITheme.IVORY
@@ -65,6 +67,7 @@ var rpg_panel: Control
 var graphics_panel: Control
 var loot_panel: Control
 var sanctuary_panel: Control
+var echoes_panel: Control
 var ui_scale := 1.0
 var reduced_motion := false
 var reduced_effects := false
@@ -115,6 +118,13 @@ func _ready() -> void:
 	loot_panel.name = "LootPanel"
 	add_child(loot_panel)
 	loot_panel.close_requested.connect(close_modal)
+	echoes_panel = preload("res://scripts/ui/echoes_break_panel.gd").new()
+	echoes_panel.name = "EchoesBreakPanel"
+	add_child(echoes_panel)
+	echoes_panel.close_requested.connect(close_modal)
+	echoes_panel.continue_requested.connect(func() -> void: echoes_continue_requested.emit())
+	echoes_panel.upgrade_requested.connect(func(id: String) -> void: echoes_upgrade_requested.emit(id))
+	echoes_panel.pointers_canceled.connect(_retain_home_pointer_tails)
 	sanctuary_panel = preload("res://scripts/ui/sanctuary_panel.gd").new()
 	sanctuary_panel.name = "SanctuaryPanel"
 	add_child(sanctuary_panel)
@@ -421,7 +431,7 @@ func apply_visual_settings(settings: Dictionary) -> void:
 		var receiver := _native_panel()
 		_cancel_native_pointers()
 		receiver.cancel_for_focus_loss()
-	for panel: Control in [pet_panel, pet_name_panel, pet_preview, exchange_panel, exchange_text_panel, home_panel, graphics_panel]:
+	for panel: Control in [pet_panel, pet_name_panel, pet_preview, exchange_panel, exchange_text_panel, home_panel, graphics_panel, echoes_panel]:
 		if is_instance_valid(panel): panel.apply_visual_settings(settings)
 	queue_redraw()
 
@@ -686,6 +696,9 @@ func _open_modal(value: StringName) -> bool:
 		chat_panel.hide_panel()
 	if value != &"social" and is_instance_valid(social_panel):
 		social_panel.hide_panel()
+	if value != &"echoes_break" and is_instance_valid(echoes_panel):
+		echoes_panel.hide_panel()
+		if generation != _modal_epoch: return false
 	if value != &"sanctuary" and is_instance_valid(sanctuary_panel):
 		sanctuary_panel.hide_panel()
 	if value != &"graphics" and is_instance_valid(graphics_panel):
@@ -739,6 +752,8 @@ func close_modal() -> void:
 	if generation != _modal_epoch: return
 	if is_instance_valid(chat_panel): chat_panel.hide_panel()
 	if is_instance_valid(social_panel): social_panel.hide_panel()
+	if is_instance_valid(echoes_panel): echoes_panel.hide_panel()
+	if generation != _modal_epoch: return
 	if is_instance_valid(sanctuary_panel):
 		sanctuary_panel.hide_panel()
 	if is_instance_valid(graphics_panel):
@@ -810,6 +825,9 @@ func _input(event: InputEvent) -> void:
 			return
 		if is_instance_valid(social_panel) and social_panel.visible:
 			social_panel.handle_event(event)
+			return
+		if is_instance_valid(echoes_panel) and echoes_panel.visible:
+			echoes_panel.handle_event(event)
 			return
 		if is_instance_valid(sanctuary_panel) and sanctuary_panel.visible:
 			sanctuary_panel.handle_event(event)
@@ -1527,6 +1545,18 @@ func _draw_storage_warning() -> void:
 
 
 func activity_status_lines() -> Dictionary:
+	if String(session_snapshot.get("activity_id", "")) == "echoes_of_eternity":
+		var activity: Dictionary = session_snapshot.get("activity", {})
+		var cleared := clampi(int(activity.get("completed_waves", 0)), 0, 5)
+		var phase := String(activity.get("phase", "awaiting_start"))
+		var label := "WAVE %d / 5" % clampi(int(activity.get("wave", 1)), 1, 5)
+		if phase == "awaiting_start": label = "READY · TOUCH THE ECHO SHRINE"
+		elif bool(activity.get("upgrade_required", false)): label = "CHOOSE A BOON AT THE SHRINE"
+		elif phase == "break": label = "%d / 5 CLEARED · READY WHEN YOU ARE" % cleared
+		elif phase in ["warning", "awaiting_roster"]: label += " · INCOMING"
+		elif cleared == 5: label = "5 / 5 CLEARED · SEARCH CACHES & RETURN"
+		return {"title": "ECHOES OF ETERNITY", "objectives": label,
+			"progress": float(cleared) / 5.0, "ready": cleared == 5}
 	var completed := maxi(0, int(session_snapshot.get("objectives_completed", 0)))
 	var required := maxi(1, int(session_snapshot.get("objectives_required", 1)))
 	return {"title": String(session_snapshot.get("activity_name", "Activity")).to_upper(),
@@ -1543,10 +1573,12 @@ func _draw_activity_status() -> void:
 	_text("%d DM · UNSECURED" % int(session_snapshot.get("unsecured_gold", 0)), rect.position + Vector2(rect.size.x - 14, 21), 11, GOLD, false, true)
 	_text(String(labels.objectives), rect.position + Vector2(14, 47), 10, IVORY)
 	var track := Rect2(rect.position + Vector2(180, 38), Vector2(294, 7))
+	if String(session_snapshot.get("activity_id", "")) == "echoes_of_eternity":
+		track = Rect2(rect.position + Vector2(14, 56), Vector2(rect.size.x - 28, 4))
 	draw_rect(track, Color(0.01, 0.03, 0.04))
-	draw_rect(Rect2(track.position, Vector2(track.size.x * float(labels.progress), 7)), TEAL)
+	draw_rect(Rect2(track.position, Vector2(track.size.x * float(labels.progress), track.size.y)), TEAL)
 	if bool(labels.ready):
-		_text("Return to camp to secure your discoveries", Vector2(size.x * 0.5, rect.end.y + 20), 12, TEAL, true)
+		_text("Search the caches, then secure at the return spring" if String(session_snapshot.get("activity_id", "")) == "echoes_of_eternity" else "Return to camp to secure your discoveries", Vector2(size.x * 0.5, rect.end.y + 20), 12, TEAL, true)
 
 
 func _draw_expedition_status() -> void:
@@ -1829,7 +1861,7 @@ func _draw_pack() -> void:
 func result_display_lines() -> Dictionary:
 	if String(results_snapshot.get("run_kind", "")) == "activity":
 		var secured := String(results_snapshot.get("outcome", "")) == "activity_completed"
-		return {"title": "DISCOVERIES SECURED" if secured else "ACTIVITY ENDED",
+		return {"title": ("CHALLENGE SECURED" if String(results_snapshot.get("activity_id", "")) == "echoes_of_eternity" else "DISCOVERIES SECURED") if secured else "ACTIVITY ENDED",
 			"detail": "Your discoveries are safe in your collection." if secured else "Unsecured finds were lost. Your secured collection is unchanged.",
 			"secured": secured, "completed": secured, "early": false,
 			"currency": "DM SECURED" if secured else "DM LOST",
@@ -1872,6 +1904,9 @@ func _draw_results() -> void:
 	if activity_result:
 		summaries[1] = ["DISCOVERIES", "%d / %d" % [int(results_snapshot.get("objectives_completed", 0)), int(results_snapshot.get("objectives_required", 0))]]
 		summaries[2] = ["OUTCOME", "COMPLETED" if success else "ENDED"]
+		if String(results_snapshot.get("activity_id", "")) == "echoes_of_eternity":
+			summaries[1] = ["WAVES CLEARED", "%d / 5" % int(results_snapshot.get("completed_waves", 0))]
+			summaries[2] = ["SCORE · LOCAL RECORD", str(results_snapshot.get("score", 0))]
 	for index in range(summaries.size()):
 		var at := rect.position + Vector2(30 + index * 263, 127)
 		_panel(Rect2(at, Vector2(245, 65)), Color(0.045, 0.12, 0.13, 1))
@@ -1954,3 +1989,18 @@ func _fit_text(value: String, width: float, font_size: int) -> String:
 	while cut.length() > 1 and _font.get_string_size(cut + "…", HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > width:
 		cut = cut.left(cut.length() - 1)
 	return cut + "…"
+
+
+func open_echoes_break(context: Dictionary) -> bool:
+	if mode != &"none" or not is_instance_valid(echoes_panel): return false
+	echoes_panel.open_panel(context)
+	var opened := _open_modal(&"echoes_break")
+	return opened and mode == &"echoes_break" and echoes_panel.visible and echoes_panel.context == context
+
+
+func echoes_review_token() -> int:
+	return _modal_epoch if mode == &"echoes_break" else -1
+
+
+func activity_return_review_token() -> int:
+	return _modal_epoch if mode == &"sanctuary" and sanctuary_panel.kind == &"portal" else -1

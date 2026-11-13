@@ -4,7 +4,7 @@ extends RefCounted
 ## a temporary file, and renamed only after a successful read-back. A previous
 ## valid profile is kept as .bak. This is offline persistence, not remote authority.
 
-const VERSION := 12
+const VERSION := 13
 const ActivityProgress = preload("res://scripts/progression/activity_progression.gd")
 const DepthProgress = preload("res://scripts/progression/depth_progression.gd")
 const EncounterProgress = preload("res://scripts/progression/encounter_progression.gd")
@@ -195,7 +195,7 @@ static func _normalize(value: Variant, unavailable_items: Dictionary, unavailabl
 		result.pets = pets
 	result.gold = int(value.gold)
 	result.revision = int(value.get("revision", 0))
-	var activities := ActivityProgress.normalize(value.get("activities"), int(result.revision)) if int(value.version) >= ActivityProgress.FIRST_PROFILE_VERSION else ActivityProgress.migrate(value, int(result.revision))
+	var activities := ActivityProgress.normalize(value.get("activities"), int(result.revision)) if int(value.version) >= ActivityProgress.CURRENT_PROFILE_VERSION else ActivityProgress.migrate(value, int(result.revision))
 	if activities.is_empty(): return {}
 	result.activities = activities
 	for id: Variant in value.get("items", {}):

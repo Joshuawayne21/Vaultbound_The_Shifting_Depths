@@ -1,5 +1,6 @@
 extends "res://tests/test_harness.gd"
 const Store = preload("res://scripts/progression/profile_store.gd")
+const ActivityProgress = preload("res://scripts/progression/activity_progression.gd")
 const Home = preload("res://scripts/progression/home_progression.gd")
 const Fixtures = preload("res://tests/home_test_fixtures.gd")
 const PATH := "/tmp/vaultbound-home-profile-v8/profile.json"
@@ -22,7 +23,7 @@ func _write(path: String, bytes: String) -> void:
 	file.close()
 
 func _run() -> void:
-	check(Store.VERSION == 12 and Home.VERSION == 3, "Current profile and home namespace are independent of dungeon content versions")
+	check(Store.VERSION == 13 and Home.VERSION == 3, "Current profile and home namespace are independent of dungeon content versions")
 	for version in range(1, 8): _migration(version)
 	_schema()
 	_preservation()
@@ -41,8 +42,8 @@ func _migration(version: int) -> void:
 	var loaded := store.load_profile()
 	if not check(not store.read_only and not loaded.is_empty() and loaded.version == Store.VERSION,
 		"Version%d migrates through the existing profile normalization" % version): return
-	check(loaded.home == Home.empty_fields() and Store.normalize(loaded) == loaded,
-		"Version%d migration allocates no home identity or visit record" % version)
+	check(loaded.home == Home.empty_fields() and loaded.activities == ActivityProgress.empty_fields() and not old.has("activities") and Store.normalize(loaded) == loaded,
+		"Version%d migration adds empty activity records but allocates no home identity or visit" % version)
 	check(loaded.gold == old.gold and loaded.items == old.items and loaded.companions == old.companions
 		and loaded.statistics == old.statistics and loaded.discoveries == old.discoveries,
 		"Version%d preserves secured currency, items, companions, discoveries and full-precision statistics" % version)
@@ -108,6 +109,7 @@ func _preservation() -> void:
 			"future_field": unknown.home.theme_variant = "future_theme"
 			"legacy_unknown":
 				unknown.version = 7
+				unknown.erase("activities")
 				unknown.home = {"legacy_house": "keep_this_progress"}
 		_write(PATH, JSON.stringify(unknown, "", true, true))
 		_write(PATH + ".bak", JSON.stringify(valid, "", true, true))

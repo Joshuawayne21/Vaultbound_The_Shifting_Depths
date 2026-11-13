@@ -20,7 +20,8 @@ const DEFINITIONS := {
 }
 # Expanding this allowlist requires the gameplay/return/settlement tests for that
 # activity. Setting a resource's release flag alone cannot open an empty world.
-const RELEASED_ROUTES := {&"abyssal_descent": &"rootbound_abyss", &"bloodspire_arena": &"combat_arena", &"beastwilds": &"beastwilds"}
+const RELEASED_ROUTES := {&"abyssal_descent": &"rootbound_abyss", &"bloodspire_arena": &"combat_arena", &"beastwilds": &"beastwilds", &"echoes_of_eternity": &"echoes_of_eternity"}
+const RELEASED_DEPTHS := {&"abyssal_descent": 0, &"bloodspire_arena": 0, &"beastwilds": 2, &"echoes_of_eternity": 3}
 
 static func definition(id: StringName) -> Resource:
 	return DEFINITIONS.get(id) as Resource
@@ -30,7 +31,7 @@ static func describe(id: StringName) -> Dictionary:
 	return data.describe() if data != null else {}
 
 static func valid() -> bool:
-	if DEFINITIONS.size() != IDS.size(): return false
+	if DEFINITIONS.size() != IDS.size() or RELEASED_DEPTHS.keys() != RELEASED_ROUTES.keys(): return false
 	var galleries := {"adventure": 0, "conflict": 0, "ascension": 0}
 	for id: StringName in IDS:
 		var data := definition(id)
@@ -43,7 +44,7 @@ static func valid() -> bool:
 			or data.required_cleared_depth < 0 or data.required_cleared_depth > 50: return false
 		galleries[data.gallery] += 1
 		if RELEASED_ROUTES.has(id):
-			if data.destination != RELEASED_ROUTES[id] or data.required_cleared_depth != (2 if id == &"beastwilds" else 0): return false
+			if data.destination != RELEASED_ROUTES[id] or data.required_cleared_depth != int(RELEASED_DEPTHS[id]): return false
 			if data.release_mode != ("local_practice" if id == &"bloodspire_arena" else "local_expedition"): return false
 		elif data.release_mode != "unavailable" or data.destination != &"" or String(data.unavailable_reason).is_empty():
 			return false
@@ -65,7 +66,7 @@ static func entry_status(profile: Dictionary, id: StringName) -> Dictionary:
 	if depths.is_empty():
 		result.reason = "Secured dungeon progression is unavailable."
 		return result
-	if int(depths.highest_cleared_depth) < int(data.required_cleared_depth) and not (id == &"beastwilds" and Tester.enabled(profile)):
+	if int(depths.highest_cleared_depth) < int(data.required_cleared_depth) and not (id in [&"beastwilds", &"echoes_of_eternity"] and Tester.enabled(profile)):
 		result.reason = "Complete Depth %d and extract before entering." % int(data.required_cleared_depth)
 		return result
 	result.ok = true
@@ -79,7 +80,7 @@ static func information_lines(profile: Dictionary, id: StringName) -> Array[Stri
 	# Six bounded lines fit the existing card. Detailed depth information uses
 	# Game's existing reviewed depth selector instead of this compact summary.
 	var lines: Array[String] = [String(data.description), String(data.mode_summary)]
-	lines.append("AVAILABLE: LOCAL PRACTICE ONLY" if data.release_mode == "local_practice" else "ACTIVITY NOT IMPLEMENTED" if not status.implemented else "LOCAL PVE EXPEDITION")
+	lines.append("AVAILABLE: LOCAL PRACTICE ONLY" if data.release_mode == "local_practice" else "ACTIVITY NOT IMPLEMENTED" if not status.implemented else "LOCAL FIVE-WAVE TRIAL" if id == &"echoes_of_eternity" else "LOCAL PVE EXPEDITION")
 	lines.append(String(data.proposed_requirements))
 	lines.append(String(data.reward_summary))
 	lines.append("No matchmaking, ranked progress or Realm Mastery in this foundation.")

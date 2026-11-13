@@ -5,15 +5,21 @@ signal activity_exit_requested(source: Node3D)
 signal activity_return_requested(source: Node3D, completed_result: Dictionary)
 const SpringVisual = preload("res://scripts/visual/return_spring_visual.gd")
 const Architecture = preload("res://scripts/world/architecture.gd")
+const Activities = preload("res://scripts/activities/activity_catalog.gd")
 var interaction_radius := 2.8
 var _world: WeakRef
 var _generation := -1
 var _committing := false
 var _committed_result: Dictionary = {}
 var _visual: Node3D
+var _activity_descriptor: Dictionary = {}
 
 func configure(world: Node3D, generation: int) -> bool:
 	if is_inside_tree() or _world != null or not is_instance_valid(world) or generation < 0: return false
+	if not world.has_method("issued_activity_context"): return false
+	var descriptor: Dictionary = Activities.descriptor(StringName(world.issued_activity_context().get("activity_id", "")))
+	if descriptor.is_empty() or world.get_script() == null or world.get_script().resource_path != String(descriptor.world_script): return false
+	_activity_descriptor = descriptor.duplicate(true)
 	_world = weakref(world)
 	_generation = generation
 	return true
@@ -43,7 +49,8 @@ func get_exit_status(actor: Node3D) -> Dictionary:
 		if authority.completed_activity_return_matches(world, self, _generation, _committed_result.return_token):
 			return {"ok": true, "can_secure": false, "can_abandon": false, "completed_return": true,
 				"reason": "Rewards already secured; retry return." if _committed_result.outcome == "activity_completed" else "Findings already discarded; retry return.",
-				"activity_id": "beastwilds", "claimed": [], "required": [], "total": 3}
+				"activity_id": String(_activity_descriptor.activity_id), "claimed": [], "required": [],
+				"total": int(_activity_descriptor.objectives_required), "completed_waves": int(_committed_result.get("completed_waves", 0))}
 		return rejected
 	if not authority.has_method("activity_exit_status"): return rejected
 	var status: Dictionary = authority.activity_exit_status(world, self, actor)

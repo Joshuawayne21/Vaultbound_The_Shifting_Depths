@@ -74,6 +74,10 @@ var _hud_elapsed := 0.0
 var _damage_receipts: Dictionary = {}
 var _progression_profile: Dictionary = {}
 var _derived_stats: Dictionary = {"damage_multiplier": 1.0, "armor": 0.0}
+# Session owns temporary activity effects; these are references, never saved gear.
+var _activity_effect_world: WeakRef
+var _activity_effect_authority: WeakRef
+var _activity_effect_generation := -1
 
 @onready var visual: Node3D = $Visual
 
@@ -90,7 +94,7 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	combat.tick(delta)
-	stamina_component.tick(delta, health > 0.0 and combat.state not in [&"blocking", &"charging", &"dodge"])
+	stamina_component.tick(delta, health > 0.0 and combat.state not in [&"blocking", &"charging", &"dodge"], float(activity_effect_snapshot().regen_multiplier))
 	var movement := Vector3.ZERO
 	if controls_enabled and InputHub.controls_enabled and health > 0.0:
 		var stick := InputHub.get_move_vector()
@@ -329,7 +333,7 @@ func on_weapon_style_changed() -> void:
 	_refresh_progression_stats()
 
 func combat_damage_multiplier() -> float:
-	return clampf(float(_derived_stats.get("damage_multiplier", 1.0)), 1.0, 2.0)
+	return clampf(float(_derived_stats.get("damage_multiplier", 1.0)), 1.0, 2.0) * float(activity_effect_snapshot().damage_multiplier)
 
 func combat_effect_snapshot() -> Dictionary:
 	return CharacterProgression.EFFECTS.clamp_effects(_derived_stats)
@@ -453,3 +457,45 @@ func _emit_stats() -> void:
 	if current != _previous_stats:
 		_previous_stats = current
 		stats_changed.emit(health, max_health, stamina, max_stamina)
+
+
+func bind_activity_effects(world: Node3D, authority: Node, generation: int) -> bool:
+	# Called only after world + party admission. Exact source checks also run on every read.
+	if not _activity_effect_context_valid(world, authority, generation) or not authority.activity_context_valid(world, generation): return false
+	_activity_effect_world = weakref(world)
+	_activity_effect_authority = weakref(authority)
+	_activity_effect_generation = generation
+	return true
+
+
+func clear_activity_effects(expected_generation: int = -1) -> void:
+	if expected_generation >= 0 and expected_generation != _activity_effect_generation: return
+	_activity_effect_world = null
+	_activity_effect_authority = null
+	_activity_effect_generation = -1
+
+
+func _activity_effect_context_valid(world: Node3D, authority: Node, generation: int) -> bool:
+	var shell := get_parent()
+	return is_inside_tree() and not is_queued_for_deletion() and health > 0.0 and not downed and not eliminated \
+		and is_instance_valid(shell) and shell.get_script() != null \
+		and shell.get_script().resource_path == "res://scripts/systems/game.gd" \
+		and shell.get("player") == self and shell.get("active_world") == world \
+		and shell.get("current_location") == &"echoes_of_eternity" \
+		and is_instance_valid(world) and world.is_inside_tree() and not world.is_queued_for_deletion() \
+		and world.get_script() != null and world.get_script().resource_path == "res://scripts/activities/echoes_level.gd" \
+		and is_instance_valid(authority) and authority == get_node_or_null("/root/ExpeditionSession") \
+		and generation >= 0 and int(authority.get("run_generation")) == generation
+
+
+func activity_effect_snapshot() -> Dictionary:
+	var identity := {"damage_multiplier": 1.0, "regen_multiplier": 1.0}
+	var world := _activity_effect_world.get_ref() as Node3D if _activity_effect_world != null else null
+	var authority := _activity_effect_authority.get_ref() as Node if _activity_effect_authority != null else null
+	if not _activity_effect_context_valid(world, authority, _activity_effect_generation): return identity
+	var granted: Dictionary = authority.echoes_effects(world, self, _activity_effect_generation)
+	for key: String in ["damage_multiplier", "regen_multiplier"]:
+		var value: Variant = granted.get(key)
+		if not (value is float or value is int) or not is_finite(float(value)): return identity
+	return {"damage_multiplier": clampf(float(granted.damage_multiplier), 1.0, 1.12),
+		"regen_multiplier": clampf(float(granted.regen_multiplier), 1.0, 1.24)}
