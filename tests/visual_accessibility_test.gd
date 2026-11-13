@@ -251,7 +251,7 @@ func _world_receivers() -> void:
 	var material: Material = motes.material_override
 	check(settings.set_presentation_preferences(2, 60, 100, true, false, 0, true, false), "Zero-density static presentation applies to live world components")
 	check(motes.multimesh.visible_instance_count == 0 and motes.multimesh == instances and motes.material_override == material, "Zero density hides all motes without replacing mesh or material")
-	var gate := portal_to(&"rootbound_abyss")
+	var gate := portal_to(&"realm_nexus")
 	game.player.global_position = game.active_world.get_poi_approach_position(&"rootbound_abyss") + Vector3.UP * 0.15
 	game.player.velocity = Vector3.ZERO
 	await frames(3)

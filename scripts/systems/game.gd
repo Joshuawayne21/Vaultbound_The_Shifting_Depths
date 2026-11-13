@@ -6,6 +6,7 @@ signal scene_changed(destination: StringName)
 
 const LEVELS := {
 	&"sanctuary": "res://scenes/world/sanctuary.tscn",
+	&"realm_nexus": "res://scenes/world/realm_nexus.tscn",
 	&"dungeon": "res://scenes/world/dungeon.tscn",
 	&"combat_arena": "res://scenes/world/combat_arena.tscn",
 	&"rootbound_abyss": "res://scenes/world/rootbound_abyss.tscn",
@@ -20,6 +21,7 @@ const LEVELS := {
 	&"home_rooftop_garden": "res://scenes/world/home_rooftop_garden.tscn",
 }
 const HOME_ROOMS := {&"home_conservatory": &"pet_conservatory", &"home_armory": &"armory", &"home_companion_hall": &"companion_hall", &"home_relic_library": &"relic_library", &"home_personal_chamber": &"personal_chamber", &"home_wardrobe": &"wardrobe", &"home_rooftop_garden": &"rooftop_garden"}
+const REALMS = preload("res://scripts/realms/realm_catalog.gd")
 const DEPTH_POLICY = preload("res://resources/expedition/depth_policy.tres")
 const DUNGEON_CONTENT = preload("res://scripts/expedition/dungeon_content.gd")
 
@@ -121,7 +123,7 @@ func _process(delta: float) -> void:
 		hud.expedition_overlay.pet_name_panel.refresh_source()
 	if current_location == &"rootbound_abyss" and is_instance_valid(active_world) and active_world.has_method("snapshot"):
 		hud.set_dungeon_snapshot(active_world.snapshot())
-	elif current_location == &"sanctuary" and not transitioning:
+	elif _portal_hub_context() and not transitioning:
 		_publish_city_snapshot()
 		if _city_portal_source != null and hud.expedition_overlay.mode == &"sanctuary":
 			var source := _city_portal_source.get_ref() as Node3D
@@ -183,6 +185,22 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 			next_world.free()
 		hud.show_message("Passage is missing a safe arrival point.")
 		return
+	var preserves_nexus_practice_return: bool = destination == &"combat_arena" and current_location == &"combat_arena" \
+		and is_instance_valid(request_world) and request_world.get_script() != null \
+		and request_world.get_script().resource_path == "res://scripts/world/combat_arena.gd" \
+		and request_world.has_method("uses_nexus_return") and request_world.uses_nexus_return()
+	if destination == &"combat_arena" and (current_location == &"realm_nexus" or preserves_nexus_practice_return):
+		# This canonical Nexus visit retains its exit through training resets.
+		# Default Sanctuary/Sunken Vault practice keeps its existing contracts.
+		if (not _portal_hub_context() and not preserves_nexus_practice_return) or active_world != request_world or not is_instance_valid(request_world) \
+			or not request_world.is_inside_tree() or request_world.is_queued_for_deletion() \
+			or request_world.get_parent() != world_root or ExpeditionSession.active or entry_id != &"default" \
+			or next_world.get_script() == null or next_world.get_script().resource_path != "res://scripts/world/combat_arena.gd" \
+			or not next_world.has_method("configure_return_route") \
+			or not next_world.configure_return_route(&"realm_nexus", &"from_bloodspire"):
+			next_world.free()
+			hud.show_message("The Nexus practice return is unavailable. You remain in the current area.")
+			return
 	if destination == &"personal_sanctuary":
 		# Home ownership is prepared by the existing save authority. Its notices
 		# and changed signal can synchronously replace this request's world.
@@ -351,6 +369,12 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 			var room_home: Dictionary = ExpeditionSession.home_snapshot()
 			combat_admitted = combat_admitted and not home_room_identity.is_empty() and room_home.get("id") == home_room_identity \
 				and ExpeditionSession.home_room_accessible(HOME_ROOMS[destination]) and not ExpeditionSession.active
+	if destination == &"realm_nexus":
+		combat_admitted = is_instance_valid(next_world) and not next_world.is_queued_for_deletion() \
+			and next_world.get_parent() == world_root and active_world == next_world and current_location == destination \
+			and _travel_serial == travel_serial and next_world.get_script() != null \
+			and next_world.get_script().resource_path == "res://scripts/world/realm_nexus.gd" \
+			and next_world.has_method("validate_nexus_arrival") and next_world.validate_nexus_arrival(entry_id)
 	if not issued_plan.is_empty() and _travel_generation_valid(issued_generation, issued_seed, issued_context, issued_plan) \
 			and _candidate_ready_valid(next_world, issued_context, issued_plan):
 		# Native candidate floor/capsules exist now. Only its private issued
@@ -365,6 +389,8 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 		_cancel_candidate_travel(next_world, issued_generation, issued_seed, issued_context, issued_plan)
 		if (destination == &"personal_sanctuary" or HOME_ROOMS.has(destination)):
 			hud.show_message("Home arrival is obstructed. You remain in the current area.")
+		elif destination == &"realm_nexus":
+			hud.show_message("Nexus arrival is obstructed. You remain in the current area.")
 		return
 	if is_instance_valid(previous_world):
 		_pet_presenter = null
@@ -414,8 +440,9 @@ func change_location(destination: StringName, entry_id: StringName = &"default",
 	InputHub.controls_enabled = true
 	hud.set_input_enabled(true)
 	scene_changed.emit(destination)
-	if destination == &"sanctuary":
+	if _portal_hub_context():
 		_publish_city_snapshot()
+	if destination == &"sanctuary":
 		hud.present_pending_results()
 
 
@@ -636,7 +663,7 @@ func _finish_return_recovery(message: String) -> void:
 		_return_focus_suspend = {"world": weakref(active_world), "player": weakref(player), "party": weakref(party), "serial": _travel_serial}
 	hud.set_transition(0.0)
 	hud.show_message(message)
-	if current_location == &"sanctuary": _publish_city_snapshot()
+	if _portal_hub_context(): _publish_city_snapshot()
 
 
 func _resume_return_focus() -> void:
@@ -676,6 +703,9 @@ func _bind_world_travel_signal(source: Node, world: Node3D) -> void:
 		var callback: Callable = connection.callable
 		if callback.get_object() == self and callback.get_method() in [&"_on_source_travel", &"_on_completed_return_request"]:
 			source.disconnect("travel_requested", callback)
+	# All twelve Nexus portals use the reviewed card path. Never wire a raw
+	# travel signal that could bypass authored ownership or unavailable gates.
+	if world.get_script() != null and world.get_script().resource_path == "res://scripts/world/realm_nexus.gd": return
 	if world.has_method("registered_checkpoints") and world.registered_checkpoints().has(source):
 		source.connect("travel_requested", _on_completed_return_request.bind(weakref(world), weakref(source), ExpeditionSession.run_generation))
 	else:
@@ -775,11 +805,11 @@ func _cancel_candidate_travel(candidate: Node3D, generation: int = -1, seed_valu
 	hud.set_input_enabled(not _modal_open)
 	hud.set_transition(0.0)
 	hud.show_message("The expedition changed before travel completed. Approach the portal again.")
-	if current_location == &"sanctuary": _publish_city_snapshot()
+	if _portal_hub_context(): _publish_city_snapshot()
 
 
 func _publish_city_snapshot() -> void:
-	if current_location != &"sanctuary" or not is_instance_valid(active_world) or not active_world.has_method("get_city_layout"):
+	if not _portal_hub_context() or not is_instance_valid(active_world) or not active_world.has_method("get_city_layout"):
 		return
 	var data: Dictionary = active_world.get_city_layout().duplicate(true)
 	data.player_position = player.global_position
@@ -788,7 +818,7 @@ func _publish_city_snapshot() -> void:
 
 
 func _on_city_waypoint(id: StringName) -> void:
-	if transitioning or current_location != &"sanctuary" or not is_instance_valid(active_world) or not active_world.has_method("get_city_layout"):
+	if transitioning or not _portal_hub_context() or not is_instance_valid(active_world) or not active_world.has_method("get_city_layout"):
 		return
 	if id == &"":
 		_city_waypoint.clear()
@@ -806,8 +836,41 @@ func _on_city_waypoint(id: StringName) -> void:
 	hud.show_message("Waypoint set · " + label)
 
 
+func _portal_hub_context() -> bool:
+	if current_location == &"sanctuary": return true
+	return current_location == &"realm_nexus" and is_instance_valid(active_world) \
+		and active_world.get_script() != null \
+		and active_world.get_script().resource_path == "res://scripts/world/realm_nexus.gd"
+
+
+func _nexus_portal_source_valid(source: Node3D) -> bool:
+	# Every Nexus gate, including auxiliary legacy routes, is enrolled once by
+	# the authored world. Clearing an activity ID never grants legacy authority.
+	if current_location != &"realm_nexus": return true
+	return _portal_hub_context() and is_instance_valid(source) \
+		and active_world.has_method("owns_portal_source") and active_world.owns_portal_source(source)
+
+
+func _portal_activity_id(source: Node3D) -> StringName:
+	if not is_instance_valid(source): return &""
+	var value: Variant = source.get("activity_id")
+	return StringName(value) if value is String or value is StringName else &""
+
+
+func _activity_source_definition(source: Node3D) -> Dictionary:
+	if current_location != &"realm_nexus" or not _portal_hub_context() or not is_instance_valid(source) \
+		or source.get_script() == null or source.get_script().resource_path != "res://scripts/world/portal.gd": return {}
+	var id: StringName = _portal_activity_id(source)
+	var data: Dictionary = REALMS.describe(id)
+	if data.is_empty() or not REALMS.valid() or not active_world.has_method("owns_activity_portal") \
+		or not active_world.owns_activity_portal(source, id) \
+		or source.get("destination") != data.destination or source.get("entry_id") != data.entry_id \
+		or source.get("visual_profile_override") != REALMS.definition(id).visual_profile: return {}
+	return data
+
+
 func _city_source_valid(source: Node3D) -> bool:
-	if transitioning or not _application_focused or current_location != &"sanctuary" or not is_instance_valid(active_world) \
+	if transitioning or not _application_focused or not _portal_hub_context() or not is_instance_valid(active_world) \
 			or not is_instance_valid(source) or not source.is_inside_tree() or not active_world.is_ancestor_of(source):
 		return false
 	if player.health <= 0.0 or player.downed or player.combat.state != &"idle": return false
@@ -832,14 +895,19 @@ func _on_city_terminal(source: Node3D, kind: StringName, context: Dictionary) ->
 
 
 func _on_portal_information(source: Node3D) -> void:
-	if not _city_source_valid(source) or hud.expedition_overlay.mode != &"none" or not bool(source.get("require_entry_card")):
+	if not _city_source_valid(source) or not _nexus_portal_source_valid(source) \
+		or hud.expedition_overlay.mode != &"none" or not bool(source.get("require_entry_card")):
 		return
 	var destination := StringName(source.get("destination"))
-	if not LEVELS.has(destination): return
+	var activity_id := _portal_activity_id(source)
+	if not activity_id.is_empty():
+		if _activity_source_definition(source).is_empty(): return
+	elif not LEVELS.has(destination): return
 	_city_review_epoch += 1
 	_city_portal_source = weakref(source)
 	_city_content_advisory.clear()
 	_city_portal_route = {"destination": destination, "entry_id": StringName(source.get("entry_id"))}
+	if not activity_id.is_empty(): _city_portal_route.activity_id = activity_id
 	if destination == &"rootbound_abyss":
 		_city_portal_route.expedition_depth = 1
 		_city_portal_route.depth_policy_version = DEPTH_POLICY.policy_version
@@ -874,7 +942,8 @@ func _portal_details(source: Node3D) -> Dictionary:
 		details.maximum_depth = maxi(DEPTH_POLICY.supported_maximum_depth, mini(int(status.highest_unlocked_depth), DEPTH_POLICY.supported_maximum_depth + 1))
 		details.lines = _portal_information_lines(destination, status)
 	else:
-		details.lines = _portal_information_lines(destination)
+		var activity_id := StringName(_city_portal_route.get("activity_id", &""))
+		details.lines = REALMS.information_lines(ExpeditionSession.profile, activity_id) if not activity_id.is_empty() else _portal_information_lines(destination)
 	return details
 
 
@@ -906,6 +975,11 @@ func _city_portal_advisory(source: Node3D) -> Dictionary:
 func _city_portal_local_status(source: Node3D) -> Dictionary:
 	if not _city_source_valid(source) or not _city_portal_route_matches(source):
 		return {"ok": false, "reason": "Move back within sight and reach of this portal."}
+	var activity_id := StringName(_city_portal_route.get("activity_id", &""))
+	if not activity_id.is_empty():
+		if ExpeditionSession.active: return {"ok": false, "reason": "Finish the current expedition before entering another activity."}
+		var activity: Dictionary = REALMS.entry_status(ExpeditionSession.profile, activity_id)
+		if not bool(activity.ok): return {"ok": false, "reason": String(activity.reason)}
 	if _city_portal_route.destination == &"rootbound_abyss":
 		if typeof(_city_portal_route.get("expedition_depth")) != TYPE_INT \
 				or _city_portal_route.get("depth_policy_version") != DEPTH_POLICY.policy_version:
@@ -916,8 +990,14 @@ func _city_portal_local_status(source: Node3D) -> Dictionary:
 
 
 func _city_portal_route_matches(source: Node3D) -> bool:
-	return is_instance_valid(source) and not _city_portal_route.is_empty() and LEVELS.has(_city_portal_route.destination) \
-		and source.get("destination") == _city_portal_route.destination and source.get("entry_id") == _city_portal_route.entry_id
+	if not is_instance_valid(source) or _city_portal_route.is_empty() or not _nexus_portal_source_valid(source): return false
+	var activity_id := StringName(_city_portal_route.get("activity_id", &""))
+	if activity_id != _portal_activity_id(source): return false
+	if not activity_id.is_empty():
+		var data := _activity_source_definition(source)
+		return not data.is_empty() and data.destination == _city_portal_route.destination and data.entry_id == _city_portal_route.entry_id
+	return LEVELS.has(_city_portal_route.destination) and source.get("destination") == _city_portal_route.destination \
+		and source.get("entry_id") == _city_portal_route.entry_id
 
 
 func _on_portal_enter() -> void:
@@ -932,20 +1012,29 @@ func _on_portal_enter() -> void:
 	var depth := int(_city_portal_route.get("expedition_depth", 1))
 	var policy_version := int(_city_portal_route.get("depth_policy_version", 0))
 	var reviewed_epoch := _city_review_epoch
+	var activity_id := StringName(_city_portal_route.get("activity_id", &""))
 	_city_portal_source = null
 	_city_portal_route.clear()
 	_city_content_advisory.clear()
 	hud.close_modals()
-	_travel_from_city_portal.call_deferred(weakref(source), destination, entry_id, depth, policy_version, reviewed_epoch)
+	_travel_from_city_portal.call_deferred(weakref(source), destination, entry_id, depth, policy_version, reviewed_epoch, activity_id)
 
 
-func _travel_from_city_portal(reference: WeakRef, destination: StringName, entry_id: StringName, depth: int, policy_version: int, reviewed_epoch: int) -> void:
+func _travel_from_city_portal(reference: WeakRef, destination: StringName, entry_id: StringName, depth: int, policy_version: int, reviewed_epoch: int, activity_id: StringName = &"") -> void:
 	# Recheck after the input/physics callback, immediately before existing travel guards.
 	var source := reference.get_ref() as Node3D
 	if reviewed_epoch != _city_review_epoch or hud.expedition_overlay.mode != &"none" \
-			or not _city_source_valid(source) or source.get("destination") != destination or source.get("entry_id") != entry_id:
+			or not _city_source_valid(source) or source.get("destination") != destination or source.get("entry_id") != entry_id \
+			or _portal_activity_id(source) != activity_id or not _nexus_portal_source_valid(source):
 		hud.show_message("Portal entry expired. Approach the gate and review it again.")
 		return
+	if not activity_id.is_empty():
+		var data := _activity_source_definition(source)
+		var activity: Dictionary = REALMS.entry_status(ExpeditionSession.profile, activity_id)
+		if data.is_empty() or not bool(activity.ok) or ExpeditionSession.active \
+			or activity.destination != destination or activity.entry_id != entry_id or not LEVELS.has(destination):
+			hud.show_message("Activity entry changed. Review the gateway again.")
+			return
 	if destination == &"rootbound_abyss":
 		var status: Dictionary = ExpeditionSession.depth_entry_status(depth)
 		if policy_version != DEPTH_POLICY.policy_version or not bool(status.ok):
@@ -1001,6 +1090,10 @@ func _portal_information_lines(destination: StringName, depth_status: Dictionary
 				if lines[index].contains("unlock the next depth") or lines[index].contains("unlocks the next depth"):
 					lines[index] = "Testing a locked depth does not skip earned depth progression. Rewards still require extraction."
 		if debug_expedition_seed >= 0: lines[seed_row] = "Developer seed: %d · layout and modifiers are generated on entry." % debug_expedition_seed
+	elif destination == &"realm_nexus":
+		lines = ["NEXUS OF REALMS · Sanctuary activity hall", "Explore ten gateways grouped in Adventure, Conflict and Ascension.", "Abyssal Descent and local Bloodspire practice are playable.", "Other activities are unavailable. The entrance gateway returns to Sanctuary."]
+	elif destination == &"sanctuary":
+		lines = ["SANCTUARY · Return to the shared city", "Arrive at the north promenade near the Nexus entrance.", "Your secured equipment, home, pets and companions remain intact."]
 	elif destination == &"combat_arena":
 		lines = ["PROVING GROUNDS · Existing combat practice area", "Practice Sword/Shield and Staff combat with the current enemies and targets.", "This is a local training destination, not a player-versus-player match."]
 	elif destination == &"collection_hall":
@@ -1035,6 +1128,9 @@ func _on_travel(destination: StringName, entry_id: StringName) -> void:
 
 func _on_source_travel(destination: StringName, entry_id: StringName, source_world: Node3D, generation: int) -> void:
 	# Interactions can originate in the physics step; tree mutation must be deferred.
+	# Nexus world signals have no unreviewed route. Shell-owned death/fall/wipe
+	# recovery still calls the deferred context guard directly.
+	if current_location == &"realm_nexus": return
 	if not is_instance_valid(source_world) or source_world != active_world or source_world.is_queued_for_deletion() or generation != ExpeditionSession.run_generation: return
 	_travel_if_context_current.call_deferred(destination, entry_id, weakref(source_world), generation, ExpeditionSession.active)
 

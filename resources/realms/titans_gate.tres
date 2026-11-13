@@ -1,0 +1,21 @@
+[gd_resource type="Resource" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/realms/realm_activity.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/portals/nexus/titans_gate.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"titans_gate"
+label = "Titan's Gate"
+description = "Confront immense guardians with readable multi-phase encounters."
+gallery = "adventure"
+release_mode = "unavailable"
+destination = &""
+entry_id = &"default"
+required_cleared_depth = 10
+proposed_requirements = "Proposed unlock: complete Depth 10 and extract."
+mode_summary = "Cooperative giant boss challenges · planned."
+reward_summary = "Planned rewards: boss equipment, materials and trophies."
+unavailable_reason = "Titan encounters and their cooperative activity are not implemented yet."
+architecture_family = "titan_chains"
+visual_profile = ExtResource("2")

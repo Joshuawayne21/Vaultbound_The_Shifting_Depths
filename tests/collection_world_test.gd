@@ -28,8 +28,13 @@ func _run() -> void:
 	for entry: Node in get_nodes_in_group("interactables"):
 		if entry.get("destination") != null:
 			destinations.append(entry.destination)
-	check(destinations.has(&"dungeon") and destinations.has(&"rootbound_abyss") and destinations.has(&"personal_sanctuary") \
-		and sanctuary.get_node("CollectionHallGate").get_meta("sanctuary_poi") == &"collection_hall", "Sanctuary retains dungeon portals and the stable Hall gate/POI now leads to the personal home")
+	check(destinations.size() == 2 and destinations.has(&"realm_nexus") and destinations.has(&"personal_sanctuary") \
+		and sanctuary.get_node("CollectionHallGate").get_meta("sanctuary_poi") == &"collection_hall", "Sanctuary has exactly the Nexus and saved-home entrances; activities live together inside the Nexus")
+	var guides: Dictionary = {}
+	for entry: Node in get_nodes_in_group("city_terminals"):
+		if entry.terminal_id in [&"dungeon", &"combat_arena"]:
+			guides[entry.terminal_id] = entry.kind
+	check(guides == {&"dungeon": &"guide", &"combat_arena": &"guide"}, "Retained practice POIs become genuine orientation guides rather than duplicate activity gates")
 	check(_clear_floor(sanctuary, sanctuary.get_spawn_transform(&"from_hall").origin - Vector3.UP * 0.15), "Returning from the Hall has an unobstructed Sanctuary arrival")
 	sanctuary.queue_free()
 	await frames(3)

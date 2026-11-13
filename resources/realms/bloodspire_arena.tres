@@ -1,0 +1,21 @@
+[gd_resource type="Resource" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/realms/realm_activity.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/portals/nexus/bloodspire_arena.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"bloodspire_arena"
+label = "Bloodspire Arena"
+description = "Practise current Sword/Shield and Staff combat in the Proving Grounds."
+gallery = "conflict"
+release_mode = "local_practice"
+destination = &"combat_arena"
+entry_id = &"default"
+required_cleared_depth = 0
+proposed_requirements = "Local practice is open; competitive entry will require a combat tutorial."
+mode_summary = "LOCAL PRACTICE · Existing NPC encounters; no PvP or ranked rating."
+reward_summary = "Practice only: no ranked rewards or equipped-item loss."
+unavailable_reason = ""
+architecture_family = "crossed_blades"
+visual_profile = ExtResource("2")

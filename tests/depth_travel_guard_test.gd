@@ -107,8 +107,8 @@ func _portal_still_available(label: String) -> void:
 	game.player.global_position = safe_world.get_poi_approach_position(&"rootbound_abyss") + Vector3.UP * 0.15
 	game.player.velocity = Vector3.ZERO
 	await frames(3)
-	var gate := portal_to(&"rootbound_abyss")
-	if not check(gate != null, label + " retains its physical Rootbound portal"): return
+	var gate := portal_to(&"realm_nexus")
+	if not check(gate != null, label + " retains its physical Nexus entrance"): return
 	gate.interact(game.player)
 	var panel: Control = game.hud.expedition_overlay.sanctuary_panel
 	check(panel.visible and panel.entry_enabled and game.hud.expedition_overlay.mode == &"sanctuary",

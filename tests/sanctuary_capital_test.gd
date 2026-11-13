@@ -181,11 +181,21 @@ func _geometry() -> void:
 		check(bounds.end.y >= 57.99 and bounds.end.y <= 70.01 and bounds.position.y >= -9.0 and bounds.position.y <= -7.0, "Named elder tree towers above the player and has a grounded distant cliff-root bed: " + id)
 
 func _portal_profiles() -> void:
-	var identities: Array[StringName] = [&"dungeon", &"rootbound_abyss", &"combat_arena", &"personal_sanctuary"]
+	var identities: Array[StringName] = [&"dungeon", &"rootbound_abyss", &"combat_arena", &"personal_sanctuary", &"realm_nexus"]
+	var legacy: Dictionary = {}
+	for destination: StringName in [&"dungeon", &"rootbound_abyss", &"combat_arena"]:
+		check(portal_to(destination) == null, "Activity is no longer duplicated outside the Nexus: " + String(destination))
+		var fixture: Node3D = preload("res://scenes/world/portal.tscn").instantiate()
+		fixture.destination = destination
+		fixture.require_entry_card = true
+		fixture.position = Layout.get_poi(destination).position
+		fixture.name = "LegacyVisualFixture" + String(destination)
+		city.add_child(fixture)
+		legacy[destination] = fixture
 	var material_ids: Dictionary = {}
 	for destination: StringName in identities:
-		var portal := portal_to(destination)
-		if not check(portal != null, "Existing playable portal remains present: " + String(destination)): continue
+		var portal: Node3D = legacy.get(destination) if legacy.has(destination) else portal_to(destination)
+		if not check(portal != null, "Actual city gateway or retained native legacy-profile fixture exists: " + String(destination)): continue
 		var resource: Resource = portal.get("_visual_profile")
 		var label := portal.get_node_or_null("RouteKind") as Label3D
 		check(resource != null and portal.get_meta("portal_visual_profile_id", &"") == resource.id and label != null and not label.no_depth_test, "Portal exposes its actual route-specific profile and depth-tested label: " + String(destination))
@@ -206,8 +216,11 @@ func _portal_profiles() -> void:
 				var shape := body.get_child(0) as CollisionShape3D
 				matching = matching and shape.shape is BoxShape3D and shape.shape.size == node.mesh.size and body.collision_layer == 8 and body.collision_mask == 0 and shape.global_transform.is_equal_approx(node.global_transform)
 		check(matching, "Every new opaque portal ornament has a matching camera-only shape and leaves player collision unchanged")
-		var poi: StringName = &"collection_hall" if destination == &"personal_sanctuary" else destination
+		var poi: StringName = &"collection_hall" if destination == &"personal_sanctuary" else &"rootbound_abyss" if destination == &"realm_nexus" else destination
 		check(is_equal_approx(portal.interaction_radius, 3.0) and portal.require_entry_card and portal.position.is_equal_approx(Layout.get_poi(poi).position), "Portal appearance preserves admission radius, entry review and exact authored destination position")
+	for fixture: Node3D in legacy.values(): fixture.free()
+	check(portal_to(&"dungeon") == null and portal_to(&"rootbound_abyss") == null and portal_to(&"combat_arena") == null,
+		"Native legacy presentation fixtures leave no duplicate city gameplay sources")
 	var hall_profile := load("res://resources/portals/collection_hall.tres") as Resource
 	check(hall_profile.magic_color.r > hall_profile.magic_color.b and hall_profile.id == &"collection_gold", "The existing interior Collection Hall portal retains its gold trophy identity")
 	check(portal_to(&"veilgarden") == null and portal_to(&"bloodfall_frontier") == null, "Future purple/red worlds are not falsely exposed before implementation")
@@ -220,9 +233,9 @@ func _camera_routes(quality: int) -> void:
 	for index in range(3):
 		var angle := (float(index) + 0.5) * TAU / 16.0
 		points.append({"point": Vector3(sin(angle), 0, -cos(angle)) * 41.0, "yaw": PI - angle})
-	for destination: StringName in [&"rootbound_abyss", &"personal_sanctuary"]:
+	for destination: StringName in [&"realm_nexus", &"personal_sanctuary"]:
 		var portal := portal_to(destination)
-		var poi: StringName = &"collection_hall" if destination == &"personal_sanctuary" else destination
+		var poi: StringName = &"collection_hall" if destination == &"personal_sanctuary" else &"rootbound_abyss" if destination == &"realm_nexus" else destination
 		points.append({"point": city.get_poi_approach_position(poi), "yaw": portal.rotation.y + PI})
 	# Preserve every earlier wall/tower/portal probe, then add the new plaza,
 	# all authored districts and the suspended central landmark.

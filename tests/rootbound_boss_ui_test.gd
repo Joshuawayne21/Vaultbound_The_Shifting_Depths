@@ -50,11 +50,12 @@ func _tap(at: Vector2, finger: int = 710) -> void:
 	touch(overlay, finger, at, false)
 
 func _open_gate() -> void:
+	if not await enter_nexus_from_sanctuary(): return
 	game.hud.close_modals()
-	game.player.reset_for_spawn(Transform3D(Basis.IDENTITY, game.active_world.get_poi_approach_position(&"rootbound_abyss") + Vector3.UP * 0.15))
+	game.player.reset_for_spawn(Transform3D(Basis.IDENTITY, game.active_world.get_poi_approach_position(&"abyssal_descent") + Vector3.UP * 0.15))
 	await frames(3)
 	var gate := portal_to(&"rootbound_abyss")
-	if not check(is_instance_valid(gate), "Existing blue portal remains available"):
+	if not check(is_instance_valid(gate), "Existing expedition is available at the authored Abyssal Descent gateway"):
 		return
 	gate.interact(game.player)
 	check(overlay.mode == &"sanctuary" and panel.has_depth_selector(), "Physical source opens the existing paused review card")
@@ -141,7 +142,7 @@ func _pool_input_guards() -> void:
 	_tap(panel.primary_rect().get_center())
 	biome.available = false
 	await frames(3)
-	check(not game.transitioning and not session.active and game.current_location == &"sanctuary", "Deferred physical entry rechecks executable content availability")
+	check(not game.transitioning and not session.active and game.current_location == &"realm_nexus", "Deferred physical entry rechecks executable content availability")
 	biome.available = available
 	await _open_gate()
 	game._on_portal_depth_selected(2)
@@ -174,7 +175,7 @@ func _missing_candidate_floor() -> void:
 		and input_hub.controls_enabled and not game.party.paused, "Physical rejection retires only the failed run and restores source/input/party ownership")
 	check(FileAccess.get_file_as_bytes(PROFILE) == saved, "Physical rejection leaves all previously secured bytes intact")
 	await _open_gate()
-	check(panel.entry_enabled and not session.active, "The same physical Sanctuary portal remains usable after native floor rejection")
+	check(panel.entry_enabled and not session.active, "The preserved Sanctuary entrance still reaches a usable real expedition review after native floor rejection")
 	game.hud.close_modals()
 
 func _candidate_floor_fault(candidate: Node) -> void:

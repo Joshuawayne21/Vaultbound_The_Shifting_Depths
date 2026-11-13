@@ -50,14 +50,15 @@ func _build_scenery() -> void:
 		add_child(fauna)
 
 func _build_portals() -> void:
-	for id: StringName in [&"dungeon", &"rootbound_abyss", &"combat_arena", &"collection_hall"]:
+	for id: StringName in [&"rootbound_abyss", &"collection_hall"]:
 		var data: Dictionary = CITY_LAYOUT.get_poi(id)
 		var portal := Portal.instantiate()
-		portal.name = {&"dungeon": "PracticeGate", &"rootbound_abyss": "RootboundExpeditionGate", &"combat_arena": "ProvingGroundsGate", &"collection_hall": "CollectionHallGate"}[id]
+		portal.name = "NexusOfRealmsGate" if id == &"rootbound_abyss" else "CollectionHallGate"
 		portal.position = data.position
 		portal.rotation.y = data.rotation
-		portal.destination = &"personal_sanctuary" if id == &"collection_hall" else id
-		portal.entry_id = &"from_sanctuary" if id == &"dungeon" else &"default"
+		portal.destination = &"personal_sanctuary" if id == &"collection_hall" else &"realm_nexus"
+		portal.entry_id = &"default" if id == &"collection_hall" else &"from_sanctuary"
+		if id == &"rootbound_abyss": portal.visual_profile_override = preload("res://resources/portals/realm_nexus.tres")
 		portal.title = String(data.label).to_upper()
 		portal.require_entry_card = true
 		portal.set_meta("sanctuary_poi", id)
@@ -116,9 +117,11 @@ func _build_terminals() -> void:
 		&"map": "Choose the city guide or a LOCAL TEST Exchange. DEMO / NOT LIVE: synthetic accounts, items and TEST DM only. Nothing enters your real collection; online player trading remains unavailable.",
 		&"equipment": "Preview your owned equipment and appearance using the existing equipment viewer. Cosmetic purchases and a separate cosmetic catalog are not available in this build.",
 		&"conservatory": "Weave earned cosmetic pets, explore their journal, and choose one companion to follow you. Expedition ingredients remain unsecured until extraction.",
+		&"dungeon": "Nexus: dungeon depths, records and local practice. Contracts are not available.",
+		&"combat_arena": "Recruit at the southern Tavern. Bloodspire offers local practice; no matchmaking.",
 		&"foyer_guide": "North: Nexus · East: merchants/Forge · West: home/pets/appearance · South: recruitment",
 	}
-	for id: StringName in [&"map", &"equipment", &"conservatory", &"foyer_guide"]:
+	for id: StringName in [&"map", &"equipment", &"conservatory", &"foyer_guide", &"dungeon", &"combat_arena"]:
 		var data: Dictionary = CITY_LAYOUT.get_poi(id)
 		var terminal := Terminal.new()
 		terminal.name = String(id).capitalize() + "CityTerminal"
@@ -193,6 +196,9 @@ func get_spawn_transform(entry_id: StringName) -> Transform3D:
 	# New arrivals face the Exchange from the southern Grand Foyer. Existing
 	# expedition and home return entries keep their established safe transforms.
 	var spawn_position := Vector3(0, 0.95, 31.0)
+	if entry_id == &"from_nexus":
+		# The existing north forecourt is flat and clear of the portal frame.
+		return Transform3D(Basis(Vector3.UP, PI), Vector3(0, 0.15, -31.0))
 	if entry_id == &"from_dungeon":
 		spawn_position = Vector3(0, 0.15, -5.4)
 	if entry_id == &"from_abyss":

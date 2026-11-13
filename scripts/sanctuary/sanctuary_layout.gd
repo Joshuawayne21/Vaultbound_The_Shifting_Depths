@@ -48,9 +48,9 @@ func get_wings() -> Array[Dictionary]:
 
 func get_pois() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	result.append(_poi(&"rootbound_abyss", "Rootbound Abyss", &"A", Vector3(-3.5, 0, -2), 2.1, &"portal"))
-	result.append(_poi(&"dungeon", "Sunken Vault · Practice", &"A", Vector3(3.5, 0, -2), 2.1, &"portal"))
-	result.append(_poi(&"combat_arena", "Proving Grounds", &"B", Vector3(-2.1, 0, -2), 2.1, &"portal"))
+	result.append(_poi(&"rootbound_abyss", "Nexus of Realms · Enter", &"A", Vector3(-3.5, 0, -2), 2.1, &"portal"))
+	result.append(_poi(&"dungeon", "Realm Routes & Records", &"A", Vector3(3.5, 0, -2), 2.1, &"guide"))
+	result.append(_poi(&"combat_arena", "Party Preparation & Practice", &"B", Vector3(-2.1, 0, -2), 2.1, &"guide"))
 	result.append(_poi(&"training_target", "Practice Sentinel", &"B", Vector3(3.0, 0, 0.3), 2.0, &"training"))
 	result.append(_poi(&"merchant_appraiser", "Iris · Relic Appraiser", &"C", Vector3(-4.2, 0, -2), 1.6, &"merchant"))
 	result.append(_poi(&"merchant_general", "Mara · General Merchant", &"C", Vector3(0, 0, -2), 1.6, &"merchant"))

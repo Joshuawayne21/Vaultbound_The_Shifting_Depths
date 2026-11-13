@@ -1,0 +1,14 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/visual/portal_visual_profile.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"gilded_vault"
+route_label = "THE GILDED VAULT"
+crest = "relic"
+deep_color = Color(0.17254902, 0.10980392, 0.02745098, 1)
+magic_color = Color(0.76470588, 0.57647059, 0.15686275, 1)
+rim_color = Color(1.00000000, 0.89019608, 0.62745098, 1)
+accent_color = Color(0.91372549, 0.73725490, 0.33333333, 1)
+frame_material = &"gold"

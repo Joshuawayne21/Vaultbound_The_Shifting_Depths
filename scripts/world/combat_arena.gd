@@ -10,6 +10,18 @@ const Golem = preload("res://scenes/enemies/golem.tscn")
 var display_name := "THE PROVING GROUNDS"
 var objective := "Three trials • Rest at the crystal to reset encounters"
 
+# Per-visit presentation/return routing only, never a new arena or save field.
+var _nexus_practice_visit := false
+
+func configure_return_route(destination: StringName, entry_id: StringName) -> bool:
+	if is_inside_tree() or _nexus_practice_visit or destination != &"realm_nexus" or entry_id != &"from_bloodspire":
+		return false
+	_nexus_practice_visit = true
+	return true
+
+func uses_nexus_return() -> bool:
+	return _nexus_practice_visit
+
 func _ready() -> void:
 	var kit := Architecture.new(self)
 	kit.environment(true)
@@ -47,9 +59,9 @@ func _ready() -> void:
 	var portal := Portal.instantiate()
 	portal.position = Vector3(0, 0, 17)
 	portal.rotation.y = PI
-	portal.destination = &"dungeon"
-	portal.entry_id = &"from_arena"
-	portal.title = "RETURN TO SUNKEN VAULT"
+	portal.destination = &"realm_nexus" if _nexus_practice_visit else &"dungeon"
+	portal.entry_id = &"from_bloodspire" if _nexus_practice_visit else &"from_arena"
+	portal.title = "RETURN TO NEXUS" if _nexus_practice_visit else "RETURN TO SUNKEN VAULT"
 	add_child(portal)
 	var station := Station.new()
 	station.position = Vector3(-5, 0, 12)

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/realms/realm_activity.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/portals/nexus/guild_conquest.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"guild_conquest"
+label = "Guild Conquest"
+description = "Contest strategic objectives with your guild."
+gallery = "conflict"
+release_mode = "unavailable"
+destination = &""
+entry_id = &"default"
+required_cleared_depth = 0
+proposed_requirements = "Proposed unlock: join an eligible guild and qualify."
+mode_summary = "Guild team objectives · requires online services."
+reward_summary = "Planned rewards: guild cosmetics, titles and trophies."
+unavailable_reason = "Guild membership and authoritative conquest matches are unavailable."
+architecture_family = "guild_battlements"
+visual_profile = ExtResource("2")

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/realms/realm_activity.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/portals/nexus/beastwilds.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"beastwilds"
+label = "The Beastwilds"
+description = "Explore wild habitats and discover cosmetic creatures."
+gallery = "adventure"
+release_mode = "unavailable"
+destination = &""
+entry_id = &"default"
+required_cleared_depth = 2
+proposed_requirements = "Proposed unlock: complete Depth 2 and extract."
+mode_summary = "Creature tracking, eggs and pet discoveries · planned."
+reward_summary = "Planned rewards: pet ingredients, habitats and creature trophies."
+unavailable_reason = "Beastwilds exploration and acquisition are not implemented yet."
+architecture_family = "living_tree"
+visual_profile = ExtResource("2")

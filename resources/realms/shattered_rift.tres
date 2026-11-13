@@ -1,0 +1,21 @@
+[gd_resource type="Resource" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/realms/realm_activity.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/portals/nexus/shattered_rift.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"shattered_rift"
+label = "Shattered Rift"
+description = "Risk a current expedition bag in an unstable extraction realm."
+gallery = "conflict"
+release_mode = "unavailable"
+destination = &""
+entry_id = &"default"
+required_cleared_depth = 12
+proposed_requirements = "Proposed unlock: complete Depth 12 and a PvP introduction."
+mode_summary = "Team PvPvE extraction · requires online services."
+reward_summary = "Planned rule: only unsecured match loot can be lost; equipped gear protected."
+unavailable_reason = "Shattered Rift gameplay and authenticated team services are unavailable."
+architecture_family = "broken_dimension"
+visual_profile = ExtResource("2")

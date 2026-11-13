@@ -41,12 +41,13 @@ func _tap(point: Vector2, finger: int = 301) -> void:
 	touch(overlay, finger, point, false)
 
 func _open_gate() -> Node3D:
+	if not await enter_nexus_from_sanctuary(): return null
 	game.hud.close_modals()
-	game.player.global_position = game.active_world.get_poi_approach_position(&"rootbound_abyss") + Vector3.UP * 0.15
+	game.player.global_position = game.active_world.get_poi_approach_position(&"abyssal_descent") + Vector3.UP * 0.15
 	game.player.velocity = Vector3.ZERO
 	await frames(3)
 	var gate := portal_to(&"rootbound_abyss")
-	if check(gate != null, "Rootbound retains its physical Sanctuary gate"):
+	if check(gate != null, "Abyssal Descent uses the actual registered Nexus gate"):
 		gate.interact(game.player)
 	check(overlay.mode == &"sanctuary" and panel.kind == &"portal" and panel.has_depth_selector(), "Nearby source opens the existing paused card with its depth selector")
 	return gate
@@ -160,7 +161,7 @@ func _deferred_guards() -> void:
 	_tap(panel.primary_rect().get_center())
 	_fixture_unlock(1)
 	await frames(3)
-	check(not game.transitioning and not session.active and game.current_location == &"sanctuary", "Deferred admission rechecks eligibility after the card closes")
+	check(not game.transitioning and not session.active and game.current_location == &"realm_nexus", "Deferred admission rechecks eligibility after the card closes")
 	_fixture_unlock(6)
 	gate = await _open_gate()
 	game._on_portal_depth_selected(6)

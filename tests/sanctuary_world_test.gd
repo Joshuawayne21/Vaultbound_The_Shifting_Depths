@@ -126,15 +126,17 @@ func _portal_round_trips() -> void:
 	game.debug_expedition_seed = 23
 	for destination: StringName in [&"dungeon", &"personal_sanctuary", &"combat_arena", &"rootbound_abyss"]:
 		game.hud.close_modals()
+		if destination != &"personal_sanctuary" and not await enter_nexus_from_sanctuary(): return
+		var source_location: StringName = game.current_location
 		var portal := portal_to(destination)
-		if not check(portal != null, "City exposes the playable portal: " + String(destination)):
+		if not check(portal != null, "The correct hub exposes the playable portal: " + String(destination)):
 			continue
-		var poi: StringName = &"collection_hall" if destination == &"personal_sanctuary" else destination
+		var poi: StringName = {&"personal_sanctuary": &"collection_hall", &"rootbound_abyss": &"abyssal_descent", &"combat_arena": &"bloodspire_arena", &"dungeon": &"nexus_practice"}[destination]
 		player.reset_for_spawn(Transform3D(Basis.IDENTITY, game.active_world.get_poi_approach_position(poi) + Vector3.UP * 0.15))
 		await frames(5)
 		check(player.interaction_target == portal and game._city_source_valid(portal), "Authored portal approach is physically nearby and visible: " + String(destination))
 		input_hub.request_action(&"interact")
-		check(game.current_location == &"sanctuary" and game.hud.expedition_overlay.sanctuary_panel.kind == &"portal", "Portal first opens source-bound information without travel: " + String(destination))
+		check(game.current_location == source_location and game.hud.expedition_overlay.sanctuary_panel.kind == &"portal", "Portal first opens source-bound information without travel: " + String(destination))
 		game.hud.expedition_overlay.sanctuary_panel._activate("enter")
 		if not await arrive(destination):
 			return
@@ -146,7 +148,7 @@ func _portal_round_trips() -> void:
 			if not await _return_through(&"personal_sanctuary"): return
 			check(player.get_instance_id() == identity and game.world_root.get_child_count() == 1, "The interior Hall round trip retains the same shell and one active home")
 		if destination == &"combat_arena":
-			if not await _return_through(&"dungeon"):
+			if not await _return_through(&"realm_nexus"):
 				return
 		if not await _return_through(&"sanctuary"):
 			return
@@ -161,8 +163,15 @@ func _return_through(destination: StringName) -> bool:
 	player.reset_for_spawn(Transform3D(Basis.IDENTITY, portal.to_global(Vector3(0, 0.15, 2))))
 	await frames(8)
 	check(player.is_on_floor() and player.interaction_target == portal, "Existing return portal has a grounded nearby interaction approach")
-	check(not portal.require_entry_card, "Existing non-city return keeps its immediate interaction contract")
+	var reviewed_hub: bool = game.current_location == &"realm_nexus"
+	check(portal.require_entry_card == reviewed_hub, "Only the Nexus return uses the shared reviewed hub card; existing gameplay returns remain immediate")
 	input_hub.request_action(&"interact")
+	if reviewed_hub:
+		var overlay: Control = game.hud.expedition_overlay
+		var panel: Control = overlay.sanctuary_panel
+		if not check(panel.visible and panel.kind == &"portal" and panel.entry_enabled, "Nexus return is an actual source-bound review"): return false
+		touch(overlay, 1902, panel.primary_rect().get_center(), true)
+		touch(overlay, 1902, panel.primary_rect().get_center(), false)
 	return await arrive(destination)
 
 func _clear_floor(point: Vector3) -> bool:

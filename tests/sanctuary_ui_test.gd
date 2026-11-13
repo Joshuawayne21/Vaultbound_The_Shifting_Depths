@@ -138,12 +138,13 @@ func _terminals() -> void:
 		game.hud.close_modals()
 
 func _portal_sources() -> void:
+	if not await enter_nexus_from_sanctuary(): return
 	var gate := portal_to(&"rootbound_abyss")
-	check(gate != null and gate.require_entry_card, "Sanctuary expedition gate opts into an entry card")
+	check(gate != null and gate.require_entry_card, "Nexus Abyssal gate opts into the existing depth entry card")
 	if gate == null: return
 	gate.interact(game.player)
 	check(overlay.mode == &"none", "A remote portal interaction cannot open its card")
-	await _approach(&"rootbound_abyss")
+	await _approach(&"abyssal_descent")
 	game.player.request_action(&"heavy_start")
 	var charge_state: StringName = game.player.combat.state
 	var charge_stamina: float = game.player.stamina
@@ -152,7 +153,7 @@ func _portal_sources() -> void:
 	check(surface.message == "Finish your current action before interacting" and game.player.combat.state == charge_state and is_equal_approx(game.player.stamina, charge_stamina) and is_equal_approx(game.player.combat.ability_remaining(1), ability_cooldown), "Busy interaction explains its rejection without changing charge, stamina or ability cooldown")
 	game.player.request_action(&"heavy_cancel")
 	gate.interact(game.player)
-	check(panel.visible and panel.kind == &"portal" and panel.entry_enabled and game.current_location == &"sanctuary", "Nearby portal interaction presents information before travel")
+	check(panel.visible and panel.kind == &"portal" and panel.entry_enabled and game.current_location == &"realm_nexus", "Nearby portal interaction presents information before travel")
 	var information := " ".join(panel.context.lines)
 	check(information.contains("1 local human") and information.contains("AI companion") and information.contains("Matchmaking unavailable") and information.contains("not known before generation"), "Portal states local human/AI party, unavailable matchmaking and unknown generated modifiers honestly")
 	touch(overlay, 93, panel.primary_rect().get_center(), true)
@@ -161,9 +162,9 @@ func _portal_sources() -> void:
 	check(panel.entry_enabled and not game.transitioning, "Dragging away and returning cannot confirm portal entry")
 	game.player.global_position += Vector3(9, 0, 0)
 	panel._activate("enter")
-	check(not panel.entry_enabled and not game.transitioning and game.current_location == &"sanctuary", "Enter revalidates range even if the card opened while near")
+	check(not panel.entry_enabled and not game.transitioning and game.current_location == &"realm_nexus", "Enter revalidates range even if the card opened while near")
 	game.hud.close_modals()
-	await _approach(&"rootbound_abyss")
+	await _approach(&"abyssal_descent")
 	var blocker := obstacle((game.player.global_position + gate.global_position) * 0.5 + Vector3.UP * 1.1, Vector3(1.2, 2.4, 0.3))
 	await frames(3)
 	gate.interact(game.player)

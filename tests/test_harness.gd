@@ -54,6 +54,36 @@ func portal_to(destination: StringName) -> Node3D:
 			return portal as Node3D
 	return null
 
+func enter_nexus_from_sanctuary() -> bool:
+	# Test setup still uses the authored source, shared reviewed card and native
+	# touch path. It never substitutes direct change_location or edits ownership.
+	if game.current_location == &"realm_nexus" and not game.transitioning:
+		return true
+	if not check(game.current_location == &"sanctuary" and not game.transitioning,
+		"Nexus setup starts in the actual Sanctuary or its already loaded hall"):
+		return false
+	game.hud.close_modals()
+	var gate := portal_to(&"realm_nexus")
+	if not check(gate != null and gate.get_parent() == game.active_world and gate.require_entry_card,
+		"Sanctuary exposes the real reviewed Nexus entrance"):
+		return false
+	game.player.reset_for_spawn(Transform3D(Basis.IDENTITY,
+		game.active_world.get_poi_approach_position(&"rootbound_abyss") + Vector3.UP * 0.15))
+	await frames(4)
+	if not check(game.player.interaction_target == gate and game._city_source_valid(gate),
+		"Retained northern approach reaches the authored Nexus entrance"):
+		return false
+	input_hub.request_action(&"interact")
+	var overlay: Control = game.hud.expedition_overlay
+	var panel: Control = overlay.sanctuary_panel
+	if not check(overlay.mode == &"sanctuary" and panel.kind == &"portal" and panel.entry_enabled,
+		"Real city interaction opens the source-bound Nexus review"):
+		return false
+	var at: Vector2 = panel.primary_rect().get_center()
+	touch(overlay, 1901, at, true)
+	touch(overlay, 1901, at, false)
+	return await arrive(&"realm_nexus")
+
 func sanctuary_service_approach(service: Node) -> Vector3:
 	var service_id := StringName(service.get("vendor")) if service.get("service_kind") == &"merchant" else StringName(service.get("service_kind"))
 	return game.active_world.get_service_approach_position(service_id) + Vector3.UP * 0.15

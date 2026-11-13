@@ -20,6 +20,9 @@ const VISUAL_PROFILES := {
 @export var title: String = "THE SHIFTING DEPTHS"
 @export var interaction_radius: float = 3.0
 @export var require_entry_card := false
+## Activity presentation is never a travel or reward authority.
+@export var activity_id: StringName = &""
+@export var visual_profile_override: Resource
 
 var _runes: Node3D
 var _surface: MeshInstance3D
@@ -38,10 +41,17 @@ var _route_label: Label3D
 func _ready() -> void:
 	add_to_group("interactables")
 	var palette := preload("res://scripts/visual/visual_style.gd").palette()
-	var stone: Material = palette.light_stone
+	_visual_profile = VISUAL_PROFILES.get(destination, VISUAL_PROFILES[&"dungeon"])
+	if visual_profile_override is VaultPortalVisualProfile:
+		_visual_profile = visual_profile_override
+	var frame_key: StringName = _visual_profile.frame_material
+	if frame_key not in VaultPortalVisualProfile.FRAME_MATERIALS or not palette.has(String(frame_key)):
+		frame_key = &"light_stone"
+	# Select a cached opaque material; never recolor its shared resource.
+	var stone: Material = palette[String(frame_key)]
 	var dark_stone: Material = palette.dark_stone
 	var gold: Material = palette.gold
-	_visual_profile = VISUAL_PROFILES.get(destination, VISUAL_PROFILES[&"dungeon"])
+	set_meta("portal_frame_material", frame_key)
 	set_meta("portal_visual_profile_id", _visual_profile.id)
 	# Tinting a cached palette resource would recolor every other world and gate.
 	var glow := palette.glow.duplicate() as StandardMaterial3D

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/realms/realm_activity.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/portals/nexus/forbidden_gate.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"forbidden_gate"
+label = "Forbidden Gate"
+description = "Discover sealed endgame realms beyond the ancient chains."
+gallery = "ascension"
+release_mode = "unavailable"
+destination = &""
+entry_id = &"default"
+required_cleared_depth = 20
+proposed_requirements = "Proposed unlock: clear Depth 20 and earn four Realm Seals through PvE."
+mode_summary = "Sealed endgame realm variations · planned."
+reward_summary = "Planned rewards: forbidden relics, cosmetic discoveries and trophies."
+unavailable_reason = "Forbidden realms and earnable Realm Seals are not implemented yet."
+architecture_family = "obsidian_monuments"
+visual_profile = ExtResource("2")

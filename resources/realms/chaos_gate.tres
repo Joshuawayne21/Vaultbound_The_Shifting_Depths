@@ -1,0 +1,21 @@
+[gd_resource type="Resource" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/realms/realm_activity.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/portals/nexus/chaos_gate.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"chaos_gate"
+label = "Chaos Gate"
+description = "Enter configurable special events and changing realm conditions."
+gallery = "ascension"
+release_mode = "unavailable"
+destination = &""
+entry_id = &"default"
+required_cleared_depth = 5
+proposed_requirements = "Proposed unlock: complete Depth 5 and extract."
+mode_summary = "Rotating local events first; online schedule later · planned."
+reward_summary = "Planned rewards: event cosmetics, collectibles and trophies."
+unavailable_reason = "Playable Chaos events and their completion rules are not implemented yet."
+architecture_family = "prismatic_shards"
+visual_profile = ExtResource("2")

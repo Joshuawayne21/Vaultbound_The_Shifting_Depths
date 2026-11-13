@@ -1,0 +1,21 @@
+[gd_resource type="Resource" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/realms/realm_activity.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/portals/nexus/echoes_of_eternity.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"echoes_of_eternity"
+label = "Echoes of Eternity"
+description = "Face escalating survival waves and select temporary upgrades."
+gallery = "ascension"
+release_mode = "unavailable"
+destination = &""
+entry_id = &"default"
+required_cleared_depth = 3
+proposed_requirements = "Proposed unlock: complete Depth 3 and extract."
+mode_summary = "Survival challenges with boss waves · planned."
+reward_summary = "Planned rewards: companion resources, cosmetics and survival trophies."
+unavailable_reason = "Echoes survival rules and reward settlement are not implemented yet."
+architecture_family = "spectral_spires"
+visual_profile = ExtResource("2")

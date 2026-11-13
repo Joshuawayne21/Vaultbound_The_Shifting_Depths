@@ -3,6 +3,10 @@ extends Resource
 ## Authored portal appearance only. Destinations, admission and saves stay with Game.
 ## Colors are read-only source data; each portal owns its animated materials.
 
+const FRAME_MATERIALS: Array[StringName] = [&"light_stone", &"dark_stone", &"wood", &"gold", &"stone", &"crystal"]
+
+## Existing profiles retain the original opaque light-stone construction.
+@export var frame_material: StringName = &"light_stone"
 @export var id: StringName
 @export var route_label := ""
 @export_enum("root", "relic", "practice", "home") var crest := "root"

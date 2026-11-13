@@ -1,0 +1,14 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/visual/portal_visual_profile.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"bloodspire_arena"
+route_label = "BLOODSPIRE ARENA"
+crest = "practice"
+deep_color = Color(0.13725490, 0.04313725, 0.07058824, 1)
+magic_color = Color(0.68627451, 0.18823529, 0.29803922, 1)
+rim_color = Color(0.96078431, 0.65098039, 0.69019608, 1)
+accent_color = Color(0.86666667, 0.32156863, 0.43137255, 1)
+frame_material = &"dark_stone"

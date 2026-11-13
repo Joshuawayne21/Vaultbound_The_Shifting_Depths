@@ -135,7 +135,7 @@ func _actual_preview_admission() -> void:
 	_tap(panel.primary_rect().get_center(), 954)
 	ember.available = false
 	await frames(3)
-	var denied: bool = not game.transitioning and not session.active and game.current_location == &"sanctuary"
+	var denied: bool = not game.transitioning and not session.active and game.current_location == &"realm_nexus"
 	ember.available = available
 	if not check(denied, "Deferred real entry rejects unavailable Ember content instead of substituting Rootbound"): return
 	await _open_gate()
@@ -190,7 +190,7 @@ func _advisory_guards() -> void:
 	game._process(0.21)
 	var still_advisory: bool = panel.entry_enabled
 	_tap(panel.primary_rect().get_center(), 955)
-	var rejected: bool = not panel.entry_enabled and not session.active and not game.transitioning and game.current_location == &"sanctuary"
+	var rejected: bool = not panel.entry_enabled and not session.active and not game.transitioning and game.current_location == &"realm_nexus"
 	game._process(0.21)
 	var denied_after_poll: bool = not panel.entry_enabled
 	ember.available = available

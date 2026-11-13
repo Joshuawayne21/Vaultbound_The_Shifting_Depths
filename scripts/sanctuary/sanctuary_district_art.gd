@@ -151,7 +151,7 @@ static func _camera_box_at(parent: Node3D, at: Vector3, size: Vector3, label: St
 	_camera_shape(anchor, bounds)
 
 static func _promenade(kit: Architecture, art: Dressing) -> void:
-	# Paired watch spires frame the two existing passages and their shared horizon.
+	# Paired watch spires frame the single Nexus entrance and its route guide.
 	for side in [-1.0, 1.0]:
 		_tower(kit, art, Vector3(side * 6.2, 0, -6.0), 7.0, "stone")
 		kit.cone(Vector3(side * 6.2, 8.1, -6.0), 1.4, 2.0, "dark_stone")

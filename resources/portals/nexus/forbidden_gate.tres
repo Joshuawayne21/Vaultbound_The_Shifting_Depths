@@ -1,0 +1,14 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/visual/portal_visual_profile.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"forbidden_gate"
+route_label = "FORBIDDEN GATE"
+crest = "relic"
+deep_color = Color(0.05490196, 0.06274510, 0.10980392, 1)
+magic_color = Color(0.64705882, 0.54117647, 0.24313725, 1)
+rim_color = Color(0.93333333, 0.87843137, 0.67843137, 1)
+accent_color = Color(0.78823529, 0.70980392, 0.42352941, 1)
+frame_material = &"dark_stone"

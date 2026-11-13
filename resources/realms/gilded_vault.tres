@@ -1,0 +1,21 @@
+[gd_resource type="Resource" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/realms/realm_activity.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/portals/nexus/gilded_vault.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"gilded_vault"
+label = "The Gilded Vault"
+description = "Search ancient vaults through exploration, secrets and puzzles."
+gallery = "adventure"
+release_mode = "unavailable"
+destination = &""
+entry_id = &"default"
+required_cleared_depth = 5
+proposed_requirements = "Proposed unlock: complete Depth 5 and extract."
+mode_summary = "Treasure chambers, locks and guarded caches · planned."
+reward_summary = "Planned rewards: valuables, crafting materials and decorations."
+unavailable_reason = "The Gilded Vault activity is not implemented yet."
+architecture_family = "golden_keys"
+visual_profile = ExtResource("2")

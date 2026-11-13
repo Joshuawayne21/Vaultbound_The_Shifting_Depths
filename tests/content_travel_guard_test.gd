@@ -219,12 +219,12 @@ func _open_gate() -> void:
 	game.player.global_position = safe_world.get_poi_approach_position(&"rootbound_abyss") + Vector3.UP * 0.15
 	game.player.velocity = Vector3.ZERO
 	await frames(3)
-	var portal := portal_to(&"rootbound_abyss")
-	if not check(portal != null, "Existing physical Rootbound portal remains reachable"): return
+	var portal := portal_to(&"realm_nexus")
+	if not check(portal != null, "The retained Sanctuary still exposes its physical Nexus entrance"): return
 	portal.interact(game.player)
 	var panel: Control = game.hud.expedition_overlay.sanctuary_panel
 	check(panel.visible and panel.entry_enabled, "Source-bound portal card remains usable after content guard failures")
-	check(String(panel.context.lines[1]).contains("Rootwarden") and String(panel.context.lines[0]).contains("ROOTBOUND"), "Pre-entry card advertises only currently executable Rootbound/Rootwarden content")
+	check(String(panel.context.lines[0]).contains("NEXUS") and not panel.has_depth_selector(), "The preserved Sanctuary source reviews the hall without impersonating an expedition admission")
 
 func _replacement_survives() -> void:
 	fault = "replacement"
@@ -246,7 +246,18 @@ func _frozen_content_and_touch_entry() -> void:
 	old_boss_name = authored_boss.display_name
 	old_boss_health = authored_boss.legacy_data.max_health
 	old_theme_name = authored_theme.display_name
-	await _open_gate()
+	# Only this actual entry case leaves the retained Sanctuary fixture. Prior
+	# rollback probes intentionally review its hall gate without replacing it.
+	if not await enter_nexus_from_sanctuary(): return
+	game.player.reset_for_spawn(Transform3D(Basis.IDENTITY,
+		game.active_world.get_poi_approach_position(&"abyssal_descent") + Vector3.UP * 0.15))
+	await frames(4)
+	var portal := portal_to(&"rootbound_abyss")
+	if not check(portal != null and game.player.interaction_target == portal, "Actual Nexus gate remains the shared Rootbound admission source"): return
+	input_hub.request_action(&"interact")
+	var reviewed: Control = game.hud.expedition_overlay.sanctuary_panel
+	check(reviewed.visible and reviewed.entry_enabled and reviewed.has_depth_selector()
+		and String(reviewed.context.lines[1]).contains("Rootwarden") and String(reviewed.context.lines[0]).contains("ROOTBOUND"), "Actual expedition review retains executable Rootbound/Rootwarden content")
 	game.debug_expedition_seed = SEED
 	fault = "authored"
 	var count_before := fault_count

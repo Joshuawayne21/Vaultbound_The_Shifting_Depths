@@ -217,22 +217,24 @@ func poi_rect(index: int) -> Rect2:
 
 func selected_pois() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
+	var central_district := StringName(snapshot.get("center_district_id", ""))
 	for poi: Dictionary in snapshot.get("pois", []):
-		if StringName(poi.get("district", "")) == selected_district or (selected_district == &"map" and StringName(poi.id) == &"map"):
+		var central_match: bool = selected_district == &"map" and (StringName(poi.id) == &"map" or (not central_district.is_empty() and StringName(poi.get("district", "")) == central_district))
+		if StringName(poi.get("district", "")) == selected_district or central_match:
 			result.append(poi)
 	return result.slice(0, 4)
 
 func selected_name() -> String:
 	for district: Dictionary in snapshot.get("districts", []):
 		if StringName(district.id) == selected_district: return String(district.label)
-	return "Ring Exchange"
+	return String(snapshot.get("center_label", "Ring Exchange"))
 
 func _draw() -> void:
 	if _font == null: return
 	var rect := panel_rect()
 	UI.frame(self, rect, UI.PANEL, UI.GOLD, true)
-	_text("SANCTUARY · FOUR WINGS" if kind == &"map" else String(context.get("title", "SANCTUARY GUIDE")), rect.position + Vector2(24, 40), 23, UI.IVORY, rect.size.x - 48)
-	_text("N: Nexus · E: Merchants & Forge · W: Home, Pets & Appearance · S: Entrance & Recruitment" if kind == &"map" else "LOCAL GAME · No online matchmaking", rect.position + Vector2(24, 68), 12, UI.MUTED, rect.size.x - 48)
+	_text(String(snapshot.get("map_title", "SANCTUARY · FOUR WINGS")) if kind == &"map" else String(context.get("title", "SANCTUARY GUIDE")), rect.position + Vector2(24, 40), 23, UI.IVORY, rect.size.x - 48)
+	_text(String(snapshot.get("map_subtitle", "N: Nexus · E: Merchants & Forge · W: Home, Pets & Appearance · S: Entrance & Recruitment")) if kind == &"map" else "LOCAL GAME · No online matchmaking", rect.position + Vector2(24, 68), 12, UI.MUTED, rect.size.x - 48)
 	if kind == &"map": _draw_map()
 	else: _draw_information()
 	_button(close_rect(), "BACK", false)
@@ -255,7 +257,7 @@ func _draw_map() -> void:
 		var at := map_position(district.center, rect, radius)
 		draw_line(rect.get_center(), at, Color(UI.GOLD, 0.24), 6, true)
 		_button(district_rect(StringName(district.id)), String(district.id), selected_district == StringName(district.id))
-	_button(district_rect(&"map"), "RING", selected_district == &"map")
+	_button(district_rect(&"map"), String(snapshot.get("center_button", "RING")), selected_district == &"map")
 	for poi: Dictionary in snapshot.get("pois", []):
 		draw_circle(map_position(poi.position, rect, radius), 3, UI.GOLD)
 	var waypoint: Dictionary = snapshot.get("waypoint", {})
@@ -272,7 +274,7 @@ func _draw_map() -> void:
 	_text("LOCAL DESTINATIONS", details.position + Vector2(0, 125), 12, UI.GOLD, details.size.x)
 	var pois := selected_pois()
 	for index in range(pois.size()): _button(poi_rect(index), String(pois[index].label), false)
-	var caption := "Select A–H to see district names and services."
+	var caption := String(snapshot.get("map_caption", "Select A–H to see district names and services."))
 	if not waypoint.is_empty(): caption = "Waypoint: " + String(waypoint.label)
 	_text(caption, panel_rect().position + Vector2(24, panel_rect().size.y - 112), 12, UI.TEAL, panel_rect().size.x - 48)
 

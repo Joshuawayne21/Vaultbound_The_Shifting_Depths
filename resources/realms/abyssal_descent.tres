@@ -1,0 +1,21 @@
+[gd_resource type="Resource" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/realms/realm_activity.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/portals/nexus/abyssal_descent.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"abyssal_descent"
+label = "Abyssal Descent"
+description = "Progressive generated expeditions into the existing dungeon depths."
+gallery = "adventure"
+release_mode = "local_expedition"
+destination = &"rootbound_abyss"
+entry_id = &"default"
+required_cleared_depth = 0
+proposed_requirements = "Depth 1 is open; deeper floors require the preceding clear and extraction."
+mode_summary = "Solo with up to two recruited AI adventurers."
+reward_summary = "Rewards: existing dungeon loot, Depthmarks and secured discoveries."
+unavailable_reason = ""
+architecture_family = "black_stone_runes"
+visual_profile = ExtResource("2")

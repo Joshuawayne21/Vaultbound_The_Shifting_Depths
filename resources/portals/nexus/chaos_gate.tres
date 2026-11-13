@@ -1,0 +1,14 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/visual/portal_visual_profile.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"chaos_gate"
+route_label = "CHAOS GATE"
+crest = "relic"
+deep_color = Color(0.09411765, 0.06274510, 0.17254902, 1)
+magic_color = Color(0.49411765, 0.42745098, 0.73333333, 1)
+rim_color = Color(0.76078431, 0.92549020, 0.94901961, 1)
+accent_color = Color(0.78039216, 0.52941176, 0.73725490, 1)
+frame_material = &"crystal"

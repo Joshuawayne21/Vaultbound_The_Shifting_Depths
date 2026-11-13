@@ -1,0 +1,14 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/visual/portal_visual_profile.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"shattered_rift"
+route_label = "SHATTERED RIFT"
+crest = "relic"
+deep_color = Color(0.09019608, 0.05098039, 0.14509804, 1)
+magic_color = Color(0.51764706, 0.28627451, 0.67843137, 1)
+rim_color = Color(0.87058824, 0.69019608, 0.94901961, 1)
+accent_color = Color(0.77647059, 0.43137255, 0.72549020, 1)
+frame_material = &"dark_stone"

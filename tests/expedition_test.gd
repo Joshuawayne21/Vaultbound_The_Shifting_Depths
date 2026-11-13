@@ -29,7 +29,9 @@ func _run() -> void:
 		finish()
 		return
 	player = game.player
-	check(portal_to(&"dungeon") != null and portal_to(&"rootbound_abyss") != null, "Sanctuary preserves the original route and adds an expedition portal")
+	check(portal_to(&"realm_nexus") != null and portal_to(&"personal_sanctuary") != null, "Sanctuary preserves home access and groups activities behind its Nexus entrance")
+	if not await enter_nexus_from_sanctuary(): finish(); return
+	check(portal_to(&"dungeon") != null and portal_to(&"rootbound_abyss") != null and portal_to(&"combat_arena") != null, "The actual Nexus preserves both legacy practice routes and the existing expedition route")
 	check(session.depth_entry_status(1).ok and not session.depth_entry_status(2).ok and session.profile.depth_progression.highest_unlocked_depth == 1, "Fresh actual expedition starts with depth one available and depth two locked")
 	var seed_value := _feature_seed()
 	var identity := player.get_instance_id()
